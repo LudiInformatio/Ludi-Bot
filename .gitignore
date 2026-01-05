@@ -1,0 +1,8 @@
+venv/\n__pycache__/\n*.env\n.DS_Store\nludi.db
+.env
+*.pyc
+__pycache__/
+ludi.db
+yak_cache.json
+*.log
+venv/

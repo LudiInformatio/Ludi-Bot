@@ -1,0 +1,392 @@
+# S.A.V.A.G.E. Engine Research Findings
+
+## Executive Summary
+
+Based on comprehensive review of academic research, industry best practices, and data sources, this document outlines the statistical foundations for the **Ludi Informatio** S.A.V.A.G.E. (Simulated Archetype Variable Analytic Game Engine) framework.
+
+---
+
+## 1. Academic Research Insights
+
+### Nature Scientific Reports: SHAP-Based NBA Prediction Model
+
+**Source**: [Stacked ensemble model for NBA game outcome prediction analysis](https://www.nature.com/articles/s41598-025-13657-1)
+
+**Key Findings**:
+
+#### Most Important Features (SHAP Analysis)
+The research analyzed 7,380 NBA games (2021-2024 seasons) and identified the following feature importance hierarchy:
+
+1. **2PA (Two-Point Attempts)** - HIGHEST impact (negative correlation when high volume/low efficiency)
+2. **FG (Field Goals Made)** - Strong positive predictor
+3. **2P (Two-Point Makes)** - Strong positive predictor
+4. **TRB (Total Rebounds)** - Critical positive predictor
+5. **OREB/DREB Interaction** - Synergistic effect (offensive + defensive rebounding together)
+6. **FGA (Field Goal Attempts)** - Negative when high (indicates inefficiency)
+7. **3P (Three-Point Makes)** - Moderate positive impact
+8. **AST (Assists)** - Minimal direct impact (surprising finding)
+
+#### Critical Insight: The "High Volume, Low Efficiency" Pattern
+- **High 2PA without high FG%** = Strong negative signal
+- Teams trailing often increase 2PA reactively (desperation shooting)
+- Model learned this pattern as loss indicator
+
+#### Model Architecture
+- **Stacked Ensemble**: XGBoost, MLP, AdaBoost, KNN as base learners
+- **Meta-Learner**: MLP (Multilayer Perceptron)
+- **Accuracy**: ~70-75% on test data
+- **Interpretability**: SHAP values for transparency
+
+**Application to S.A.V.A.G.E.**:
+- Use SHAP-style feature weighting in our Poisson simulations
+- Prioritize shooting efficiency over volume
+- Implement rebound synergy calculations
+- Monitor 2PA as efficiency indicator, not just scoring potential
+
+---
+
+### Beating Vegas Thesis: Mixed-Linear Models & Kelly Criterion
+
+**Source**: [David Levine's Thesis](https://dlevine820.github.io/Beating-Vegas-Thesis/6-appendix.html)
+
+**Key Findings**:
+
+#### Modeling Approach
+- **Mixed-Linear Models** with random effects by team and week
+- **DVOA (Defense-adjusted Value Over Average)** as key predictor
+- **Dynamic Line Movement** tracking for optimal entry points
+- **Kelly Criterion** for bet sizing (K1 strategy)
+
+#### Bet Sizing Strategy
+- Calculate Expected Value (EV) at multiple decision points
+- If future forecasted spread worsens → bet full allotment NOW
+- If future spread improves → bet 1/3 now, 2/3 later
+- Example: Jaguars +3 (EV: 6.76%) → bet 6.76% of bankroll
+
+#### Key Variables Used
+- Team-specific offensive/defensive ratings
+- Rest days and schedule density
+- Betting market movement (cash vs. tickets)
+- Week-by-week random effects
+
+**Application to S.A.V.A.G.E.**:
+- Implement Kelly Criterion for unit sizing
+- Track line movement for optimal entry timing
+- Use team-specific random effects in simulations
+- Monitor public betting percentages (cash/tickets split)
+
+---
+
+## 2. Industry Best Practices
+
+### NBAstuffer: Critical Betting Statistics
+
+**Source**: [NBA Stats for Bettors](https://www.nbastuffer.com/nba-stats-for-bettors/)
+
+**Essential Metrics**:
+
+#### Advanced Stats
+- **PER (Player Efficiency Rating)** - Overall player value
+- **TS% (True Shooting Percentage)** - Accounts for FTs and 3PM value
+- **BPM (Box Plus/Minus)** - Team impact estimation
+
+#### Team Metrics
+- **Offensive Rating** - Points per 100 possessions
+- **Defensive Rating** - Points allowed per 100 possessions
+- **Pace** - Possessions per 48 minutes
+
+#### Situational Factors
+1. **Home/Away Splits** - Home teams win ~60% of games
+2. **Rest Days** - Critical for back-to-backs (B2B)
+   - 3rd or 4th game in 5 nights = fatigue indicator
+   - Guards most affected (cover 5+ miles per game)
+3. **Injury Reports** - Star player absence changes team dynamics
+4. **Matchup History** - Some teams have stylistic advantages
+
+**Application to S.A.V.A.G.E.**:
+- Integrate TS% instead of raw FG% for efficiency
+- Use Offensive/Defensive Rating as pace modifiers
+- Apply B2B fatigue tax (especially for guards)
+- Build matchup-specific defensive scheme adjustments
+
+---
+
+## 3. Information Edge: Beat Writer Intelligence Network
+
+**Source**: [Fiddle's Substack - Beat Writer List](https://fiddlespicks.substack.com/p/the-updated-beat-writer-list-for)
+
+**Strategic Value**:
+> "By the time aggregators blast out the news, books have either moved or are seconds away from locking the lines, while the people following the original source might have already seen it coming."
+
+### The "Line Lag" Opportunity
+1. **Beat writer tweets** (e.g., "Player limping in shootaround")
+2. **15-30 minute window** before official injury report
+3. **Run 2,500 simulations** with adjusted projections
+4. **Place bet** before line moves
+5. **Official report** → line moves → you already have CLV (Closing Line Value)
+
+### Key Beat Writers by Team
+
+**High-Value Sources**:
+- **Lakers**: Mike Trudell, Jovan Buha
+- **Warriors**: Anthony Slater, Sam Gordon
+- **Knicks**: Ian Begley, Steve Popper
+- **Bucks**: Eric Nehm
+- **Celtics**: Jay King, John Karalis
+- **Thunder**: Brandon Rahbar, Rylan Stiles
+- **Nuggets**: Bennett Durando, Mike Singer
+
+### Intelligence Types
+1. **Usage Displacement** - "Player dealing with lingering hamstring" → reduce efficiency 5-10%
+2. **Archetype Shift** - "Coach wants Giannis initiating from top" → increase AST projection
+3. **Hustle & Fatigue** - "Tired legs on B2B" → reduce PPP (Points Per Possession)
+4. **Lineup Hints** - "Player will start" → 15-minute edge before official announcement
+
+**Application to S.A.V.A.G.E.**:
+- Create Twitter/X monitoring module (Module S - Scout)
+- Keyword triggers: "Out," "Starting," "Minutes Limit," "Available," "Limping," "Restriction"
+- Automated alerts when key players mentioned
+- Manual override capability for nuanced intel
+
+---
+
+## 4. Referee Impact Data
+
+**Source**: [NBAstuffer 2025-2026 Referee Stats](https://www.nbastuffer.com/2025-2026-nba-referee-stats/)
+
+**Available Data**:
+- Game-by-game referee assignments
+- Fouls per game by referee
+- Over/Under trends by referee
+- ATS (Against The Spread) performance
+- Home/Road bias
+
+**Multi-Source Validation Strategy**:
+
+| Source | Data Type | Update Frequency | Purpose |
+|--------|-----------|------------------|---------|
+| **NBAstuffer** | Daily stats, L5 games | Daily (5 AM) | Recency & volatility |
+| **Basketball-Reference** | Career averages, bias | Weekly (Mondays) | Stable baseline personality |
+| **Covers.com** | O/U profitability | Weekly | Market efficiency check |
+| **OddsShark** | Trend verification | Weekly | Consensus validation |
+| **Official NBA** | Assignments | Daily (9 AM ET) | Official crew info |
+
+**Referee Personality Profiles**:
+- **High Pace Refs** (e.g., 1.04x multiplier) - More possessions, higher totals
+- **Whistle Heavy** (e.g., 1.15x FTA) - More free throws
+- **Road Bias** - Calls +2.1 more fouls on road teams
+- **Clutch Chaos** - Low L2M (Last 2 Minute) correct call % → widen variance
+
+**Application to S.A.V.A.G.E.**:
+- Module G (Zebras) fetches assignments at 9:05 AM
+- Apply pace multiplier to base 99.5 possessions
+- Adjust FTA projections for whistle-heavy refs
+- Flag "trap games" when Stuffer says "High Fouls" but Covers shows "Under Trend"
+
+---
+
+## 5. Statistical Model Recommendations
+
+### Core Simulation Engine
+
+**Distribution Type**: **Poisson** (not Normal/Gaussian)
+
+**Why Poisson?**
+- NBA scoring cannot go below zero
+- Allows for "explosive upside" (50+ point games)
+- Better models rare events (blowouts, career nights)
+- Handles discrete events (made baskets, rebounds)
+
+**Simulation Parameters**:
+- **Iterations**: 2,500 runs per player/game
+- **Inputs**: Base stats (L10, L5, Season), Pace, Usage%, Efficiency
+- **Modifiers**: Referee impact, defensive scheme, fatigue, injury status
+- **Outputs**: Mean, Median, 10th/90th percentile (floor/ceiling)
+
+### Feature Weighting (SHAP-Inspired)
+
+**Tier 1 Features** (Highest Weight):
+1. True Shooting % (TS%)
+2. Total Rebounds (TRB)
+3. Usage Rate (USG%)
+4. Pace-Adjusted Possessions
+
+**Tier 2 Features** (Moderate Weight):
+5. Defensive Rating (opponent)
+6. Free Throw Rate (FTr)
+7. 3-Point Rate (3PAr)
+8. Turnover Rate (TOV%)
+
+**Tier 3 Features** (Context):
+9. Rest Days
+10. Home/Away
+11. Referee Impact
+12. Matchup History
+
+### Coefficient of Variation (CV) for Volatility
+
+**Formula**: `CV = Standard Deviation / Mean`
+
+**Application**:
+- **Low CV** (< 0.15) = Consistent player → tighter projection range
+- **High CV** (> 0.25) = Volatile player → wider floor/ceiling spread
+
+**Example**:
+- Player A: 20 PPG, StdDev 3 → CV = 0.15 (consistent)
+- Player B: 20 PPG, StdDev 6 → CV = 0.30 (boom/bust)
+
+→ Player B gets wider Poisson distribution in simulations
+
+### "One Ball Rule" - Negative Correlation
+
+**Concept**: Possessions are finite. If Player A dominates, Player B's opportunities decrease.
+
+**Implementation**:
+- Track total team possessions (Pace × 48 min / avg possession length)
+- In each simulation run, if Giannis gets 15 rebounds → reduce Brook Lopez rebound probability for that specific run
+- Prevents unrealistic "everyone has a career night" scenarios
+
+### Kelly Criterion for Bet Sizing
+
+**Formula**: 
+```
+Kelly % = (Win Probability × Decimal Odds - 1) / (Decimal Odds - 1)
+```
+
+**Conservative Approach** (Fractional Kelly):
+- Use **1/4 Kelly** or **1/2 Kelly** to reduce variance
+- Never bet more than 5% of bankroll on single play
+- Never have more than 15% exposed in single slate
+
+**Example**:
+- Win Probability: 60% (from simulations)
+- Odds: -110 (1.91 decimal)
+- Full Kelly: 8.7% of bankroll
+- 1/2 Kelly: 4.35% of bankroll ✓ (safer)
+
+---
+
+## 6. Data Pipeline Architecture
+
+### Daily Workflow (Staggered Schedule)
+
+**5:00 AM ET - Heavy Lifting**
+- Scrape yesterday's box scores
+- Update player rolling averages (L5, L10, L20, Season)
+- Fetch updated referee stats from NBAstuffer
+- Grade yesterday's bets (Win/Loss, CLV)
+
+**9:05 AM ET - Live Wire**
+- Fetch official referee assignments (released 9:00 AM)
+- Pull current Vegas lines & player props
+- DuckDuckGo news scan for injury updates
+
+**9:10 AM ET - Simulation**
+- Run 2,500 Poisson sims with all modifiers
+- Generate EV calculations
+- Rank plays by confidence (Diamond/Gold/Silver tiers)
+
+**9:30 AM ET - Delivery**
+- Dashboard refreshes with "Executive Briefing"
+- Telegram notification with top 3-5 plays
+- User reviews and places bets
+
+**Every 30 Minutes (Game Days)**
+- Module S (Scout) checks for status flips
+- If Diamond play affected → immediate Telegram alert
+
+### Data Sources Summary
+
+| Data Type | Primary Source | Backup Source | Scraping Method |
+|-----------|----------------|---------------|-----------------|
+| Player Stats | NBA API | Basketball-Reference | `nba_api` library |
+| Odds/Lines | The-Odds-API | SportsGameOdds | REST API |
+| Props | SportsGameOdds | PrizePicks/Underdog | REST API |
+| Injuries | Tank01 (15-min cycle) | RotoWire | REST API |
+| News | DuckDuckGo | Beat Writers (Twitter) | `duckduckgo_search` |
+| Referees | NBAstuffer | Basketball-Reference | `pd.read_html()` |
+| Ref Trends | Covers.com | OddsShark | BeautifulSoup |
+
+---
+
+## 7. Model Validation Strategy
+
+### Backtesting Protocol
+
+**Historical Testing** (Recommended):
+1. Run model on last 30 days of games (already completed)
+2. Compare projections to actual results
+3. Calculate RMSE (Root Mean Square Error) for each stat:
+   - Points: Target RMSE < 4.5
+   - Rebounds: Target RMSE < 2.0
+   - Assists: Target RMSE < 1.8
+
+**Live Testing** (Current Season):
+1. Track all recommended bets for 2 weeks
+2. Measure:
+   - Win Rate (target: >54% at -110 odds)
+   - ROI (Return on Investment)
+   - CLV (Closing Line Value) - did lines move in our favor?
+3. Adjust model weights based on results
+
+### Key Performance Indicators (KPIs)
+
+**Model Accuracy**:
+- Projection accuracy within ±10% of actual result
+- Hit rate on "Diamond" plays: >60%
+- Hit rate on "Gold" plays: >55%
+
+**Betting Performance**:
+- Positive CLV on >70% of bets
+- ROI > 5% over 100+ bet sample
+- Max drawdown < 20% of peak bankroll
+
+**Information Edge**:
+- Beat writer intel leads to line movement within 30 min: >50% of time
+- Referee assignments incorporated before 9:30 AM: 100%
+
+---
+
+## 8. Next Steps for Implementation
+
+### Phase 1: Core Engine (Week 1-2)
+- [ ] Implement Poisson distribution simulations (2,500 runs)
+- [ ] Build SHAP-weighted feature importance system
+- [ ] Create CV (Coefficient of Variation) calculator
+- [ ] Implement "One Ball Rule" negative correlation
+
+### Phase 2: Data Integration (Week 2-3)
+- [ ] Set up NBA API connection for player stats
+- [ ] Integrate The-Odds-API for lines/props
+- [ ] Build DuckDuckGo news scraper
+- [ ] Create referee data aggregator (multi-source)
+
+### Phase 3: Intelligence Layer (Week 3-4)
+- [ ] Twitter/X beat writer monitoring (Module S)
+- [ ] Keyword trigger system
+- [ ] Telegram alert integration
+- [ ] Manual override interface for nuanced intel
+
+### Phase 4: Risk Management (Week 4-5)
+- [ ] Kelly Criterion calculator
+- [ ] Exposure heat map (5%/15% rule enforcement)
+- [ ] Synthetic parlay detector
+- [ ] CLV tracking system
+
+### Phase 5: UI/UX (Week 5-6)
+- [ ] Streamlit "War Room" dashboard
+- [ ] "Ask Ludi" chat interface (Gemini integration)
+- [ ] Executive Briefing generator
+- [ ] Mobile-responsive design
+
+---
+
+## Conclusion
+
+The S.A.V.A.G.E. engine combines:
+- **Academic rigor** (SHAP feature weighting, Poisson distributions)
+- **Professional betting strategies** (Kelly Criterion, CLV tracking)
+- **Information edge** (beat writer intelligence, multi-source referee data)
+- **Risk management** (exposure limits, synthetic parlay detection)
+
+This positions **Ludi Informatio** as a professional-grade analytics platform, not just a "picks" service.

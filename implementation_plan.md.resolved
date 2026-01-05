@@ -1,0 +1,138 @@
+# Ludi Lens v2.0: Master Strategic Plan
+
+## 1. The "Real Talk" Product Audit
+**Role:** Product Manager / VC
+**Verdict:** **STRONG BUY** (with caveats)
+
+### The Market Gap
+The current sports betting landscape is polarized:
+1.  **"Tout" Services:** Scammy, loud, subjective, "Lock of the Century" marketing. Low trust.
+2.  **Quant Sites:** Dense spreadsheets, overwhelming data, requires a PhD to navigate. High friction.
+
+**Your "Ludi Lens" Value Prop:**
+You are building the **"Bloomberg Terminal for the Executive Bettor."**
+*   **Differentiation:** You aren't selling "picks"; you are selling *intelligence*. The "Executive Briefing" concept fits perfectly into the trend of the "Financialization of Sports Betting." People want to feel like investors, not gamblers.
+*   **Demographic:** The analytical fan who doesn't have 4 hours a day to scrape Twitter/X. They want the *synthesis* of the data, not just the raw feed.
+
+### The Innovation Check
+*   **The "Beat Writer" Edge:** This is your "Info Alpha." Most models only look at stats. Integrating qualitative "soft" data (tweets, reporter sentiment) with quantitative data (Poisson sims) is a legitimate edge.
+*   **The "S.A.V.A.G.E." Engine:** Moving from averages to probability distributions (Poisson) helps identify "tail events" (e.g., a blowout game where starters sit). This counters the "average" thinking of public bettors.
+
+### The Warning (Feasibility Challenge)
+*   **Complexity Creep:** You are trying to build: A Ref Database + Live Twitter Scraper + Injury Tracker + Simulation Engine + Web App + Android App.
+*   **Novice Trap:** Trying to do *all* of this at once will kill the project.
+*   **Solution:** We must be ruthless about prioritization. The Android App comes *last*. The Web App (Streamlit) is the MVP.
+
+---
+
+## 2. Math & Model Feasibility Review
+**Role:** Data Scientist
+**Status:** **Green Light** (with simplifications)
+
+1.  **Poisson Simulations:**
+    *   *Realism:* Excellent for NBA scoring (discrete events).
+    *   *Feasibility:* Easy to implement in Python (`numpy.random.poisson`).
+    *   *Novice-Friendly:* Yes.
+
+2.  **SHAP / Machine Learning:**
+    *   *Realism:* High. Shows *why* a projection is what it is.
+    *   *Feasibility:* Hardest part. Training a model requires a clean historical dataset.
+    *   *Novice Adjustment:* For Phase 1, we will use **Weighted Heuristics** (Manual Weights) instead of a trained ML model.
+        *   *Instead of AI training:* `Score = (0.4 * RecentForm) + (0.3 * Matchup) + (0.3 * Usage)`
+        *   *Why:* It allows you to "turn the knobs" and understand the math before handing it over to a "black box" AI. We upgrade to XGBoost/SHAP in Phase 3.
+
+3.  **"Usage Vacuum" & Negative Correlation:**
+    *   *Realism:* Critical. If Giannis sits, those 20 shots *must* go somewhere.
+    *   *Feasibility:* The logic is sound: `TotalAvailableUsage = 100%`. If Player A (30%) is OUT, redistribute that 30% proportionally to the remaining starters.
+    *   *Novice-Friendly:* Yes, just math.
+
+---
+
+## 3. The Toolkit (Novice + Scalable)
+
+We will use a stack that is **easy to write** but **powerful enough to scale**.
+
+### Core Tech Stack
+*   **Language:** **Python** (The language of data).
+*   **Brain (Logic):** `pandas` (Excel on steroids), `numpy` (math).
+*   **Memory (Database):** **SQLite**.
+    *   *Why:* It's a single file (`ludi.db`). No servers to manage. Easy to copy/paste to back up. Moves to PostgreSQL easily later.
+*   **Face (UI):** **Streamlit**.
+    *   *Why:* You write Python, it creates the website. No HTML/CSS/JavaScript knowledge required. Perfect for dashboards.
+*   **Hosting:** **Render** or **Streamlit Community Cloud**. (Free/Cheap tiers).
+
+### The "Novice" Development Environment
+1.  **IDE:** **Cursor** (or VS Code).
+    *   *Why:* The AI features help write the boilerplate code for you.
+2.  **Version Control:** **GitHub** (Private Repo).
+    *   *Why:* "Save Points" for your code. If we break something, we revert.
+3.  **Data Viewer:** **SQLite Viewer** (VS Code Extension).
+    *   *Why:* See your database tables like an Excel sheet right in your editor.
+
+### Recommended MCPs (Context for AI)
+*   **Filesystem / Edit Tools:** (Standard).
+*   **SQLite Tool:** Allows the AI to query your DB directly to check data integrity during development.
+
+---
+
+## 4. The 6-Week Game Plan (Step-by-Step)
+
+### Phase 1: The Foundation (Source of Truth) — Weeks 1-2
+*Goal: Stop using JSON files. Build a robust database that updates automatically.*
+
+1.  **Repo Setup:** Create `ludi_v2` on GitHub. Set up `.gitignore` for API keys (CRITICAL security step).
+2.  **Database Design:** Create `schema.sql`.
+    *   Tables: `Players`, `Games`, `Odds`, `Referees`, `HistoricalStats`.
+3.  **The "Ingestors" (Module A & H):**
+    *   Write scripts to pull from API -> Clean Data -> Insert into SQLite.
+    *   *Validation:* Verify we can pull the "Slate of the Day" and store it.
+
+### Phase 2: The Logic (The Engine) — Weeks 3-4
+*Goal: The "S.A.V.A.G.E." Engine runs simulations on the data.*
+
+1.  **The Simulator (Module C):**
+    *   Implement the Poisson logic.
+    *   Create the `PlayerProfile` class (stores volatility, scarcity statistics).
+2.  **The "Yak" & Modifiers (Module D & E):**
+    *   Implement the "Usage Vacuum" logic (if `Status="OUT"`, redistribute usage).
+    *   Implement basic Referee Multipliers (e.g., `PaceFactor = 1.05`).
+3.  **Output:** A script that prints: "Lakers vs Warriors: LeBron projected 28.5 pts (Range: 22-35)."
+
+### Phase 3: The Lens (The Dashboard) — Week 5
+*Goal: See the data visually.*
+
+1.  **Streamlit App ([app.py](file:///home/mnprice86/ludi_bot/app.py)):**
+    *   **Sidebar:** Date selector, "Theater" toggle (NBA/WNBA).
+    *   **Main Page:** "The Briefing" card view.
+    *   **Data Grid:** Sortable table of all projections vs. API Odds.
+2.  **Visuals:** Add Altair charts for the "Bell Curve" (Poisson distribution) of a player's projection.
+
+### Phase 4: Automation & Hosting — Week 6
+*Goal: It runs while you sleep.*
+
+1.  **GitHub Actions:** Create a `.yaml` file to run the "Ingestor" script every morning at 5:00 AM.
+2.  **Hosting:** Push the Streamlit app to Streamlit Community Cloud (Free) or Render.
+
+---
+
+## 5. Scaling Options & Reality Check
+
+### Option A: The "Personal Edge" (Day 1 Goal)
+*   **Scope:** Runs locally or on free cloud tier.
+*   **Features:** Basic Player Props, Injury adjustments.
+*   **Cost:** ~$0 (Free APIs tiers + Free hosting).
+*   **Verdict:** **START HERE.**
+
+### Option B: The "Pro Tool" (Month 6 Goal)
+*   **Scope:** 24/7 Uptime, "Scout" alerts via Telegram, ML Model training.
+*   **Features:** Paid API subscriptions (faster odds updates), SMS alerts.
+*   **Cost:** ~$50-100/mo (APIs + Database hosting).
+*   **Verdict:** Only effectively useful once Option A is proven profitable.
+
+## Next Step
+**Choice Required:**
+Do you want to start by:
+1.  **Setting up the GitHub Repo & Database Schema?** (The "Right Way" to start coding)
+2.  **Prototyping the Simulation Math in a Notebook?** (Checking the math first)
+
+I recommend **#1**. Structure saves you pain later.

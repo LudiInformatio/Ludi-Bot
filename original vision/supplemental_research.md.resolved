@@ -1,0 +1,520 @@
+# S.A.V.A.G.E. Engine - Supplemental Research & Data Sources
+
+## Complete Link Review Summary
+
+This document supplements the main research findings with detailed insights from all external resources referenced in the Ludi Lens Bot document.
+
+---
+
+## 1. Advanced Betting Strategy Insights
+
+### Topend Sports NBA Betting Strategy
+
+**Source**: [NBA Betting Strategy 2025](https://www.topendsports.com/betting-guides/sport-specific/nba/strategy.htm)
+
+#### Schedule-Based Fatigue Patterns
+
+**Back-to-Back (B2B) Science**:
+- Players need **48-72 hours** to fully replenish glycogen stores
+- Microtrauma repair incomplete on consecutive nights
+- Athletes start at physiological deficit that compounds
+
+**Position-Specific Fatigue Impact**:
+
+| Position | Distance/Game | B2B Impact | Prop Strategy |
+|----------|---------------|------------|---------------|
+| **Guards** | 5+ miles | **HIGHEST decline** | Target UNDERS on PTS/AST |
+| **Wings** | 4-5 miles | Matchup-dependent | Focus on individual matchups |
+| **Centers** | 3-4 miles | **Steadiest** per-minute | Target OVERS on REB even in B2B |
+
+**Key Insight**: Guards show most consistent decline in B2B situations due to continuous movement demands.
+
+#### Fourth Quarter Dynamics
+
+**Research-Backed Q4 Patterns**:
+- **Pace decreases**: Median Q4 pace = 90-100 possessions (vs. 100+ in Q1-Q3)
+- **Efficiency drops**: Effect size of **-1.27** between Q1 and Q4 (García et al., 2020)
+- **Star usage increases**: Rotation shortens, role players see reduced opportunities
+- **Home court amplifies**: Most teams win 50%+ of close home games
+
+**Cognitive Fatigue Factor**:
+- Reaction time and processing speed decline after sustained exertion
+- Increased turnovers and poor shot selection in Q4
+- Not just "tired legs" but mental fatigue
+
+**Application to S.A.V.A.G.E.**:
+- Implement Q4-specific pace modifier (0.90-0.95x)
+- Apply efficiency tax in close games (final 5 minutes)
+- Boost star player usage in tight Q4 scenarios
+- Reduce role player projections when game is close
+
+#### Player Prop Signals
+
+**Minutes Trends**:
+- Player A: 22 PPG on 34 min = different value than Player B: 22 PPG on 28 min
+- Check recent minutes allocation before betting scoring props
+
+**Usage Rate Spikes**:
+- When teammates injured, usage rates spike for remaining players
+- Often exceeds what props anticipate
+- Target 25%+ usage players in injury scenarios
+
+**Home/Road Splits**:
+- Some players perform significantly better at home
+- Track individual splits for persistent edges
+
+---
+
+## 2. Algorithm & Machine Learning Approaches
+
+### RG.org Sports Betting Algorithms Guide
+
+**Source**: [Sports Betting Algorithms](https://rg.org/guides/sportsbetting-guides/sports-betting-algorithms)
+
+#### Monte Carlo Simulations (Our Approach!)
+
+**Definition**: Model probabilities by running simulations thousands of times
+
+**Why It Works for NBA**:
+- Accounts for inherent uncertainty and variability
+- Explores multiple potential outcomes
+- Adjusts predictions based on real-time data
+
+**Our Implementation**:
+- **2,500 runs** per player/game
+- Each run uses Poisson distribution for discrete events
+- Aggregates to mean, median, floor (10th percentile), ceiling (90th percentile)
+
+#### Reinforcement Learning
+
+**Concept**: Algorithm learns to optimize predictions by:
+- **Rewarding** accurate forecasts
+- **Penalizing** incorrect ones
+- Continuously improving over time
+
+**Application to Ludi**:
+- Track bet results in Module R (Ledger)
+- Feed outcomes back to Module C (Oracle)
+- Adjust feature weights based on performance
+- This is your "RL Agent" brain file (`ludi_brain.pkl`)
+
+#### Machine Learning Data Requirements
+
+**Essential Inputs**:
+1. Player statistics (box score + advanced)
+2. Team strength metrics
+3. Weather conditions (outdoor sports)
+4. Historical outcomes
+5. **Player fatigue** (rest days, B2B)
+6. **Real-time adjustments** (injuries, lineup changes)
+
+**Neural Networks**:
+- Analyze relationships between variables
+- Team strength × Player fatigue × Weather
+- Make real-time adjustments based on in-game developments
+
+---
+
+## 3. Complete Data Source Catalog
+
+### Official NBA Data
+
+| Source | Data Type | Update Frequency | Scraping Method |
+|--------|-----------|------------------|-----------------|
+| [NBA.com](https://www.nba.com/) | Scores, news, schedules | Real-time | Browser/API |
+| [NBA Stats](https://www.nba.com/stats/) | Box scores, play-by-play, tracking | Post-game | `nba_api` library |
+| [NBA Official](https://official.nba.com/) | Referee assignments, L2M reports | Daily (9 AM ET) | Direct download |
+| [NBA Communications](https://pr.nba.com/) | Transactions, awards | As announced | RSS/scraper |
+
+### Analytics & Advanced Metrics
+
+| Source | Specialty | Access | Cost |
+|--------|-----------|--------|------|
+| [Basketball-Reference](https://www.basketball-reference.com/) | Historical database, game logs | `pd.read_html()` | Free |
+| [Stathead](https://stathead.com/basketball/) | Advanced queries, splits | Subscription API | $8/mo |
+| [Cleaning the Glass](https://cleaningtheglass.com/) | Garbage-time filtered stats | Subscription | $10/mo |
+| [Dunks & Threes - EPM](https://dunksandthrees.com/epm) | Estimated Plus-Minus | Public leaderboard | Free |
+| [BBall Index - LEBRON](https://www.bball-index.com/lebron-database/) | Impact metric, role data | Mix free/paid | $5-15/mo |
+| [PBP Stats](https://www.pbpstats.com/) | On/Off, WOWY, lineup stats | API subscription | $10/mo |
+| [NBAstuffer](https://www.nbastuffer.com/) | Pace, SOS, referee stats | `pd.read_html()` | Free |
+| [Crafted NBA](https://craftednba.com/) | Multi-metric dashboards | Public | Free |
+
+### APIs & Libraries
+
+| Tool | Language | Purpose | Documentation |
+|------|----------|---------|---------------|
+| [nba_api](https://github.com/swar/nba_api) | Python | Official stats client | [GitHub](https://github.com/swar/nba_api) |
+| [pbpstats](https://pypi.org/project/pbpstats/) | Python | Possession parsing | [PyPI](https://pypi.org/project/pbpstats/) |
+| [hoopR](https://hoopR.sportsdataverse.org/) | R | ESPN/NBA data | [Docs](https://hoopR.sportsdataverse.org/) |
+| [hoopR-py](https://py.sportsdataverse.org/) | Python | ESPN/NBA data | [Docs](https://py.sportsdataverse.org/) |
+| [balldontlie API](https://www.balldontlie.io/) | REST | Free JSON NBA data | [API Docs](https://www.balldontlie.io/) |
+
+### Referee Data Sources
+
+| Source | Data Available | Update Schedule | Scraping Method |
+|--------|----------------|-----------------|-----------------|
+| **NBAstuffer** | Daily stats, L5 games, fouls/game | Daily (5 AM ET) | `pd.read_html()` |
+| **Basketball-Reference** | Career averages, bias trends | Weekly (Mondays) | `pd.read_html()` |
+| **RotoWire** | Per-game stats, technicals, ejections | Daily | BeautifulSoup |
+| **Covers.com** | ATS record, O/U trends, profitability | Weekly | BeautifulSoup |
+| **OddsShark** | Trend verification | Weekly | BeautifulSoup |
+| **NBA Official** | Crew assignments | Daily (9 AM ET) | Direct PDF/HTML |
+
+**2025-26 Points of Emphasis** (affects whistle tendencies):
+1. **Closeouts on Jump Shots** - Landing space enforcement
+2. **High Fives** - Contact on follow-through
+3. **Straight-Line Pathway Plays** - Blocking/charging calls
+
+**Impact on Model**:
+- Increase FTA projections for jump shooters (landing space emphasis)
+- Adjust blocking foul probability for drives
+- Monitor early-season adjustment period (first 2 weeks)
+
+### Beat Writer Intelligence Network
+
+**Source**: [Fiddle's Substack](https://fiddlespicks.substack.com/p/the-updated-beat-writer-list-for)
+
+**Eastern Conference Key Writers**:
+- **Knicks**: Ian Begley, Steve Popper
+- **Celtics**: Jay King, John Karalis
+- **76ers**: Keith Pompey, Kyle Neubeck
+- **Bucks**: Eric Nehm
+- **Heat**: Anthony Chiang, Ira Winderman
+- **Cavaliers**: Chris Fedor, Evan Dammarell
+
+**Western Conference Key Writers**:
+- **Lakers**: Mike Trudell, Jovan Buha
+- **Warriors**: Anthony Slater, Sam Gordon
+- **Thunder**: Brandon Rahbar, Rylan Stiles
+- **Nuggets**: Bennett Durando, Mike Singer
+- **Mavericks**: Grant Afseth, Mike Curtis
+- **Suns**: Duane Rankin, Kellan Olson
+
+**Intelligence Types**:
+1. **Usage Displacement** - "Player dealing with lingering hamstring" → reduce efficiency 5-10%
+2. **Archetype Shift** - "Coach wants Giannis initiating from top" → increase AST projection
+3. **Hustle & Fatigue** - "Tired legs on B2B" → reduce PPP
+4. **Lineup Hints** - "Player will start" → 15-30 minute edge before official announcement
+
+**Twitter/X Monitoring Strategy**:
+- Create dedicated list with all 60+ beat writers
+- Keyword triggers: "Out," "Starting," "Minutes Limit," "Available," "Limping," "Restriction," "Shootaround"
+- Monitor 2-3 hours before game time
+- Cross-reference with Underdog NBA feed for speed
+
+---
+
+## 4. Kaggle NBA Betting Model Insights
+
+**Source**: [Perry613's NBA Sports Betting Model](https://www.kaggle.com/code/perry613/nba-sports-betting-model)
+
+**Feature Engineering Approach**:
+- Create rolling averages: `point_average_last10`, `reb_average_last10`
+- Opponent-adjusted metrics: `opp_def_rating`, `opp_pace`
+- Home/away splits as separate features
+- Rest days as categorical variable (0, 1, 2, 3+)
+
+**Model Architecture** (from Kaggle community):
+- **XGBoost** or **LightGBM** for speed and accuracy
+- **Random Forest** for baseline comparison
+- **Ensemble stacking** for final predictions
+
+**Validation Strategy**:
+- Time-series split (not random split) - train on past, test on future
+- Walk-forward validation for realistic backtesting
+- Track Brier score and log loss, not just accuracy
+
+---
+
+## 5. Tactical Implementation Guidelines
+
+### Data Pipeline Staggered Schedule (Refined)
+
+**5:00 AM ET - Heavy Lifting**
+```python
+# Module H (Historian)
+- Scrape yesterday's box scores (nba_api)
+- Update player rolling averages (L5, L10, L20, Season)
+- Calculate CV (Coefficient of Variation) for each player
+- Store in SQLite database
+
+# Module S (Scout) - Referee Stats
+- Fetch NBAstuffer daily update (pd.read_html)
+- Update referee L5 game stats
+- Calculate recency-weighted foul rates
+
+# Module R (Ledger)
+- Grade yesterday's bets (Win/Loss)
+- Calculate CLV (Closing Line Value)
+- Update bankroll
+- Adjust Kelly multipliers based on recent performance
+```
+
+**9:05 AM ET - Live Wire**
+```python
+# Module S (Scout) - Critical Data
+- Fetch official referee assignments (NBA Official)
+- Pull current Vegas lines (The-Odds-API)
+- Pull player props (SportsGameOdds, PrizePicks, Underdog)
+- DuckDuckGo news scan for injury updates
+
+# Module D (Yak)
+- Refresh 15-minute NBA injury cycle (Tank01)
+- Cross-reference with beat writer tweets
+- Flag status changes (GTD → OUT, Probable → Active)
+```
+
+**9:10 AM ET - Simulation**
+```python
+# Module C (Oracle) - 2,500 Poisson Sims
+for each player in today's games:
+    # Base stats from Module H
+    base_stats = get_rolling_averages(player_id, weights=[L5, L10, Season])
+    
+    # Modifiers from Modules D, E, G
+    pace_mod = get_pace_modifier(game, referee)
+    fatigue_mod = get_fatigue_tax(rest_days, position)
+    matchup_mod = get_defensive_scheme_adjustment(opponent, archetype)
+    injury_mod = get_yak_status_adjustment(player)
+    
+    # Run 2,500 Poisson simulations
+    results = run_poisson_sims(
+        base_stats, 
+        pace_mod, 
+        fatigue_mod, 
+        matchup_mod, 
+        injury_mod,
+        iterations=2500
+    )
+    
+    # Calculate floor/ceiling/mean
+    projections[player] = {
+        'mean': np.mean(results),
+        'median': np.median(results),
+        'floor': np.percentile(results, 10),
+        'ceiling': np.percentile(results, 90),
+        'cv': np.std(results) / np.mean(results)
+    }
+
+# Module F (Alchemist) - EV Calculation
+for each prop in available_props:
+    edge = calculate_edge(projection, prop_line)
+    win_prob = estimate_win_probability(edge)
+    ev = calculate_ev(win_prob, odds)
+    kelly_pct = calculate_kelly(ev, odds)
+    units = min(kelly_pct * 0.5, 0.05)  # Half-Kelly, max 5% bankroll
+    
+    if ev > 2.0:  # Minimum 2% EV threshold
+        add_to_briefing(player, prop, edge, ev, units, tier)
+```
+
+**9:30 AM ET - Delivery**
+```python
+# Module L (Ludi Lens) - Dashboard Refresh
+- Generate "Executive Briefing" with top 5-10 plays
+- Rank by EV (Diamond > Gold > Silver tiers)
+- Include game context (referee, pace, spread, total)
+- Display "Narrative" (e.g., "Lakers Pace Advantage vs. Slow Refs")
+
+# Module T (Telegram)
+- Send notification with Diamond plays only
+- Include: Player, Prop, Line, Projection, EV, Units
+- Add one-line context (e.g., "Giannis OUT - Dame usage spike")
+```
+
+**Every 30 Minutes (Game Days)**
+```python
+# Module S (Scout) - Status Monitoring
+- Check beat writer feeds for new tweets
+- Check Underdog NBA for official updates
+- If Diamond play affected by status change:
+    - Rerun simulation for affected players
+    - Send Telegram alert if EV changes >5%
+    - Update dashboard with "ALERT" badge
+```
+
+### Scraping Code Templates
+
+**Basketball-Reference Referee Stats**:
+```python
+import pandas as pd
+
+url = "https://www.basketball-reference.com/referees/2026_register.html"
+tables = pd.read_html(url)
+referee_data = tables[0]  # First table on page
+
+# Clean and process
+referee_data.columns = ['Name', 'Games', 'Fouls_Per_Game', 'Tech_Fouls', ...]
+referee_data['Name'] = referee_data['Name'].str.strip()
+```
+
+**NBAstuffer Daily Stats**:
+```python
+url = "https://www.nbastuffer.com/2025-2026-nba-referee-stats/"
+tables = pd.read_html(url)
+daily_ref_stats = tables[0]
+
+# Extract L5 game averages
+daily_ref_stats['L5_Fouls'] = daily_ref_stats['L5_Fouls'].astype(float)
+daily_ref_stats['L5_Pace_Impact'] = daily_ref_stats['L5_Total'] / 220.0  # Normalize
+```
+
+**Covers.com ATS/O-U Trends** (requires BeautifulSoup):
+```python
+from bs4 import BeautifulSoup
+import requests
+
+url = "https://www.covers.com/sport/basketball/nba/referees/statistics/2025-2026"
+response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+soup = BeautifulSoup(response.content, 'html.parser')
+
+# Find referee table
+table = soup.find('table', {'class': 'table-stats'})
+rows = table.find_all('tr')
+
+for row in rows[1:]:  # Skip header
+    cols = row.find_all('td')
+    ref_name = cols[0].text.strip()
+    ats_record = cols[1].text.strip()  # e.g., "15-10-2"
+    ou_record = cols[2].text.strip()   # e.g., "14-13"
+```
+
+**DuckDuckGo News Scraper** (already in Module D):
+```python
+from duckduckgo_search import DDGS
+
+def search_news(query):
+    results = DDGS().text(query, max_results=3, timelimit="w")
+    formatted = [{"snippet": r['body'], "link": r['href']} for r in results]
+    return {"items": formatted}
+
+# Example usage
+news = search_news("Giannis Antetokounmpo injury update Bucks")
+```
+
+---
+
+## 6. Advanced Stat Metrics to Integrate
+
+### From awesome-nba-data Repository
+
+**Impact Metrics** (for player evaluation):
+- **EPM** (Estimated Plus-Minus) - [Dunks & Threes](https://dunksandthrees.com/epm)
+- **LEBRON** - [BBall Index](https://www.bball-index.com/lebron-database/)
+- **RAPTOR** - [FiveThirtyEight](https://fivethirtyeight.com/features/introducing-raptor-our-new-metric-for-the-modern-nba/) (archived)
+- **BPM** (Box Plus/Minus) - [Basketball-Reference](https://www.basketball-reference.com/about/bpm2.html)
+
+**Efficiency Metrics**:
+- **TS%** (True Shooting %) - Accounts for FTs and 3PM value
+- **eFG%** (Effective FG%) - Weights 3PM as 1.5x
+- **Net Rating** - Points per 100 possessions differential
+
+**Usage & Opportunity**:
+- **USG%** (Usage Rate) - Percentage of team plays used while on court
+- **PIE** (Player Impact Estimate) - Overall contribution percentage
+- **Win Shares** - Estimated wins contributed
+
+**Application Priority**:
+1. **TS%** → Replace raw FG% in efficiency calculations
+2. **USG%** → Core input for "Usage Vacuum" redistribution
+3. **Net Rating** → Team strength baseline
+4. **BPM** → Quick player value assessment
+
+---
+
+## 7. Model Validation Checklist
+
+### Backtesting Protocol
+
+**Phase 1: Historical Accuracy** (Last 30 Days)
+- [ ] Run model on completed games
+- [ ] Compare projections to actual results
+- [ ] Calculate RMSE for each stat category:
+  - Points: Target < 4.5
+  - Rebounds: Target < 2.0
+  - Assists: Target < 1.8
+  - 3PM: Target < 1.0
+
+**Phase 2: Betting Performance** (Next 2 Weeks)
+- [ ] Track all recommended bets
+- [ ] Measure win rate (target >54% at -110)
+- [ ] Calculate ROI (target >5%)
+- [ ] Track CLV on every bet (target >70% positive CLV)
+
+**Phase 3: Feature Importance Analysis**
+- [ ] Run SHAP analysis on our model
+- [ ] Compare feature weights to Nature study findings
+- [ ] Adjust weights if necessary
+- [ ] Document changes in version control
+
+### Red Flags to Monitor
+
+**Model Drift Indicators**:
+- Win rate drops below 50% for 20+ bets
+- CLV consistently negative (lines moving against us)
+- RMSE increases by >20% from baseline
+- Specific stat category consistently overperforming/underperforming
+
+**When to Recalibrate**:
+- After major rule changes (mid-season adjustments)
+- After All-Star break (pace/effort changes)
+- When new referee trends emerge
+- After significant injuries to key players
+
+---
+
+## 8. Next Steps - Prioritized Implementation
+
+### Week 1-2: Core Engine
+- [ ] Implement Poisson distribution simulations (2,500 runs)
+- [ ] Build SHAP-weighted feature importance
+- [ ] Create CV calculator for volatility
+- [ ] Implement "One Ball Rule" negative correlation
+- [ ] Set up SQLite database schema
+
+### Week 2-3: Data Integration
+- [ ] NBA API connection (`nba_api` library)
+- [ ] The-Odds-API integration
+- [ ] DuckDuckGo news scraper
+- [ ] Multi-source referee aggregator
+- [ ] Beat writer Twitter monitoring (Module S)
+
+### Week 3-4: Intelligence Layer
+- [ ] Keyword trigger system
+- [ ] Telegram alert integration
+- [ ] Manual override interface
+- [ ] Status flip detection
+
+### Week 4-5: Risk Management
+- [ ] Kelly Criterion calculator
+- [ ] Exposure heat map (5%/15% enforcement)
+- [ ] Synthetic parlay detector
+- [ ] CLV tracking system
+
+### Week 5-6: UI/UX
+- [ ] Streamlit "War Room" dashboard
+- [ ] "Ask Ludi" chat interface (Gemini)
+- [ ] Executive Briefing generator
+- [ ] Mobile-responsive design
+
+---
+
+## Conclusion
+
+This supplemental research provides:
+- **20+ verified data sources** with scraping methods
+- **Position-specific fatigue patterns** for prop betting
+- **Q4 dynamics** backed by academic research
+- **Monte Carlo simulation** validation
+- **Complete beat writer network** for information edge
+- **Referee data pipeline** with multi-source validation
+- **Advanced metrics catalog** for player evaluation
+
+The S.A.V.A.G.E. engine is now grounded in:
+1. Academic research (SHAP, Poisson, Kelly Criterion)
+2. Industry best practices (fatigue analysis, Q4 dynamics)
+3. Professional data sources (nba_api, Basketball-Reference, NBAstuffer)
+4. Information edge (beat writers, 15-minute injury cycle)
+5. Risk management (CLV tracking, exposure limits)
+
+**Next**: Begin Phase 1 implementation with core Poisson simulation engine.
