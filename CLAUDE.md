@@ -15,24 +15,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🎯 Current Status (Updated Jan 8, 2026, 12:55 PM ET)
 
-### Week 2, Days 1-2: ✅ COMPLETE - Logging Framework Operational!
+### Week 2, Days 1-4: ✅ ON TRACK - Logging & Vibe Starters AI
 
-**✅ Logging Framework Implementation (Jan 8, 2026):**
+**✅ Logging Framework Implementation (Complete):**
 - `utils/bet_logger.py` (650 lines) - BetLogger class with dual storage
 - SQLite tables: `bet_recommendations`, `bet_daily_summaries` in ludi.db
 - JSON logs: `logs/bets/YYYY-MM-DD.json` format
-- Module F integrated with `get_bet_logger()` singleton
-- `backfill_week1_bets.py` (221 lines) - Week 1 test data imported
-- 5 Week 1 Diamond plays logged with full context
-- Daily summary: 7.5u total, $0.1125 API cost
+- **Status:** Operational & Backfilled.
 
-**BetLogger Features:**
-- `log_recommendation()` - Single bet logging
-- `log_batch_recommendations()` - Bulk insert
-- `update_outcome()` - Post-game result tracking
-- `get_pending_bets()` - Query unsettled bets
-- `calculate_daily_summary()` - ROI/stats aggregation
-- `get_performance_report()` - Date range analysis
+**✅ Vibe Starters Assistant (Complete - Jan 8, 2026):**
+- **Persona:** "The Smart Creative" (Voice: "Let's cook", "The Blueprint")
+- **Assets:** V5 Morning Header (Coffee/Flag), V3 Nightly Header (Sleeping)
+- **Formatting:** Strict Bullet Journal (BuJo) style
+- **Integration:** 
+    - `utils/pm_bot.py`: AI generation logic
+    - `.github/workflows/daily_briefing.yml`: Automated Morning Brief (5am EST)
+    - `.github/workflows/nightly_debrief.yml`: Automated Nightly Debrief (8pm EST)
 
 ---
 
@@ -199,7 +197,16 @@ send_alert("API Warning", "80% of quota consumed")
 # Send daily briefing (from Module F)
 briefing = reporter.generate_report(processed_slate)
 send_daily_briefing(briefing)
+
+# Send Vibe Starters AI Brief (Manual Test)
+python utils/pm_bot.py
 ```
+
+### Vibe Starters Assistant (PM Bot)
+**Role:** Project Manager & Personal Assistant
+- **Morning Routine:** Sends "The Vision", "The Blueprint", "The Intel" at 5am.
+- **Nightly Routine:** Sends "The Wins", "The Pivot", "The Vibe" at 8pm.
+- **Assets:** Clean, minimalist images stored in `.gemini/antigravity/brain/...` (configured in `pm_bot.py`)
 
 ### Testing Individual Modules
 ```bash
