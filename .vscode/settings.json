@@ -1,3 +1,9 @@
 {
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "workbench.editor.autoLockGroups": {
+        "workbench.editorinputs.searchEditorInput": true,
+        "antigravity.globalArtifactsEditorInput": true,
+        "antigravity.artifactsEditorInput": true,
+        "workbench.input.interactive": true
+    }
 }

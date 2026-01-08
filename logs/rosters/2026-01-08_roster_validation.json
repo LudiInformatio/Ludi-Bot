@@ -1,0 +1,1538 @@
+{
+  "validation_date": "2026-01-08 14:04:30",
+  "dry_run": false,
+  "database_snapshot": {
+    "total_players": 506,
+    "teams": 30
+  },
+  "tank01_snapshot": {
+    "total_players": 523,
+    "teams": 30
+  },
+  "changes": {
+    "trades": [
+      {
+        "player_id": "1630557",
+        "name": "Corey Kispert",
+        "old_team": "WAS",
+        "new_team": "ATL"
+      },
+      {
+        "player_id": "1642484",
+        "name": "RayJ Dennis",
+        "old_team": "LAC",
+        "new_team": "ATL"
+      },
+      {
+        "player_id": "203468",
+        "name": "CJ McCollum",
+        "old_team": "WAS",
+        "new_team": "ATL"
+      },
+      {
+        "player_id": "1629027",
+        "name": "Trae Young",
+        "old_team": "ATL",
+        "new_team": "WAS"
+      },
+      {
+        "player_id": "1642345",
+        "name": "Oso Ighodaro",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1630692",
+        "name": "Jordan Goodwin",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1630224",
+        "name": "Jalen Green",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1642863",
+        "name": "Khaman Maluach",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1631221",
+        "name": "Collin Gillespie",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1626164",
+        "name": "Devin Booker",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1642346",
+        "name": "Ryan Dunn",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1630587",
+        "name": "Isaiah Livers",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1626220",
+        "name": "Royce O'Neale",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1631123",
+        "name": "Jamaree Bouyea",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1630208",
+        "name": "Nick Richards",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1631109",
+        "name": "Mark Williams",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1642853",
+        "name": "Rasheer Fleming",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1642886",
+        "name": "Koby Brea",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1628960",
+        "name": "Grayson Allen",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "1628415",
+        "name": "Dillon Brooks",
+        "old_team": "PHX",
+        "new_team": "PHO"
+      },
+      {
+        "player_id": "203482",
+        "name": "Kelly Olynyk",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1642868",
+        "name": "Carter Bryant",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1629162",
+        "name": "Jordan McLaughlin",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1631110",
+        "name": "Jeremy Sochan",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1628368",
+        "name": "De'Aaron Fox",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1642844",
+        "name": "Dylan Harper",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1631127",
+        "name": "Harrison Ingram",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1630170",
+        "name": "Devin Vassell",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1629640",
+        "name": "Keldon Johnson",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1630322",
+        "name": "Lindy Waters III",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1642264",
+        "name": "Stephon Castle",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "203084",
+        "name": "Harrison Barnes",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "202687",
+        "name": "Bismack Biyombo",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1630577",
+        "name": "Julian Champagnie",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1628436",
+        "name": "Luke Kornet",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1641705",
+        "name": "Victor Wembanyama",
+        "old_team": "SAS",
+        "new_team": "SA"
+      },
+      {
+        "player_id": "1642274",
+        "name": "Yves Missi",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1642852",
+        "name": "Derik Queen",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630529",
+        "name": "Herbert Jones",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630621",
+        "name": "Hunter Dickinson",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630530",
+        "name": "Trey Murphy III",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1641725",
+        "name": "Trey Alexander",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1642877",
+        "name": "Micah Peavy",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1629673",
+        "name": "Jordan Poole",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630631",
+        "name": "Jose Alvarado",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "201599",
+        "name": "DeAndre Jordan",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1641722",
+        "name": "Jordan Hawkins",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1626172",
+        "name": "Kevon Looney",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1631121",
+        "name": "Bryce McGowens",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1629627",
+        "name": "Zion Williamson",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630180",
+        "name": "Saddiq Bey",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1642847",
+        "name": "Jeremiah Fears",
+        "old_team": "NOP",
+        "new_team": "NO"
+      },
+      {
+        "player_id": "1630540",
+        "name": "Miles McBride",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1628973",
+        "name": "Jalen Brunson",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1642885",
+        "name": "Mohamed Diawara",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1629011",
+        "name": "Mitchell Robinson",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1628969",
+        "name": "Mikal Bridges",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1629013",
+        "name": "Landry Shamet",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "203903",
+        "name": "Jordan Clarkson",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1630574",
+        "name": "Ariel Hukporti",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1626157",
+        "name": "Karl-Anthony Towns",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1627824",
+        "name": "Guerschon Yabusele",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1641998",
+        "name": "Trey Jemison",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1641755",
+        "name": "Kevin McCullar Jr.",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1642278",
+        "name": "Tyler Kolek",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1628404",
+        "name": "Josh Hart",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1628384",
+        "name": "OG Anunoby",
+        "old_team": "NYK",
+        "new_team": "NY"
+      },
+      {
+        "player_id": "1641764",
+        "name": "Brandin Podziemski",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "202710",
+        "name": "Jimmy Butler",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1627741",
+        "name": "Buddy Hield",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1630611",
+        "name": "Gui Santos",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1630311",
+        "name": "Pat Spencer",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "203552",
+        "name": "Seth Curry",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1630228",
+        "name": "Jonathan Kuminga",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "201939",
+        "name": "Stephen Curry",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1630541",
+        "name": "Moses Moody",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1629001",
+        "name": "De'Anthony Melton",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1642366",
+        "name": "Quinten Post",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1627780",
+        "name": "Gary Payton II",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "203110",
+        "name": "Draymond Green",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1631218",
+        "name": "Trayce Jackson-Davis",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "201143",
+        "name": "Al Horford",
+        "old_team": "GSW",
+        "new_team": "GS"
+      },
+      {
+        "player_id": "1642954",
+        "name": "Will Richard",
+        "old_team": "GSW",
+        "new_team": "GS"
+      }
+    ],
+    "signings": [
+      {
+        "player_id": "28838569499",
+        "name": "Moe Wagner",
+        "team": "ORL",
+        "position": "C"
+      },
+      {
+        "player_id": "94214452047",
+        "name": "Colin Castleton",
+        "team": "ORL",
+        "position": "C"
+      },
+      {
+        "player_id": "947943859589",
+        "name": "Rocco Zikarsky",
+        "team": "MIN",
+        "position": "C"
+      },
+      {
+        "player_id": "94114408027",
+        "name": "Enrique Freeman",
+        "team": "MIN",
+        "position": "PF"
+      },
+      {
+        "player_id": "28528000429",
+        "name": "Terry Rozier",
+        "team": "MIA",
+        "position": "SG"
+      },
+      {
+        "player_id": "945843361189",
+        "name": "Kasparas Jakucionis",
+        "team": "MIA",
+        "position": "SG"
+      },
+      {
+        "player_id": "943747982639",
+        "name": "Nikola Jovic",
+        "team": "MIA",
+        "position": "PF"
+      },
+      {
+        "player_id": "945643238189",
+        "name": "Hugo  Gonzalez",
+        "team": "BOS",
+        "position": "SF"
+      },
+      {
+        "player_id": "94744955527",
+        "name": "Max Shulga",
+        "team": "BOS",
+        "position": "PG"
+      },
+      {
+        "player_id": "28628646399",
+        "name": "Jayson Tatum",
+        "team": "BOS",
+        "position": "PF"
+      },
+      {
+        "player_id": "948847891869",
+        "name": "Yanic Konan Niederhauser",
+        "team": "LAC",
+        "position": "C"
+      },
+      {
+        "player_id": "28628911729",
+        "name": "Bogdan Bogdanovic",
+        "team": "LAC",
+        "position": "SG"
+      },
+      {
+        "player_id": "947042835539",
+        "name": "TyTy Washington Jr.",
+        "team": "LAC",
+        "position": "PG"
+      },
+      {
+        "player_id": "28098922762",
+        "name": "Jonas Valanciunas",
+        "team": "DEN",
+        "position": "C"
+      },
+      {
+        "player_id": "944347035539",
+        "name": "Tamar Bates",
+        "team": "DEN",
+        "position": "SG"
+      },
+      {
+        "player_id": "28908111729",
+        "name": "Nikola Jokic",
+        "team": "DEN",
+        "position": "C"
+      },
+      {
+        "player_id": "942541715989",
+        "name": "Ron Holland",
+        "team": "DET",
+        "position": "SF"
+      },
+      {
+        "player_id": "941044811139",
+        "name": "Vit Krejci",
+        "team": "ATL",
+        "position": "SF"
+      },
+      {
+        "player_id": "28498106429",
+        "name": "Kristaps Porzingis",
+        "team": "ATL",
+        "position": "C"
+      },
+      {
+        "player_id": "947640262289",
+        "name": "Nikola Djurisic",
+        "team": "ATL",
+        "position": "SF"
+      },
+      {
+        "player_id": "28748346399",
+        "name": "Max Strus",
+        "team": "CLE",
+        "position": "SG"
+      },
+      {
+        "player_id": "94724422047",
+        "name": "AJ Lawson",
+        "team": "TOR",
+        "position": "SG"
+      },
+      {
+        "player_id": "942241927989",
+        "name": "Carlton Carrington",
+        "team": "WAS",
+        "position": "PG"
+      },
+      {
+        "player_id": "28218091429",
+        "name": "Nigel Hayes",
+        "team": "PHO",
+        "position": "PF"
+      },
+      {
+        "player_id": "941742772339",
+        "name": "David Jones",
+        "team": "SA",
+        "position": "SF"
+      },
+      {
+        "player_id": "28608827869",
+        "name": "Stanley Umude",
+        "team": "SA",
+        "position": "SG"
+      },
+      {
+        "player_id": "28268405032",
+        "name": "Nikola Vucevic",
+        "team": "CHI",
+        "position": "C"
+      },
+      {
+        "player_id": "945542613189",
+        "name": "Yuki Kawamura",
+        "team": "CHI",
+        "position": "PG"
+      },
+      {
+        "player_id": "946841877789",
+        "name": "Tidjane Salaun",
+        "team": "CHA",
+        "position": "PF"
+      },
+      {
+        "player_id": "943549335539",
+        "name": "Moussa Diabate",
+        "team": "CHA",
+        "position": "PF"
+      },
+      {
+        "player_id": "28698616399",
+        "name": "Grant Williams",
+        "team": "CHA",
+        "position": "PF"
+      },
+      {
+        "player_id": "948647045669",
+        "name": "Dom Barlow",
+        "team": "PHI",
+        "position": "PF"
+      },
+      {
+        "player_id": "947644156669",
+        "name": "MarJon Beauchamp",
+        "team": "PHI",
+        "position": "SF"
+      },
+      {
+        "player_id": "28008317499",
+        "name": "Dejounte Murray",
+        "team": "NO",
+        "position": "PG"
+      },
+      {
+        "player_id": "948942345669",
+        "name": "Karlo Matkovic",
+        "team": "NO",
+        "position": "PF"
+      },
+      {
+        "player_id": "28938011729",
+        "name": "Dario Saric",
+        "team": "SAC",
+        "position": "PF"
+      },
+      {
+        "player_id": "28948755349",
+        "name": "Dennis Schroder",
+        "team": "SAC",
+        "position": "PG"
+      },
+      {
+        "player_id": "94544426027",
+        "name": "Isaiah Stevens",
+        "team": "SAC",
+        "position": "PG"
+      },
+      {
+        "player_id": "28808619869",
+        "name": "PJ Washington",
+        "team": "DAL",
+        "position": "PF"
+      },
+      {
+        "player_id": "28248988552",
+        "name": "Kyrie Irving",
+        "team": "DAL",
+        "position": "PG"
+      },
+      {
+        "player_id": "28478111729",
+        "name": "Dante Exum",
+        "team": "DAL",
+        "position": "SG"
+      },
+      {
+        "player_id": "28738039199",
+        "name": "Fred VanVleet",
+        "team": "HOU",
+        "position": "PG"
+      },
+      {
+        "player_id": "94524232027",
+        "name": "Tristen Newton",
+        "team": "HOU",
+        "position": "PG"
+      },
+      {
+        "player_id": "28568879869",
+        "name": "Nicolas Claxton",
+        "team": "BKN",
+        "position": "C"
+      },
+      {
+        "player_id": "949143631189",
+        "name": "Egor Demin",
+        "team": "BKN",
+        "position": "SG"
+      },
+      {
+        "player_id": "28188383547",
+        "name": "Haywood Highsmith",
+        "team": "BKN",
+        "position": "SF"
+      },
+      {
+        "player_id": "944849527989",
+        "name": "Chaney Johnson",
+        "team": "BKN",
+        "position": "SG"
+      },
+      {
+        "player_id": "942141385789",
+        "name": "Pacome Dadiet",
+        "team": "NY",
+        "position": "SF"
+      },
+      {
+        "player_id": "94464499047",
+        "name": "EJ Harkless",
+        "team": "UTA",
+        "position": "SG"
+      },
+      {
+        "player_id": "28228879027",
+        "name": "Oscar Tshiebwe",
+        "team": "UTA",
+        "position": "PF"
+      },
+      {
+        "player_id": "28428786249",
+        "name": "Georges Niang",
+        "team": "UTA",
+        "position": "PF"
+      },
+      {
+        "player_id": "94634212027",
+        "name": "John Tonje",
+        "team": "UTA",
+        "position": "SG"
+      },
+      {
+        "player_id": "28718011729",
+        "name": "Jusuf Nurkic",
+        "team": "UTA",
+        "position": "C"
+      },
+      {
+        "player_id": "941541715989",
+        "name": "Nikola Topic",
+        "team": "OKC",
+        "position": "PG"
+      },
+      {
+        "player_id": "949041431189",
+        "name": "Thomas Sorber",
+        "team": "OKC",
+        "position": "PF"
+      },
+      {
+        "player_id": "28428469882",
+        "name": "Damian Lillard",
+        "team": "POR",
+        "position": "PG"
+      },
+      {
+        "player_id": "942040414489",
+        "name": "Scoot Henderson",
+        "team": "POR",
+        "position": "PG"
+      },
+      {
+        "player_id": "94054442047",
+        "name": "Tyrese Haliburton",
+        "team": "IND",
+        "position": "PG"
+      },
+      {
+        "player_id": "940742582539",
+        "name": "Alex Antetokounmpo",
+        "team": "MIL",
+        "position": "SF"
+      },
+      {
+        "player_id": "94454205527",
+        "name": "L.J. Cryer",
+        "team": "GS",
+        "position": "PG"
+      },
+      {
+        "player_id": "287488965539",
+        "name": "Malevy Leons",
+        "team": "GS",
+        "position": "PF"
+      },
+      {
+        "player_id": "94184479027",
+        "name": "Scotty Pippen Jr.",
+        "team": "MEM",
+        "position": "PG"
+      },
+      {
+        "player_id": "28908536399",
+        "name": "Ty Jerome",
+        "team": "MEM",
+        "position": "SG"
+      },
+      {
+        "player_id": "949540391869",
+        "name": "Gregory Jackson",
+        "team": "MEM",
+        "position": "PF"
+      },
+      {
+        "player_id": "948742035539",
+        "name": "Chris Manon",
+        "team": "LAL",
+        "position": "SG"
+      },
+      {
+        "player_id": "28398804489",
+        "name": "Luka Doncic",
+        "team": "LAL",
+        "position": "PG"
+      }
+    ],
+    "waivers": [
+      {
+        "player_id": "1631210",
+        "name": "Jacob Toppin",
+        "last_team": "ATL"
+      },
+      {
+        "player_id": "204001",
+        "name": "Kristaps Porzi\u0146\u0123is",
+        "last_team": "ATL"
+      },
+      {
+        "player_id": "1630249",
+        "name": "V\u00edt Krej\u010d\u00ed",
+        "last_team": "ATL"
+      },
+      {
+        "player_id": "1642856",
+        "name": "Egor D\u00ebmin",
+        "last_team": "BKN"
+      },
+      {
+        "player_id": "1629651",
+        "name": "Nic Claxton",
+        "last_team": "BKN"
+      },
+      {
+        "player_id": "1642864",
+        "name": "Hugo Gonz\u00e1lez",
+        "last_team": "BOS"
+      },
+      {
+        "player_id": "1641809",
+        "name": "Drew Peterson",
+        "last_team": "CHA"
+      },
+      {
+        "player_id": "1631217",
+        "name": "Moussa Diabat\u00e9",
+        "last_team": "CHA"
+      },
+      {
+        "player_id": "1642275",
+        "name": "Tidjane Sala\u00fcn",
+        "last_team": "CHA"
+      },
+      {
+        "player_id": "202696",
+        "name": "Nikola Vu\u010devi\u0107",
+        "last_team": "CHI"
+      },
+      {
+        "player_id": "1642280",
+        "name": "Trentyn Flowers",
+        "last_team": "CHI"
+      },
+      {
+        "player_id": "1629023",
+        "name": "P.J. Washington",
+        "last_team": "DAL"
+      },
+      {
+        "player_id": "202685",
+        "name": "Jonas Valan\u010di\u016bnas",
+        "last_team": "DEN"
+      },
+      {
+        "player_id": "203999",
+        "name": "Nikola Joki\u0107",
+        "last_team": "DEN"
+      },
+      {
+        "player_id": "1641732",
+        "name": "Colby Jones",
+        "last_team": "DET"
+      },
+      {
+        "player_id": "1641842",
+        "name": "Ronald Holland II",
+        "last_team": "DET"
+      },
+      {
+        "player_id": "1628998",
+        "name": "Cody Martin",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "1629726",
+        "name": "Garrison Mathews",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "1630164",
+        "name": "James Wiseman",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "1630526",
+        "name": "Jeremiah Robinson-Earl",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "1630644",
+        "name": "Mac McClung",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "1628420",
+        "name": "Monte Morris",
+        "last_team": "IND"
+      },
+      {
+        "player_id": "203992",
+        "name": "Bogdan Bogdanovi\u0107",
+        "last_team": "LAC"
+      },
+      {
+        "player_id": "101108",
+        "name": "Chris Paul",
+        "last_team": "LAC"
+      },
+      {
+        "player_id": "1643141",
+        "name": "Jahmyl Telfort",
+        "last_team": "LAC"
+      },
+      {
+        "player_id": "1642949",
+        "name": "Yanic Konan Niederh\u00e4user",
+        "last_team": "LAC"
+      },
+      {
+        "player_id": "1643024",
+        "name": "Chris Ma\u00f1on",
+        "last_team": "LAL"
+      },
+      {
+        "player_id": "1629029",
+        "name": "Luka Don\u010di\u0107",
+        "last_team": "LAL"
+      },
+      {
+        "player_id": "1629646",
+        "name": "Charles Bassey",
+        "last_team": "MEM"
+      },
+      {
+        "player_id": "1641713",
+        "name": "GG Jackson",
+        "last_team": "MEM"
+      },
+      {
+        "player_id": "1642857",
+        "name": "Kasparas Jaku\u010dionis",
+        "last_team": "MIA"
+      },
+      {
+        "player_id": "1631107",
+        "name": "Nikola Jovi\u0107",
+        "last_team": "MIA"
+      },
+      {
+        "player_id": "1641813",
+        "name": "Mark Sears",
+        "last_team": "MIL"
+      },
+      {
+        "player_id": "1631255",
+        "name": "Karlo Matkovi\u0107",
+        "last_team": "NOP"
+      },
+      {
+        "player_id": "1642359",
+        "name": "Pac\u00f4me Dadiet",
+        "last_team": "NYK"
+      },
+      {
+        "player_id": "1641787",
+        "name": "Tosan Evbuomwan",
+        "last_team": "NYK"
+      },
+      {
+        "player_id": "1631230",
+        "name": "Dominick Barlow",
+        "last_team": "PHI"
+      },
+      {
+        "player_id": "1642282",
+        "name": "Hunter Sallis",
+        "last_team": "PHI"
+      },
+      {
+        "player_id": "1628502",
+        "name": "Nigel Hayes-Davis",
+        "last_team": "PHX"
+      },
+      {
+        "player_id": "203967",
+        "name": "Dario \u0160ari\u0107",
+        "last_team": "SAC"
+      },
+      {
+        "player_id": "203471",
+        "name": "Dennis Schr\u00f6der",
+        "last_team": "SAC"
+      },
+      {
+        "player_id": "1642357",
+        "name": "David Jones Garcia",
+        "last_team": "SAS"
+      },
+      {
+        "player_id": "1642434",
+        "name": "Riley Minix",
+        "last_team": "SAS"
+      },
+      {
+        "player_id": "1630639",
+        "name": "A.J. Lawson",
+        "last_team": "TOR"
+      },
+      {
+        "player_id": "1628964",
+        "name": "Mo Bamba",
+        "last_team": "TOR"
+      },
+      {
+        "player_id": "1641989",
+        "name": "Elijah Harkless",
+        "last_team": "UTA"
+      },
+      {
+        "player_id": "203994",
+        "name": "Jusuf Nurki\u0107",
+        "last_team": "UTA"
+      },
+      {
+        "player_id": "1642267",
+        "name": "Bub Carrington",
+        "last_team": "WAS"
+      }
+    ],
+    "unchanged": [
+      "goga bitadze",
+      "orlando robinson",
+      "jamal cain",
+      "paolo banchero",
+      "jase richardson",
+      "franz wagner",
+      "jonathan isaac",
+      "desmond bane",
+      "tristan da silva",
+      "tyus jones",
+      "jalen suggs",
+      "jett howard",
+      "anthony black",
+      "wendell carter",
+      "noah penda",
+      "naz reid",
+      "jaylen clark",
+      "joan beringer",
+      "johnny juzang",
+      "mike conley",
+      "rudy gobert",
+      "julius randle",
+      "anthony edwards",
+      "joe ingles",
+      "jaden mcdaniels",
+      "terrence shannon",
+      "donte divincenzo",
+      "leonard miller",
+      "bones hyland",
+      "rob dillingham",
+      "vladislav goldin",
+      "andrew wiggins",
+      "keshad johnson",
+      "norman powell",
+      "tyler herro",
+      "dru smith",
+      "kel'el ware",
+      "jaime jaquez",
+      "simone fontecchio",
+      "davion mitchell",
+      "jahmir young",
+      "pelle larsson",
+      "myron gardner",
+      "bam adebayo",
+      "baylor scheierman",
+      "jordan walsh",
+      "chris boucher",
+      "amari williams",
+      "anfernee simons",
+      "sam hauser",
+      "xavier tillman",
+      "luka garza",
+      "neemias queta",
+      "jaylen brown",
+      "payton pritchard",
+      "josh minott",
+      "derrick white",
+      "ron harper",
+      "ivica zubac",
+      "kris dunn",
+      "brook lopez",
+      "bradley beal",
+      "jordan miller",
+      "cam christie",
+      "nicolas batum",
+      "john collins",
+      "kobe brown",
+      "james harden",
+      "kobe sanders",
+      "derrick jones",
+      "kawhi leonard",
+      "curtis jones",
+      "spencer jones",
+      "julian strawther",
+      "bruce brown",
+      "christian braun",
+      "peyton watson",
+      "tim hardaway",
+      "jalen pickett",
+      "jamal murray",
+      "zeke nnaji",
+      "cameron johnson",
+      "aaron gordon",
+      "daron holmes",
+      "hunter tyson",
+      "isaiah stewart",
+      "chaz lanier",
+      "jadeney",
+      "paul reed",
+      "cade cunningham",
+      "marcus sasser",
+      "duncan robinson",
+      "ausar thompson",
+      "tolu smith",
+      "daniss jenkins",
+      "wendell moore",
+      "isaac jones",
+      "javonte green",
+      "caris levert",
+      "jalen duren",
+      "tobias harris",
+      "bobi klintman",
+      "caleb houstan",
+      "n'faly dante",
+      "jalen johnson",
+      "keaton wallace",
+      "nickeil alexander-walker",
+      "dyson daniels",
+      "asa newell",
+      "luke kennard",
+      "mouhamed gueye",
+      "onyeka okongwu",
+      "zaccharie risacher",
+      "darius garland",
+      "sam merrill",
+      "jaylon tyson",
+      "nae'qwan tomlin",
+      "craig porter",
+      "de'andre hunter",
+      "thomas bryant",
+      "donovan mitchell",
+      "larry nance",
+      "tyrese proctor",
+      "chris livingston",
+      "dean wade",
+      "luke travers",
+      "evan mobley",
+      "jarrett allen",
+      "lonzo ball",
+      "chucky hepburn",
+      "jamal shead",
+      "ja'kobe walter",
+      "immanuel quickley",
+      "ochai agbaji",
+      "scottie barnes",
+      "jamison battle",
+      "brandon ingram",
+      "garrett temple",
+      "rj barrett",
+      "jonathan mogbo",
+      "jakob poeltl",
+      "collin murray-boyles",
+      "sandro mamukelashvili",
+      "gradey dick",
+      "alijah martin",
+      "kyshawn george",
+      "marvin bagley",
+      "aj johnson",
+      "anthony gill",
+      "will riley",
+      "alex sarr",
+      "malaki branham",
+      "tre johnson",
+      "sharife cooper",
+      "tristan vukcevic",
+      "jamir watkins",
+      "cam whitmore",
+      "khris middleton",
+      "justin champagnie",
+      "bilal coulibaly",
+      "ayo dosunmu",
+      "coby white",
+      "julian phillips",
+      "kevin huerter",
+      "jalen smith",
+      "noa essengue",
+      "patrick williams",
+      "josh giddey",
+      "isaac okoro",
+      "jevon carter",
+      "tre jones",
+      "lachlan olbrich",
+      "zach collins",
+      "matas buzelis",
+      "emanuel miller",
+      "dalen terry",
+      "lamelo ball",
+      "pat connaughton",
+      "ryan kalkbrenner",
+      "liam mcneeley",
+      "miles bridges",
+      "josh green",
+      "tre mann",
+      "sion james",
+      "kj simpson",
+      "brandon miller",
+      "kon knueppel",
+      "collin sexton",
+      "pj hall",
+      "mason plumlee",
+      "antonio reeves",
+      "paul george",
+      "joel embiid",
+      "trendon watford",
+      "quentin grimes",
+      "jabari walker",
+      "andre drummond",
+      "justin edwards",
+      "eric gordon",
+      "johni broome",
+      "jared mccain",
+      "kelly oubre",
+      "tyrese maxey",
+      "kyle lowry",
+      "adem bona",
+      "vj edgecombe",
+      "keon ellis",
+      "devin carter",
+      "malik monk",
+      "daeqwon plowden",
+      "drew eubanks",
+      "zach lavine",
+      "demar derozan",
+      "keegan murray",
+      "doug mcdermott",
+      "maxime raynaud",
+      "dylan cardwell",
+      "russell westbrook",
+      "nique clifford",
+      "domantas sabonis",
+      "precious achiuwa",
+      "daniel gafford",
+      "moussa cisse",
+      "klay thompson",
+      "dwight powell",
+      "miles kelly",
+      "ryan nembhard",
+      "max christie",
+      "brandon williams",
+      "naji marshall",
+      "caleb martin",
+      "anthony davis",
+      "d'angelo russell",
+      "cooper flagg",
+      "jaden hardy",
+      "dereck lively",
+      "tari eason",
+      "aaron holiday",
+      "clint capela",
+      "reed sheppard",
+      "jeff green",
+      "jae'sean tate",
+      "jd davison",
+      "kevin durant",
+      "josh okogie",
+      "dorian finney-smith",
+      "alperen sengun",
+      "amen thompson",
+      "isaiah crawford",
+      "steven adams",
+      "jabari smith",
+      "cam thomas",
+      "danny wolf",
+      "e.j. liddell",
+      "michael porter",
+      "day'ron sharpe",
+      "tyrese martin",
+      "nolan traore",
+      "ben saraf",
+      "ziaire williams",
+      "jalen wilson",
+      "tyson etienne",
+      "noah clowney",
+      "terance mann",
+      "drake powell",
+      "brice sensabaugh",
+      "cody williams",
+      "kyle anderson",
+      "ace bailey",
+      "svi mykhailiuk",
+      "walter clayton",
+      "taylor hendricks",
+      "lauri markkanen",
+      "kyle filipowski",
+      "keyonte george",
+      "kevin love",
+      "walker kessler",
+      "isaiah collier",
+      "branden carlson",
+      "jalen williams",
+      "isaiah hartenstein",
+      "ajay mitchell",
+      "brooks barnhizer",
+      "ousmane dieng",
+      "luguentz dort",
+      "chris youngblood",
+      "kenrich williams",
+      "cason wallace",
+      "chet holmgren",
+      "alex caruso",
+      "aaron wiggins",
+      "shai gilgeous-alexander",
+      "jaylin williams",
+      "isaiah joe",
+      "sidy cissoko",
+      "kris murray",
+      "deni avdija",
+      "robert williams",
+      "matisse thybulle",
+      "jrue holiday",
+      "rayan rupert",
+      "shaedon sharpe",
+      "javonte cooke",
+      "donovan clingan",
+      "toumani camara",
+      "yang hansen",
+      "caleb love",
+      "blake wesley",
+      "jerami grant",
+      "duop reath",
+      "taelon peter",
+      "ben sheppard",
+      "t.j. mcconnell",
+      "micah potter",
+      "andrew nembhard",
+      "bennedict mathurin",
+      "obi toppin",
+      "johnny furphy",
+      "jarace walker",
+      "quenton jackson",
+      "aaron nesmith",
+      "jay huff",
+      "kam jones",
+      "isaiah jackson",
+      "pascal siakam",
+      "ethan thompson",
+      "tony bradley",
+      "giannis antetokounmpo",
+      "gary trent",
+      "kyle kuzma",
+      "jericho sims",
+      "amir coffey",
+      "aj green",
+      "bobby portis",
+      "gary harris",
+      "cole anthony",
+      "andre jackson",
+      "taurean prince",
+      "pete nance",
+      "myles turner",
+      "thanasis antetokounmpo",
+      "kevin porter",
+      "ryan rollins",
+      "vince williams",
+      "christian koloko",
+      "jaylen wells",
+      "cedric coward",
+      "cam spencer",
+      "olivier-maxence prosper",
+      "jaren jackson",
+      "jahmai mashack",
+      "john konchar",
+      "jock landale",
+      "kentavious caldwell-pope",
+      "santi aldama",
+      "javon small",
+      "zach edey",
+      "brandon clarke",
+      "ja morant",
+      "rui hachimura",
+      "gabe vincent",
+      "drew timme",
+      "adou thiero",
+      "austin reaves",
+      "nick smith",
+      "jarred vanderbilt",
+      "maxi kleber",
+      "jaxson hayes",
+      "bronny james",
+      "lebron james",
+      "jake laravia",
+      "deandre ayton",
+      "marcus smart",
+      "dalton knecht"
+    ]
+  },
+  "summary": {
+    "total_changes": 197,
+    "trades": 83,
+    "signings": 66,
+    "waivers": 48,
+    "api_calls": 31,
+    "cost": "$0.0103"
+  }
+}

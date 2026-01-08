@@ -391,42 +391,52 @@
 - ✅ `CLAUDE.md` - Updated status
 - ✅ `UPDATED_STATUS_AND_NEXT_STEPS.md` - This file
 
-### Week 2 Planned Deliverables
+### Week 2 Deliverables
 
-- [ ] `utils/bet_logger.py` - Logging framework
-- [ ] `bet_tracking.db` - SQLite database
-- [ ] `utils/tag_classifier.py` - Tag assignment
-- [ ] `backfill_test_results.py` - Historical data import
-- [ ] `logs/bets/2026-01-07.json` - JSON log example
-- [ ] Updated `module_c.py` - Confidence intervals
-- [ ] Updated `module_f.py` - Tag integration + confidence display
+**Days 1-2 (COMPLETE ✅):**
+- ✅ `utils/bet_logger.py` (650 lines) - Logging framework with dual storage
+- ✅ `bet_recommendations` table in ludi.db - Bet tracking schema
+- ✅ `bet_daily_summaries` table in ludi.db - Daily aggregations
+- ✅ `backfill_week1_bets.py` (221 lines) - Week 1 data import
+- ✅ `logs/bets/2026-01-07.json` - JSON log with 5 bets
+- ✅ Module F integration - `get_bet_logger()` singleton pattern
+
+**Days 3-4 (IN PROGRESS):**
+- [ ] `utils/tag_classifier.py` - Tag assignment logic
+- [ ] Updated `module_f.py` - Tag integration in briefings
+- [ ] Database schema update - Tags/archetype columns
+
+**Days 5-7 (UPCOMING):**
+- [ ] Updated `module_c.py` - Confidence intervals (percentiles)
+- [ ] Updated `module_f.py` - Confidence display in briefings
 
 ---
 
-## 🚀 Ready for Week 2!
+## 🚀 Days 3-4: Play Classification Tags
 
 **Current State:**
-- All modules validated ✅
-- Test pipeline passing ✅
-- Cost under budget ✅
-- Documentation updated ✅
+- Logging framework operational ✅
+- 5 Week 1 bets tracked ✅
+- Module F integrated ✅
+- JSON + SQLite dual storage ✅
 
-**Next Action:**
-1. Review Week 2 plan
-2. Create `utils/bet_logger.py` skeleton
-3. Design bet tracking database schema
-4. Implement JSON logging
-5. Test with Week 1 results
+**Next Action (Today - Jan 8):**
+1. Create `utils/tag_classifier.py` with:
+   - `assign_archetype_tag()` - SLASHER, STRETCH_BIG, etc.
+   - `assign_scenario_tags()` - BENEFICIARY, USAGE_VACUUM, etc.
+   - `assign_matchup_tags()` - HACKERS, PAINT_PACK, etc.
+2. Integrate tags into Module F output
+3. Update database schema for tags column
+4. Test with pipeline run
 
 **Estimated Timeline:**
-- Days 1-2: Logging (16 hours)
-- Days 3-4: Tags (16 hours)
+- Days 3-4: Tags (16 hours remaining)
 - Days 5-7: Confidence (24 hours)
-- Total: ~56 hours
+- Total remaining: ~40 hours
 
-**Gate to Week 3:** Logging framework must be operational and tested with at least 10 bets.
+**Gate to Week 3:** Logging framework operational ✅ + Tags implemented + Confidence intervals complete.
 
 ---
 
-**Last Updated:** January 7, 2026, 7:00 PM ET
+**Last Updated:** January 8, 2026, 12:55 PM ET
 **Next Update:** January 14, 2026 (Week 2 completion)

@@ -115,18 +115,41 @@ The mathematical foundation is sound:
    - Commit all code with protected `.env`
    - Add README with setup instructions
 
-#### Week 2: Module Integration
-4. **Connect Modules A-G (Days 5-7):**
-   - Test each module independently first
-   - Verify API connections (The-Odds-API, Tank01, Google)
-   - Run `python main.py` and debug import errors
+#### Week 1 Continued: Module Integration (Days 5-7)
+4. **Test Individual Modules (Days 5-6):**
+   - Test Module A (Gatekeeper): Fetch odds from The-Odds-API
+   - Test Module C (Oracle): Run Poisson simulations
+   - Test Module D (Yak): Check injury intelligence & 15-min cache
+   - Test Module E (Calibrator): Apply matchup adjustments
+   - Test Module F (Alchemist/Reporter): Generate daily briefing
+   - Test Module G (Zebras): Referee impact calculations
+   - Test Module H (Historian): Database read/write operations
+   - Test Module X (Scenario Builder): Injury scenario toggles
 
-5. **First End-to-End Test (Days 8-9):**
-   - Run full pipeline on single game
-   - Verify data flows: Gatekeeper → Oracle → Yak → Calibrator → Reporter
+5. **Critical Verification Checks (Day 7):**
+   - **Blowout Tax**: Verify Module F downgrades props in blowout scenarios
+   - **Scenario Control**: Verify Module X UI allows manual "Player OUT" toggles
+   - **Usage Redistribution**: Confirm usage vacuum math when star player excluded
+   - Run `python main.py` end-to-end and debug integration issues
    - Generate first `daily_briefing.txt`
 
-6. **Add Logging Framework (Day 10):**
+**Week 1, Days 5-7 Success Criteria:**
+- ✅ All 9 modules import and run without crashing
+- ✅ API calls return valid data (check rate limits)
+- ✅ Simulations generate player projections
+- ✅ Blowout Tax logic verified in Module F
+- ✅ Scenario Control toggles function correctly
+- ✅ Daily briefing file contains readable recommendations
+
+---
+
+#### Week 2: Integration & Logging (Days 8-14)
+6. **First End-to-End Pipeline Test (Days 8-9):**
+   - Run full pipeline on single game slate
+   - Verify data flows: Gatekeeper → Oracle → Yak → Calibrator → Reporter
+   - Debug any module communication issues
+
+7. **Add Logging Framework (Day 10):**
    ```python
    import logging
    logging.basicConfig(
@@ -136,53 +159,89 @@ The mathematical foundation is sound:
    )
    ```
 
+8. **Add Play Classification Tags (Days 11-12):** *NEW*
+   - Implement "BLUE CHIP" tag: Edge >10% AND WinProb >60%
+   - Implement "CORE ASSET" tag: Edge >4% AND WinProb >55%
+   - Implement "THE STEAL" tag: Edge >5% AND Line Diff >1.5 pts
+   - Update Module F output to include classification tags
+
+9. **Add Archetype Schema Foundation (Days 13-14):** *NEW*
+   - Create `player_archetypes` table in database.py
+   - Create `team_archetypes` table in database.py
+   - Run one-time scout script to classify all 30 teams
+   - Add offense_style/defense_style to team lookup
+
 **Week 2 Success Criteria:**
-- ✅ main.py runs without crashing
+- ✅ main.py runs without crashing on full slate
 - ✅ Generates projections for all players in slate
-- ✅ daily_briefing.txt contains readable recommendations
+- ✅ daily_briefing.txt contains BLUE CHIP/CORE ASSET tags
+- ✅ Team archetypes populated (Pace & Space, Bully Ball, etc.)
 - ✅ Log file shows no critical errors
 
 ---
 
-### Phase 2: The Logic (The Engine) — Weeks 3-4 (REFINED)
+### Phase 2: The S.A.V.A.G.E. Engine — Weeks 3-4 (ENHANCED)
 
-**Goal:** Optimize performance, add error handling, generate consistent daily briefings
+**Goal:** Upgrade to production-grade Poisson simulations, implement archetype system, add tracking data
 
-#### Week 3: Performance Optimization
-1. **Simulation Tuning (Days 11-13):**
-   - Current: 25,000 iterations per player
-   - Test: 10,000 vs 25,000 - does accuracy improve?
-   - Goal: Reduce runtime from ~5 min to <2 min per slate
+**Engine Name:** S.A.V.A.G.E. = **S**cenario **A**nalysis & **V**alue **A**ssessment **G**ame **E**ngine
 
-2. **Database Indexing (Day 14):**
-   - Add indexes on player_id, game_date
-   - Test query performance (L5, L10 averages)
+#### Week 3: Simulation & Archetype Enhancement
+1. **Upgrade to 2,500 Poisson Simulations (Days 15-16):**
+   - Replace weighted averages with `numpy.random.poisson`
+   - Target: 2% margin of error (optimal speed/accuracy balance)
+   - Implement "fat tail" distribution for star player explosions
+   - Add Coefficient of Variation (CV) calculation per player
 
-3. **Caching Strategy (Days 15-16):**
-   - Cache referee data (refresh daily, not every run)
-   - Cache team archetypes (static for season)
-   - Cache injury status (15-minute TTL)
+2. **Player Archetype Classification (Days 17-18):** *NEW*
+   - Fetch Synergy Play Type data from nba_api
+   - Classify rebounding: "Warrior" vs "Vulture"
+   - Classify defense: "Island", "Screen Navigator", "Drop Anchor"
+   - Classify playmaking: "PnR Maestro", "Connector", "Transition Artist"
+   - Populate `player_archetypes` table
 
-#### Week 4: Robustness & Error Handling
-4. **Add Try/Except Blocks (Days 17-18):**
+3. **Implement "One Ball Rule" (Day 19):** *NEW*
+   - Add negative correlation logic to simulations
+   - If Giannis gets 15 rebounds in a sim run, Brook Lopez probability decreases
+   - Enable accurate "PIVOT PLAY" correlation detection
+
+4. **Referee Weekly Sync Enhancement (Day 20):** *NEW*
+   - Basketball-Reference: Weekly personality profiles
+   - NBAstuffer: Daily "Last 5 Games" recency data
+   - Covers: Cross-reference O/U profitability trends
+   - Add "Data Conflict" flag when sources disagree
+
+#### Week 4: Robustness & Historical Run
+5. **Add Try/Except Blocks (Days 21-22):**
    - Wrap API calls with retry logic (max 3 attempts)
    - Graceful degradation if one module fails
    - Email/log critical errors
 
-5. **Edge Case Testing (Day 19):**
+6. **Add Tracking Data Integration (Days 23-24):** *NEW*
+   - Fetch `PlayerDashPtPass` for Potential Assists
+   - Fetch `PlayerDashPtReb` for Contested/Uncontested %
+   - Run overnight batch job (not live) to avoid lag
+   - Add `potential_assists`, `contested_reb_pct` columns
+
+7. **Edge Case Testing (Day 25):**
    - Empty slate (no games scheduled)
    - API timeout scenarios
    - Player with no historical data
+   - Back-to-back game fatigue tax
 
-6. **Historical Run (Days 20-21):**
+8. **Historical Run (Days 26-28):**
    - Run pipeline on 10 past dates
-   - Store projections in database
+   - Store projections with BLUE CHIP/STEAL tags
    - Prepare data for Phase 4 validation
+   - Document runtime performance
 
 **Week 4 Success Criteria:**
+- ✅ 2,500 Poisson simulations running per player
+- ✅ Player archetypes populated for active roster
+- ✅ "One Ball Rule" correlation working in sims
+- ✅ Potential Assists/Rebounds data integrated
 - ✅ Pipeline runs on 10 consecutive dates without manual intervention
 - ✅ Runtime <2 minutes per slate
-- ✅ Projections stored in database for all dates
 - ✅ Ready for historical comparison
 
 ---
@@ -272,7 +331,7 @@ def calculate_metrics(results):
     return metrics
 ```
 
-**Days 25-26: Run Backtest & Analyze**
+**Days 33-34: Run Backtest & Analyze**
 1. Execute on 50 past games (10 dates × 5 games avg)
 2. Generate report with visualizations:
    - Error distribution by stat category
@@ -284,17 +343,26 @@ def calculate_metrics(results):
    - Is hit rate > 52.4% overall?
    - Are high-edge bets performing better?
 
+**Days 35: Add CLV Tracking Foundation** *NEW*
+4. **Implement Closing Line Value (CLV) Tracking:**
+   - Add `opening_line`, `closing_line` columns to backtesting_results
+   - Calculate: `clv_pct = (closing_line - opening_line) / opening_line * 100`
+   - CLV > 0 means you "beat the market" (even if bet loses)
+   - Track CLV % as primary performance metric (not just W/L)
+
 **Week 5 Success Criteria (GO/NO-GO DECISION):**
 
 **Minimum Viable Accuracy:**
 - ✅ RMSE < 15% for PTS/AST/REB (acceptable for personal use)
 - ✅ Hit rate > 50% overall (better than random)
 - ✅ Hit rate improves with edge threshold (validates edge calculation)
+- ✅ CLV tracking schema implemented
 
 **Strong Success (Proceed to Phase 6 with confidence):**
 - ✅ RMSE < 10% for PTS/AST/REB
 - ✅ Hit rate > 52% overall
 - ✅ Hit rate > 55% on 10%+ edge bets
+- ✅ CLV positive on >50% of bets
 
 **Failure (STOP, diagnose, refactor):**
 - ❌ RMSE > 15%
@@ -657,56 +725,99 @@ def calculate_metrics(results):
 ## 8. Implementation Checklist (8-Week Gantt Chart)
 
 ```
-Week 1: Foundation
-[x] Day 1:  Security fix (.env migration)
-[ ] Day 2-3: Migrate JSON to SQLite
-[ ] Day 4:  Create GitHub repo
-[ ] Day 5-7: Test module connections
+Week 1: Foundation (Days 1-7)
+[x] Day 1:    Security fix (.env migration) ✅
+[x] Day 2-3:  Migrate JSON to SQLite ✅
+[x] Day 4:    Create GitHub repo ✅
+[ ] Day 5-6:  Test individual modules (A-H, X)
+[ ] Day 7:    Critical verification (Blowout Tax, Scenario Control)
 
-Week 2: Integration
-[ ] Day 8-9:  First end-to-end pipeline run
-[ ] Day 10:   Add logging framework
-[ ] Day 11-14: Performance optimization
+Week 2: Integration & Classification (Days 8-14)
+[ ] Day 8-9:   First end-to-end pipeline run
+[ ] Day 10:    Add logging framework
+[ ] Day 11-12: Add play classification tags (BLUE CHIP, STEAL) *NEW*
+[ ] Day 13-14: Add archetype schema foundation *NEW*
 
-Week 3: Performance
-[ ] Day 15-16: Simulation tuning
-[ ] Day 17-18: Caching strategy
-[ ] Day 19-21: Error handling
+**MILESTONE: Team archetypes populated, classification tags working**
 
-Week 4: Historical Data
-[ ] Day 22-24: Run pipeline on 10 past dates
-[ ] Day 25-28: Store projections in DB
+Week 3: S.A.V.A.G.E. Engine Upgrade (Days 15-20)
+[ ] Day 15-16: Upgrade to 2,500 Poisson simulations *NEW*
+[ ] Day 17-18: Player archetype classification *NEW*
+[ ] Day 19:    Implement "One Ball Rule" correlation *NEW*
+[ ] Day 20:    Referee weekly sync enhancement *NEW*
+
+Week 4: Tracking Data & Historical Run (Days 21-28)
+[ ] Day 21-22: Add try/except blocks, error handling
+[ ] Day 23-24: Tracking data integration (Potential Assists) *NEW*
+[ ] Day 25:    Edge case testing (empty slate, timeouts, B2B)
+[ ] Day 26-28: Historical run on 10 past dates
 
 **GATE 1: Week 4 Complete → Proceed to Validation**
 
-Week 5: Validation ⚠️ CRITICAL
+Week 5: Validation ⚠️ CRITICAL (Days 29-35)
 [ ] Day 29:    Design backtesting schema
 [ ] Day 30-31: Write backtest_model.py
 [ ] Day 32-33: Run on 50 historical games
-[ ] Day 34-35: Analyze results
+[ ] Day 34:    Analyze results (RMSE, hit rate)
+[ ] Day 35:    Add CLV tracking foundation *NEW*
 
 **GATE 2: Week 5 Validation → GO/NO-GO Decision**
-- If PASS: Proceed to Week 6 (light calibration) or Week 7 (dashboard)
-- If FAIL: Extend Week 6 for deep refactoring
+- If PASS (>52% hit rate): Proceed to Week 6 or Week 7
+- If FAIL (<50% hit rate): Extend Week 6 for deep refactoring
 
-Week 6: Calibration (Conditional)
+Week 6: Calibration & Alerts (Days 36-42)
 [ ] Day 36-37: Root cause analysis (if needed)
 [ ] Day 38-39: Adjust modifiers and retest
-[ ] Day 40-42: Validate on holdout set
+[ ] Day 40:    Add "Reverse Line Movement" alert *NEW*
+[ ] Day 41-42: Validate on holdout set
 
 **GATE 3: Week 6 Calibrated → Proceed to Dashboard**
 
-Week 7: Dashboard
-[ ] Day 43-45: Build Streamlit app
-[ ] Day 46-47: Add visualizations
+Week 7: Dashboard (Days 43-49)
+[ ] Day 43-45: Build Streamlit app ("The Front Office")
+[ ] Day 46-47: Add visualizations (Market Pulse, The Radar)
 [ ] Day 48-49: Deploy to Streamlit Cloud
 
-Week 8: Automation
+Week 8: Automation & Documentation (Days 50-56)
 [ ] Day 50-51: GitHub Actions workflow
 [ ] Day 52-53: Telegram bot (optional)
-[ ] Day 54-55: Documentation
+[ ] Day 54-55: Documentation (README, USER_GUIDE, terminology.md) *NEW*
 [ ] Day 56:    Launch! 🚀
+
+**POST-LAUNCH: 200 paper bets before real money**
 ```
+
+---
+
+## 9. NEW: S.A.V.A.G.E. Engine Reference
+
+**Full Name:** Scenario Analysis & Value Assessment Game Engine
+
+### Core Components
+| Component | Module | Description |
+|-----------|--------|-------------|
+| **Scenario** | Module X | Dynamic roster/injury scenarios |
+| **Analysis** | Module E | Matchup and archetype evaluation |
+| **Value** | Module F | Edge detection and EV calculation |
+| **Assessment** | Module C | Confidence grading (Oracle) |
+| **Game** | Module A | Sport-specific data (Gatekeeper) |
+| **Engine** | Core | 2,500 Poisson simulations |
+
+### Play Classification Tags
+| Tag | Criteria | Action |
+|-----|----------|--------|
+| **BLUE CHIP** | Edge >10%, WinProb >60% | High allocation |
+| **CORE ASSET** | Edge >4%, WinProb >55% | Standard allocation |
+| **THE STEAL** | Edge >5%, Line Diff >1.5 | Value opportunity |
+| **STRUCTURED** | Correlation value detected | SGP consideration |
+| **PIVOT PLAY** | Negative correlation | Trade-off bet |
+
+### Archetype Quick Reference
+**Team Offense:** Pace & Space, Bully Ball, Heliocentric
+**Team Defense:** Funnel (Drop), Swarm (Blitz), Switch Everything
+**Player Rebounding:** Warrior (Contested), Vulture (Uncontested)
+**Player Defense:** Island, Screen Navigator, Drop Anchor
+**Player Playmaking:** PnR Maestro, Connector, Transition Artist
 
 ---
 
@@ -786,8 +897,42 @@ By Week 8, you'll have:
 
 ---
 
-**Document Version:** 2.0 - Revised Implementation Plan
-**Compiled By:** Claude Sonnet 4.5 (Post-Assessment Revision)
-**Date:** January 4, 2026
-**Status:** APPROVED - Ready to Execute
-**First Action:** Create .env file and migrate API keys (Day 1, Hour 1)
+**Document Version:** 2.2 - Added Devigging Implementation
+**Compiled By:** Claude Opus 4.5 (Post-Historical Context Review)
+**Original Date:** January 4, 2026
+**Last Updated:** January 6, 2026
+**Status:** APPROVED - Week 1 Days 1-4 Complete ✅ | Devigging Added ✅
+**Current Phase:** Week 1, Days 5-7 (Module Integration Testing)
+**Engine Name:** S.A.V.A.G.E. Protocol (Scenario Analysis & Value Assessment Game Engine)
+**Reference Doc:** See `original vision/more_relevant_history.md` for full project history
+
+---
+
+## CHANGELOG: January 6, 2026
+
+### V2.2 - Devigging Implementation Added
+
+**New Files Created:**
+- `utils/__init__.py` - Utils package initializer
+- `utils/devig.py` - Fair odds calculation utilities
+
+**Files Modified:**
+- `module_f.py` (V4.3 → V4.4) - Integrated devigged edge calculation
+
+**What Changed:**
+1. Edge calculation now removes bookmaker vig (~2-5%) to reveal TRUE edge
+2. Module F accepts new prop format with odds: `{"line": 24.5, "odds_over": -115, "odds_under": -105}`
+3. Backwards compatible with legacy format (line only, assumes -110/-110)
+4. Added `_estimate_over_probability()` method using stat-specific variance
+5. Win probability now uses model probability directly (more accurate)
+
+**Impact:**
+- Edge values will be ~3-5% HIGHER than before (vig was hiding true edge)
+- More accurate EV calculations
+- Better alignment with CLV tracking in Week 5 validation
+
+**Example:**
+```
+Before (with vig):  Model 55% vs Raw 53.5% = 2.8% edge
+After (devigged):   Model 55% vs Fair 51.1% = 7.6% edge
+```

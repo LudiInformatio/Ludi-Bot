@@ -111,6 +111,48 @@ class LudiHistorian:
             )
         ''')
 
+        # 5. Roster History Table (Audit Trail for Trades/Signings/Waivers)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS roster_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                team TEXT NOT NULL,
+                season_id TEXT NOT NULL,
+                status TEXT DEFAULT 'ACTIVE',
+                change_type TEXT,
+                change_date TEXT NOT NULL,
+                previous_team TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Add indexes for roster_history
+        c.execute('CREATE INDEX IF NOT EXISTS idx_roster_history_player ON roster_history(player_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_roster_history_date ON roster_history(change_date)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_roster_history_season ON roster_history(season_id)')
+
+        # Add new columns to players table (for existing databases)
+        # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN season_id TEXT DEFAULT "22025"')
+        except:
+            pass  # Column already exists
+
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN is_active BOOLEAN DEFAULT 1')
+        except:
+            pass  # Column already exists
+
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN roster_updated_at TIMESTAMP')
+        except:
+            pass  # Column already exists
+
+        # Add composite index for season-aware roster queries
+        c.execute('CREATE INDEX IF NOT EXISTS idx_players_season_team ON players(season_id, team, is_active)')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
@@ -118,10 +160,11 @@ class LudiHistorian:
     def update_player_census(self, player_data):
         """
         Upserts (Update or Insert) player data.
+        LEGACY METHOD - Use update_player_census_v2() for new code with season tracking.
         """
         conn = self._get_conn()
         c = conn.cursor()
-        
+
         c.execute('''
             INSERT INTO players (player_id, name, team, position, status, base_ppg, usg_pct)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -131,15 +174,99 @@ class LudiHistorian:
                 usg_pct=excluded.usg_pct,
                 updated_at=CURRENT_TIMESTAMP
         ''', (
-            player_data['id'], 
-            player_data['name'], 
-            player_data['team'], 
+            player_data['id'],
+            player_data['name'],
+            player_data['team'],
             player_data['pos'],
             player_data.get('status', 'ACTIVE'),
             player_data.get('ppg', 0),
             player_data.get('usg', 0)
         ))
-        
+
+        conn.commit()
+        conn.close()
+
+    def update_player_census_v2(self, player_data, season_id='22025'):
+        """
+        Enhanced version with season tracking and roster update timestamps.
+
+        Args:
+            player_data: Dict with id, name, team, pos, status, ppg, usg
+            season_id: Season identifier (default: '22025' for 2025-26)
+
+        Returns:
+            bool: True if team changed (trade detected), False otherwise
+        """
+        conn = self._get_conn()
+        c = conn.cursor()
+
+        # Check if player exists and team changed (trade detection)
+        c.execute('SELECT team FROM players WHERE player_id = ?', (player_data['id'],))
+        existing = c.fetchone()
+        team_changed = existing and existing[0] != player_data['team']
+
+        c.execute('''
+            INSERT INTO players (
+                player_id, name, team, position, status,
+                base_ppg, usg_pct, season_id, is_active, roster_updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+            ON CONFLICT(player_id) DO UPDATE SET
+                team=excluded.team,
+                position=excluded.position,
+                status=excluded.status,
+                base_ppg=excluded.base_ppg,
+                usg_pct=excluded.usg_pct,
+                season_id=excluded.season_id,
+                is_active=excluded.is_active,
+                roster_updated_at=CURRENT_TIMESTAMP,
+                updated_at=CURRENT_TIMESTAMP
+        ''', (
+            player_data['id'],
+            player_data['name'],
+            player_data['team'],
+            player_data.get('pos', 'UNK'),
+            player_data.get('status', 'ACTIVE'),
+            player_data.get('ppg', 0),
+            player_data.get('usg', 0),
+            season_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return team_changed
+
+    def log_roster_change(self, player_id, player_name, old_team, new_team, change_type, notes=''):
+        """
+        Log roster change to history table for audit trail.
+
+        Args:
+            player_id: Player identifier
+            player_name: Player full name
+            old_team: Previous team abbreviation (or None for signings)
+            new_team: New team abbreviation (or None for waivers)
+            change_type: 'TRADE', 'SIGNING', 'WAIVED', 'TWO_WAY'
+            notes: Optional notes about the transaction
+        """
+        conn = self._get_conn()
+        c = conn.cursor()
+
+        c.execute('''
+            INSERT INTO roster_history (
+                player_id, player_name, team, season_id,
+                change_type, change_date, previous_team, notes
+            ) VALUES (?, ?, ?, ?, ?, DATE('now'), ?, ?)
+        ''', (
+            player_id,
+            player_name,
+            new_team or 'FREE_AGENT',
+            '22025',
+            change_type,
+            old_team,
+            notes
+        ))
+
         conn.commit()
         conn.close()
 

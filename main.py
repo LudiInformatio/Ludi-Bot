@@ -2,7 +2,9 @@ import sys
 import pandas as pd
 import time
 import logging
+import argparse
 from datetime import datetime
+from utils.pm_bot import ProjectManagerBot
 
 # ====================================================
 # LUDI INFORMATIO | CENTRAL ORCHESTRATOR
@@ -12,13 +14,14 @@ from datetime import datetime
 # Ensure your files are named module_a.py, module_b.py, etc.
 try:
     import config
-    from module_a import LudiGatekeeper   # The Gatekeeper (Lines)
-    from module_b import LudiEngine       # The Engine (Stats/Trends)
-    from module_c import LudiSimulator    # The Simulator (Math)
-    from module_d import LudiYak          # The Yak (News)
-    from module_e import LudiCalibrator   # The Calibrator (Adjustments)
-    from module_f import LudiReporter     # The Reporter (Briefing)
-    from module_g import LudiRefEngine    # The Zebras (Referees)
+    from module_a import Gatekeeper        # The Gatekeeper (Lines)
+    from module_b import print_sharp_box_score  # Display function (Stats/Trends)
+    from module_c import LudiOracle        # The Simulator (Math)
+    from module_d import LudiYak           # The Yak (News)
+    from module_e import LudiCalibrator    # The Calibrator (Adjustments)
+    from module_f import LudiReporter      # The Reporter (Briefing)
+    from module_g import LudiRefEngine     # The Zebras (Referees)
+    from module_h_historian import LudiHistorian  # Database/Historical Data
 except ImportError as e:
     print(f"CRITICAL ERROR: Missing a Ludi Module. {e}")
     sys.exit(1)
@@ -34,41 +37,55 @@ class LudiOrchestrator:
         print("="*50)
 
         # 1. INITIALIZE ALL SYSTEMS
-        self.gate = LudiGatekeeper()
-        self.engine = LudiEngine()
-        self.sim = LudiSimulator()
+        self.gate = Gatekeeper()
+        self.historian = LudiHistorian()  # Database/Historical data
+        self.sim = LudiOracle()
         self.yak = LudiYak()
         self.calib = LudiCalibrator()
         self.reporter = LudiReporter()
         self.zebras = LudiRefEngine()
-        
+
         # Build Ref DB immediately
         self.zebras.build_ref_database()
 
+        # Note: Module B (print_sharp_box_score) is a function, not a class
+        # Use self.historian for historical data access instead
+
     def get_roster_for_game(self, team_abbr):
         """
-        Helper: Filters Module B's history DB to find active players for a team.
+        Helper: Filters historical DB to find active players for a team.
+        TODO: Implement using database.py or Module H (Historian)
         """
-        if self.engine.history_df.empty:
-            return []
-            
-        # Filter by Team Abbreviation (assuming 'TEAM_ABBREVIATION' exists in NBA API data)
-        # We look at the last 15 days to get the current rotation
-        recent_date = pd.Timestamp.now() - pd.Timedelta(days=20)
-        
-        mask = (self.engine.history_df['TEAM_ABBREVIATION'] == team_abbr) & \
-               (self.engine.history_df['GAME_DATE'] >= recent_date)
-               
-        team_df = self.engine.history_df[mask]
-        
-        # Get unique players who have played recently
-        # Return list of (ID, Name)
-        roster = team_df[['PLAYER_ID', 'PLAYER_NAME']].drop_duplicates()
-        return roster.to_dict('records')
+        # TODO: This needs to be reimplemented to use ludi.db
+        # For now, return empty list to prevent crashes
+        print(f"[WARN] get_roster_for_game() not yet implemented for {team_abbr}")
+        return []
+
+        # ORIGINAL CODE (needs refactoring):
+        # if self.engine.history_df.empty:
+        #     return []
+        # recent_date = pd.Timestamp.now() - pd.Timedelta(days=20)
+        # mask = (self.engine.history_df['TEAM_ABBREVIATION'] == team_abbr) & \
+        #        (self.engine.history_df['GAME_DATE'] >= recent_date)
+        # team_df = self.engine.history_df[mask]
+        # roster = team_df[['PLAYER_ID', 'PLAYER_NAME']].drop_duplicates()
+        # return roster.to_dict('records')
 
     def run_daily_cycle(self):
+        """
+        ⚠️ WARNING: This method uses OLD architecture (Module B as LudiEngine class)
+
+        TODO FOR NEXT SESSION:
+        - Module B is now just print_sharp_box_score() function
+        - Historical data is in ludi.db (use database.py or self.historian)
+        - Player analysis needs to be reimplemented or refactored
+        - This method will FAIL until refactored to use current module architecture
+
+        See CLAUDE.md for correct module class names and architecture.
+        """
         print("\n" + "="*50)
         print("   >>> STARTING DAILY SIMULATION CYCLE <<<")
+        print("   ⚠️  WARNING: Using old architecture - needs refactoring")
         print("="*50)
 
         # -------------------------------------------------
@@ -208,6 +225,26 @@ class LudiOrchestrator:
         with open("daily_briefing.txt", "w", encoding="utf-8") as f:
             f.write(briefing)
 
+
 if __name__ == "__main__":
-    app = LudiOrchestrator()
-    app.run_daily_cycle()
+    parser = argparse.ArgumentParser(description="Ludi Informatio Manager")
+    parser.add_argument("--mode", type=str, default="interactive", 
+                        choices=["interactive", "briefing", "debrief", "pm_briefing", "pm_debrief"],
+                        help="Operation mode")
+    
+    args = parser.parse_args()
+
+    if args.mode == "pm_briefing":
+        bot = ProjectManagerBot()
+        bot.generate_briefing(mode="morning")
+    
+    elif args.mode == "pm_debrief":
+        bot = ProjectManagerBot()
+        bot.generate_briefing(mode="nightly")
+
+    elif args.mode == "interactive":
+        app = LudiOrchestrator()
+        app.run_daily_cycle()
+        
+    else:
+        print(f"Mode {args.mode} not yet implemented or legacy.")

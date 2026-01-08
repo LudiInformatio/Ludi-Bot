@@ -4,8 +4,12 @@ import os
 import time
 from datetime import datetime, timedelta
 from duckduckgo_search import DDGS
-import unidecode 
+import unidecode
 import config
+
+# [PAID TIER] Import monitoring and retry utilities
+from utils.api_monitor import get_monitor
+from utils.api_helpers import retry_with_backoff
 
 # ==========================================
 # LUDI INFORMATIO | MODULE D: THE YAK
@@ -18,14 +22,17 @@ class LudiYak:
         print(f"LUDI INFORMATIO: MODULE D (YAK V3.5) ONLINE")
         print(f"   >>> 15-MIN SYNC | PROBABLE & AVAILABLE ACTIVE")
         print(f"{'='*40}")
-        
+
         self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
         self.TANK_HOST = "tank01-fantasy-stats.p.rapidapi.com"
         self.cache_file = "yak_cache.json"
         self.cache = self._load_cache()
-        
+
         self.official_injuries = {}
         self.last_official_refresh = None
+
+        # [PAID TIER] Initialize API Monitor
+        self.monitor = get_monitor()
         
         self.KEYWORDS = {
             "OUT": ["ruled out", "won't play", "surgery", "out indefinitely", "downgraded", "rest", "inactive"],
@@ -47,6 +54,7 @@ class LudiYak:
         with open(self.cache_file, 'w') as f:
             json.dump(self.cache, f)
 
+    @retry_with_backoff(max_attempts=3, backoff=2.0)
     def refresh_official_injuries(self):
         """Syncs with the NBA's 15-minute reporting cycle."""
         if self.last_official_refresh:
@@ -56,10 +64,17 @@ class LudiYak:
 
         url = f"https://{self.TANK_HOST}/getNBAInjuryList"
         headers = {"X-RapidAPI-Key": self.TANK_KEY, "X-RapidAPI-Host": self.TANK_HOST}
-        
+
         try:
             r = requests.get(url, headers=headers, timeout=10)
+
+            # [PAID TIER] Log API usage
+            self.monitor.log_request('tank01', 'injury_list', r.headers)
+
+            # Enhanced error handling
+            r.raise_for_status()  # Raise for 4xx/5xx
             data = r.json()
+
             if r.status_code == 200 and 'body' in data:
                 self.official_injuries = {}
                 for item in data['body']:
@@ -67,13 +82,45 @@ class LudiYak:
                     clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
                     # Designation handles: Out, Doubtful, Questionable, Probable, Available
                     self.official_injuries[clean_name] = item.get('designation', 'Available')
-                
+
                 self.last_official_refresh = datetime.now()
                 print(f"   [YAK] 📋 Heartbeat: NBA Official Feed Synced.")
                 return True
+
+        except requests.exceptions.HTTPError as e:
+            if e.response and e.response.status_code == 429:
+                print(f"   [YAK] ⚠️ Rate limit - extending cache...")
+                return False  # Use cached data
+            else:
+                error_msg = f"HTTP Error {e.response.status_code if e.response else 'Unknown'}"
+                print(f"   [YAK] ❌ {error_msg}")
+                self.monitor.log_failed_request('tank01', 'injury_list', error_msg)
+                raise
+
         except Exception as e:
-            print(f"   [YAK] ⚠️ Refresh Error: {e}")
-        return False
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"   [YAK] ❌ Error: {error_msg}")
+            self.monitor.log_failed_request('tank01', 'injury_list', error_msg)
+            raise
+
+    def refresh_injuries_balldontlie(self):
+        """ [SECONDARY] BallDontLie Injury Source """
+        bdl_key = getattr(config, 'BALLDONTLIE_KEY', None)
+        if not bdl_key:
+            return False
+
+        url = f"https://{config.BALLDONTLIE_HOST}/v1/player_injuries"
+        headers = {"Authorization": bdl_key}
+        
+        try:
+            # r = requests.get(url, headers=headers)
+            # data = r.json()
+            # if r.status_code == 200:
+            #     print(f"   [YAK] 🛡️ Secondary Feed (BDL) Synced.")
+            #     # Logic to merge with self.official_injuries would go here
+            pass
+        except Exception as e:
+            print(f"   [YAK] ⚠️ BDL Refresh Error: {e}")
 
     def search_news(self, query):
         if query in self.cache:
@@ -93,6 +140,7 @@ class LudiYak:
     def get_player_status(self, player_name, team_name="NBA"):
         clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()
         self.refresh_official_injuries()
+        self.refresh_injuries_balldontlie() # BDL Backup
             
         status_tag = self.official_injuries.get(clean_name)
         

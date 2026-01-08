@@ -61,9 +61,46 @@ def send_message(text: str, parse_mode: str = "Markdown") -> bool:
     except requests.exceptions.HTTPError as e:
         print(f"❌ HTTP error: {e}")
         return False
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Failed to send Telegram message: {e}")
+
+def send_photo(photo_path: str, caption: str = None) -> bool:
+    """
+    Send a photo via Telegram bot.
+    
+    Args:
+        photo_path: Absolute path to the image file
+        caption: Optional text caption
+        
+    Returns:
+        True if sent successfully
+    """
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("❌ Telegram credentials not configured")
         return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
+    
+    try:
+        with open(photo_path, 'rb') as f:
+            files = {'photo': f}
+            data = {'chat_id': TELEGRAM_CHAT_ID}
+            if caption:
+                data['caption'] = caption
+                data['parse_mode'] = 'Markdown'
+            
+            response = requests.post(url, files=files, data=data, timeout=20)
+            response.raise_for_status()
+            
+            if response.json().get("ok"):
+                print("✅ Telegram photo sent successfully")
+                return True
+            else:
+                print(f"❌ Telegram API error: {response.json().get('description')}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Failed to send Telegram photo: {e}")
+        return False
+
 
 
 def send_alert(title: str, message: str) -> bool:

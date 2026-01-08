@@ -1,0 +1,51 @@
+[
+  {
+    "run_date": "2026-01-07",
+    "game_id": "TEST_GAME",
+    "game_date": "2026-01-07",
+    "matchup": "TEST @ TEST",
+    "player_name": "Test Player",
+    "team": "TEST",
+    "stat_category": "PTS",
+    "bet_side": "OVER",
+    "line": 20.5,
+    "projection": 22.3,
+    "true_edge": 8.5,
+    "ev": 12.0,
+    "units": 1.0,
+    "confidence_tier": "DIAMOND"
+  },
+  {
+    "run_date": "2026-01-07",
+    "game_id": "TEST_GAME",
+    "game_date": "2026-01-07",
+    "matchup": "TEST @ TEST",
+    "player_name": "Test Player",
+    "team": "TEST",
+    "stat_category": "PTS",
+    "bet_side": "OVER",
+    "line": 20.5,
+    "projection": 22.3,
+    "true_edge": 8.5,
+    "ev": 12.0,
+    "units": 1.0,
+    "confidence_tier": "DIAMOND"
+  },
+  {
+    "run_date": "2026-01-07",
+    "game_id": "TEST_GAME",
+    "game_date": "2026-01-07",
+    "matchup": "TEST @ TEST",
+    "player_name": "Test Player",
+    "team": "TEST",
+    "stat_category": "PTS",
+    "bet_side": "OVER",
+    "line": 20.5,
+    "projection": 22.3,
+    "true_edge": 8.5,
+    "ev": 12.0,
+    "units": 1.0,
+    "confidence_tier": "DIAMOND",
+    "bet_id": 1
+  }
+]

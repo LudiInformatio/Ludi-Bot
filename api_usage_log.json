@@ -1,0 +1,1129 @@
+[
+  {
+    "timestamp": "2026-01-07T17:08:03.990884",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19994",
+      "requests_used": "6",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T17:09:37.007633",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19988",
+      "requests_used": "12",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T17:09:37.576961",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19988",
+      "requests_used": "12",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T17:09:38.141327",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19988",
+      "requests_used": "12",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T17:09:38.712927",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19988",
+      "requests_used": "12",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T17:11:43.182570",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19982",
+      "requests_used": "18",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:23:12.619217",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19976",
+      "requests_used": "24",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:23:13.193699",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19976",
+      "requests_used": "24",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:23:13.760318",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19976",
+      "requests_used": "24",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:23:14.317388",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19976",
+      "requests_used": "24",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:24:19.914114",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19970",
+      "requests_used": "30",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:24:20.551687",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19970",
+      "requests_used": "30",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:24:21.156032",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19970",
+      "requests_used": "30",
+      "request_cost": "0"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:25:32.829277",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19964",
+      "requests_used": "36",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:26:39.314427",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19950",
+      "requests_used": "50",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:27:36.295081",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19936",
+      "requests_used": "64",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:28:46.442151",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19922",
+      "requests_used": "78",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:30:14.266449",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19904",
+      "requests_used": "96",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:39:35.552385",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19898",
+      "requests_used": "102",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:40:12.642495",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19889",
+      "requests_used": "111",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:54:18.092573",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19879",
+      "requests_used": "121",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:54:18.712200",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19855",
+      "requests_used": "145",
+      "request_cost": "24"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:54:19.324126",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19834",
+      "requests_used": "166",
+      "request_cost": "21"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:54:19.942349",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19810",
+      "requests_used": "190",
+      "request_cost": "24"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:54:35.847983",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19804",
+      "requests_used": "196",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:55:16.796390",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19798",
+      "requests_used": "202",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:55:17.411212",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19774",
+      "requests_used": "226",
+      "request_cost": "24"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:55:18.052550",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19753",
+      "requests_used": "247",
+      "request_cost": "21"
+    }
+  },
+  {
+    "timestamp": "2026-01-07T19:55:18.930165",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19729",
+      "requests_used": "271",
+      "request_cost": "24"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:52.774013",
+    "api": "tank01",
+    "endpoint": "teams",
+    "rate_limit_info": {
+      "requests_remaining": "999",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:54.019962",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "998",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:54.685943",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "997",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:55.423355",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "996",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:56.050588",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "995",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:57.034194",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "994",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:57.737379",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "993",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:58.519765",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "992",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:59.182771",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "991",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:01:59.871912",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "990",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:00.417111",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "989",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:01.392869",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "988",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:02.399179",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "987",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:03.248423",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "986",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:04.083383",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "985",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:04.755449",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "984",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:05.380703",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "983",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:05.947460",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "982",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:06.610414",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "981",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:07.296530",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "980",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:07.891363",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "979",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:08.697212",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "978",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:09.367336",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "977",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:09.951229",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "976",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:10.622099",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "975",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:11.432381",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "974",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:12.249701",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "973",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:12.885268",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "972",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:13.568231",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "971",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:14.142920",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "970",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:02:14.803251",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "969",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:02.222385",
+    "api": "tank01",
+    "endpoint": "teams",
+    "rate_limit_info": {
+      "requests_remaining": "968",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:02.715977",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "967",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:03.342049",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "966",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:04.199599",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "965",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:04.797029",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "964",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:05.489211",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "963",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:06.229445",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "962",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:06.939955",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "961",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:07.647457",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "960",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:08.304135",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "959",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:09.045725",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "958",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:09.590992",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "957",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:10.174279",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "956",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:10.714117",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "955",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:11.287113",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "954",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:11.946216",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "953",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:12.517883",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "952",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:13.104739",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "951",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:14.718051",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "950",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:15.907286",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "949",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:16.427358",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "948",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:17.168588",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "947",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:17.763834",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "946",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:18.322854",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "945",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:18.877432",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "944",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:19.645575",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "943",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:20.185935",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "942",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:20.838804",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "941",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:21.460054",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "940",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:22.186763",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "939",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:22.893276",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "938",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:48.828383",
+    "api": "tank01",
+    "endpoint": "teams",
+    "rate_limit_info": {
+      "requests_remaining": "937",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:49.501861",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "936",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:50.181657",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "935",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:50.820810",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "934",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:51.527482",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "933",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:52.177875",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "932",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:52.724803",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "931",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:53.409976",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "930",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:54.001528",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "929",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:54.855017",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "928",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:55.558987",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "927",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:56.173370",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "926",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:56.710635",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "925",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:57.426935",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "924",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:58.122845",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "923",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:58.780067",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "922",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:03:59.407948",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "921",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:00.199257",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "920",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:00.833567",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "919",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:01.510273",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "918",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:02.410134",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "917",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:03.131944",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "916",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:03.992366",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "915",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:04.721171",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "914",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:05.322173",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "913",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:05.982217",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "912",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:06.707047",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "911",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:07.538829",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "910",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:08.158615",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "909",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:08.799984",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "908",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-08T14:04:09.444379",
+    "api": "tank01",
+    "endpoint": "roster",
+    "rate_limit_info": {
+      "requests_remaining": "907",
+      "requests_limit": "1000"
+    }
+  }
+]

@@ -28,6 +28,28 @@ SGO_API_KEY = os.getenv('SGO_API_KEY')
 # LIVE STATS & ROSTERS (Tank01)
 # Source: https://rapidapi.com/tank01/api/tank01-fantasy-stats
 TANK01_KEY = os.getenv('TANK01_KEY')
+TANK01_HOST = "tank01-fantasy-stats.p.rapidapi.com"
+
+# ====================================================
+# 2b. NEW PAID APIs (Placeholders - Add keys to .env)
+# ====================================================
+
+# API-SPORTS (Historical Data + Livescores)
+# Source: https://api-sports.io/documentation/nba/v2
+# Pricing: $25/mo for Pro tier
+APISPORTS_KEY = os.getenv('APISPORTS_KEY')
+APISPORTS_HOST = "v2.nba.api-sports.io"
+
+# BALLDONTLIE (Props Validation + Injuries + Play-by-Play)
+# Source: https://docs.balldontlie.io
+# Pricing: $40/mo for NBA tier
+BALLDONTLIE_KEY = os.getenv('BALLDONTLIE_KEY')
+BALLDONTLIE_HOST = "api.balldontlie.io"
+
+# GEMINI AI (Ask Ludi Chatbot - Week 7)
+# Source: https://ai.google.dev/
+# Pricing: Pay-as-you-go (~$5-10/mo estimated)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # ====================================================
 # 3. NEWS & SCOUTING (The Yak)
@@ -57,6 +79,26 @@ ENABLE_TELEGRAM_ALERTS = True
 RUN_SEASON_INIT = False
 
 # ====================================================
+# 5b. API TIER CONFIGURATION
+# ====================================================
+
+# Tier detection (free vs paid)
+ODDS_API_TIER = os.getenv('ODDS_API_TIER', 'free')
+TANK01_TIER = os.getenv('TANK01_TIER', 'free')
+
+# Tier limits (requests/month for odds_api, requests/day for tank01)
+TIER_LIMITS = {
+    'odds_api': {
+        'free': 500,      # per month
+        'paid': 20000     # per month
+    },
+    'tank01': {
+        'free': 1000,     # per month
+        'paid': 1000      # per DAY (30,000/month)
+    }
+}
+
+# ====================================================
 # 6. DFS & PROP SETTINGS (THE UNLOCK)
 # ====================================================
 
@@ -77,19 +119,50 @@ SGO_INCLUDE_ALTS = True
 
 def validate_config():
     """Verify all required API keys are loaded"""
+    # Required for core functionality
     required_keys = {
         'ODDS_API_KEY': ODDS_API_KEY,
         'TANK01_KEY': TANK01_KEY,
+    }
+    
+    # Optional keys (new paid APIs - warn if missing but don't fail)
+    optional_keys = {
+        'APISPORTS_KEY': APISPORTS_KEY,
+        'BALLDONTLIE_KEY': BALLDONTLIE_KEY,
+        'GEMINI_API_KEY': GEMINI_API_KEY,
         'GOOGLE_SEARCH_KEY': GOOGLE_SEARCH_KEY,
-        'TELEGRAM_TOKEN': TELEGRAM_TOKEN
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
     }
 
-    missing = [key for key, value in required_keys.items() if not value]
+    missing_required = [key for key, value in required_keys.items() if not value]
+    missing_optional = [key for key, value in optional_keys.items() if not value]
 
-    if missing:
-        raise ValueError(f"Missing required API keys in .env file: {', '.join(missing)}")
+    if missing_required:
+        raise ValueError(f"Missing REQUIRED API keys in .env file: {', '.join(missing_required)}")
 
-    print("✅ All API keys loaded successfully from .env")
+    print("✅ Core API keys loaded (ODDS_API_KEY, TANK01_KEY)")
+
+    # Tier validation (use global to modify module-level variables)
+    global ODDS_API_TIER, TANK01_TIER
+
+    if ODDS_API_TIER not in ['free', 'paid']:
+        print(f"⚠️  Invalid ODDS_API_TIER: {ODDS_API_TIER}, defaulting to 'free'")
+        ODDS_API_TIER = 'free'
+
+    if TANK01_TIER not in ['free', 'paid']:
+        print(f"⚠️  Invalid TANK01_TIER: {TANK01_TIER}, defaulting to 'free'")
+        TANK01_TIER = 'free'
+
+    # Display tier info
+    print(f"✅ The-Odds-API tier: {ODDS_API_TIER.upper()} "
+          f"(limit: {TIER_LIMITS['odds_api'][ODDS_API_TIER]:,} requests/month)")
+    print(f"✅ Tank01 tier: {TANK01_TIER.upper()} "
+          f"(limit: {TIER_LIMITS['tank01'][TANK01_TIER]:,} requests/{'day' if TANK01_TIER == 'paid' else 'month'})")
+
+    if missing_optional:
+        print(f"⚠️  Optional keys not set: {', '.join(missing_optional)}")
+    else:
+        print("✅ All optional API keys loaded")
 
 # Run validation on import (can be disabled for testing)
 if __name__ != "__main__":

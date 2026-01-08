@@ -8,14 +8,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Product Name**: Ludi Lens (Dashboard Interface)
 - **Engine**: S.A.V.A.G.E. Protocol (Scenario Analysis & Value Assessment Game Engine)
-- **Current Phase**: Week 2, Days 1-2 (Logging Framework) - **Week 1 Complete ✅**
+- **Current Phase**: Week 2, Days 3-4 (Play Classification Tags) - **Days 1-2 Complete ✅**
 - **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
 
-## 🎯 Current Status (Updated Jan 7, 2026, 9:30 PM ET)
+## 🎯 Current Status (Updated Jan 8, 2026, 12:55 PM ET)
 
-### Week 1: ✅ COMPLETE - Ready for Week 2!
+### Week 2, Days 1-2: ✅ COMPLETE - Logging Framework Operational!
+
+**✅ Logging Framework Implementation (Jan 8, 2026):**
+- `utils/bet_logger.py` (650 lines) - BetLogger class with dual storage
+- SQLite tables: `bet_recommendations`, `bet_daily_summaries` in ludi.db
+- JSON logs: `logs/bets/YYYY-MM-DD.json` format
+- Module F integrated with `get_bet_logger()` singleton
+- `backfill_week1_bets.py` (221 lines) - Week 1 test data imported
+- 5 Week 1 Diamond plays logged with full context
+- Daily summary: 7.5u total, $0.1125 API cost
+
+**BetLogger Features:**
+- `log_recommendation()` - Single bet logging
+- `log_batch_recommendations()` - Bulk insert
+- `update_outcome()` - Post-game result tracking
+- `get_pending_bets()` - Query unsettled bets
+- `calculate_daily_summary()` - ROI/stats aggregation
+- `get_performance_report()` - Date range analysis
+
+---
+
+### Week 1: ✅ COMPLETE
 
 **✅ Module Implementation Status:**
 - All 9 modules (A-H + X) production-ready: **73,232 lines of code**

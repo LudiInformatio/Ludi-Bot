@@ -6,6 +6,9 @@ import time
 from datetime import datetime, timedelta
 import config
 
+# [PAID TIER] Import monitoring utilities
+from utils.api_monitor import get_monitor
+
 # =========================================================
 # LUDI INFORMATIO | MODULE H: THE HISTORIAN
 # V1.3 - HYBRID SYNC (Matches nba_api Schema with Tank01)
@@ -16,10 +19,17 @@ class LudiHistorian:
         print(f"\n{'='*40}")
         print(f"LUDI INFORMATIO: MODULE H (HISTORIAN) ONLINE")
         print(f"{'='*40}")
-        
+
         self.history_file = "ludi_history_db.json"
         self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
         self.TANK_HOST = "tank01-fantasy-stats.p.rapidapi.com"
+
+        # API-Sports (Historical)
+        self.APISPORTS_KEY = getattr(config, 'APISPORTS_KEY', '')
+        self.APISPORTS_HOST = getattr(config, 'APISPORTS_HOST', 'v2.nba.api-sports.io')
+
+        # [PAID TIER] Initialize API Monitor
+        self.monitor = get_monitor()
 
     def update_database(self):
         """
@@ -136,29 +146,33 @@ class LudiHistorian:
         
         try:
             r = requests.get(url_box, headers=headers, params=params_box)
+
+            # [PAID TIER] Log API usage
+            self.monitor.log_request('tank01', 'box_score', r.headers)
+
             body = r.json().get('body', {})
             player_stats = body.get('playerStats', {})
-            
+
             # Parse Players
             for p_id, stats in player_stats.items():
-                
+
                 # --- VARS ---
                 tov = stats.get('TOV', stats.get('to', 0))
-                
+
                 # --- MAPPING: TANK01 -> NBA API SCHEMA ---
                 # This ensures your new data matches the 'Initializer' columns
                 record = {
                     "GAME_DATE": datetime.strptime(date_str, '%Y%m%d'),
-                    "PLAYER_ID": p_id, 
+                    "PLAYER_ID": p_id,
                     "PLAYER_NAME": stats.get('longName', 'Unknown'),
                     "TEAM_ABBREVIATION": stats.get('teamAbv', 'UNK'),
-                    
+
                     # Core Stats
                     "PTS": float(stats.get('pts', 0)),
                     "AST": float(stats.get('ast', 0)),
                     "REB": float(stats.get('reb', 0)),
                     "MIN": self._clean_minutes(stats.get('mins', 0)),
-                    
+
                     # Defense
                     "STL": float(stats.get('stl', 0)),
                     "BLK": float(stats.get('blk', 0)),
@@ -171,17 +185,20 @@ class LudiHistorian:
                     "FG3A": float(stats.get('tptfga', 0)), # Tank01 weird key
                     "FTM": float(stats.get('ftm', 0)),
                     "FTA": float(stats.get('fta', 0)),
-                    
+
                     # Rebounding Splits
                     "OREB": float(stats.get('oreb', 0)),
                     "DREB": float(stats.get('dreb', 0)),
                 }
                 storage_list.append(record)
-                
-            time.sleep(0.1) 
-            
-        except:
-            pass
+
+            time.sleep(0.1)
+
+        except Exception as e:
+            # [PAID TIER] Replace silent failure with error logging
+            error_msg = f"{type(e).__name__}: {str(e)[:100]}"
+            print(f"   [HISTORIAN] ❌ Box score fetch failed for game {game_id}: {error_msg}")
+            self.monitor.log_failed_request('tank01', 'box_score', error_msg)
             
     def _clean_minutes(self, min_val):
         """Handles MM:SS, float, or int inputs for minutes."""
@@ -195,7 +212,27 @@ class LudiHistorian:
                     return int(parts[0]) + (int(parts[1]) / 60.0)
                 except:
                     return 0.0
-            return 0.0
+    def fetch_historical_apisports(self, season, date_str):
+        """ [SECONDARY] API-Sports Backfill Source """
+        if not self.APISPORTS_KEY:
+            return []
+
+        print(f"      > [APISPORTS] Backfilling {date_str}...")
+        url = f"https://{self.APISPORTS_HOST}/games"
+        headers = {
+            "x-rapidapi-host": self.APISPORTS_HOST,
+            "x-rapidapi-key": self.APISPORTS_KEY
+        }
+        params = {"season": season, "date": date_str}
+        
+        try:
+            # Placeholder implementation until key is live
+            # r = requests.get(url, headers=headers, params=params)
+            # return r.json()
+            return []
+        except Exception as e:
+            print(f"      ⚠️ [APISPORTS] Error: {e}")
+            return []
 
 if __name__ == "__main__":
     h = LudiHistorian()
