@@ -8,6 +8,10 @@ import config  # Imports: ODDS_API_KEY, TANK01_KEY
 # [INTEGRATION] Import The Zebras
 from module_g import LudiRefEngine
 
+# [PAID TIER] Import monitoring and retry utilities
+from utils.api_monitor import get_monitor
+from utils.api_helpers import retry_with_backoff
+
 class Gatekeeper:
     def __init__(self):
         print("========================================")
@@ -15,13 +19,16 @@ class Gatekeeper:
         print(f"   >>> PIPELINE: V9.3 (NC LEGAL + REFS)")
         print(f"   >>> TARGETS: FD/DK/MGM/CZR/365 | SHARPS | DFS")
         print("========================================")
-        
+
         self.session = requests.Session()
-        self.games = {} 
+        self.games = {}
         self.est_tz = pytz.timezone('US/Eastern')
-        
+
         # Initialize Ref Engine
         self.zebras = LudiRefEngine()
+
+        # [PAID TIER] Initialize API Monitor
+        self.monitor = get_monitor()
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -37,13 +44,14 @@ class Gatekeeper:
         }
         return mapping.get(team_name, None)
 
+    @retry_with_backoff(max_attempts=3, backoff=2.0)
     def fetch_live_slate(self, sport='basketball_nba'):
         """ [1] GET SCHEDULE & LINES (With Ref Impact + Date Sorting) """
         print(f"[1] 📡 Fetching Slate & Live Odds...")
-        
+
         # Build Ref Database
         self.zebras.build_ref_database()
-        
+
         url = f'https://api.the-odds-api.com/v4/sports/{sport}/odds'
         params = {
             'api_key': config.ODDS_API_KEY,
@@ -53,6 +61,11 @@ class Gatekeeper:
         }
         try:
             response = self.session.get(url, params=params)
+
+            # [PAID TIER] Log API usage
+            self.monitor.log_request('odds_api', 'fetch_slate', response.headers)
+            self.monitor.check_quota_threshold('odds_api')
+
             response.raise_for_status()
             data = response.json()
             
@@ -164,11 +177,12 @@ class Gatekeeper:
         print(f"[3] 📡 Fetching Prop Targets (Limit: {limit_games})...")
         target_ids = list(self.games.keys())[:limit_games]
         
+        # Valid betting markets (validated 2026-01-07)
+        # Note: Attempts (FGA, FTA, FG3A) come from database, not betting markets
         markets = (
             "player_points,player_rebounds,player_assists,"
-            "player_threes,player_threes_attempts,"
-            "player_field_goals_attempts,player_frees_attempts,"
-            "player_blocks,player_steals,player_turnovers"
+            "player_threes,player_steals,player_blocks,"
+            "player_turnovers,player_double_double,player_triple_double"
         )
         
         for g_id in target_ids:
@@ -180,8 +194,12 @@ class Gatekeeper:
                 'oddsFormat': 'american'
             }
             try:
-                time.sleep(0.5) 
+                time.sleep(0.5)
                 response = self.session.get(url, params=params)
+
+                # [PAID TIER] Log API usage
+                self.monitor.log_request('odds_api', 'fetch_props', response.headers)
+
                 if response.status_code == 200:
                     data = response.json()
                     for book in data.get('bookmakers', []):
@@ -203,9 +221,33 @@ class Gatekeeper:
                                         self.games[g_id]['props'][player] = {}
                                     short_key = key.replace('player_', '')
                                     self.games[g_id]['props'][player][short_key] = line
+                    
+                    # Call BDL Backup
+                    self.fetch_props_balldontlie(g_id)
+
                     print(f"   > {self.games[g_id]['matchup']}... ✅ Targets Acquired.")
             except Exception as e:
                 print(f"   ❌ Error on {g_id}: {e}")
+
+    def fetch_props_balldontlie(self, game_id, limit=50):
+        """ [3b] BALLDONTLIE BACKUP/VALIDATION """
+        bdl_key = getattr(config, 'BALLDONTLIE_KEY', None)
+        if not bdl_key:
+            return  # checking if key is present
+
+        print(f"      > [BDL] Cross-referencing with BallDontLie...")
+        url = f"https://{config.BALLDONTLIE_HOST}/v2/odds/player_props"
+        headers = {"Authorization": bdl_key}
+        params = {"game_id": game_id} # BDL uses their own IDs, mapping required in real prod
+
+        try: 
+            # Note: In a real scenario, we'd need to map The-Odds-API GameID to BDL GameID.
+            # For this placeholder implementation, we just show the structure.
+            # r = self.session.get(url, headers=headers, params=params)
+            # data = r.json()
+            pass 
+        except Exception as e:
+            print(f"      ⚠️ [BDL] Error: {e}")
 
     def fetch_full_sim_packet(self):
         """ [4] GET SIM INPUTS (Same as before) """

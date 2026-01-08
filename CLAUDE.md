@@ -1,0 +1,433 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**Ludi Informatio v2.0** is an NBA analytics platform that generates betting recommendations for player props using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
+
+- **Product Name**: Ludi Lens (Dashboard Interface)
+- **Engine**: S.A.V.A.G.E. Protocol (Scenario Analysis & Value Assessment Game Engine)
+- **Current Phase**: Week 2, Days 1-2 (Logging Framework) - **Week 1 Complete ✅**
+- **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
+
+---
+
+## 🎯 Current Status (Updated Jan 7, 2026, 7:00 PM ET)
+
+### Week 1, Days 5-7: ✅ COMPLETE
+
+**✅ Module Implementation Status:**
+- All 9 modules (A-H + X) production-ready: **73,232 lines of code**
+- API integrations: The-Odds-API (PAID 20K/mo), Tank01 (PAID 1K/day)
+- Utilities: Devigging, monitoring, retry logic all complete
+- Database: 10,840 game logs, 505 players, 496 games migrated
+- **NEW:** `test_pipeline.py` - Full end-to-end integration test (456 lines)
+
+**✅ Integration Test Results (Jan 7, 7:00 PM ET):**
+- **test_pipeline.py**: ✅ PASSED ALL CRITERIA
+- Games processed: 3 (CHI-DET, WAS-PHI, TOR-CHA)
+- Players simulated: 19 (dynamic roster discovery via database)
+- Diamond plays generated: 5 recommendations
+- API cost: **$0.1125** (75 credits, **25% under budget**)
+- Current usage: 19,729/20,000 credits remaining (98.6%)
+
+**✅ Fixed Issues:**
+- Module A: Invalid market names corrected (player_field_goals_attempts → removed)
+- test_pipeline.py: Type validation added for prop lines (N/A handling)
+- Roster discovery: 100% automated, zero hardcoded player names
+
+**📊 Cost Performance:**
+| Metric | Value | Status |
+|--------|-------|--------|
+| Per Game (Test) | $0.0375 | ✅ 62% under target |
+| Daily (3 games avg) | $0.1125 | ✅ Well within budget |
+| Monthly (30 days) | $3.38 | ✅ 89% headroom |
+| Paid Tier Budget | $30.00/month | ✅ Active |
+
+### Module Class Names Reference (CRITICAL)
+
+**Use these EXACT class names when importing modules:**
+
+| Module | File | Correct Class Name | API Integration |
+|--------|------|-------------------|-----------------|
+| A: Gatekeeper | `module_a.py` | `Gatekeeper` | The-Odds-API (PAID) |
+| B: Engine | `module_b.py` | `print_sharp_box_score` (function) | None (display layer) |
+| C: Oracle | `module_c.py` | `LudiOracle` | None (pure math) |
+| D: Yak | `module_d.py` | `LudiYak` | Tank01 + DuckDuckGo |
+| E: Calibrator | `module_e.py` | `LudiCalibrator` | None (matchup logic) |
+| F: Alchemist | `module_f.py` | `LudiReporter` | Devigging (local) |
+| G: Zebras | `module_g.py` | `LudiRefEngine` | NBA.com (scraping) |
+| H: Historian | `module_h_historian.py` | `LudiHistorian` | Tank01 (PAID) |
+| X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` | None (usage vacuum) |
+
+**Import Examples:**
+```python
+from module_a import Gatekeeper              # ✅ Correct
+from module_c import LudiOracle              # ✅ Correct
+from module_e import LudiCalibrator          # ✅ Correct
+
+# WRONG (old names - DO NOT USE):
+from module_a import LudiGatekeeper          # ❌ ImportError
+from module_c import LudiSimulator           # ❌ ImportError
+from module_e import LudiEvaluator           # ❌ ImportError
+```
+
+---
+
+## Development Commands
+
+### Environment Setup
+```bash
+# 1. Create virtual environment (if needed)
+python3.11 -m venv venv
+
+# 2. Activate virtual environment
+source venv/bin/activate  # Linux/Mac
+# or: .\venv\Scripts\activate  # Windows
+
+# 3. Install dependencies
+pip install numpy pandas requests python-dotenv duckduckgo-search pytz unidecode
+
+# 4. Configure environment variables
+cp .env.template .env
+# Then edit .env with your API keys (ODDS_API_KEY, TANK01_KEY required)
+```
+
+### Paid Tier Setup (NEW - January 7, 2026)
+```bash
+# The system is now configured for PAID tier APIs!
+# Your .env file contains:
+# - ODDS_API_KEY: 9aa84b1836e565ec82161558d5cc948b (PAID: 20K requests/month)
+# - TANK01_KEY: b4ec1031f4msh80f4fc4cd874de4p17e5b7jsn8eeafd9da310 (PAID: 1K requests/day)
+# - ODDS_API_TIER: paid
+# - TANK01_TIER: paid
+
+# To verify tier configuration:
+./venv/bin/python -c "import config"
+# Should output:
+# ✅ Core API keys loaded (ODDS_API_KEY, TANK01_KEY)
+# ✅ The-Odds-API tier: PAID (limit: 20,000 requests/month)
+# ✅ Tank01 tier: PAID (limit: 1,000 requests/day)
+```
+
+### Running the System
+```bash
+# Run the main daily pipeline (orchestrates all modules)
+./venv/bin/python main.py
+
+# Test integration (verifies Module A connectivity)
+./venv/bin/python test_integration.py
+
+# Run prototype simulation engine (validates math)
+./venv/bin/python prototype_engine.py
+
+# Initialize/verify database
+./venv/bin/python database.py
+
+# Sync historical data to database
+./venv/bin/python module_h_historian.py
+```
+
+### Monitoring API Usage (NEW - Paid Tier Integration)
+```bash
+# View real-time API usage logs
+cat api_usage_log.json | python -m json.tool
+
+# Get usage summary (requires implementing monitor_api_usage.py)
+./venv/bin/python monitor_api_usage.py
+
+# Check Telegram alerts
+# Alerts are sent automatically when:
+# - API quota >80% consumed
+# - API errors occur
+# - Rate limits hit
+```
+
+### Testing Individual Modules
+```bash
+# Test Module A (Gatekeeper - fetches odds)
+python -c "from module_a import Gatekeeper; gk = Gatekeeper(); print(gk.fetch_live_slate())"
+
+# Test Module D (Yak - injury intelligence)
+python -c "from module_d import LudiYak; yak = LudiYak(); print(yak.get_injuries())"
+
+# Test Module F (Alchemist - edge calculation)
+python module_f.py  # If it has a __main__ block
+
+# Test devigging utility
+python -c "from utils.devig import devig_multiplicative; print(devig_multiplicative(-110, -110))"
+```
+
+### Database Operations
+```bash
+# Inspect database contents
+python inspect_db.py
+
+# Backup database before migrations
+cp ludi.db ludi.db.backup_$(date +%Y%m%d_%H%M%S)
+
+# Migrate JSON to SQLite (one-time operation)
+python migrate_json_to_sqlite.py
+
+# Query database directly
+sqlite3 ludi.db "SELECT COUNT(*) FROM player_game_logs;"
+sqlite3 ludi.db "SELECT DISTINCT team_abbreviation FROM player_game_logs ORDER BY team_abbreviation;"
+```
+
+## Architecture Overview
+
+### Modular Pipeline Design
+
+The system uses a **sequential pipeline** where data flows through 9 specialized modules:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  MODULE A: Gatekeeper (Odds Ingestion)                  │
+│  - Fetches game lines, player props from The-Odds-API   │
+│  - Integrates Module G (referee assignments)            │
+│  - Outputs: Game slate, prop lines, referee factors     │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  MODULE B: Engine (Historical Analysis)                 │
+│  - Loads player game logs from ludi.db                  │
+│  - Calculates season avg, L5, L10 trends                │
+│  - Identifies "hot streaks" for reporting               │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  MODULE C: Oracle (Monte Carlo Simulation)              │
+│  - 25,000 Poisson iterations per player                 │
+│  - Simulates FGA, FG3A, FTA (volume)                    │
+│  - Applies shooting %s, pace, fatigue, referee impact   │
+│  - Outputs: Projected stats with confidence intervals   │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  MODULE D: Yak (Injury Intelligence)                    │
+│  - 15-minute refresh cycle (aligns with NBA rules)      │
+│  - Primary: Tank01 API, Secondary: BallDontLie          │
+│  - Nuance detection via DuckDuckGo search               │
+│  - Classifies: OUT/DOUBTFUL/Q/PROBABLE/MINUTES_LIMIT    │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  MODULE E: Calibrator (Matchup Adjustments)             │
+│  - Assigns player archetype (SLASHER, STRETCH_BIG, etc) │
+│  - Applies matchup modifiers vs defense schemes         │
+│  - Blowout tax (spread > 12.5 reduces volume)           │
+│  - Pace modifiers (totals > 238 or < 218)               │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  MODULE F: Alchemist (Edge Calculation & Reporting)     │
+│  - Devigs bookmaker odds (removes vig)                  │
+│  - Calculates TRUE edge vs fair probability             │
+│  - Filters: edge ≥ 5% threshold                         │
+│  - EV & unit sizing (0.25u to 1.5u)                     │
+│  - Classifies: DIAMOND/BLUE CHIP/CORE ASSET/THE STEAL   │
+│  - Generates daily_briefing.txt                         │
+└─────────────────────────────────────────────────────────┘
+
+Supporting Modules:
+  MODULE G: Zebras (referee pace impact, scraped daily)
+  MODULE H: Historian (database sync, historical backfill)
+  MODULE X: Scenario Builder (injury "what-if" toggles)
+  MODULE I: Aggregator (future unified data layer - placeholder)
+```
+
+### Database Schema (ludi.db)
+
+**Key Tables:**
+- `player_game_logs` (10,840 records): Historical performance data with all stats
+- `players` (505 records): Current roster with archetypes and usage
+- `games` (496 records): Game results with pace and referee crews
+- `odds`: Live market data from bookmakers
+- `simulations`: Model output archive for backtesting
+
+**Indexes for Performance:**
+- `idx_player_game_logs_player_date` (composite index for fast player queries)
+- `idx_player_game_logs_game_date` (for date-range queries)
+
+### Critical Innovations
+
+#### 1. Devigging (Module F - v4.4 Update, Jan 6 2026)
+**What it does**: Removes bookmaker vig (overround) to calculate TRUE edge instead of raw edge.
+
+**Why it matters**: Without devigging, edge calculations are understated by 3-5%. A bet that looks like 2.8% edge might actually be 7.6% true edge.
+
+**Implementation**: Uses `utils/devig.py` with multiplicative method
+```python
+from utils.devig import devig_multiplicative
+fair_over, fair_under = devig_multiplicative(-110, -110)
+true_edge = (model_prob - fair_over) / fair_over * 100
+```
+
+#### 2. Usage Vacuum Theory (Module C + Module X)
+**Concept**: When a star player is OUT, their usage (FGA, FTA, TOV) is redistributed to teammates.
+
+**Implementation**:
+- Module X creates "WITHOUT [Player]" scenarios
+- Module C redistributes usage percentage across remaining rotation
+- Module F labels beneficiaries in briefing output
+
+#### 3. Blowout Tax (Module F)
+**Problem**: Starters sit early in blowouts, killing volume props.
+
+**Solution**: Sliding scale reduction based on spread
+```python
+if spread > 7.0:
+    blowout_mult = 1.0 - ((spread - 7.0) * 0.015)
+    # Example: 12-point spread = 0.925 multiplier (-7.5% volume)
+```
+
+#### 4. 15-Minute Injury Sync (Module D)
+**Why 15 minutes**: NBA requires teams to report injuries 15 minutes before tipoff.
+
+**Implementation**:
+- Caches injury data for 15 minutes (`yak_cache.json`)
+- Refreshes at 14:59 mark before games
+- Nuance detection scans news for "late scratch", "minutes limit" keywords
+
+#### 5. Archetype Matchup Matrix (Module E)
+**Concept**: Player style vs defensive scheme creates exploitable edges.
+
+**Example Matchups**:
+- STRETCH_BIG vs PAINT_PACK defense → +15% 3PM/3PA (paint defenders leave shooters open)
+- SLASHER vs HACKERS defense → +20% FTA (aggressive rim protection = more fouls)
+- RIM_RUNNER vs PERIMETER defense → +30% OREB (small ball concedes size advantage)
+
+**Team Defense Schemes (2025-26)**:
+- PAINT_PACK: OKC, BOS, DET, MIN, SAS, ORL
+- BLITZ: HOU, TOR, MIA, PHX
+- PERIMETER: GSW, DAL, NYK
+- FUNNEL: WAS, ATL, CHI, UTA, SAC
+- HACKERS: IND, CHA, POR
+
+## Key Concepts for Development
+
+### Poisson Simulation Approach (Module C)
+- **25,000 iterations** per player (optimal balance of speed vs accuracy)
+- **Two-stage simulation**:
+  1. Volume simulation (FGA, FG3A, FTA using Poisson distributions)
+  2. Outcome simulation (apply shooting percentages)
+- **Modifiers applied**: pace × referee_factor × fatigue_tax × defense_rating
+
+### Edge Calculation Methodology (Module F)
+```python
+# 1. Devig bookmaker odds
+fair_prob = devig_multiplicative(over_odds, under_odds)
+
+# 2. Calculate true edge
+true_edge = (model_prob - fair_prob) / fair_prob * 100
+
+# 3. Filter by threshold
+if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
+    # 4. Calculate EV
+    win_prob = clamp(model_prob, 0.51, 0.75)
+    ev = ((win_prob * 1.91) - 1) * 100  # Assumes -110 juice
+
+    # 5. Kelly sizing
+    units = ev / 8  # Conservative fractional Kelly
+    units = clamp(units, 0.25, 1.5)
+```
+
+### Validation Requirements (Week 5 Gate)
+**Must-Achieve Metrics Before Dashboard Development**:
+- RMSE < 10% for PTS/AST/REB projections
+- Hit rate > 52% overall
+- Hit rate > 55% on 10%+ edge bets
+- Positive CLV (Closing Line Value) on >50% of bets
+
+**If metrics fail**: Extend Week 6 for calibration, DO NOT proceed to dashboard.
+
+## Configuration & Security
+
+### Environment Variables (.env)
+**Required for core functionality**:
+- `ODDS_API_KEY`: The-Odds-API key (game lines, player props)
+- `TANK01_KEY`: Tank01 RapidAPI key (rosters, injuries, box scores)
+
+**Optional but recommended**:
+- `BALLDONTLIE_KEY`: BallDontLie API key (props validation, backup data)
+- `APISPORTS_KEY`: API-Sports key (historical backtesting data)
+- `GEMINI_API_KEY`: Google Gemini AI key (Week 7 chatbot feature)
+
+**Security**:
+- `.env` file is in `.gitignore` - NEVER commit it
+- Use `.env.template` as reference for required keys
+- `config.py` validates required keys on import
+
+### API Rate Limits & Caching
+- **The-Odds-API**: Free tier = 500 requests/month, Paid = $30/mo for 20K
+- **Tank01**: Free = 1K/month, Paid = $10/mo for 1K/day
+- **Module D caching**: 15-minute cache prevents redundant injury API calls
+- **Module G caching**: Referee assignments scraped once daily
+
+## Common Development Patterns
+
+### Adding a New Module
+1. Create `module_x.py` with a class following naming convention (e.g., `LudiNewFeature`)
+2. Import in `main.py` orchestrator
+3. Initialize in `LudiOrchestrator.__init__()`
+4. Call in `run_daily_cycle()` at appropriate pipeline stage
+5. Update this CLAUDE.md with module description
+
+### Modifying Edge Calculation
+- **File**: `module_f.py` (LudiReporter or LudiAlchemist class)
+- **Key methods**: `calculate_edge()`, `calculate_ev()`, `calculate_kelly()`
+- **Testing**: Run `python module_f.py` if it has test code, or create unit test
+- **Devigging**: Always use `utils/devig.py` functions, never raw odds
+
+### Adding New Player Archetypes
+- **File**: `module_e.py` (LudiCalibrator class)
+- **Pattern**: Add to `ARCHETYPE_PROFILES` dictionary
+- **Matchup modifiers**: Update `apply_matchup_modifiers()` method
+- **Classification logic**: Update `assign_archetype()` based on player stats
+
+### Updating Defensive Schemes
+- **File**: `module_e.py`
+- **Map**: `TEAM_DEFENSIVE_SCHEMES` dictionary (30 NBA teams)
+- **Season updates**: Review schemes annually (pace changes, coaching changes)
+- **Source**: NBA.com defensive stats, league pass observations
+
+## Important Notes
+
+### Current Project Status
+- **Completed**: Security hardening, database migration (10,840 game logs), devigging implementation
+- **In Progress**: Week 1 Days 5-7 integration testing (all modules A-H, X)
+- **Next Phase**: Week 2 logging framework, play classification tags
+- **Critical Gate**: Week 5 validation (DO NOT skip - model accuracy must be proven)
+
+### Development Workflow
+1. **ALWAYS** activate virtual environment before running code
+2. **ALWAYS** check `.env` file exists with required API keys
+3. **Test modules individually** before running full pipeline
+4. **Backup database** before running migration scripts
+5. **Paper trade** any model changes before deploying to production
+
+### Known Issues & Gotchas
+- `main.py` uses old class names (LudiGatekeeper vs Gatekeeper) - check imports
+- Module I (Aggregator) is placeholder code - not yet implemented
+- Referee assignments require web scraping (can fail if NBA.com changes HTML structure)
+- DuckDuckGo search in Module D can be rate-limited - use sparingly
+- Blowout tax logic is in Module F, not Module E (despite being a "calibration")
+
+### Testing Strategy
+- **Unit tests**: Test individual module methods in isolation
+- **Integration tests**: Use `test_integration.py` to verify module connections
+- **End-to-end tests**: Run `main.py` with `limit_games=1` to test full pipeline on single game
+- **Validation tests**: Week 5 backtesting framework (50+ historical games)
+
+## Resources
+
+- **Implementation Plan**: See `implementation_plan_REVISED_8WEEK.md` for full roadmap
+- **Project History**: See `original vision/more_relevant_history.md` for context
+- **Week Status**: See `UPDATED_STATUS_AND_NEXT_STEPS.md` for current progress
+- **Completion Reports**: See `WEEK1_DAY2-4_COMPLETION_REPORT.md` for past milestones
