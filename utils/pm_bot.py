@@ -155,8 +155,8 @@ class ProjectManagerBot:
             # 1. Send the visual header
             send_photo(header_img)
             
-            # 2. Send the text briefing
-            return send_message(briefing_text)
+            # 2. Send the text briefing (no parse_mode to avoid Markdown errors)
+            return send_message(briefing_text, parse_mode=None)
             
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")

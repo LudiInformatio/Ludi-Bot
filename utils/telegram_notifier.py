@@ -39,9 +39,12 @@ def send_message(text: str, parse_mode: str = "Markdown") -> bool:
 
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "parse_mode": parse_mode
+        "text": text
     }
+    
+    # Only include parse_mode if explicitly set (Telegram rejects null values)
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
 
     try:
         response = requests.post(url, json=payload, timeout=10)
