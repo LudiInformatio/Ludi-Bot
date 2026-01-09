@@ -61,16 +61,28 @@ class TagClassifier:
             "NY": "NYK",   # New York Knicks
         }
 
-        # ARCHETYPE THRESHOLDS (from Module E lines 114-125)
+        # ARCHETYPE THRESHOLDS (from Module E v2.0 - 8 archetypes)
         # Decision tree rules - order matters, first match wins
+        # CRITICAL: Must match Module E _assign_archetype() priority order
         self.ARCHETYPE_RULES = {
-            'STRETCH_BIG': lambda p: p.get('base_reb', 0) > 6.5 and p.get('base_3pm', 0) > 1.8,
+            # Tier 1: High-usage specialists
+            'BALL_HOG': lambda p: p.get('base_usg', 0) > 0.30 and p.get('base_ast', 0) > 6.0,
             'SLASHER': lambda p: (p.get('base_pts', 0) > 22.0 and
                                   p.get('base_usg', 0) > 0.30 and
                                   p.get('base_3pm', 0) < 2.0),
-            'SNIPER': lambda p: p.get('base_3pm', 0) > 2.8 and p.get('base_ast', 0) < 3.5,
+
+            # Tier 2: Specialists
+            'STRETCH_BIG': lambda p: p.get('base_reb', 0) > 6.5 and p.get('base_3pm', 0) > 1.8,
             'RIM_RUNNER': lambda p: p.get('base_reb', 0) > 8.0 and p.get('base_3pm', 0) < 0.6,
-            'BALL_HOG': lambda p: p.get('base_usg', 0) > 0.30 and p.get('base_ast', 0) > 6.0,
+            'SNIPER': lambda p: p.get('base_3pm', 0) > 2.8 and p.get('base_ast', 0) < 3.5,
+
+            # Tier 3: Role players (NEW - Week 2 Day 5)
+            'TWO_WAY_WING': lambda p: ((p.get('base_stl', 0) + p.get('base_blk', 0)) >= 1.8 and
+                                       p.get('base_3pm', 0) >= 1.5 and
+                                       p.get('base_pts', 0) < 22.0),
+            'FACILITATOR': lambda p: (p.get('base_ast', 0) >= 5.0 and
+                                      p.get('base_pts', 0) < 15.0 and
+                                      p.get('base_usg', 0) < 0.28),
         }
 
         # SCENARIO THRESHOLDS
