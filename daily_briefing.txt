@@ -1,24 +1,29 @@
 
-📰 LUDI ELITE BRIEFING (Jan 07, 2026)
+📰 LUDI ELITE BRIEFING (Jan 09, 2026)
 ================================
 💎 DIAMOND PLAYS
-🏀 Duncan Robinson (DET) | OVER 17.5 PTS
-   Sharp Proj: 10.52 | EV: +43.25% | 1.5u
+🏀 Payton Pritchard (BOS) | OVER 3.5 3PM
+   Sharp Proj: 2.2 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
    📝  [🔥 CORRELATED SGP]
 
-🏀 Duncan Robinson (DET) | OVER 4.5 3PM
-   Sharp Proj: 2.58 | EV: +43.25% | 1.5u
+🏀 Neemias Queta (BOS) | OVER 10.5 REB
+   Sharp Proj: 5.92 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
-🏀 Ausar Thompson (DET) | OVER 3.5 AST
-   Sharp Proj: 1.79 | EV: +43.25% | 1.5u
+🏀 Collin Murray-Boyles (TOR) | OVER 11.5 PTS
+   Sharp Proj: 7.26 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
-🏀 Matas Buzelis (CHI) | OVER 1.5 3PM
-   Sharp Proj: 2.78 | EV: +43.25% | 1.5u
+🏀 Kyshawn George (WAS) | OVER 2.5 3PM
+   Sharp Proj: 1.3 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
-🏀 Tyrese Maxey (PHI) | OVER 8.5 AST
-   Sharp Proj: 6.15 | EV: +43.25% | 1.5u
+🏀 Bilal Coulibaly (WAS) | OVER 4.5 REB
+   Sharp Proj: 6.6 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 

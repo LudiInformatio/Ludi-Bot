@@ -1125,5 +1125,1183 @@
       "requests_remaining": "907",
       "requests_limit": "1000"
     }
+  },
+  {
+    "timestamp": "2026-01-09T14:11:58.810931",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19723",
+      "requests_used": "277",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:11:59.443717",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19696",
+      "requests_used": "304",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:00.395379",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19669",
+      "requests_used": "331",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:01.458461",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19642",
+      "requests_used": "358",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:27.210936",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "19636",
+      "requests_used": "364",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:27.858111",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19609",
+      "requests_used": "391",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:28.475310",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19582",
+      "requests_used": "418",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:12:29.226519",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "19555",
+      "requests_used": "445",
+      "request_cost": "27"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:00.154088",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "998",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:01.052758",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "997",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:01.606408",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "996",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:02.240562",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "995",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:02.735943",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "994",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:03.683150",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "992",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:04.221728",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "991",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:04.900653",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "990",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:05.567378",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "989",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:06.062833",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "988",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:06.604511",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "987",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:07.252274",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "986",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:07.821754",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "985",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:08.362297",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "984",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:09.465595",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "983",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:10.597318",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "981",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:11.169429",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "980",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:11.818829",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "979",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:12.457106",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "978",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:12.994710",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "977",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:13.497290",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "976",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:14.043724",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "975",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:14.599594",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "974",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:15.654808",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "972",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:16.289899",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "971",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:17.152853",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "970",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:17.836666",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "969",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:18.582437",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "968",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:19.178034",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "967",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:19.761307",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "966",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:20.339588",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "965",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:21.434627",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "963",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:22.442976",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "962",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:23.485212",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "961",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:24.058254",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "960",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:24.680881",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "959",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:25.485074",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "958",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:26.150336",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "957",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:26.805622",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "956",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:28.133866",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "954",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:28.802204",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "953",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:29.559314",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "952",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:30.133617",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "951",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:30.713868",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "950",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:31.396537",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "949",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:32.824996",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "947",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:33.405770",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "946",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:34.066365",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "945",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:34.779134",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "944",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:35.414239",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "943",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:36.176402",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "942",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:36.732287",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "941",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:37.327983",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "940",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:37.982067",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "939",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:38.596625",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "938",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:39.301386",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "937",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:39.962354",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "936",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:40.974964",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "934",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:41.589717",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "933",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:42.155427",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "932",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:30:43.103832",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "931",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:41.837324",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "929",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:42.494950",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "928",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:43.000465",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "927",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:44.020865",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "926",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:44.586962",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "925",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:45.683035",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "923",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:46.316588",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "922",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:46.842380",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "921",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:47.331144",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "920",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:47.985630",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "919",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:48.466432",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "918",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:49.139163",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "917",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:49.797079",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "916",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:50.430710",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "915",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:51.062976",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "914",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:51.990367",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "912",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:52.744854",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "911",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:53.273759",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "910",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:54.219033",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "909",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:54.748615",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "908",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:55.282562",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "907",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:56.012526",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "906",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:56.556030",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "905",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:57.656960",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "903",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:58.224890",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "902",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:58.886720",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "901",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:32:59.605457",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "900",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:00.146606",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "899",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:00.657667",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "898",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:01.147536",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "897",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:01.952968",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "896",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:03.210755",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "894",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:03.757397",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "893",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:04.324313",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "892",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:04.823980",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "891",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:05.433947",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "890",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:05.979329",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "889",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:06.606932",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "888",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:07.108337",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "887",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:08.200335",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "885",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:08.881636",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "884",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:09.528926",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "883",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:10.278157",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "882",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:10.772940",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "881",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:11.268816",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "880",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:12.240584",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "878",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:12.856641",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "877",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:13.532727",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "876",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:14.043148",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "875",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:14.626137",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "874",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:15.217236",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "873",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:15.802983",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "872",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:16.452628",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "871",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:16.990669",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "870",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:17.976527",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "869",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:18.498925",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "868",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:19.036623",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "867",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:20.415818",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "865",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:20.997290",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "864",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:21.532739",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "863",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-09T14:33:22.106675",
+    "api": "tank01",
+    "endpoint": "box_score",
+    "rate_limit_info": {
+      "requests_remaining": "862",
+      "requests_limit": "1000"
+    }
   }
 ]
