@@ -1,0 +1,93 @@
+name: Daily Data Sync
+
+on:
+  schedule:
+    # 3am EST = 8am UTC (during EST, 4am EDT = 8am UTC during daylight saving)
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Allow manual trigger for testing
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need full history for git operations
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests python-dotenv pytz
+
+      - name: Run Module H (Fetch recent games)
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          # These are optional but prevent import errors in config.py
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: python module_h_historian.py
+
+      - name: Migrate JSON to SQLite
+        run: python migrate_json_to_sqlite.py
+
+      - name: Deduplicate database
+        run: |
+          python -c "
+          import sqlite3
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          
+          # Deduplicate player_game_logs
+          c.execute('''
+              DELETE FROM player_game_logs 
+              WHERE rowid NOT IN (
+                  SELECT MIN(rowid) 
+                  FROM player_game_logs 
+                  GROUP BY player_id, game_date
+              )
+          ''')
+          deleted = c.rowcount
+          print(f'Deleted {deleted} duplicate game logs')
+          
+          # Deduplicate games
+          c.execute('''
+              DELETE FROM games 
+              WHERE rowid NOT IN (
+                  SELECT MIN(rowid) 
+                  FROM games 
+                  GROUP BY game_id
+              )
+          ''')
+          
+          conn.commit()
+          
+          # Report final state
+          c.execute('SELECT COUNT(*), MAX(game_date) FROM player_game_logs')
+          logs = c.fetchone()
+          print(f'Database: {logs[0]} records through {logs[1]}')
+          conn.close()
+          "
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Ludi Bot"
+          git config user.email "noreply@ludibot.com"
+          git add ludi.db ludi_history_db.json
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit - database already up to date"
+          else
+            git commit -m "chore: automated data sync $(date +'%Y-%m-%d')"
+            git push
+            echo "✅ Database updated and pushed!"
+          fi
