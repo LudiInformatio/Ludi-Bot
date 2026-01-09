@@ -8,29 +8,78 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Product Name**: Ludi Lens (Dashboard Interface)
 - **Engine**: S.A.V.A.G.E. Protocol (Scenario Analysis & Value Assessment Game Engine)
-- **Current Phase**: Week 2, Days 3-4 (Play Classification Tags) - **Days 1-2 Complete ✅**
+- **Current Phase**: Week 2, Days 3-4 (Play Classification Tags) - **Days 1-4 Complete ✅**
 - **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
 
-## 🎯 Current Status (Updated Jan 8, 2026, 12:55 PM ET)
+## How Claude Code Assists on This Project
 
-### Week 2, Days 1-4: ✅ ON TRACK - Logging & Vibe Starters AI
+**Role:** PM / Consultant / Personal Assistant / Tutor
 
-**✅ Logging Framework Implementation (Complete):**
+**Your Working Style (Observed):**
+- **Session-based:** Morning/evening work blocks, prep for tomorrow
+- **Casual communication:** Speed over typos, direct requests, action-oriented
+- **Documentation-focused:** Values comprehensive status updates, structured markdown
+- **Telegram integration:** Async work notes, morning/nightly briefs
+- **Friendly-but-professional vibe:** Matches "IYKYK Elite Set" iconography, approachable tone
+
+**How I Assist:**
+1. **Anticipate next steps** - Prepare plans, documentation, and code before you need them
+2. **Structured responses** - Use checklists, tables, bullet points (matches your style)
+3. **Focus on "the why"** - Explain technical decisions and trade-offs
+4. **Respect your flow** - Work with typos, understand intent over perfect grammar
+5. **Prepare for tomorrow** - Create game plans, status docs, commit messages in advance
+6. **Mirror your tone** - Friendly but serious, "get it done" mindset (not cold/industrial)
+
+**What to Expect:**
+- Concise summaries unless you ask for detail
+- Proactive planning (I'll suggest next steps)
+- Clean formatting with emoji anchors (💎📐🥃🍾🥊🧊)
+- Code + documentation + status updates in one session
+- "Tomorrow's briefing" ready before you sign off
+
+---
+
+## 🎯 Current Status (Updated Jan 8, 2026, 8:00 PM ET)
+
+### Week 2, Days 1-4: ✅ COMPLETE - Logging, Vibe Starters & Tag Classification
+
+**✅ Days 1-2: Logging Framework (Complete):**
 - `utils/bet_logger.py` (650 lines) - BetLogger class with dual storage
 - SQLite tables: `bet_recommendations`, `bet_daily_summaries` in ludi.db
 - JSON logs: `logs/bets/YYYY-MM-DD.json` format
 - **Status:** Operational & Backfilled.
 
-**✅ Vibe Starters Assistant (Complete - Jan 8, 2026):**
+**✅ Days 3-4: Tag Classification System (Complete - Jan 8, 2026):**
+- **Core Utility:** `utils/tag_classifier.py` (492 lines) - Searchable play classification
+- **4 Tag Categories:** Archetype (6), Scenario (4), Matchup (5+), Market (extensible)
+- **Module F Integration:** v4.6 with tag assignment in bet logging pipeline
+- **Storage Format:** JSON arrays in SQLite (`["STRETCH_BIG", "BENEFICIARY", "vs_PAINT_PACK"]`)
+- **Archetype System:** STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, BALL_HOG, GENERALIST
+- **Scenario Tags:** BENEFICIARY, USAGE_VACUUM, MINUTES_LIMIT, HOT_STREAK
+- **Matchup Tags:** vs_PAINT_PACK, vs_BLITZ, vs_PERIMETER, vs_FUNNEL, vs_HACKERS, vs_NEUTRAL
+- **Market Tags:** CORRELATED_SGP (framework for CONTRARIAN, STEAM_MOVE, CLOSING_VALUE)
+
+**✅ Vibe Starters Assistant (Upgraded - Jan 8, 2026):**
 - **Persona:** "The Smart Creative" (Voice: "Let's cook", "The Blueprint")
-- **Assets:** V5 Morning Header (Coffee/Flag), V3 Nightly Header (Sleeping)
-- **Formatting:** Strict Bullet Journal (BuJo) style
-- **Integration:** 
-    - `utils/pm_bot.py`: AI generation logic
+- **Assets:** V10 Vector Headers (clean, minimalist design)
+  - Morning: `header_morning_vector_v10_1767920729761.png`
+  - Nightly: `header_nightly_vector_v10_1767920745059.png`
+  - Break: `header_break_recharge_v2_1767921486336.png` (NEW - state preservation)
+- **Iconography:** "IYKYK Elite Set" - 💎 (Vision), 📐 (Blueprint), 🥃 (Intel), 🍾 (Wins), 🥊 (Pivot), 🧊 (Vibe)
+- **Context Optimization:** Reads `task.md` + `UPDATED_STATUS_AND_NEXT_STEPS.md` (focused, fast)
+- **NEW Feature:** Break message trigger (`utils/trigger_break.py`) for work session pauses
+- **Integration:**
+    - `utils/pm_bot.py`: AI generation logic with V10 assets
     - `.github/workflows/daily_briefing.yml`: Automated Morning Brief (5am EST)
     - `.github/workflows/nightly_debrief.yml`: Automated Nightly Debrief (8pm EST)
+
+**✅ System Audit: Referee Nomenclature (Complete - Jan 8, 2026):**
+- **Document:** `REFEREE_NOMENCLATURE_AUDIT.md` (462 lines) - Comprehensive Module G analysis
+- **Current Match Rate:** 16.7% (2/12 officials matched today)
+- **Risk Assessment:** 🟡 MEDIUM (functional but suboptimal, substring matching is fragile)
+- **Recommendations:** Phase 1 (exact matching + normalization), Phase 2 (unit tests), Phase 3 (expand coverage)
 
 ---
 
@@ -392,6 +441,59 @@ if spread > 7.0:
 - PERIMETER: GSW, DAL, NYK
 - FUNNEL: WAS, ATL, CHI, UTA, SAC
 - HACKERS: IND, CHA, POR
+
+#### 6. Tag Classification System (Week 2 Days 3-4, Jan 8 2026)
+**What it does**: Assigns searchable tags to betting recommendations for filtering, analysis, and pattern recognition.
+
+**Why it matters**: Enables filtering bets by archetype (STRETCH_BIG), scenario (BENEFICIARY), matchup (vs_PAINT_PACK), or market context (CORRELATED_SGP). Essential for dashboard search, historical analysis, and ML training.
+
+**Implementation**: `utils/tag_classifier.py` (492 lines) - Singleton pattern with 4 tag categories
+
+**Tag Categories:**
+
+1. **ARCHETYPE TAGS** (1 per player):
+   - STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, BALL_HOG, GENERALIST
+   - Reuses Module E's `_assign_archetype()` logic (validated thresholds)
+
+2. **SCENARIO TAGS** (0-4 per player):
+   - BENEFICIARY: Usage vacuum beneficiary (Module X integration)
+   - USAGE_VACUUM: High-usage player is OUT (>18% usage)
+   - MINUTES_LIMIT: Injury management restriction (Module D status)
+   - HOT_STREAK: L5 performance ≥ 20% above season average
+
+3. **MATCHUP TAGS** (1 per game):
+   - vs_PAINT_PACK, vs_BLITZ, vs_PERIMETER, vs_FUNNEL, vs_HACKERS, vs_NEUTRAL
+   - Uses defensive scheme mapping (30 NBA teams)
+   - Handles team aliases (PHO→PHX, NO→NOP, NY→NYK)
+
+4. **MARKET TAGS** (0-n per bet):
+   - CORRELATED_SGP: 2+ high-unit bets (≥1.2u) in same game
+   - Framework extensible for CONTRARIAN, STEAM_MOVE, CLOSING_VALUE
+
+**Storage Format**: JSON array in SQLite `bet_recommendations.tags` column
+```python
+tags = ["STRETCH_BIG", "BENEFICIARY", "vs_PAINT_PACK", "CORRELATED_SGP"]
+stored_as = json.dumps(tags)  # ["STRETCH_BIG","BENEFICIARY","vs_PAINT_PACK","CORRELATED_SGP"]
+```
+
+**Module F Integration** (v4.6):
+- Lines 6, 34-40: Import and initialize singleton
+- Lines 134-168: Build context, assign tags, format for database
+- Lines 332-342: Parse tags from database, display in briefing as `🏷️ TAG1 | TAG2 | TAG3`
+
+**Usage Example:**
+```python
+from utils.tag_classifier import get_tag_classifier
+
+classifier = get_tag_classifier()
+tags = classifier.classify_play(
+    player_packet={'base_pts': 18.9, 'base_reb': 6.5, 'base_3pm': 2.1, ...},
+    game_context={'opponent': 'OKC', 'spread': 4.5, 'injury_status': 'ACTIVE'},
+    scenario_field='WITHOUT Giannis (+2.4 FGA)',
+    all_game_props=[...]  # For correlation detection
+)
+# Returns: ['STRETCH_BIG', 'BENEFICIARY', 'vs_PAINT_PACK']
+```
 
 ## Key Concepts for Development
 
