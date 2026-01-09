@@ -65,13 +65,14 @@ def send_message(text: str, parse_mode: str = "Markdown") -> bool:
         print(f"❌ HTTP error: {e}")
         return False
 
-def send_photo(photo_path: str, caption: str = None) -> bool:
+def send_photo(photo_path: str, caption: str = None, parse_mode: str = None) -> bool:
     """
     Send a photo via Telegram bot.
     
     Args:
         photo_path: Absolute path to the image file
         caption: Optional text caption
+        parse_mode: formatting mode (Markdown/HTML/None)
         
     Returns:
         True if sent successfully
@@ -88,7 +89,8 @@ def send_photo(photo_path: str, caption: str = None) -> bool:
             data = {'chat_id': TELEGRAM_CHAT_ID}
             if caption:
                 data['caption'] = caption
-                data['parse_mode'] = 'Markdown'
+                if parse_mode:
+                    data['parse_mode'] = parse_mode
             
             response = requests.post(url, files=files, data=data, timeout=20)
             response.raise_for_status()

@@ -149,14 +149,12 @@ class ProjectManagerBot:
             response = self.model.generate_content(prompt)
             briefing_text = response.text
             
-            # Send Header + Briefing
+            # Send Header + Briefing as a SINGLE CARD
             from utils.telegram_notifier import send_photo, send_message
             
-            # 1. Send the visual header
-            send_photo(header_img)
-            
-            # 2. Send the text briefing (no parse_mode to avoid Markdown errors)
-            return send_message(briefing_text, parse_mode=None)
+            # Send photo with caption (briefing text)
+            # parse_mode=None is crucial to prevent crashes from AI-generated asterisks
+            return send_photo(header_img, caption=briefing_text, parse_mode=None)
             
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")
@@ -194,9 +192,9 @@ class ProjectManagerBot:
             break_text = response.text
             
             from utils.telegram_notifier import send_photo, send_message
-            send_photo(header_img)
-            # Replaced "briefing_text" with "break_text" to match
-            return send_message(break_text)
+            
+            # Send photo with caption (break text) as SINGLE CARD
+            return send_photo(header_img, caption=break_text, parse_mode=None)
             
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
