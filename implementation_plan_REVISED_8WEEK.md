@@ -768,8 +768,13 @@ Week 5: Validation ⚠️ CRITICAL (Days 29-35)
 Week 6: Calibration & Alerts (Days 36-42)
 [ ] Day 36-37: Root cause analysis (if needed)
 [ ] Day 38-39: Adjust modifiers and retest
+[ ] Day 38-39: Adjust modifiers and retest
 [ ] Day 40:    Add "Reverse Line Movement" alert *NEW*
-[ ] Day 41-42: Validate on holdout set
+[ ] Day 41:    **Build Advanced Signals (The "Pro" Upgrade):**
+      - [ ] Strength of Schedule (SOS) Logic (Contextualize L10 logs)
+      - [ ] Depth Chart Authority (Handle "Starter Returns" minutes processing)
+      - [ ] Shooting Luck Deviation (SLD) Signal (Regression detector)
+[ ] Day 42:    Validate on holdout set
 
 **GATE 3: Week 6 Calibrated → Proceed to Dashboard**
 

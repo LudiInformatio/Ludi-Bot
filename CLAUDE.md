@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Ludi Informatio v2.0** is an NBA analytics platform that generates betting recommendations for player props using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
 
-- **Product Name**: Ludi Lens (Dashboard Interface)
-- **Engine**: S.A.V.A.G.E. Protocol (Scenario Analysis & Value Assessment Game Engine)
-- **Current Phase**: Week 2, Days 3-4 (Play Classification Tags) - **Days 1-4 Complete ✅**
+- **Product Name**: Ludi Lens v2.0 (The Front Office War Room)
+- **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | 5k Runs | Usage Vacuum)
+- **Current Phase**: Week 3 (Validation) -> Week 6 (Ludi Lens Dashboard Build)
 - **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
@@ -37,28 +37,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Proactive planning (I'll suggest next steps)
 - Clean formatting with emoji anchors (💎📐🥃🍾🥊🧊)
 - Code + documentation + status updates in one session
-- "Tomorrow's briefing" ready before you sign off
+- **Project Context (Ludi Lens v2.0):**
+    - **Identity:** "Front Office War Room" (Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981)
+    - **Voice:** Professional, Tactical, "Asset Management" (No "locks" or "gambling" slang)
+    - **Tech Stack:** Python + Streamlit + SQLite + GitHub Actions
+    - **Philosophy:** "Possession-Based Physics" (Usage Pies, Efficiency Taxes, Archetype Multipliers)
 
 ---
 
-## 🎯 Current Status (Updated Jan 9, 2026, 2:45 PM ET)
+## 🎯 Current Status (Updated Jan 9, 2026, 6:00 PM ET)
 
-### Week 2, Day 6: ✅ COMPLETE - Data Sync & Automation
+### Week 3: ✅ IN PROGRESS - Validation Phase
 
-**✅ Database Sync (Jan 9, 2026):**
-- Module H fixed to include `GAME_ID` in Tank01 records
-- Database updated: 10,840 → 12,108 records (+1,268)
-- Most recent game: January 8, 2026
-- Fixed `migrate_json_to_sqlite.py` to handle None matchup fields
+**✅ Module C (Oracle V3.2) - Engine Verification:**
+- **Hybrid S.A.V.A.G.E. Engine:** Verified.
+- **Logic:** Normal Distribution (High-Vol) + Poisson (Rare Events).
+- **Speed:** 5,000 sims < 200ms.
 
-**✅ GitHub Actions Automation:**
-- New workflow: `.github/workflows/data_sync.yml`
-- Schedule: Daily at 3am EST (8am UTC)
-- Fetches Tank01 box scores → Migrates to SQLite → Auto-commits
-- Manual trigger available via `workflow_dispatch`
-- **Required secrets:** `TANK01_KEY`, `ODDS_API_KEY`
+**✅ "Smart Money" Backtest (MVP Verified):**
+- **Win Rate:** 63.64% (Small Sample).
+- **SOS Regression:** 60.0% Win Rate.
+- **Rotation Chaos:** 60.0% Win Rate (Starter Returns -> Fade Backup).
+- **Shooting Luck:** 100.0% Win Rate (Starter Min > 25, FGA > 10).
 
-### Week 2, Days 1-4: ✅ COMPLETE - Logging, Vibe Starters & Tag Classification
+**⏳ Next Steps (Phase B):**
+- **Archetype Backtesting:** Testing 8 Player Archetypes vs 5 Defensive Schemes.
+- **Ref Archetype Backtesting:** Testing Referee Impact (using newly confirmed `referee_crew` data).
+
+### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags
+
+**✅ Database Sync:**
+- Records: 12k+ logs backfilled.
+- Table: `games` confirmed to have `referee_crew` for analysis.
+
+**✅ Tag System:**
+- Archetypes: SLASHER, STRETCH_BIG, etc.
+- Scenarios: BENEFICIARY, USAGE_VACUUM.
+- Matchups: vs_PAINT_PACK, vs_BLITZ.
 
 
 **✅ Days 1-2: Logging Framework (Complete):**
@@ -321,7 +336,33 @@ python migrate_json_to_sqlite.py
 # Query database directly
 sqlite3 ludi.db "SELECT COUNT(*) FROM player_game_logs;"
 sqlite3 ludi.db "SELECT DISTINCT team_abbreviation FROM player_game_logs ORDER BY team_abbreviation;"
-```
+### Ludi Lens v2.0 Architecture (Target State - Week 6)
+**The Mission:** Validate the Math (Week 3-5), then Build the War Room (Week 6).
+
+**1. The Stack:**
+*   **Frontend:** Streamlit (Hosted on Community Cloud or Local)
+*   **Backend:** Python Modules A-H (The S.A.V.A.G.E. Engine)
+*   **Database:** SQLite (`ludi.db`) - The Single Source of Truth
+*   **Automation:** GitHub Actions (Morning Briefs) + Render/Telegram (Real-time Scout)
+
+**2. Key Files (To Be Built):**
+*   `app.py`: The War Room Dashboard (Streamlit)
+*   `engine.py`: The Simulation Core (Poisson/Normal Hybrid)
+*   `scout.py`: The "Pulse Protocol" (News/Injury Alerts)
+*   `config.py`: Central Command (Theaters, Colors, Keys)
+
+**3. The Syndicate Workflow:**
+*   **05:00 AM (The Night Shift):** Historian syncs box scores. Scout checks NBAstuffer (Ref Stats). Ledger grades bets.
+*   **09:05 AM (The Live Wire):** Scout Grabs Official Ref Assignments. Gatekeeper pulls Opening Lines.
+*   **09:10 AM (The Physics):** Engine runs 5,000 Hybrid Sims using Usage Vacuums & Ref Modifiers.
+*   **09:30 AM (The Briefing):** "Executive Briefing" delivered to Dashboard & Telegram.
+
+**4. Data Sources (The "Intel Stack"):**
+*   **Speed:** Underdog NBA Twitter (The Trigger)
+*   **Context:** Beat Writer Lists (The "Why" / Narrative Tax)
+*   **Physics:** NBAstuffer (Ref Bias, Usage Rates)
+*   **Economics:** Covers/OddsShark (Betting Trends, Line Movement)
+*   **Official:** NBA API (L2M Reports, Lineups)
 
 ## Architecture Overview
 
@@ -632,3 +673,22 @@ if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
 - **Project History**: See `original vision/more_relevant_history.md` for context
 - **Week Status**: See `UPDATED_STATUS_AND_NEXT_STEPS.md` for current progress
 - **Completion Reports**: See `WEEK1_DAY2-4_COMPLETION_REPORT.md` for past milestones
+
+## Strategic Roadmap: The Road to "Pro" (Week 6+ Concepts)
+*These concepts identify "Smart Money" regression spots and are slated for the Calibration Phase.*
+
+### 1. Strength of Schedule (SOS) Adjustment
+**Concept:** Adjust L10 averages based on opponent defensive rating.
+- **Example:** Scored 12 pts vs #1 Defense → Rated as "Neutral" (not bad).
+- **Implementation:** Weighted multiplier on historical logs before calculating baseline.
+
+### 2. Depth Chart Authority (Rotation Chaos)
+**Concept:** Explicitly model "Starter Returns" impact on bench usage.
+- **Problem:** When Haliburton returns, McConnell's minutes drop, but his L5 logs are still inflated.
+- **Solution:** Maintain team depth charts; trigger "Minutes Compression" when a starter enters active status.
+
+### 3. Shooting Luck Deviation (The "Poor Man's ShotQuality")
+**Concept:** Identify unsustainable efficiency variance.
+- **Signal:** Large gap between Season FG% (48%) and L5 FG% (25%).
+- **Action:** Bet on **Positive Regression** (Buy Low).
+

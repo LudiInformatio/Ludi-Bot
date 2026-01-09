@@ -27,11 +27,14 @@ class LudiRLAgent:
         return max(0.85, min(1.15, 1.0 + (q_val * 0.1)))
 
 class LudiOracle:
-    def __init__(self):
+    def __init__(self, sim_count=5000):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE C (ORACLE V3.1) LIVE")
+        print(f"LUDI INFORMATIO: MODULE C (ORACLE V3.2) LIVE")
+        print(f"   >>> Hybrid Engine: Normal (High-Vol) + Poisson (Rare)")
+        print(f"   >>> Sim Count: {sim_count}")
         print(f"{'='*40}")
         
+        self.sim_count = sim_count
         self.brain = LudiRLAgent()
         self.STAT_MAP = {
             'points': 'PTS', 'rebounds': 'REB', 'assists': 'AST',
@@ -104,7 +107,8 @@ class LudiOracle:
             if stat == 'FTA': stat_mod *= mods['whistle']
             
             adj_base = base * stat_mod
-            res = np.random.normal(adj_base, adj_base * 0.12, 25000)
+            # Normal Dist for Volume (allows for hot/cold nights)
+            res = np.random.normal(adj_base, adj_base * 0.12, self.sim_count)
             vol[stat] = round(np.mean(np.maximum(res, 0)), 1)
         return vol
 
@@ -126,7 +130,16 @@ class LudiOracle:
         # POSSESSION-BASED ACCOUNTING
         for stat in ['AST', 'REB', 'OREB', 'DREB', 'STL', 'BLK', 'TOV']:
             base = player.get(stat, 0.0) * mods['pace']
-            res = np.random.normal(base, base * 0.28, 25000)
+            
+            if stat in ['STL', 'BLK']:
+                # POISSON for Rare Events
+                # No variance parameter needed for poisson, variance = mean
+                res = np.random.poisson(base, self.sim_count)
+            else:
+                # NORMAL for High-Volume stats (AST, REB, TOV)
+                # Allows tuning variance (0.28 factor)
+                res = np.random.normal(base, base * 0.28, self.sim_count)
+                
             out[stat] = round(np.mean(np.maximum(res, 0)), 1)
             
         return out

@@ -11,6 +11,9 @@
     - [x] Discover GitHub Actions Workflows (daily/nightly)
     - [x] Update Workflows to use new `pm_bot.py` logic (Committed)
     - [x] Verify `main.py` calls `ProjectManagerBot` correctly
+- [x] Evaluate ShotQuality Integration (New Request) <!-- id: 3 -->
+    - [x] Create Analysis Report
+    - [x] Determine Integration Points (Module E/F)
 - [x] Implement Play Classification Tags (Week 2, Days 3-4) <!-- id: 0 -->
     - [x] Create `utils/tag_classifier.py`
     - [x] Integrate tags into `module_f.py` (Briefing generation)
@@ -18,3 +21,9 @@
 - [ ] Implement Confidence Intervals (Week 2, Days 5-7) <!-- id: 1 -->
     - [ ] Update `module_c.py` for percentiles
     - [ ] Update `module_f.py` for risk display
+
+- [-] Execute Backtesting Protocol (Week 3) <!-- id: 4 -->
+    - [x] Run `backtest_model.py` on 50 historical games
+    - [x] Validate Regression/SOS Logic
+    - [x] Validate Rotation/Depth Chart Logic
+    - [x] Validate Shooting Luck Logic
