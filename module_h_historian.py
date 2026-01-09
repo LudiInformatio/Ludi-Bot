@@ -162,6 +162,7 @@ class LudiHistorian:
                 # --- MAPPING: TANK01 -> NBA API SCHEMA ---
                 # This ensures your new data matches the 'Initializer' columns
                 record = {
+                    "GAME_ID": game_id,  # Critical: Required for migration to SQLite
                     "GAME_DATE": datetime.strptime(date_str, '%Y%m%d'),
                     "PLAYER_ID": p_id,
                     "PLAYER_NAME": stats.get('longName', 'Unknown'),

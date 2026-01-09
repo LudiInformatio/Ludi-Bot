@@ -201,6 +201,7 @@ def migrate_games(conn, legacy_data):
             # Parse matchup: "MIL vs. BKN" or "MIL @ BKN"
             # "@" means team is away, "vs." means team is home
             team_abbr = row.get('TEAM_ABBREVIATION', '')
+            matchup = matchup or ''  # Handle None matchup
 
             if ' @ ' in matchup:
                 # Team is away

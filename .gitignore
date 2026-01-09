@@ -1,8 +1,21 @@
-venv/\n__pycache__/\n*.env\n.DS_Store\nludi.db
-.env
-*.pyc
-__pycache__/
-ludi.db
-yak_cache.json
-*.log
+# Environment
 venv/
+.venv/
+*.env
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Caches (regenerated at runtime)
+yak_cache.json
+
+# NOTE: ludi.db and ludi_history_db.json are NOT ignored
+# They are committed to enable GitHub Actions data sync automation
