@@ -11,10 +11,10 @@
     - [x] Discover GitHub Actions Workflows (daily/nightly)
     - [x] Update Workflows to use new `pm_bot.py` logic (Committed)
     - [x] Verify `main.py` calls `ProjectManagerBot` correctly
-- [ ] Implement Play Classification Tags (Week 2, Days 3-4) <!-- id: 0 -->
-    - [ ] Create `utils/tag_classifier.py`
-    - [ ] Integrate tags into `module_f.py` (Briefing generation)
-    - [ ] Update Database Schema for tags
+- [x] Implement Play Classification Tags (Week 2, Days 3-4) <!-- id: 0 -->
+    - [x] Create `utils/tag_classifier.py`
+    - [x] Integrate tags into `module_f.py` (Briefing generation)
+    - [x] Update Database Schema for tags
 - [ ] Implement Confidence Intervals (Week 2, Days 5-7) <!-- id: 1 -->
     - [ ] Update `module_c.py` for percentiles
     - [ ] Update `module_f.py` for risk display
