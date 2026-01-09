@@ -10,20 +10,27 @@ class ProjectManagerBot:
     def __init__(self):
         print("📒 Initializing Vibe Starters Assistant (Powered by Ludi)...")
         
-        # Assets Paths
-        # Assets Paths
-        self.artifacts_dir = Path("/home/mnprice86/.gemini/antigravity/brain/cc7a00ac-2b90-4fa5-9eec-9978df401a91")
+        # Assets Paths (Relative for Cloud/GitHub Actions compatibility)
+        # We assume the script is running from repo root or utils/
+        # Best practice: Resolve paths relative to this file
+        base_dir = Path(__file__).resolve().parent.parent
+        self.assets_dir = base_dir / "assets"
+        
         # FINAL UI: Clean Vector "Vibe V10" Assets
-        self.morning_img = self.artifacts_dir / "header_morning_vector_v10_1767920729761.png"
-        self.nightly_img = self.artifacts_dir / "header_nightly_vector_v10_1767920745059.png"
-        self.break_img = self.artifacts_dir / "header_break_recharge_v2_1767921486336.png"
+        self.morning_img = self.assets_dir / "header_morning.png"
+        self.nightly_img = self.assets_dir / "header_nightly.png"
+        self.break_img = self.assets_dir / "header_break.png"
 
         if not GEMINI_API_KEY:
             print("❌ GEMINI_API_KEY not found! Cannot generate AI briefing.")
             self.model = None
         else:
-            genai.configure(api_key=GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                self.model = genai.GenerativeModel('gemini-2.0-flash')
+            except Exception as e:
+                print(f"⚠️ Error configuring Gemini: {e}")
+                self.model = None
 
     def _read_file_safe(self, filepath):
         try:
@@ -35,14 +42,38 @@ class ProjectManagerBot:
             print(f"⚠️ Could not read {filepath}: {e}")
             return ""
 
-    def _get_context(self):
+    def _get_context(self, mode="morning"):
         """
-        Retrieves context from Ludi modules. 
-        (Mocked for now, will connect to Module F later).
+        Retrieves WORK context from project files (task.md, status logs).
+        Focuses on the User's Development Journey.
         """
-        today = datetime.datetime.now().strftime('%Y-%m-%d')
-        # Todo: Pull real data from Ludi pipeline
-        return f"Date: {today}. Market Status: Open. No critical alerts yet."
+        try:
+            # Resolve paths relative to repo root
+            base_dir = Path(__file__).resolve().parent.parent
+            task_file = base_dir / "task.md"
+            status_file = base_dir / "UPDATED_STATUS_AND_NEXT_STEPS.md"
+            
+            context_str = f"Date: {datetime.datetime.now().strftime('%Y-%m-%d')}\n"
+
+            if task_file.exists():
+                context_str += "\n=== CURRENT TASKS (The Blueprint) ===\n"
+                with open(task_file, 'r') as f:
+                    # simplistic read of the first 25 lines to capture active tasks
+                    lines = f.readlines()
+                    context_str += "".join([line for line in lines[:25] if '- [' in line])
+            else:
+                context_str += "\n(Note: task.md not found in cloud env)\n"
+            
+            if status_file.exists():
+                context_str += "\n=== PROJECT STATUS (The Vision) ===\n"
+                with open(status_file, 'r') as f:
+                     # Read the top summary
+                     context_str += f.read(1000)
+
+            return context_str
+
+        except Exception as e:
+            return f"Error retrieving work context: {e}. Defaulting to generic prod mode."
 
     def generate_briefing(self, mode="morning"):
         """
