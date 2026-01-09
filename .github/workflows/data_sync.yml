@@ -9,6 +9,8 @@ on:
 jobs:
   sync-data:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
     
     steps:
       - name: Checkout repository
