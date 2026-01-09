@@ -3,6 +3,7 @@ from datetime import datetime
 import config
 from utils.devig import get_fair_probability, calculate_true_edge, american_to_implied
 from utils.bet_logger import get_bet_logger
+from utils.tag_classifier import get_tag_classifier
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
@@ -29,6 +30,14 @@ class LudiReporter:
         except Exception as e:
             print(f"⚠️  Bet logger unavailable: {e}")
             self.bet_logger = None
+
+        # Initialize tag classifier (Week 2, Days 3-4)
+        try:
+            self.tag_classifier = get_tag_classifier()
+            print(f"✅ Tag classifier connected")
+        except Exception as e:
+            print(f"⚠️  Tag classifier unavailable: {e}")
+            self.tag_classifier = None
 
     def generate_report(self, processed_slate):
         """
@@ -122,6 +131,42 @@ class LudiReporter:
                             if abs(game.get('ref_impact', 1.0) - 1.0) > 0.04:
                                 note_elements.append(f"⚖️ Ref Impact: {game.get('ref_impact', 1.0)}")
 
+                            # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
+                            tags_formatted = "[]"  # Default empty tags
+                            if self.tag_classifier:
+                                try:
+                                    # Build game context for classifier
+                                    game_ctx = {
+                                        'opponent': game.get('opponent', ''),
+                                        'spread': game.get('spread', 0),
+                                        'players': game.get('players', [])
+                                    }
+
+                                    # Build yak report (injury status)
+                                    yak_report = {
+                                        'status': p.get('status', 'ACTIVE'),
+                                        'note': ''
+                                    }
+
+                                    # Collect all game props for correlation detection
+                                    # Note: player_props list is built incrementally, so we use the partial list
+                                    all_game_props = player_props.copy()
+
+                                    # Assign tags
+                                    tags_list = self.tag_classifier.assign_all_tags(
+                                        player_packet=p,
+                                        game_context=game_ctx,
+                                        yak_report=yak_report,
+                                        all_game_props=all_game_props
+                                    )
+
+                                    # Format for database
+                                    tags_formatted = self.tag_classifier.format_tags_for_db(tags_list)
+
+                                except Exception as e:
+                                    print(f"⚠️  Tag classification failed for {p['name']}: {e}")
+                                    tags_formatted = "[]"  # Empty array fallback
+
                             # --- BET LOGGING (V4.5) ---
                             if self.bet_logger:
                                 try:
@@ -154,6 +199,7 @@ class LudiReporter:
                                         'units': units,
                                         'confidence_tier': 'DIAMOND',  # TODO: tiering logic
                                         'note': " | ".join(note_elements),
+                                        'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
                                         'referee_impact': game.get('ref_impact', 1.0),
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
@@ -164,15 +210,16 @@ class LudiReporter:
                                     print(f"⚠️  Failed to log bet: {e}")
 
                             player_props.append({
-                                "name": p['name'], 
-                                "team": p['team'], 
+                                "name": p['name'],
+                                "team": p['team'],
                                 "stat": stat_key.upper(),
                                 "bet_on": "OVER" if edge > 0 else "UNDER",
-                                "line": line, 
+                                "line": line,
                                 "proj": round(final_proj, 2),
-                                "ev": ev, 
-                                "units": units, 
-                                "note": " | ".join(note_elements)
+                                "ev": ev,
+                                "units": units,
+                                "note": " | ".join(note_elements),
+                                "tags": tags_formatted  # Week 2, Days 3-4: Tag classification
                             })
 
                 # --- 4. CORRELATION CHECK (SGP TARGETS) ---
@@ -282,7 +329,18 @@ class LudiReporter:
         for bet in diamonds:
             report += f"🏀 {bet['name']} ({bet['team']}) | {bet['bet_on']} {bet['line']} {bet['stat']}\n"
             report += f"   Sharp Proj: {bet['proj']} | EV: +{bet['ev']}% | {bet['units']}u\n"
-            if bet['note']: 
+
+            # Display tags (Week 2, Days 3-4)
+            if bet.get('tags') and self.tag_classifier:
+                try:
+                    tags_list = self.tag_classifier.parse_tags_from_db(bet['tags'])
+                    if tags_list:
+                        tags_display = " | ".join(tags_list)
+                        report += f"   🏷️  {tags_display}\n"
+                except Exception as e:
+                    pass  # Silent fail for tag display
+
+            if bet['note']:
                 report += f"   📝 {bet['note']}\n\n"
         
         return report

@@ -208,6 +208,25 @@ python utils/pm_bot.py
 - **Nightly Routine:** Sends "The Wins", "The Pivot", "The Vibe" at 8pm.
 - **Assets:** Clean, minimalist images stored in `.gemini/antigravity/brain/...` (configured in `pm_bot.py`)
 
+### Design Identity & Visual Guidelines
+**Core Logo:** The "Winking Notebook" (Character).
+- **Visuals:** A friendly, animated notebook character with a winking face and "sparks" flying out the top.
+- **Vibe:** Playful, "Get it done", Approchable, NOT cold/industrial.
+- **Reference Image:** `/home/mnprice86/.gemini/antigravity/brain/cc7a00ac-2b90-4fa5-9eec-9978df401a91/uploaded_image_1767915156997.png`
+- **Typography:** Rounded sans-serif, friendly but clean.
+- **Colors:** Cream, Dark Slate, Gold Sparks.
+
+### Brand Iconography (The "IYKYK" Elite Set)
+*Use these "Insider/Sharp" anchors:*
+- **Morning Vision:** 💎 (The Diamond / Sharp Vision)
+- **The Blueprint:** 📐 (The Angle / The Playbook)
+- **The Intel:** 🥃 (The Pour / Straight Up Truth)
+- **The Wins:** 🍾 (The Toast / Bottles)
+- **The Pivot:** 🥊 (The Counter-Punch / Adjustment)
+- **The Vibe/Energy:** 🧊 (Stay Frosty / Composed) or 🛑 (Hard Stop)
+- **Separators:** `──────────────` (Clean Line)
+- **Metadata:** `📅 JAN 08 | 🟢 ONLINE` (Monospace)
+
 ### Testing Individual Modules
 ```bash
 # Test Module A (Gatekeeper - fetches odds)
