@@ -17,7 +17,19 @@
 - [x] Implement Play Classification Tags (Week 2, Days 3-4) <!-- id: 0 -->
     - [x] Create `utils/tag_classifier.py`
     - [x] Integrate tags into `module_f.py` (Briefing generation)
-    - [x] Update Database Schema for tags
+    - [ ] **Validation Phase B: Archetype Backtesting:**
+  - [ ] Implement `backtest_archetypes.py` (8 Archetypes x 5 Def Schemes)
+  - [ ] Define Defensive Schemes (Funnel, Paint Pack, etc.)
+  - [ ] Run Archetype Validation on Targeted Slate (Jan 9-10)
+
+- [ ] **ENHANCEMENT: Multi-Bookmaker Tracking (Post-Validation)**
+  - [ ] Refactor Module A to store Lines per Bookmaker
+  - [ ] Update Module F to Report Best Line + Book
+  - [ ] Enable "Line Shopping" Logic in Main Orchestrator
+
+- [ ] **Validation Phase C: Referee Impact & Final Report:**
+  - [ ] Implement `backtest_refs.py` (Crew Analysis)
+  - [ ] Generate WEEK 3 VALIDATION REPORT
 - [ ] Implement Confidence Intervals (Week 2, Days 5-7) <!-- id: 1 -->
     - [ ] Update `module_c.py` for percentiles
     - [ ] Update `module_f.py` for risk display

@@ -54,14 +54,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Logic:** Normal Distribution (High-Vol) + Poisson (Rare Events).
 - **Speed:** 5,000 sims < 200ms.
 
-**✅ "Smart Money" Backtest (MVP Verified):**
-- **Win Rate:** 63.64% (Small Sample).
-- **SOS Regression:** 60.0% Win Rate.
-- **Rotation Chaos:** 60.0% Win Rate (Starter Returns -> Fade Backup).
-- **Shooting Luck:** 100.0% Win Rate (Starter Min > 25, FGA > 10).
+**✅ "Smart Money" Backtest (Targeted Testing Phase):**
+- **Protocol:** "Targeted Testing" (Paper Trading specific matchups).
+- **Target Games (Jan 9):** OKC vs MEM, ATL vs DEN, MIL vs LAL.
+- **Goal:** Verify localized accuracy before full-slate automation.
+- **Status:** 60-100% Win Rate on initial "Smart Money" samples.
 
-**⏳ Next Steps (Phase B):**
-- **Archetype Backtesting:** Testing 8 Player Archetypes vs 5 Defensive Schemes.
+**⏳ Next Steps (Phase B & Enhancement):**
+- **Archetype Backtesting:** Testing 8 Player Archetypes vs 5 Defensive Schemes using the targeted 3-game slate.
+- **ENHANCEMENT:** Implement Multi-Bookmaker Tracking (Line Shopping & Grading) *after* validation phase.
 - **Ref Archetype Backtesting:** Testing Referee Impact (using newly confirmed `referee_crew` data).
 
 ### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags

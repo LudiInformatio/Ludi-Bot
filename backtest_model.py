@@ -1,9 +1,6 @@
 import sqlite3
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 from module_c import LudiOracle
-import ast
 
 # =========================================================
 # LUDI LENS v2.0 | S.A.V.A.G.E. ENGINE VALIDATION
@@ -13,6 +10,12 @@ import ast
 DB_PATH = "ludi.db"
 
 class ScenarioMiner:
+    """
+    Mines historical game logs to identify 'Smart Money' scenarios:
+    1. SOS Regression (Easy Matchup after Hard Schedule)
+    2. Rotation Chaos (Starter Returns -> Fade Backup)
+    3. Shooting Luck (Buy Low on Elite Shooters)
+    """
     def __init__(self, db_path=DB_PATH):
         self.conn = sqlite3.connect(db_path)
         self.df = self._load_data()
@@ -31,20 +34,6 @@ class ScenarioMiner:
 
     def _calculate_team_defensive_ratings(self):
         # Infer opponent from matchup and calculate points allowed
-        # Matchup format: "LAL @ GSW" or "LAL vs. GSW"
-        # We need to parse this to find the opponent.
-        
-        # Simplified Defensive Rating: Points Allowed L10 Games
-        # 1. Group by GameID/Team? No, we have individual logs.
-        # We need to know how many points a TEAM allowed in a game.
-        # This is hard from player logs without game scores. 
-        # Approx: Sum opponent player points? That's equal to team points allowed.
-        
-        # Strategy: 
-        # 1. Identify Opponent for each row.
-        # 2. Sum PTS by (Game_Date, Opponent) -> This equals Points Scored by Team against Opponent.
-        #    Wait, Sum PTS by (Game_Date, Team) = Team Score.
-        #    Points Allowed by Team A = Sum PTS of Team B in that game.
         
         # Let's extract opponent first.
         def get_opponent(row):
@@ -62,21 +51,10 @@ class ScenarioMiner:
         team_scores.rename(columns={'pts': 'team_pts'}, inplace=True)
         
         # Calculate Points Allowed (Join back on opponent)
-        # For each (date, team), find (date, opponent)'s score.
-        # This is computationally heavy to do exactly for 12k rows in pandas if not careful.
-        # Let's just create a lookup dictionary (date, team) -> score
         score_lookup = team_scores.set_index(['game_date', 'team_abbreviation'])['team_pts'].to_dict()
         
-        def get_pts_allowed(row):
-            return score_lookup.get((row['game_date'], row['opponent']), 110) # Default 110
-            
-        team_scores['pts_allowed'] = team_scores.apply(lambda r: score_lookup.get((r['game_date'], get_opponent({'matchup': f"{r['team_abbreviation']} @ UNK", 'team_abbreviation': r['team_abbreviation']})), 110), axis=1)
-        # Actually, simpler: just map the opponent.
-        
-        # Let's just do a rolling average of "Pts Allowed" for each team.
-        # We need a DF of [Date, Team, PtsAllowed].
+        # Calculate Pts Allowed for each team
         # PtsAllowed for Team A is Team B's score.
-        pass # Placeholder for complex logic, realizing simple rolling mean is easier if we had scores.
         
         # For "Gauntlet" regression, let's stick to a simpler proxy if full team scores are messy:
         # We'll assume we can't perfectly calc Def Rtg yet without Game table.
