@@ -60,10 +60,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Goal:** Verify localized accuracy before full-slate automation.
 - **Status:** 60-100% Win Rate on initial "Smart Money" samples.
 
+**🔧 BUG FIXED (Jan 9 Evening):**
+- **Issue:** Module A was capturing Bovada ALT LINES instead of NC Legal.
+- **Fix:** Deployed priority logic for FanDuel/DraftKings over sharps.
+- **Result:** Giannis line corrected from 34.5 to 30.5.
+
+**⚠️ GAP DISCOVERED (Jan 9 Evening):**
+- **Issue:** Module D (Yak) is loaded but NOT called during scenario building.
+- **Location:** `main.py` line 264: "# TODO: Integrate Module D calls here"
+- **Impact:** Injury status not checked before simulations.
+- **Priority:** P0 - Must fix Jan 10.
+
 **⏳ Next Steps (Phase B & Enhancement):**
-- **Archetype Backtesting:** Testing 8 Player Archetypes vs 5 Defensive Schemes using the targeted 3-game slate.
-- **ENHANCEMENT:** Implement Multi-Bookmaker Tracking (Line Shopping & Grading) *after* validation phase.
-- **Ref Archetype Backtesting:** Testing Referee Impact (using newly confirmed `referee_crew` data).
+- **P0:** Integrate Yak into main pipeline (1 hour).
+- **P1:** Implement Full Bookmaker Tracking - store ALL lines per book (2 hours).
+- **P2:** Create line_shop.py utility for sharp vs NC comparison (1.5 hours).
+- **P3:** Update Module F for true EV calculation (1 hour).
+- **ARCHITECTURE:** Implement "Three-Layer Line Capture" (Sharp Truth, NC Legal Targets, DFS Pickem).
 
 ### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags
 

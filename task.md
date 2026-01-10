@@ -22,10 +22,20 @@
   - [ ] Define Defensive Schemes (Funnel, Paint Pack, etc.)
   - [ ] Run Archetype Validation on Targeted Slate (Jan 9-10)
 
+- [x] **BUG FIX: Line Capture Priority (Jan 9 - FIXED)**
+  - [x] Module A was capturing Bovada alts instead of NC Legal
+  - [x] Deployed priority logic for FanDuel/DraftKings
+
+- [ ] **P0: CRITICAL - Integrate Yak into Main Pipeline (Jan 10)**
+  - [ ] Add self.yak.get_player_status() call in main.py
+  - [ ] Update player status before building scenarios
+  - [ ] Skip players with status OUT/DOUBTFUL
+
 - [ ] **ENHANCEMENT: Multi-Bookmaker Tracking (Post-Validation)**
   - [ ] Refactor Module A to store Lines per Bookmaker
   - [ ] Update Module F to Report Best Line + Book
   - [ ] Enable "Line Shopping" Logic in Main Orchestrator
+  - [ ] Create utils/line_shop.py for sharp vs NC comparison
 
 - [ ] **Validation Phase C: Referee Impact & Final Report:**
   - [ ] Implement `backtest_refs.py` (Crew Analysis)

@@ -211,6 +211,9 @@ class Gatekeeper:
                         
                         target_books = nc_legal + sharps + dfs
                         
+                        # PRIORITY: NC Legal first, then sharps, then DFS
+                        # Only capture line if we don't have one yet (avoids alt line overwrites)
+                        priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365']
                         if book['title'] in target_books:
                             for market in book['markets']:
                                 key = market['key'] 
@@ -220,7 +223,9 @@ class Gatekeeper:
                                     if player not in self.games[g_id]['props']:
                                         self.games[g_id]['props'][player] = {}
                                     short_key = key.replace('player_', '')
-                                    self.games[g_id]['props'][player][short_key] = line
+                                    # Only set if not already set OR if this is a priority book
+                                    if short_key not in self.games[g_id]['props'][player] or book['title'] in priority_books:
+                                        self.games[g_id]['props'][player][short_key] = line
                     
                     # Call BDL Backup
                     self.fetch_props_balldontlie(g_id)

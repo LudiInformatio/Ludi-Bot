@@ -2,28 +2,28 @@
 📰 LUDI ELITE BRIEFING (Jan 09, 2026)
 ================================
 💎 DIAMOND PLAYS
-🏀 Derrick White (BOS) | OVER 6.5 AST
-   Sharp Proj: 4.55 | EV: +43.25% | 1.5u
+🏀 Jaylen Brown (BOS) | OVER 1.5 3PM
+   Sharp Proj: 2.4 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+   📝  [🔥 CORRELATED SGP]
+
+🏀 Neemias Queta (BOS) | OVER 8.5 REB
+   Sharp Proj: 5.77 | EV: +43.25% | 1.5u
+   🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+   📝  [🔥 CORRELATED SGP]
+
+🏀 Immanuel Quickley (TOR) | OVER 18.5 PTS
+   Sharp Proj: 13.31 | EV: +43.25% | 1.5u
    🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
-🏀 Jaylen Brown (BOS) | OVER 33.5 PTS
-   Sharp Proj: 28.61 | EV: +43.25% | 1.5u
+🏀 Immanuel Quickley (TOR) | OVER 5.5 AST
+   Sharp Proj: 2.93 | EV: +43.25% | 1.5u
    🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
-🏀 Payton Pritchard (BOS) | OVER 19.5 PTS
-   Sharp Proj: 14.88 | EV: +43.25% | 1.5u
-   🏷️  GENERALIST | vs_NEUTRAL
-   📝  [🔥 CORRELATED SGP]
-
-🏀 Payton Pritchard (BOS) | OVER 3.5 3PM
-   Sharp Proj: 2.18 | EV: +43.25% | 1.5u
-   🏷️  GENERALIST | vs_NEUTRAL
-   📝  [🔥 CORRELATED SGP]
-
-🏀 Payton Pritchard (BOS) | OVER 19.5 PTS
-   Sharp Proj: 14.69 | EV: +43.25% | 1.5u
+🏀 Collin Murray-Boyles (TOR) | OVER 10.5 PTS
+   Sharp Proj: 5.86 | EV: +43.25% | 1.5u
    🏷️  GENERALIST | vs_NEUTRAL
    📝  [🔥 CORRELATED SGP]
 
