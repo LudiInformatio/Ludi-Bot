@@ -1,48 +1,95 @@
-name: Data Sync Workflow
+name: Daily Data Sync
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Run every 6 hours
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  pull-requests: write
+    # 3am EST = 8am UTC (during EST, 4am EDT = 8am UTC during daylight saving)
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Allow manual trigger for testing
 
 jobs:
   sync-data:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Need full history for git operations
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Git
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-      - name: Run data sync script
+      - name: Install dependencies
         run: |
-          python3 scripts/data_sync.py
+          python -m pip install --upgrade pip
+          pip install pandas requests python-dotenv pytz
 
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git diff --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push changes
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          git add .
-          git commit -m "chore: sync data [skip ci]"
-          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
+      - name: Run Module H (Fetch recent games)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          # These are optional but prevent import errors in config.py
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: python module_h_historian.py
+
+      - name: Migrate JSON to SQLite
+        run: python migrate_json_to_sqlite.py
+
+      - name: Deduplicate database
+        run: |
+          python -c "
+          import sqlite3
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          
+          # Deduplicate player_game_logs
+          c.execute('''
+              DELETE FROM player_game_logs 
+              WHERE rowid NOT IN (
+                  SELECT MIN(rowid) 
+                  FROM player_game_logs 
+                  GROUP BY player_id, game_date
+              )
+          ''')
+          deleted = c.rowcount
+          print(f'Deleted {deleted} duplicate game logs')
+          
+          # Deduplicate games
+          c.execute('''
+              DELETE FROM games 
+              WHERE rowid NOT IN (
+                  SELECT MIN(rowid) 
+                  FROM games 
+                  GROUP BY game_id
+              )
+          ''')
+          
+          conn.commit()
+          
+          # Report final state
+          c.execute('SELECT COUNT(*), MAX(game_date) FROM player_game_logs')
+          logs = c.fetchone()
+          print(f'Database: {logs[0]} records through {logs[1]}')
+          conn.close()
+          "
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Ludi Bot"
+          git config user.email "noreply@ludibot.com"
+          git add ludi.db ludi_history_db.json
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit - database already up to date"
+          else
+            git commit -m "chore: automated data sync $(date +'%Y-%m-%d')"
+            git push
+            echo "✅ Database updated and pushed!"
+          fi
