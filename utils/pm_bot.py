@@ -1,8 +1,7 @@
-
 import os
 import datetime
 from pathlib import Path
-import google.generativeai as genai
+from google import genai
 from config import GEMINI_API_KEY, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 from utils.telegram_notifier import send_photo, send_message
 
@@ -10,45 +9,29 @@ class ProjectManagerBot:
     def __init__(self):
         print("📒 Initializing Vibe Starters Assistant (Powered by Ludi)...")
         
-        # Assets Paths (Relative for Cloud/GitHub Actions compatibility)
-        # We assume the script is running from repo root or utils/
-        # Best practice: Resolve paths relative to this file
+        # Assets Paths
         base_dir = Path(__file__).resolve().parent.parent
         self.assets_dir = base_dir / "assets"
         
-        # FINAL UI: Clean Vector "Vibe V10" Assets
         self.morning_img = self.assets_dir / "header_morning.png"
         self.nightly_img = self.assets_dir / "header_nightly.png"
         self.break_img = self.assets_dir / "header_break.png"
 
         if not GEMINI_API_KEY:
             print("❌ GEMINI_API_KEY not found! Cannot generate AI briefing.")
-            self.model = None
+            self.client = None
         else:
             try:
-                genai.configure(api_key=GEMINI_API_KEY)
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
+                # New SDK Syntax
+                self.client = genai.Client(api_key=GEMINI_API_KEY)
+                # We'll use 2.0-flash as the default for the new SDK, or 1.5-flash if needed
+                self.model_id = 'gemini-2.0-flash' 
             except Exception as e:
                 print(f"⚠️ Error configuring Gemini: {e}")
-                self.model = None
-
-    def _read_file_safe(self, filepath):
-        try:
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    return f.read()
-            return ""
-        except Exception as e:
-            print(f"⚠️ Could not read {filepath}: {e}")
-            return ""
+                self.client = None
 
     def _get_context(self, mode="morning"):
-        """
-        Retrieves WORK context from project files (task.md, status logs).
-        Focuses on the User's Development Journey.
-        """
         try:
-            # Resolve paths relative to repo root
             base_dir = Path(__file__).resolve().parent.parent
             task_file = base_dir / "task.md"
             status_file = base_dir / "UPDATED_STATUS_AND_NEXT_STEPS.md"
@@ -58,28 +41,20 @@ class ProjectManagerBot:
             if task_file.exists():
                 context_str += "\n=== CURRENT TASKS (The Blueprint) ===\n"
                 with open(task_file, 'r') as f:
-                    # simplistic read of the first 25 lines to capture active tasks
                     lines = f.readlines()
                     context_str += "".join([line for line in lines[:25] if '- [' in line])
-            else:
-                context_str += "\n(Note: task.md not found in cloud env)\n"
             
             if status_file.exists():
                 context_str += "\n=== PROJECT STATUS (The Vision) ===\n"
                 with open(status_file, 'r') as f:
-                     # Read the top summary
                      context_str += f.read(1000)
 
             return context_str
-
         except Exception as e:
-            return f"Error retrieving work context: {e}. Defaulting to generic prod mode."
+            return f"Error retrieving work context: {e}"
 
     def generate_briefing(self, mode="morning"):
-        """
-        Generates the briefing using Gemini and sends it via Telegram.
-        """
-        if not self.model:
+        if not self.client:
             return False
 
         context = self._get_context()
@@ -91,69 +66,56 @@ class ProjectManagerBot:
             You are the "Vibe Starters Assistant" (Powered by Ludi).
             Your persona is the "Smart Creative" - efficient, low-key, professional but casual.
             
-            **OBJECTIVE:** 
-            Generate a "Morning Brief" for the user.
+            **OBJECTIVE:** Generate a "Morning Brief" for the user.
+            **CONTEXT:** {context}
             
-            **CONTEXT:**
-            {context}
-            
-            **FORMATTING RULES (The Vibe Starters Code):**
+            **FORMATTING RULES:**
             1. **METADATA:** `📅 {today_str} | 🟢 ONLINE`
             2. **SEPARATORS:** `──────────────`
-            3. **ICONS (IYKYK Edition):**
-               - Vision: 💎 (The Diamond/Sharp)
-               - Blueprint: 📐 (The Angle)
-               - Intel: 🥃 (The Pour/Straight Up)
+            3. **ICONS:** Vision: 💎 | Blueprint: 📐 | Intel: 🥃
             
             **STRUCTURE:**
-            `──────────────`
+            ──────────────
             **THE VISION** 💎
             (One single sentence goal.)
-            
-            `──────────────`
+            ──────────────
             **THE BLUEPRINT** 📐
             (3 bullet points on key tasks.)
-            
-            `──────────────`
+            ──────────────
             **THE INTEL** 🥃
             (One smart insight or market nugget.)
             """
-        else: # Nightly
+        else:
             header_img = str(self.nightly_img)
             prompt = f"""
             You are the "Vibe Starters Assistant". End of day protocol.
+            **CONTEXT:** {context}
             
             **FORMATTING RULES:**
             1. **METADATA:** `📅 {today_str} | 🌙 OFFLINE`
             2. **SEPARATORS:** `──────────────`
-            3. **ICONS (IYKYK Edition):**
-               - Wins: 🍾 (The Toast)
-               - Pivot: 🥊 (The Counter-Punch)
-               - Vibe: 🧊 (Stay Frosty)
+            3. **ICONS:** Wins: 🍾 | Pivot: 🥊 | Vibe: 🧊
             
             **STRUCTURE:**
-            `──────────────`
+            ──────────────
             **THE WINS** 🍾
-            (Highlight 2-3 wins.)
-            
-            `──────────────`
+            (Highlight 2-3 wins based on the context.)
+            ──────────────
             **THE PIVOT** 🥊
             (One adjustment for tomorrow.)
-            
-            `──────────────`
+            ──────────────
             **THE VIBE** 🧊
             (Closing energy check.)
             """
 
         try:
-            response = self.model.generate_content(prompt)
+            # New SDK Syntax
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=prompt
+            )
             briefing_text = response.text
             
-            # Send Header + Briefing as a SINGLE CARD
-            from utils.telegram_notifier import send_photo, send_message
-            
-            # Send photo with caption (briefing text)
-            # parse_mode=None is crucial to prevent crashes from AI-generated asterisks
             return send_photo(header_img, caption=briefing_text, parse_mode=None)
             
         except Exception as e:
@@ -161,46 +123,24 @@ class ProjectManagerBot:
             return False
 
     def send_break_message(self):
-        """
-        Sends a one-off 'Break/State Preservation' message.
-        """
-        if not self.model:
+        if not self.client:
             return False
 
         header_img = str(self.break_img)
-        time_str = datetime.datetime.now().strftime('%I:%M %p')
+        time_str = datetime.now().strftime('%I:%M %p')
         
-        prompt = f"""
-        You are the user's "Vibe Starters" assistant.
-        Generate a "State Preservation" card.
-        
-        **FORMAT:**
-        `⏸️ PAUSED | {time_str}`
-        `──────────────`
-        
-        **ICONS:**
-        - Use 🛑 (Hard Stop) or 🥃 (Relax)
-        
-        **CONTENT:**
-        1. "System Idle. Context Saved."
-        2. "Go touch grass." (Or similar vibe).
-        """
+        prompt = "Generate a 'State Preservation' card. Format: PAUSED | {time_str}. Icons: 🛑 or 🥃. Content: System Idle. Context Saved. Go touch grass."
         
         try:
-            print("☕ Generating Break Message...")
-            response = self.model.generate_content(prompt)
-            break_text = response.text
-            
-            from utils.telegram_notifier import send_photo, send_message
-            
-            # Send photo with caption (break text) as SINGLE CARD
-            return send_photo(header_img, caption=break_text, parse_mode=None)
-            
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=prompt
+            )
+            return send_photo(header_img, caption=response.text, parse_mode=None)
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
             return False
 
 if __name__ == "__main__":
-    # Test run
     bot = ProjectManagerBot()
     bot.generate_briefing(mode="morning")
