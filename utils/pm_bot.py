@@ -127,7 +127,7 @@ class ProjectManagerBot:
             return False
 
         header_img = str(self.break_img)
-        time_str = datetime.now().strftime('%I:%M %p')
+        time_str = datetime.datetime.now().strftime('%I:%M %p')
         
         prompt = "Generate a 'State Preservation' card. Format: PAUSED | {time_str}. Icons: 🛑 or 🥃. Content: System Idle. Context Saved. Go touch grass."
         
