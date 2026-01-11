@@ -11,6 +11,13 @@
     - [x] Discover GitHub Actions Workflows (daily/nightly)
     - [x] Update Workflows to use new `pm_bot.py` logic (Committed)
     - [x] Verify `main.py` calls `ProjectManagerBot` correctly
+    - [x] **FIX: GitHub Actions API Keys & SDK Migration (Jan 11, 2026)**
+        - [x] Add secrets to workflows (daily/nightly)
+        - [x] Migrate to `google-genai` SDK
+        - [x] Add missing dependencies (`unidecode`, `beautifulsoup4`, etc.)
+    - [x] **Feature: Single Game Notes (Jan 11, 2026)**
+        - [x] Create `send_single_game_notes.py` for targeted reporting
+        - [x] Schedule GitHub Action (`game_notes_mil_den.yml`) for 10am EST
 - [x] Evaluate ShotQuality Integration (New Request) <!-- id: 3 -->
     - [x] Create Analysis Report
     - [x] Determine Integration Points (Module E/F)

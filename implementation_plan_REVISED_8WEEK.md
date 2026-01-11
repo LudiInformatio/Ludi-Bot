@@ -1,17 +1,24 @@
 # Ludi Lens v2.0: REVISED 8-Week Strategic Plan (Post-Assessment)
 
-**Document Version:** 2.0 - Updated After Comprehensive Project Assessment
-**Revision Date:** January 4, 2026
-**Previous Plan:** 6 weeks (Foundation → Engine → Dashboard → Automation)
-**New Plan:** 8 weeks (Foundation → Engine → **VALIDATION** → Calibration → Dashboard → Automation)
+**Document Version:** 2.1 - Updated Status (Jan 11, 2026)
+**Current Phase:** Phase 1 (Foundation/Integration) - Wrapping Up
+**Status:** ✅ ON TRACK
 
 **GitHub Repository:** https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
 
-## REVISION SUMMARY: What Changed and Why
+## REVISION SUMMARY: Current Progress (Jan 11, 2026)
 
-### Critical Discovery from Assessment
+**Recent Accomplishments:**
+- ✅ **GitHub Actions Fixed:** Automated Morning Briefing and Nightly Debrief workflows are now correctly configured with API secrets and updated Python dependencies.
+- ✅ **Gemini SDK Migration:** Successfully migrated from the deprecated `google-generativeai` to the modern `google-genai` library (SDK v2).
+- ✅ **Dependency Hardening:** Added missing libraries (`unidecode`, `duckduckgo_search`, `beautifulsoup4`) to ensure cloud stability.
+- ✅ **Targeted Reporting:** Implemented `send_single_game_notes.py` and scheduled automated delivery for specific high-leverage matchups (MIL vs DEN).
+
+---
+
+## 1. The "Real Talk" Product Audit (Unchanged)
 
 The original 6-week plan had a **critical blind spot**: it jumped from building projections (Week 4) directly to dashboard (Week 5) without ever validating if the model was accurate.
 
