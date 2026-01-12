@@ -33,4 +33,5 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python main.py --games CLE SAC LAC --mode pm_briefing
+          # Use --send-telegram to ensure delivery even if Gemini AI fails
+          python main.py --games CLE SAC LAC --send-telegram

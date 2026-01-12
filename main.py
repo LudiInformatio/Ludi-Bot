@@ -24,6 +24,7 @@ try:
     # Utilities
     from utils.pm_bot import ProjectManagerBot
     from utils.api_monitor import get_monitor
+    from utils.telegram_notifier import send_message
 except ImportError as e:
     print(f"CRITICAL ERROR: Missing a Ludi Module. {e}")
     sys.exit(1)
@@ -32,13 +33,14 @@ except ImportError as e:
 logging.basicConfig(level=logging.INFO, format="[LUDI-CORE] %(message)s")
 
 class LudiOrchestrator:
-    def __init__(self, target_teams=None):
+    def __init__(self, target_teams=None, send_telegram=False):
         print("\n" + "="*50)
         print("   LUDI INFORMATIO | SYSTEM INITIALIZATION")
         print("   Architecture: Modules A-H (Production v2.0)")
         print("="*50)
 
         self.target_teams = target_teams # List of team abbrs (e.g. ['CLE', 'SAC'])
+        self.send_telegram = send_telegram
 
         # 1. INITIALIZE ALL SYSTEMS
         self.gate = Gatekeeper()
@@ -249,11 +251,16 @@ class LudiOrchestrator:
         
         with open("daily_briefing.txt", "w") as f: f.write(briefing)
         print("\n✅ Saved to daily_briefing.txt")
+        
+        if self.send_telegram:
+            print("[step 6] Sending Telegram Briefing...")
+            send_message(f"🚨 **LUDI EVENING LOCK** 🚨\n\n{briefing}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="interactive")
     parser.add_argument("--games", nargs='+', help="Target teams (e.g. CLE SAC)")
+    parser.add_argument("--send-telegram", action='store_true', help="Send results via Telegram")
     args = parser.parse_args()
 
     if args.mode == "pm_briefing":
@@ -261,5 +268,5 @@ if __name__ == "__main__":
     elif args.mode == "pm_debrief":
         ProjectManagerBot().generate_briefing(mode="nightly")
     else:
-        app = LudiOrchestrator(target_teams=args.games)
+        app = LudiOrchestrator(target_teams=args.games, send_telegram=args.send_telegram)
         app.run_daily_cycle()
