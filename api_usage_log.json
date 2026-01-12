@@ -3167,5 +3167,24 @@
       "requests_remaining": "982",
       "requests_limit": "1000"
     }
+  },
+  {
+    "timestamp": "2026-01-12T10:20:07.850136",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "15122",
+      "requests_used": "4878",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-12T10:20:09.297827",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "988",
+      "requests_limit": "1000"
+    }
   }
 ]
