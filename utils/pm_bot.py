@@ -22,9 +22,8 @@ class ProjectManagerBot:
             self.client = None
         else:
             try:
-                # New SDK Syntax
+                # google-genai SDK
                 self.client = genai.Client(api_key=GEMINI_API_KEY)
-                # We'll use 2.0-flash as the default for the new SDK, or 1.5-flash if needed
                 self.model_id = 'gemini-2.0-flash' 
             except Exception as e:
                 print(f"⚠️ Error configuring Gemini: {e}")
