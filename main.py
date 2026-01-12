@@ -260,11 +260,35 @@ class LudiOrchestrator:
             if not home_matched and not away_matched:
                 continue
 
-            # Check Injuries (Yak)
-            # TODO: Integrate Module D calls here to update status
+            # Check Injuries (Yak) - Filter OUT and DOUBTFUL players
+            print(f"      [YAK] Checking injury status...")
+            filtered_home = []
+            filtered_away = []
             
-            # Build Scenario
-            scenario = self.build_simulation_scenario(game_data, home_matched, away_matched)
+            for player in home_matched:
+                status_info = self.yak.get_player_status(player['PLAYER_NAME'], home_team)
+                if status_info['status'] in ['OUT', 'DOUBTFUL']:
+                    print(f"         ⚠️  {player['PLAYER_NAME']}: {status_info['status']} - Skipping")
+                else:
+                    player['injury_status'] = status_info['status']
+                    player['injury_note'] = status_info.get('note', '')
+                    filtered_home.append(player)
+            
+            for player in away_matched:
+                status_info = self.yak.get_player_status(player['PLAYER_NAME'], away_team)
+                if status_info['status'] in ['OUT', 'DOUBTFUL']:
+                    print(f"         ⚠️  {player['PLAYER_NAME']}: {status_info['status']} - Skipping")
+                else:
+                    player['injury_status'] = status_info['status']
+                    player['injury_note'] = status_info.get('note', '')
+                    filtered_away.append(player)
+            
+            if not filtered_home and not filtered_away:
+                print(f"      ❌ All players filtered out - skipping game")
+                continue
+            
+            # Build Scenario with filtered rosters
+            scenario = self.build_simulation_scenario(game_data, filtered_home, filtered_away)
             all_scenarios.append({
                 'scenario': scenario,
                 'game_data': game_data,
