@@ -73,6 +73,10 @@ class LudiReporter:
                             odds_under = -110
 
                         # Map internal projection keys to common sportsbook prop keys
+                        # Ensure line is numeric
+                        if not isinstance(line, (int, float)):
+                            continue
+
                         raw_val = self._map_stat(p, stat_key)
 
                         # Apply Final 2026 Blowout Modifier
@@ -104,8 +108,15 @@ class LudiReporter:
                             # Use our model probability directly (already calculated)
                             win_prob = min(max(model_prob, 0.51), 0.75)
 
-                            # Standardized -110 (1.91) EV Calculation
-                            ev = round(((win_prob * 1.91) - 1) * 100, 2)
+                            # Calculate Decimal Odds for accurate EV
+                            bet_odds = odds_over if bet_direction == 'over' else odds_under
+                            if bet_odds > 0:
+                                decimal_odds = 1 + (bet_odds / 100)
+                            else:
+                                decimal_odds = 1 + (100 / abs(bet_odds))
+
+                            # EV Calculation using actual odds
+                            ev = round(((win_prob * decimal_odds) - 1) * 100, 2)
                             
                             # Bankroll Unit Sizing (0.25u to 1.5u)
                             units = min(max(round(ev / 8.0, 2), 0.25), 1.5) if ev >= 1.0 else 0
