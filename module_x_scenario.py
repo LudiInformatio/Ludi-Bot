@@ -25,18 +25,28 @@ class ScenarioBuilder:
         final_scenarios = []
         
         for game in processed_slate:
-            # 1. Base Scenario
+            # 1. Base Scenario (All Active/GTD players included)
             base_scenario = game.copy()
             base_scenario['scenario_name'] = "BASE"
             final_scenarios.append(base_scenario)
             
-            # 2. Contingency Scenarios (Player OUT)
+            # 2. GTD Forks (The "Scenario Fork")
+            # Create branching realities for Questionable/GTD stars
             for player in game['players']:
-                # Threshold: Only simulate if a KEY PLAYER sits
-                # (Usage > 18% and Minutes > 24) to avoid noise
-                if player.get('base_usg', 0) > 0.18 and player.get('base_min', 0) > 24.0:
+                # Only fork for KEY players who are uncertain
+                is_key_player = player.get('base_usg', 0) > 0.18 and player.get('base_min', 0) > 24.0
+                is_uncertain = player.get('status') in ['Q', 'GTD', 'Questionable']
+                
+                if is_key_player and is_uncertain:
+                    # Scenario A: Player Plays (Standard Risk Tax)
+                    # (This is effectively covered by BASE, but we can make it explicit or apply tax)
+                    # For now, BASE assumes they play. We could add a specific "Risk Adjusted" one if needed.
+                    
+                    # Scenario B: Player Sits (Usage Vacuum)
                     contingency = self._build_out_scenario(game, player)
                     if contingency:
+                        # Rename for clarity
+                        contingency['scenario_name'] = f"IF {player['PLAYER_NAME']} SITS"
                         final_scenarios.append(contingency)
                         
         return final_scenarios

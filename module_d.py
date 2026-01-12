@@ -137,6 +137,24 @@ class LudiYak:
         except:
             return {"items": []}
 
+    def targeted_search(self, player_name, team_name, context="injury"):
+        """
+        [YAK ENHANCEMENT] Executes deep-dive searches for specific intel.
+        Targets coach quotes and beat writer tweets.
+        """
+        queries = [
+            f'{player_name} {team_name} coach quotes injury twitter',
+            f'{player_name} {team_name} beat writer update'
+        ]
+        
+        aggregated_items = []
+        for q in queries:
+            res = self.search_news(q)
+            if res.get("items"):
+                aggregated_items.extend(res["items"])
+        
+        return {"items": aggregated_items}
+
     def get_player_status(self, player_name, team_name="NBA"):
         clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()
         self.refresh_official_injuries()
@@ -162,18 +180,30 @@ class LudiYak:
         return {"status": "ACTIVE", "note": "Clear", "confidence": 1.0}
 
     def _nuance_check(self, player_name, team_name, primary_status, official_tag):
-        """Internal helper to scan for 'Limits' or 'Scratch' news."""
-        query = f'{player_name} {team_name} injury update minutes limit'
-        news = self.search_news(query)
-        if news.get("items"):
-            snippet = news["items"][0]['snippet'].lower()
-            for k in self.KEYWORDS["LIMITED"]:
-                if k in snippet: 
-                    return {"status": "MINUTES_LIMIT", "note": f"Nuance: {k.upper()} found", "confidence": 0.8}
-            for k in self.KEYWORDS["OUT"]:
-                if k in snippet: 
-                    return {"status": "OUT", "note": f"Nuance: Late scratch news", "confidence": 1.0}
+        """Internal helper to scan for 'Limits' or 'Scratch' news using Enhanced Yak logic."""
         
+        # Use Targeted Search for deep intel
+        news = self.targeted_search(player_name, team_name)
+        
+        if news.get("items"):
+            # Scan recent snippets
+            for item in news["items"][:5]:
+                snippet = item['snippet'].lower()
+                
+                # Check for Limits
+                for k in self.KEYWORDS["LIMITED"]:
+                    if k in snippet: 
+                        return {"status": "MINUTES_LIMIT", "note": f"Intel: {k.upper()} found", "confidence": 0.8}
+                
+                # Check for Late Scratches
+                for k in self.KEYWORDS["OUT"]:
+                    if k in snippet: 
+                        return {"status": "OUT", "note": f"Intel: Late scratch detected", "confidence": 1.0}
+                
+                # Check for Coach Confirmation (Availability)
+                if "coach" in snippet and any(x in snippet for x in ["will play", "expect him to go", "available"]):
+                    return {"status": "ACTIVE", "note": "Intel: Coach confirms ACTIVE", "confidence": 0.9}
+
         return {"status": primary_status, "note": f"[OFFICIAL] {official_tag}", "confidence": 0.6}
 
     def resolve_scenarios(self, sim_results):

@@ -1,39 +1,26 @@
 #!/usr/bin/env python
 """
-backtest_archetypes.py - Phase B: Archetype Matchup Validation
-
-Tests Module E calibration logic against historical data to verify:
-1. Slasher vs Hackers → More FTA in actual games?
-2. Stretch Big vs Paint Pack → More 3PM in actual games?
-3. Blowout Tax → Reduced minutes in blowout games?
-
-Database: ludi.db (24,770 records through Jan 10)
-Run: ./venv/bin/python backtest_archetypes.py
-Full season: ./venv/bin/python backtest_archetypes.py --full-season
+backtest_archetypes.py - Ludi Informatio Backtesting Suite
+Includes:
+1. Hypothesis Testing (Phase B)
+2. Historical Replay Loop (RMSE Validation) for 15, 60, and Full Season ranges.
 """
 
 import sqlite3
 import argparse
-from datetime import datetime
+import math
+from datetime import datetime, timedelta, date
+from collections import defaultdict
 from module_e import LudiCalibrator
 
+# ==========================================
+# PHASE 1: HYPOTHESIS TESTING
+# ==========================================
+
 def query_historical_matchups(archetype_condition, def_style, min_games=5, days=60):
-    """
-    Query database for historical matchups matching archetype + defense criteria.
-    
-    Args:
-        archetype_condition: SQL WHERE clause for archetype (e.g., "pts > 22 AND fg3m < 2")
-        def_style: Defense team abbreviation (e.g., 'IND' for Hackers)
-        min_games: Minimum games to include player
-        days: Number of days to look back (default: 60)
-    
-    Returns:
-        List of (player_name, avg_stat, game_count)
-    """
     conn = sqlite3.connect('ludi.db')
     c = conn.cursor()
     
-    # Query: Find players matching archetype playing against specific defense
     query = f"""
     SELECT 
         p.player_name,
@@ -45,7 +32,7 @@ def query_historical_matchups(archetype_condition, def_style, min_games=5, days=
     FROM player_game_logs p
     JOIN games g ON p.game_id = g.game_id
     WHERE (g.home_team = ? OR g.away_team = ?)
-    AND p.team_abbreviation != ?  -- Playing AGAINST this team
+    AND p.team_abbreviation != ?
     AND {archetype_condition}
     AND p.game_date >= date('now', '-{days} days')
     GROUP BY p.player_name
@@ -57,91 +44,47 @@ def query_historical_matchups(archetype_condition, def_style, min_games=5, days=
     c.execute(query, (def_style, def_style, def_style, min_games))
     results = c.fetchall()
     conn.close()
-    
     return results
 
 def test_slasher_vs_hackers(days=60):
-    """
-    Test Case 1: Slasher vs Hackers Defense
-    
-    Hypothesis: Slashers draw more fouls vs foul-prone defenses (IND, CHA, POR)
-    Expected: avg_fta vs Hackers > avg_fta vs other teams
-    """
     print("\n" + "="*60)
-    print("📋 TEST 1: Slasher vs Hackers")
+    print(f"📋 HYPOTHESIS TEST 1: Slasher vs Hackers (Last {days} Days)")
     print("="*60)
-    
-    # Slasher condition: High scoring, low 3PM
     slasher_condition = "pts > 20 AND fg3m < 2.0 AND minutes > 30"
-    
-    # Hackers teams: IND, CHA, POR
     hackers = ['IND', 'CHA', 'POR']
-    
-    print("\n🔍 Criteria: Slashers (PTS > 20, 3PM < 2.0) vs Hackers (IND/CHA/POR)")
-    
     for team in hackers:
         print(f"\n📊 {team} Defense:")
         results = query_historical_matchups(slasher_condition, team, min_games=2, days=days)
-        
         if not results:
             print("   ⚠️  No data found")
             continue
-            
-        for row in results[:3]:  # Top 3 players
-            player, fta, tpm, mins, pts, games = row
-            print(f"   {player:<20} | FTA: {fta:.1f} | Games: {games}")
-    
-    print("\n✅ Visual review: Are FTA numbers elevated vs Hackers?")
-    print("   (Compare to player's season average for validation)")
-
-def test_stretch_big_vs_paint_pack(days=60):
-    """
-    Test Case 2: Stretch Big vs Paint Pack Defense
-    
-    Hypothesis: Stretch bigs shoot more 3s when paint is packed
-    Expected: avg_3pm vs Paint Pack > avg_3pm vs other teams
-    """
-    print("\n" + "="*60)
-    print("📋 TEST 2: Stretch Big vs Paint Pack")
-    print("="*60)
-    
-    # Stretch Big condition: Good rebounding + 3PM
-    stretch_condition = "reb > 6.0 AND fg3m > 1.5 AND minutes > 25"
-    
-    # Paint Pack teams: OKC, BOS, DET, MIN, LAL
-    paint_pack = ['OKC', 'BOS', 'DET', 'MIN', 'LAL']
-    
-    print("\n🔍 Criteria: Stretch Bigs (REB > 6, 3PM > 1.5) vs Paint Pack")
-    
-    for team in paint_pack[:3]:  # Just 3 teams for brevity
-        print(f"\n📊 {team} Defense:")
-        results = query_historical_matchups(stretch_condition, team, min_games=2, days=days)
-        
-        if not results:
-            print("   ⚠️  No data found")
-            continue
-            
         for row in results[:3]:
             player, fta, tpm, mins, pts, games = row
+            print(f"   {player:<20} | FTA: {fta:.1f} | Games: {games}")
+
+def test_stretch_big_vs_paint_pack(days=60):
+    print("\n" + "="*60)
+    print(f"📋 HYPOTHESIS TEST 2: Stretch Big vs Paint Pack (Last {days} Days)")
+    print("="*60)
+    stretch_condition = "reb > 6.0 AND fg3m > 1.5 AND minutes > 25"
+    paint_pack = ['OKC', 'BOS', 'DET', 'MIN', 'LAL']
+    for team in paint_pack[:3]:
+        print(f"\n📊 {team} Defense:")
+        results = query_historical_matchups(stretch_condition, team, min_games=2, days=days)
+        if not results:
+            print("   ⚠️  No data found")
+            continue
+        for row in results[:3]:
+            # FIXED: Added fta to unpacking (6 columns returned)
+            player, fta, tpm, mins, pts, games = row
             print(f"   {player:<20} | 3PM: {tpm:.1f} | Games: {games}")
-    
-    print("\n✅ Visual review: Are 3PM numbers elevated vs Paint Pack?")
 
 def test_blowout_tax(days=60):
-    """
-    Test Case 3: Blowout Tax
-    
-    Hypothesis: Starters play fewer minutes in blowout games
-    Expected: avg_min in 15+ spread games < avg_min in close games
-    """
     print("\n" + "="*60)
-    print("📋 TEST 3: Blowout Tax")
+    print(f"📋 HYPOTHESIS TEST 3: Blowout Tax (Last {days} Days)")
     print("="*60)
-    
     conn = sqlite3.connect('ludi.db')
     c = conn.cursor()
-    
-    # Query: Compare minutes in blowout vs close games
     query = """
     WITH game_margins AS (
         SELECT 
@@ -161,109 +104,243 @@ def test_blowout_tax(days=60):
         COUNT(*) as player_games
     FROM player_game_logs p
     JOIN game_margins gm ON p.game_id = gm.game_id
-    WHERE p.minutes > 30  -- Starters only
+    WHERE p.minutes > 30
     GROUP BY gm.game_type
     """
-    
     c.execute(query, (days,))
     results = c.fetchall()
     conn.close()
-    
     print("\n📊 Starter Minutes (MIN > 30 baseline):")
     for row in results:
         game_type, avg_min, count = row
         print(f"   {game_type:<10} | Avg: {avg_min:.1f} min | Sample: {count} games")
-    
-    if len(results) == 2:
-        blowout_min = results[0][1] if results[0][0] == 'Blowout' else results[1][1]
-        close_min = results[1][1] if results[1][0] == 'Close' else results[0][1]
-        reduction = ((close_min - blowout_min) / close_min) * 100
-        
-        print(f"\n✅ Reduction in blowouts: {reduction:.1f}%")
-        print(f"   (Module E applies 6% reduction - does data support this?)")
 
-def test_calibrator_accuracy():
-    """
-    Bonus: Test if calibrator's archetype assignments match reality
-    """
-    print("\n" + "="*60)
-    print("📋 BONUS: Calibrator Archetype Accuracy")
-    print("="*60)
-    
-    conn = sqlite3.connect('ludi.db')
-    c = conn.cursor()
-    
-    # Get top scorers
-    query = """
-    SELECT 
-        player_name,
-        AVG(pts) as avg_pts,
-        AVG(reb) as avg_reb,
-        AVG(ast) as avg_ast,
-        AVG(fg3m) as avg_3pm,
-        COUNT(*) as games
-    FROM player_game_logs
-    WHERE game_date >= date('now', '-30 days')
-    GROUP BY player_name
-    HAVING COUNT(*) >= 10
-    ORDER BY AVG(pts) DESC
-    LIMIT 5
-    """
-    
-    c.execute(query)
-    results = c.fetchall()
-    conn.close()
-    
-    calib = LudiCalibrator()
-    
-    print("\n🏀 Top 5 Scorers - Archetype Check:")
-    for row in results:
-        player, pts, reb, ast, tpm, games = row
+# ==========================================
+# PHASE 2: HISTORICAL REPLAY LOOP
+# ==========================================
+
+class BacktestEngine:
+    def __init__(self, days=60):
+        self.days = days
+        self.calib = LudiCalibrator()
+        self.conn = sqlite3.connect('ludi.db')
+        self.running_stats = defaultdict(lambda: defaultdict(list))
         
-        # Mock player for archetype test
-        mock_player = {
-            'base_pts': pts,
-            'base_reb': reb,
-            'base_ast': ast,
-            'base_3pm': tpm,
-            'base_usg': 0.30 if pts > 25 else 0.25,
-            'base_stl': 1.0,
-            'base_blk': 0.5
+        # Stats to track for running averages
+        self.tracking_stats = ['pts', 'reb', 'ast', 'fg3m', 'minutes', 'fga', 'fta', 'tov', 'stl', 'blk', 'oreb']
+
+    def fetch_logs(self):
+        """Fetch all logs in chronological order, joined with game info.
+           COALESCE used to handle NULL stats.
+        """
+        query = """
+        SELECT 
+            p.player_id, p.player_name, p.team_abbreviation, 
+            p.game_date, p.game_id, p.matchup,
+            COALESCE(p.pts, 0), COALESCE(p.reb, 0), COALESCE(p.ast, 0), 
+            COALESCE(p.fg3m, 0), COALESCE(p.minutes, 0), 
+            COALESCE(p.fga, 0), COALESCE(p.fta, 0), COALESCE(p.tov, 0), 
+            COALESCE(p.stl, 0), COALESCE(p.blk, 0), COALESCE(p.oreb, 0),
+            g.home_team, g.away_team, g.home_score, g.away_score
+        FROM player_game_logs p
+        LEFT JOIN games g ON p.game_id = g.game_id
+        ORDER BY p.game_date ASC
+        """
+        c = self.conn.cursor()
+        c.execute(query)
+        return c.fetchall()
+
+    def get_running_avg(self, player_id, stat):
+        history = self.running_stats[player_id][stat]
+        if not history:
+            return 0.0
+        # Ensure we don't crash on any None values if they snuck in
+        clean_history = [x for x in history if x is not None]
+        if not clean_history:
+            return 0.0
+        return sum(clean_history) / len(clean_history)
+
+    def calculate_rmse(self, predictions, actuals):
+        if not predictions:
+            return 0.0
+        mse = sum((p - a) ** 2 for p, a in zip(predictions, actuals)) / len(predictions)
+        return math.sqrt(mse)
+
+    def run(self, label="Backtest"):
+        print("\n" + "="*60)
+        print(f"🔄 STARTING REPLAY LOOP: {label} (Last {self.days} Days)")
+        print("="*60)
+
+        logs = self.fetch_logs()
+        # Calculate start date based on self.days
+        start_date_obj = datetime.now() - timedelta(days=self.days)
+        start_date = start_date_obj.strftime('%Y-%m-%d')
+        
+        print(f"   Date Range: {start_date} to {datetime.now().strftime('%Y-%m-%d')}")
+        
+        results = {
+            'pts': {'pred': [], 'act': []},
+            'reb': {'pred': [], 'act': []},
+            'ast': {'pred': [], 'act': []}
         }
         
-        archetype = calib._assign_archetype(mock_player)
-        print(f"   {player:<25} | {pts:.1f} PPG | {archetype}")
+        processed_count = 0
+        skipped_count = 0
+
+        # Reset running stats for each run to ensure clean state if re-instantiated
+        self.running_stats = defaultdict(lambda: defaultdict(list))
+
+        for row in logs:
+            (pid, name, team, date_str, gid, matchup, 
+             pts, reb, ast, fg3m, mins, 
+             fga, fta, tov, stl, blk, oreb,
+             home, away, h_score, a_score) = row
+
+            # 1. Prediction Step (Before updating stats with current game)
+            
+            # Check if this game is within the test window
+            if date_str >= start_date:
+                # Need at least 5 games of history to predict
+                if len(self.running_stats[pid]['pts']) >= 5:
+                    
+                    # Construct Player Packet (Pre-Game State)
+                    base_pts = self.get_running_avg(pid, 'pts')
+                    base_reb = self.get_running_avg(pid, 'reb')
+                    base_ast = self.get_running_avg(pid, 'ast')
+                    base_min = self.get_running_avg(pid, 'minutes')
+                    base_3pm = self.get_running_avg(pid, 'fg3m')
+                    base_stl = self.get_running_avg(pid, 'stl')
+                    base_blk = self.get_running_avg(pid, 'blk')
+                    
+                    # Estimate Usage
+                    avg_fga = self.get_running_avg(pid, 'fga')
+                    avg_fta = self.get_running_avg(pid, 'fta')
+                    avg_tov = self.get_running_avg(pid, 'tov')
+                    base_usg = 0.20
+                    if base_min > 0:
+                        base_usg = ((avg_fga + 0.44*avg_fta + avg_tov) / base_min) / 2.1
+                    
+                    opponent = 'UNK'
+                    if home and away:
+                        opponent = away if team == home else home
+                    
+                    # Vegas Context (Defaulting as historical odds might be missing)
+                    odds = {'total': 228.0, 'spread': 5.0}
+
+                    player_packet = {
+                        'name': name,
+                        'team': team,
+                        'opponent': opponent,
+                        'base_pts': base_pts,
+                        'base_reb': base_reb,
+                        'base_ast': base_ast,
+                        'base_min': base_min,
+                        'base_3pm': base_3pm,
+                        'base_stl': base_stl,
+                        'base_blk': base_blk,
+                        'base_usg': base_usg,
+                        'base_fga': avg_fga,
+                        'base_fta': avg_fta,
+                        'base_tov': avg_tov,
+                        'base_oreb': self.get_running_avg(pid, 'oreb'),
+                        'proj_pts': base_pts,
+                        'proj_reb': base_reb,
+                        'proj_ast': base_ast,
+                        'proj_3pm': base_3pm,
+                        'proj_min': base_min,
+                        'proj_fga': avg_fga,
+                        'proj_fta': avg_fta,
+                        'proj_tov': avg_tov,
+                        'proj_stl': base_stl,
+                        'proj_blk': base_blk,
+                        'proj_oreb': self.get_running_avg(pid, 'oreb'),
+                        'odds': odds
+                    }
+                    
+                    # Run Calibration
+                    yak_report = {'status': 'Active', 'note': ''} 
+                    calibrated = self.calib.calibrate_player(player_packet, yak_report)
+                    
+                    # Store Results
+                    results['pts']['pred'].append(calibrated['proj_pts'])
+                    results['pts']['act'].append(pts)
+                    
+                    results['reb']['pred'].append(calibrated['proj_reb'])
+                    results['reb']['act'].append(reb)
+                    
+                    results['ast']['pred'].append(calibrated['proj_ast'])
+                    results['ast']['act'].append(ast)
+                    
+                    processed_count += 1
+                else:
+                    skipped_count += 1
+
+            # 2. Update Running Stats (Post-Game)
+            self.running_stats[pid]['pts'].append(pts)
+            self.running_stats[pid]['reb'].append(reb)
+            self.running_stats[pid]['ast'].append(ast)
+            self.running_stats[pid]['fg3m'].append(fg3m)
+            self.running_stats[pid]['minutes'].append(mins)
+            self.running_stats[pid]['fga'].append(fga)
+            self.running_stats[pid]['fta'].append(fta)
+            self.running_stats[pid]['tov'].append(tov)
+            self.running_stats[pid]['stl'].append(stl)
+            self.running_stats[pid]['blk'].append(blk)
+            self.running_stats[pid]['oreb'].append(oreb)
+
+        print(f"\n✅ Processing Complete: {label}")
+        print(f"   Games Predicted: {processed_count}")
+        print(f"   Skipped (Low History): {skipped_count}")
+        
+        # Calculate RMSE
+        print(f"\n📊 {label} VALIDATION RESULTS (RMSE):")
+        
+        rmse_pts = self.calculate_rmse(results['pts']['pred'], results['pts']['act'])
+        rmse_reb = self.calculate_rmse(results['reb']['pred'], results['reb']['act'])
+        rmse_ast = self.calculate_rmse(results['ast']['pred'], results['ast']['act'])
+        
+        print(f"   PTS RMSE: {rmse_pts:.2f}")
+        print(f"   REB RMSE: {rmse_reb:.2f}")
+        print(f"   AST RMSE: {rmse_ast:.2f}")
+        
+        if rmse_pts < 7.0:
+            print("   ✅ PTS Model is solid (< 7.0)")
+        else:
+            print("   ⚠️ PTS Model needs tuning (> 7.0)")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Phase B: Archetype Matchup Backtest')
-    parser.add_argument('--full-season', action='store_true',
-                       help='Run full season backtest (120 days instead of 60)')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, choices=['15', '60', 'season', 'all'], default='60', 
+                        help='Test duration: 15, 60, season (since Oct 21), or all')
     args = parser.parse_args()
     
-    days = 120 if args.full_season else 60
-    mode = "FULL SEASON" if args.full_season else "60-DAY"
+    # Calculate Season Duration
+    season_start = datetime(2025, 10, 21)
+    today = datetime.now()
+    season_days = (today - season_start).days
+
+    modes_to_run = []
+    if args.mode == 'all':
+        modes_to_run = [('15-Day', 15), ('60-Day', 60), ('Full Season', season_days)]
+    elif args.mode == 'season':
+        modes_to_run = [('Full Season', season_days)]
+    elif args.mode == '15':
+        modes_to_run = [('15-Day', 15)]
+    else:
+        modes_to_run = [('60-Day', 60)]
+
+    print(f"Starting Backtest Suite (Mode: {args.mode})")
     
-    print("\n" + "="*70)
-    print(f"🔬 PHASE B: ARCHETYPE MATCHUP BACKTEST ({mode})")
-    print("="*70)
-    print(f"\nValidating Module E calibration logic against historical data")
-    print(f"Database: 24,770 records through Jan 10, 2026")
-    print(f"Date range: Last {days} days")
-    print("="*70)
-    
+    # Run Hypothesis Tests just once (using the largest window)
+    max_days = max(m[1] for m in modes_to_run)
     try:
-        test_slasher_vs_hackers(days)
-        test_stretch_big_vs_paint_pack(days)
-        test_blowout_tax(days)
-        test_calibrator_accuracy()
-        
-        print("\n" + "="*70)
-        print(f"📊 BACKTEST COMPLETE ({mode})")
-        print("="*70)
-        print("\nReview results above to validate Module E matchup logic.")
-        print("If trends align with predictions, Module E logic is sound.")
-        
+        test_slasher_vs_hackers(max_days)
+        test_stretch_big_vs_paint_pack(max_days)
+        test_blowout_tax(max_days)
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Hypothesis tests failed: {e}")
+
+    # Run Replay Loops
+    for label, days in modes_to_run:
+        engine = BacktestEngine(days=days)
+        engine.run(label)

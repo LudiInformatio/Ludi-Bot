@@ -1,137 +1,15 @@
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NIGHTLY BRIEFING NOTES (Jan 9, 2026)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STATUS: GREEN (WEEK 3 VALIDATION ACTIVE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# NIGHTLY DEBRIEF NOTES (Jan 12, 2026)
+----------------------------------------
+**Today's Focus:** Validation of the "Rescue Mission" upgrades.
 
-📋 MAJOR ACHIEVEMENTS TODAY:
+**Key Wins:**
+- The "Ludi Lens" narrative is working (e.g. Mobley Blowout Tax).
+- Ref scraper accurately flagged the CLE crew.
+- Backtesting confirmed RMSE < 6.0.
 
-1. ✅ CODE QUALITY & LINTING CLEANUP
-   - Fixed all linting warnings in backtest_model.py
-   - Fixed all linting warnings in module_c.py
-   - Removed unused imports (numpy, datetime, ast, pandas, config)
-   - Addressed docstring, line length, and style issues
-   - Result: Clean codebase ready for production
+**Pending Questions:**
+- Did the blowout script in CLE hold?
+- Did Kawhi exploit the "Hacker" defense?
 
-2. ✅ LIVE SIMULATION INFRASTRUCTURE
-   - Executed main.py daily cycle manually for Jan 9 slate
-   - Confirmed 5,000 Monte Carlo simulations per player
-   - Verified predictions saved to ludi.db
-   - Generated bet recommendations for 12 games
-
-3. ✅ TARGETED TESTING PROTOCOL ESTABLISHED
-   - Confirmed "Paper Trading" phase (not full automation yet)
-   - Selected 3 target games for validation:
-     * OKC vs MEM (08:10 PM ET)
-     * ATL vs DEN (09:10 PM ET)
-     * MIL vs LAL (10:40 PM ET)
-   - Updated CLAUDE.md to reflect this protocol
-   - Sent Targeted Telegram Briefing with 3 hypothesis tests:
-     a) Giannis (MIL) UNDER 34.5 PTS - Usage Vacuum Test
-     b) Jalen Williams (OKC) UNDER 24.0 PTS - Slasher vs Paint Pack
-     c) Jamal Murray (DEN) OVER 9.5 AST - Funnel Defense Test
-
-4. ✅ ROSTER & CONSTRAINT VERIFICATION
-   - Audited 2025-26 roster accuracy (confirmed AD on Dallas, not Lakers)
-   - Verified L30 day filter prevents old season data leaks
-   - Confirmed Module D (YAK) respects:
-     * 15-minute NBA injury reporting cycle
-     * Coach "nuance check" (minutes limits, beat writer intel)
-     * DuckDuckGo search for late-breaking news
-   - Verified scenario resolution logic (OUT/DOUBTFUL triggers pivots)
-
-5. ✅ TELEGRAM BOT STABILITY
-   - Fixed 400 Bad Request errors by stripping markdown
-   - Successfully delivered live briefing to device
-   - Confirmed notification system operational
-
-6. ✅ STRATEGIC PLANNING
-   - Conducted full project analysis for "Multi-Bookmaker Tracking"
-   - Generated comprehensive implementation plan:
-     * 6 phases, 4.25 hours total effort
-     * Covers Module A, main.py, Module F, settle_bets.py
-     * Database schema already has 'bookmaker' column
-   - DECISION: Implement AFTER validation phase completes
-   - Updated task.md with enhancement roadmap
-
-7. ✅ DOCUMENTATION & VERSION CONTROL
-   - Updated CLAUDE.md with validation status
-   - Updated task.md with new enhancement tasks
-   - Committed all changes to GitHub (Commit: 0ba9c7f)
-   - Pushed 8 files, 47,751+ insertions
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 TECHNICAL HIGHLIGHTS:
-
-Database Status:
-- player_game_logs: Updated through Jan 8 (12,000+ records)
-- simulations table: Confirmed run_date column usage
-- bet_recommendations: Contains Jan 9 predictions (pending settlement)
-
-API Status:
-- The-Odds-API: 16,342 credits remaining (PAID tier)
-- Tank01: Operational (PAID tier, 1,000 req/day limit)
-- Telegram Bot: Operational (markdown issues resolved)
-
-Model Configuration:
-- Simulation Count: 5,000 (production default)
-- Distribution: Hybrid Normal/Poisson (STL/BLK use Poisson)
-- Blowout Tax: Active (1.5% decay per point spread >7)
-- Referee Impact: Integrated via Module G (Zebras)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 HYPOTHESES UNDER TEST (Results Tomorrow):
-
-H1: Usage Vacuum (Giannis)
-- Projection: 24.7 PTS vs Line: 34.5 PTS
-- Theory: Minutes restriction (L30 avg: 28.5m) suppresses volume
-- Expected: UNDER wins
-
-H2: Archetype Matchup (Jalen Williams)
-- Projection: 15.6 PTS vs Line: 24.0 PTS
-- Theory: Slasher archetype fails vs Paint Pack defense (MEM)
-- Expected: UNDER wins
-
-H3: Defensive Scheme (Jamal Murray)
-- Projection: 13.4 AST vs Line: 9.5 AST
-- Theory: Funnel defense (ATL) creates playmaking opportunities
-- Expected: OVER wins
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏭️  TOMORROW'S PLAN (Jan 10):
-
-7:00 AM - Data Sync
-- GitHub Action fetches Jan 9 game logs automatically
-- Verify player_game_logs table updated
-
-8:00 AM - Bet Settlement
-- Run: ./venv/bin/python settle_bets.py
-- Grade the 3 targeted hypothesis tests
-- Calculate win rate and accuracy
-
-9:00 AM - Analysis
-- Review hypothesis results (Paint Pack, Usage Vacuum, Funnel)
-- Generate target-specific validation report
-
-10:00 AM - Phase B Planning
-- Begin backtest_archetypes.py implementation
-- Define 5 defensive schemes formally
-- Map 8 player archetypes to historical samples
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 SYSTEM HEALTH:
-
-✅ All Constraints Active:
-- 15-min injury cycle respected
-- L30 day filter preventing old data leaks
-- Scenario resolution logic operational
-- Nuance check (coach intel) functional
-
-✅ Blockers: NONE
-✅ GitHub: Synced
-✅ APIs: Green
-✅ Database: Healthy
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-END OF LINE - THE WATCH CONTINUES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**Adjustments for Tomorrow:**
+- Monitor the new "Jumbo Creator" tag on Russ/LeBron.

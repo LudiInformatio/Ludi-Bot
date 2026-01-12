@@ -121,26 +121,37 @@ class LudiReporter:
                             # Bankroll Unit Sizing (0.25u to 1.5u)
                             units = min(max(round(ev / 8.0, 2), 0.25), 1.5) if ev >= 1.0 else 0
 
-                            # --- 3. DYNAMIC NOTE GENERATION (Deterministic Only) ---
+                            # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
                             
-                            # A) Archetype Label (from Module E)
-                            if p.get('archetype'):
-                                note_elements.append(f"[{p['archetype']}]")
+                            # A) Narrative from Module E (Matchups/Boosts)
+                            # This captures the "Why": e.g. "[HELIOCENTRIC] | Trap Scheme (Pass-First)"
+                            if 'notes' in p:
+                                raw_notes = p['notes'].strip()
+                                # Clean up leading pipes if they exist
+                                if raw_notes.startswith('|'): raw_notes = raw_notes[1:].strip()
+                                if raw_notes: note_elements.append(raw_notes)
 
-                            # B) Scenario Resolver (from Module X)
+                            # B) Blowout Context (The "Game Script")
+                            if blowout_mult < 0.95:
+                                pct_cut = int((1 - blowout_mult) * 100)
+                                note_elements.append(f"📉 BLOWOUT TAX (-{pct_cut}% Volume)")
+
+                            # C) Scenario Resolver (from Module X)
                             scenario_raw = p.get('scenario', 'BASE')
                             if "WITHOUT" in scenario_raw:
                                 absent_star = scenario_raw.replace("WITHOUT ", "")
-                                note_elements.append(f"🚀 BENEFICIARY: Scaling for {absent_star} OUT")
+                                note_elements.append(f"🚀 VACUUM: {absent_star} OUT")
                             
-                            # C) Status Flag (from Module D)
+                            # D) Status Flag (from Module D)
                             if p.get('status') in ['Q', 'GTD']:
-                                note_elements.append(f"🚨 GTD: Proj assumes {p['name']} PLAYS")
+                                note_elements.append(f"🚨 GTD Risk")
 
-                            # D) Referee Context (from Module G)
+                            # E) Referee Context (from Module G)
                             if abs(game.get('ref_impact', 1.0) - 1.0) > 0.04:
-                                note_elements.append(f"⚖️ Ref Impact: {game.get('ref_impact', 1.0)}")
+                                ref_val = game.get('ref_impact')
+                                ref_note = f"⚖️ Refs Boost Overs ({ref_val}x)" if ref_val > 1.0 else f"⚖️ Refs Drag Unders ({ref_val}x)"
+                                note_elements.append(ref_note)
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
@@ -198,7 +209,7 @@ class LudiReporter:
                                         'status': p.get('status', 'Active'),
                                         'scenario': p.get('scenario', 'BASE'),
                                         'stat_category': stat_key.upper(),
-                                        'bet_side': 'OVER' if edge > 0 else 'UNDER',
+                                        'bet_side': bet_direction.upper(),
                                         'line': line,
                                         'odds_over': odds_over,
                                         'odds_under': odds_under,
@@ -223,8 +234,9 @@ class LudiReporter:
                             player_props.append({
                                 "name": p['name'],
                                 "team": p['team'],
+                                "matchup": game.get('matchup', ''),
                                 "stat": stat_key.upper(),
-                                "bet_on": "OVER" if edge > 0 else "UNDER",
+                                "bet_on": bet_direction.upper(),
                                 "line": line,
                                 "proj": round(final_proj, 2),
                                 "ev": ev,
@@ -330,29 +342,58 @@ class LudiReporter:
         report = f"\n📰 LUDI ELITE BRIEFING ({datetime.now().strftime('%b %d, %Y')})\n"
         report += "================================\n"
         
-        # Filter for Tier 1 Diamonds (Top 5 high-conviction plays)
-        diamonds = [p for p in props if p['units'] >= 1.2][:5]
+        # 1. Group by Game
+        # We need game info which might not be in the flat 'props' list?
+        # Ah, 'props' only has player/team. We need to pass game context or infer it.
+        # Wait, the generate_report loop builds 'all_props'. It loses game_id.
+        # I need to modify generate_report to attach game_id/matchup to each prop first.
+        # But 'all_props' is a list of dicts. I can add 'matchup' there easily.
         
-        if not diamonds:
-            return report + "⚠️ Market is efficient. No Diamond Edges detected for this refresh.\n"
+        # ... Wait, I can't modify generate_report in this replace block easily.
+        # Let's assume I modify generate_report to add 'matchup' to player_props.
         
-        report += f"💎 DIAMOND PLAYS\n"
-        for bet in diamonds:
-            report += f"🏀 {bet['name']} ({bet['team']}) | {bet['bet_on']} {bet['line']} {bet['stat']}\n"
-            report += f"   Sharp Proj: {bet['proj']} | EV: +{bet['ev']}% | {bet['units']}u\n"
+        # Wait, I'll do this in two steps. First, let's just group by TEAM for now as a proxy for game.
+        # Or better: Group by "Team vs Opponent" if opponent is available.
+        # 'player_props' has 'team'. It doesn't have 'opponent' or 'matchup'.
+        
+        # I will regroup by Team for now, then sort.
+        # Actually, let's just sort by EV and take top 3 per TEAM.
+        
+        grouped = {}
+        for p in props:
+            matchup = p.get('matchup', 'Unknown')
+            if matchup not in grouped: grouped[matchup] = []
+            grouped[matchup].append(p)
+            
+        report += f"💎 TOP TARGETS BY GAME\n"
+        
+        # Sort games alphabetically
+        for matchup in sorted(grouped.keys()):
+            plays = grouped[matchup]
+            # Sort by EV descending
+            plays.sort(key=lambda x: x['ev'], reverse=True)
+            
+            # Filter for Diamond (1.2u+) or High Gold (0.8u+)
+            top_plays = [p for p in plays if p['units'] >= 0.8][:3] # Top 3 per GAME
+            
+            if not top_plays: continue
+            
+            report += f"\n🏀 {matchup}\n"
+            for bet in top_plays:
+                report += f"   💎 {bet['name']} | {bet['bet_on']} {bet['line']} {bet['stat']}\n"
+                report += f"      Proj: {bet['proj']} | EV: +{bet['ev']}% | {bet['units']}u\n"
+                
+                # Display tags
+                if bet.get('tags') and self.tag_classifier:
+                    try:
+                        tags_list = self.tag_classifier.parse_tags_from_db(bet['tags'])
+                        if tags_list:
+                            tags_display = " | ".join(tags_list)
+                            report += f"      🏷️  {tags_display}\n"
+                    except: pass
 
-            # Display tags (Week 2, Days 3-4)
-            if bet.get('tags') and self.tag_classifier:
-                try:
-                    tags_list = self.tag_classifier.parse_tags_from_db(bet['tags'])
-                    if tags_list:
-                        tags_display = " | ".join(tags_list)
-                        report += f"   🏷️  {tags_display}\n"
-                except Exception as e:
-                    pass  # Silent fail for tag display
-
-            if bet['note']:
-                report += f"   📝 {bet['note']}\n\n"
+                if bet['note']:
+                    report += f"      📝 {bet['note']}\n"
         
         return report
 

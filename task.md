@@ -24,14 +24,28 @@
 - [x] Implement Play Classification Tags (Week 2, Days 3-4) <!-- id: 0 -->
     - [x] Create `utils/tag_classifier.py`
     - [x] Integrate tags into `module_f.py` (Briefing generation)
-    - [ ] **Validation Phase B: Archetype Backtesting:**
-  - [ ] Implement `backtest_archetypes.py` (8 Archetypes x 5 Def Schemes)
-  - [ ] Define Defensive Schemes (Funnel, Paint Pack, etc.)
-  - [ ] Run Archetype Validation on Targeted Slate (Jan 9-10)
+    - [x] **Validation Phase B: Archetype Backtesting:**
+  - [x] Implement `backtest_archetypes.py` (8 Archetypes x 5 Def Schemes)
+  - [x] Define Defensive Schemes (Funnel, Paint Pack, etc.)
+  - [x] Run Archetype Validation on Targeted Slate (Jan 9-10)
 
 - [x] **BUG FIX: Line Capture Priority (Jan 9 - FIXED)**
   - [x] Module A was capturing Bovada alts instead of NC Legal
   - [x] Deployed priority logic for FanDuel/DraftKings
+
+- [x] **Rescue Mission: Ludi Vision Restored (Jan 12, 2026)**
+  - [x] Math Integrity Audit (EV Check)
+  - [x] Architecture: Scenario Forks (GTD Play vs Sit)
+  - [x] Yak Enhancement: Targeted Deep Search (Coach/Beat Writers)
+  - [x] Archetype Overhaul: Scout-Approved Tiers (Heliocentric, Hub Big, Elite Scorer)
+  - [x] Trend Watch & Secondary Archetypes Implemented
+  - [x] Full Backtest Validation (RMSE 5.92)
+
+- [x] **Phase 4: The Digital Scout (Jan 12, 2026)**
+  - [x] Module G: Live Referee Scraping (official.nba.com)
+  - [x] Module G: Crew Impact Calculation
+  - [x] Pipeline Verification: `verify_slate_logic.py` created & passed
+  - [x] Documentation: `MISSION_COMPLETE.md` & `TOOLS_GUIDE.md` generated
 
 - [x] **P0: CRITICAL - Integrate Yak into Main Pipeline (Jan 12, 10:00 AM)**
   - [x] Add self.yak.get_player_status() call in main.py
