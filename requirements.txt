@@ -1,5 +1,10 @@
 requests
 python-dotenv
 pandas
+numpy
+pytz
+unidecode
+duckduckgo-search
+lxml
 google-genai
 inputimeout
