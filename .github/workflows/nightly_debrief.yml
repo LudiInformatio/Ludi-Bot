@@ -32,5 +32,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
         run: |
           python main.py --mode pm_debrief
