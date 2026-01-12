@@ -160,20 +160,42 @@ class LudiOrchestrator:
             'FG3M': 'proj_3pm', 'OREB': 'proj_oreb', 'MIN': 'proj_min'
         }
         
+        # Get opponent context
+        home_team = self.gate._get_abbr(game_data.get('home'))
+        away_team = self.gate._get_abbr(game_data.get('away'))
+        spread = game_data.get('vegas', {}).get('spread', 0)
+        if spread == 'N/A': spread = 0
+        total = game_data.get('vegas', {}).get('total', 0)
+        if total == 'N/A': total = 0
+        
         players = []
         for sim in sim_results:
             player_name = sim.get('PLAYER_NAME')
             team = sim.get('TEAM')
             
+            # Determine opponent based on player's team
+            opponent = away_team if team == home_team else home_team
+            
             player_dict = {
                 'name': player_name,
                 'team': team,
+                'opponent': opponent,
                 'status': 'Active',
-                'scenario': sim.get('SCENARIO', 'BASE')
+                'scenario': sim.get('SCENARIO', 'BASE'),
+                'notes': '',
+                'odds': {'spread': spread, 'total': total}
             }
             
+            # Map simulation stats
             for c_key, f_key in STAT_MAPPING.items():
                 player_dict[f_key] = sim.get(c_key, 0)
+            
+            # Add base stats for archetype classification
+            player_dict['base_pts'] = sim.get('PTS', 0)
+            player_dict['base_reb'] = sim.get('REB', 0)
+            player_dict['base_ast'] = sim.get('AST', 0)
+            player_dict['base_3pm'] = sim.get('FG3M', 0)
+            player_dict['base_min'] = sim.get('MIN', 0)
                 
             if player_name in props_data:
                 props_formatted = {}
@@ -196,18 +218,24 @@ class LudiOrchestrator:
                 
                 if props_formatted:
                     player_dict['sportsbook_props'] = props_formatted
-                    players.append(player_dict)
+                    
+                    # CALIBRATION (Module E) - Apply archetype and matchup adjustments
+                    yak_report = {
+                        'status': sim.get('injury_status', 'ACTIVE'),
+                        'note': sim.get('injury_note', '')
+                    }
+                    calibrated_player = self.calib.calibrate_player(player_dict, yak_report)
+                    
+                    players.append(calibrated_player)
 
-        spread = game_data.get('vegas', {}).get('spread', 0)
-        if spread == 'N/A': spread = 0
         ref_impact = game_data.get('archetypes', {}).get('ref_impact', 1.0)
         
         return [{
             'game_id': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_'),
             'game_date': datetime.now().strftime('%Y-%m-%d'),
-            'home_team': self.gate._get_abbr(game_data.get('home')),
-            'away_team': self.gate._get_abbr(game_data.get('away')),
-            'opponent': '', # Filled by reporter logic if needed
+            'home_team': home_team,
+            'away_team': away_team,
+            'opponent': '',
             'spread': abs(spread) if spread else 0,
             'ref_impact': ref_impact,
             'players': players
@@ -306,11 +334,14 @@ class LudiOrchestrator:
         for item in all_scenarios:
             try:
                 sim_results = self.sim.run_simulation_batch([item['scenario']])
+                # build_reporter_input now calls Module E calibration internally
                 reporter_input = self.build_reporter_input(sim_results, item['game_data'], item['props_data'])
                 processed_slate.extend(reporter_input)
             except Exception as e:
                 print(f"⚠️  Sim failed for {item.get('game_data', {}).get('matchup')}: {e}")
 
+        print("[step 4.5] Applied Archetype Calibration (Module E)...")
+        
         # STEP 5: GENERATE REPORT
         print("[step 5] Generating Daily Briefing (Module F)...")
         briefing = self.reporter.generate_report(processed_slate)
