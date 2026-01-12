@@ -51,6 +51,19 @@
   - [x] Test 3: Minutes Limit - PASSED (-25% all stats)
   - [x] Test 4: Stretch Big vs Paint Pack - PASSED (+15% 3PM)
 
+- [x] **Archetype Backtest (Jan 12, 12:00 PM)**
+  - [x] Created backtest_archetypes.py
+  - [x] Validated historical matchup patterns
+
+- [x] **P0: Refactor send_single_game_notes.py (Jan 12, 12:25 PM)**
+  - [x] Use LudiOrchestrator for full A→D→C→E→F pipeline
+  - [x] Deleted verify_calibration.py (tests complete)
+  - [x] Tested successfully with Telegram
+
+- [x] **P1: Full Season Backtest Mode (Jan 12, 12:30 PM)**
+  - [x] Added --full-season flag (120 days vs 60)
+  - [x] Both modes tested and working
+
 - [ ] **ENHANCEMENT: Multi-Bookmaker Tracking (Post-Validation)**
   - [ ] Refactor Module A to store Lines per Bookmaker
   - [ ] Update Module F to Report Best Line + Book
