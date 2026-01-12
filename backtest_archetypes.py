@@ -9,13 +9,15 @@ Tests Module E calibration logic against historical data to verify:
 
 Database: ludi.db (24,770 records through Jan 10)
 Run: ./venv/bin/python backtest_archetypes.py
+Full season: ./venv/bin/python backtest_archetypes.py --full-season
 """
 
 import sqlite3
+import argparse
 from datetime import datetime
 from module_e import LudiCalibrator
 
-def query_historical_matchups(archetype_condition, def_style, min_games=5):
+def query_historical_matchups(archetype_condition, def_style, min_games=5, days=60):
     """
     Query database for historical matchups matching archetype + defense criteria.
     
@@ -23,6 +25,7 @@ def query_historical_matchups(archetype_condition, def_style, min_games=5):
         archetype_condition: SQL WHERE clause for archetype (e.g., "pts > 22 AND fg3m < 2")
         def_style: Defense team abbreviation (e.g., 'IND' for Hackers)
         min_games: Minimum games to include player
+        days: Number of days to look back (default: 60)
     
     Returns:
         List of (player_name, avg_stat, game_count)
@@ -44,7 +47,7 @@ def query_historical_matchups(archetype_condition, def_style, min_games=5):
     WHERE (g.home_team = ? OR g.away_team = ?)
     AND p.team_abbreviation != ?  -- Playing AGAINST this team
     AND {archetype_condition}
-    AND p.game_date >= date('now', '-60 days')
+    AND p.game_date >= date('now', '-{days} days')
     GROUP BY p.player_name
     HAVING COUNT(*) >= ?
     ORDER BY game_count DESC
@@ -57,7 +60,7 @@ def query_historical_matchups(archetype_condition, def_style, min_games=5):
     
     return results
 
-def test_slasher_vs_hackers():
+def test_slasher_vs_hackers(days=60):
     """
     Test Case 1: Slasher vs Hackers Defense
     
@@ -78,7 +81,7 @@ def test_slasher_vs_hackers():
     
     for team in hackers:
         print(f"\n📊 {team} Defense:")
-        results = query_historical_matchups(slasher_condition, team, min_games=2)
+        results = query_historical_matchups(slasher_condition, team, min_games=2, days=days)
         
         if not results:
             print("   ⚠️  No data found")
@@ -91,7 +94,7 @@ def test_slasher_vs_hackers():
     print("\n✅ Visual review: Are FTA numbers elevated vs Hackers?")
     print("   (Compare to player's season average for validation)")
 
-def test_stretch_big_vs_paint_pack():
+def test_stretch_big_vs_paint_pack(days=60):
     """
     Test Case 2: Stretch Big vs Paint Pack Defense
     
@@ -112,7 +115,7 @@ def test_stretch_big_vs_paint_pack():
     
     for team in paint_pack[:3]:  # Just 3 teams for brevity
         print(f"\n📊 {team} Defense:")
-        results = query_historical_matchups(stretch_condition, team, min_games=2)
+        results = query_historical_matchups(stretch_condition, team, min_games=2, days=days)
         
         if not results:
             print("   ⚠️  No data found")
@@ -124,7 +127,7 @@ def test_stretch_big_vs_paint_pack():
     
     print("\n✅ Visual review: Are 3PM numbers elevated vs Paint Pack?")
 
-def test_blowout_tax():
+def test_blowout_tax(days=60):
     """
     Test Case 3: Blowout Tax
     
@@ -149,7 +152,7 @@ def test_blowout_tax():
                 ELSE 'Close'
             END AS game_type
         FROM games g
-        WHERE g.date >= date('now', '-60 days')
+        WHERE g.date >= date('now', '-' || ? || ' days')
         AND g.home_score IS NOT NULL
     )
     SELECT 
@@ -162,7 +165,7 @@ def test_blowout_tax():
     GROUP BY gm.game_type
     """
     
-    c.execute(query)
+    c.execute(query, (days,))
     results = c.fetchall()
     conn.close()
     
@@ -232,21 +235,30 @@ def test_calibrator_accuracy():
         print(f"   {player:<25} | {pts:.1f} PPG | {archetype}")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Phase B: Archetype Matchup Backtest')
+    parser.add_argument('--full-season', action='store_true',
+                       help='Run full season backtest (120 days instead of 60)')
+    args = parser.parse_args()
+    
+    days = 120 if args.full_season else 60
+    mode = "FULL SEASON" if args.full_season else "60-DAY"
+    
     print("\n" + "="*70)
-    print("🔬 PHASE B: ARCHETYPE MATCHUP BACKTEST")
+    print(f"🔬 PHASE B: ARCHETYPE MATCHUP BACKTEST ({mode})")
     print("="*70)
-    print("\nValidating Module E calibration logic against historical data")
+    print(f"\nValidating Module E calibration logic against historical data")
     print(f"Database: 24,770 records through Jan 10, 2026")
+    print(f"Date range: Last {days} days")
     print("="*70)
     
     try:
-        test_slasher_vs_hackers()
-        test_stretch_big_vs_paint_pack()
-        test_blowout_tax()
+        test_slasher_vs_hackers(days)
+        test_stretch_big_vs_paint_pack(days)
+        test_blowout_tax(days)
         test_calibrator_accuracy()
         
         print("\n" + "="*70)
-        print("📊 BACKTEST COMPLETE")
+        print(f"📊 BACKTEST COMPLETE ({mode})")
         print("="*70)
         print("\nReview results above to validate Module E matchup logic.")
         print("If trends align with predictions, Module E logic is sound.")
