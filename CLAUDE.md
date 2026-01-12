@@ -45,38 +45,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 🎯 Current Status (Updated Jan 9, 2026, 6:00 PM ET)
+## 🎯 Current Status (Updated Jan 12, 2026, 11:50 AM ET)
 
-### Week 3: ✅ IN PROGRESS - Validation Phase
+### Week 2: ✅ IN PROGRESS - Integration & Validation
+
+**✅ Jan 12 Completed Work:**
+- **Cloud Fixes (9:55 AM):** Added `lxml`, `numpy` to requirements.txt, fixed workflow tier vars
+- **Module D Integration (10:00 AM):** Wired `yak.get_player_status()` into main.py
+- **Module E Integration (11:35 AM):** Wired `calib.calibrate_player()` into pipeline
+- **Verification Tests (11:45 AM):** All 4 tests passing (Slasher, Blowout, MinLimit, StretchBig)
+
+**✅ Pipeline Now Complete:**
+```
+A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report)
+```
 
 **✅ Module C (Oracle V3.2) - Engine Verification:**
 - **Hybrid S.A.V.A.G.E. Engine:** Verified.
 - **Logic:** Normal Distribution (High-Vol) + Poisson (Rare Events).
 - **Speed:** 5,000 sims < 200ms.
 
-**✅ "Smart Money" Backtest (Targeted Testing Phase):**
-- **Protocol:** "Targeted Testing" (Paper Trading specific matchups).
-- **Target Games (Jan 9):** OKC vs MEM, ATL vs DEN, MIL vs LAL.
-- **Goal:** Verify localized accuracy before full-slate automation.
-- **Status:** 60-100% Win Rate on initial "Smart Money" samples.
+**✅ Module E (Calibrator V5.6) - Matchup Logic:**
+- 8 Archetypes: SLASHER, STRETCH_BIG, BALL_HOG, RIM_RUNNER, SNIPER, TWO_WAY_WING, FACILITATOR, GENERALIST
+- 5 Defensive Schemes: PAINT_PACK, BLITZ, PERIMETER, FUNNEL, HACKERS
+- Blowout Tax: -6% when spread > 12.5
+- Minutes Limit: -25% from Yak MINUTES_LIMIT status
 
-**🔧 BUG FIXED (Jan 9 Evening):**
-- **Issue:** Module A was capturing Bovada ALT LINES instead of NC Legal.
-- **Fix:** Deployed priority logic for FanDuel/DraftKings over sharps.
-- **Result:** Giannis line corrected from 34.5 to 30.5.
-
-**⚠️ GAP DISCOVERED (Jan 9 Evening):**
-- **Issue:** Module D (Yak) is loaded but NOT called during scenario building.
-- **Location:** `main.py` line 264: "# TODO: Integrate Module D calls here"
-- **Impact:** Injury status not checked before simulations.
-- **Priority:** P0 - Must fix Jan 10.
-
-**⏳ Next Steps (Phase B & Enhancement):**
-- **P0:** Integrate Yak into main pipeline (1 hour).
-- **P1:** Implement Full Bookmaker Tracking - store ALL lines per book (2 hours).
-- **P2:** Create line_shop.py utility for sharp vs NC comparison (1.5 hours).
-- **P3:** Update Module F for true EV calculation (1 hour).
-- **ARCHITECTURE:** Implement "Three-Layer Line Capture" (Sharp Truth, NC Legal Targets, DFS Pickem).
+**⏳ Next Steps (Jan 12 Afternoon):**
+- **P1:** Archetype Backtest Setup (backtest_archetypes.py)
+- **P2:** Phase C - Referee Impact Validation
+- **Tonight 8 PM:** Nightly Brief (cloud test)
 
 ### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags
 

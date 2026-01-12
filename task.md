@@ -33,10 +33,23 @@
   - [x] Module A was capturing Bovada alts instead of NC Legal
   - [x] Deployed priority logic for FanDuel/DraftKings
 
-- [ ] **P0: CRITICAL - Integrate Yak into Main Pipeline (Jan 10)**
-  - [ ] Add self.yak.get_player_status() call in main.py
-  - [ ] Update player status before building scenarios
-  - [ ] Skip players with status OUT/DOUBTFUL
+- [x] **P0: CRITICAL - Integrate Yak into Main Pipeline (Jan 12, 10:00 AM)**
+  - [x] Add self.yak.get_player_status() call in main.py
+  - [x] Update player status before building scenarios
+  - [x] Skip players with status OUT/DOUBTFUL
+
+- [x] **Module E Integration (Jan 12, 11:35 AM)**
+  - [x] Wire calibrate_player() into main.py build_reporter_input
+  - [x] Pass opponent context for matchup logic
+  - [x] Pass yak_report for MINUTES_LIMIT handling
+  - [x] Added base stats for archetype classification
+
+- [x] **Verification Tests (Jan 12, 11:45 AM)**
+  - [x] Created verify_calibration.py
+  - [x] Test 1: Slasher vs Hackers - PASSED (+20% FTA)
+  - [x] Test 2: Blowout Tax - PASSED (-6% all stats)
+  - [x] Test 3: Minutes Limit - PASSED (-25% all stats)
+  - [x] Test 4: Stretch Big vs Paint Pack - PASSED (+15% 3PM)
 
 - [ ] **ENHANCEMENT: Multi-Bookmaker Tracking (Post-Validation)**
   - [ ] Refactor Module A to store Lines per Bookmaker
