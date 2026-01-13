@@ -26,12 +26,16 @@
 ### 3. Foundation Repair (Complete)
 - **Database:** Repaired 92 records with missing team names.
 - **Git:** Cleaned up untracked submodules.
+- **Pipeline Fixes (6:40 PM):**
+    - **Evening Lock:** Fixed title logic in `morning_brief.py` to correctly display "LUDI EVENING LOCK".
+    - **Monitoring:** Created `monitor_sync.sh` (Python-based) to safely track data sync progress.
 
 ---
 
 ## 🔄 ACTIVE PROCESSES
 **DO NOT STOP OR DELETE:**
-1.  **Tracking Data Sync:** `scripts/sync_tracking_complete.py` is running in the background (PID 27480). It is backfilling shot quality/tracking data into `cache/nba_api/` and `ludi.db`.
+1.  **Tracking Data Sync:** `scripts/sync_tracking_fast.py` is running in the background (PID 17663). It is backfilling shot quality/tracking data.
+    - **Check Status:** `./monitor_sync.sh`
 2.  **Backtest Results:** `regression_backtest_*.csv` files contain the latest regression analysis.
 
 ---
