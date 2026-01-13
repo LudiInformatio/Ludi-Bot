@@ -202,6 +202,9 @@ class Gatekeeper:
 
                 if response.status_code == 200:
                     data = response.json()
+                    found_books = [b['title'] for b in data.get('bookmakers', [])]
+                    print(f"      ↳ Found Books: {found_books}")
+                    
                     for book in data.get('bookmakers', []):
                         
                         # --- THE MASTER BOOK LIST ---
@@ -215,6 +218,9 @@ class Gatekeeper:
                         # Only capture line if we don't have one yet (avoids alt line overwrites)
                         priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365']
                         if book['title'] in target_books:
+                            if book['title'] == 'FanDuel' and g_id == target_ids[0]:
+                                print(f"         [DEBUG] FanDuel Markets: {[m['key'] for m in book['markets']]}")
+                                
                             for market in book['markets']:
                                 key = market['key'] 
                                 for outcome in market['outcomes']:

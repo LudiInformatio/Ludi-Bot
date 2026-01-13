@@ -1,0 +1,3 @@
+player_id,player_name,team,fetch_date,games_played,total_reb,oreb,dreb,contested_reb,uncontested_reb,contested_reb_pct,total_passes,total_assists
+1630178,Tyrese Maxey,PHI,2026-01-13,36,160,9,151,21,139,0.131,2533,241
+1641708,Amen Thompson,HOU,2026-01-13,36,276,103,173,115,161,0.417,1918,188

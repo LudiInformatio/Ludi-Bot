@@ -1,39 +1,69 @@
-# LUDI INFORMATIO: STATUS REPORT & NEXT STEPS
-**Date:** Monday, January 12, 2026
-**To:** Ludi Management
-**From:** System Architect
+# LUDI LENS v2.0 | STATUS REPORT (JAN 13, 2026)
 
-## 1. MISSION ACCOMPLISHED: The "Scout" Update
-We have successfully audited and upgraded the core classification engine (`module_e.py`) to reflect 2025-26 NBA realities.
+## 🚨 SYSTEM STATE: LIVE FIRE
+**Date:** Tuesday, Jan 13, 2026
+**Mode:** Targeted Live Testing (Week 2/3 Transition)
+**Core Engine:** Modules A-H (Production v2.0)
 
-### Key Upgrades
--   **HELIOCENTRIC Engine:** Replaced "Ball Hog" with a sharper definition for high-usage creators (Luka, Trae, Jokic).
--   **ELITE_SCORER Tier:** Created a VIP bucket for **Steph Curry, Anthony Edwards, and KD**. They now receive specific "Switch Hunter" and "Drop Killer" boosts instead of generic logic.
--   **HUB_BIG Role:** Established a home for **Josh Hart, Scottie Barnes, and Paolo Banchero**—players who rebound elite and pass elite.
--   **The "Westbrook Fix":** Successfully purged Russell Westbrook from the "Stretch Big" category. He is now correctly treated as a `GENERALIST` with a unique "Hustle Guard" rebounding boost.
+---
 
-## 2. VALIDATION RESULTS (The Proof)
-We ran a rigorous 3-Level Backtest (15-Day, 60-Day, Full Season) on the `ludi.db`.
+## ✅ ACCOMPLISHMENTS (TODAY)
+### 1. Automation & Scheduling (Complete)
+- **Visual Engine:** Created `morning_brief.py` - Single Unified Brain (no split Gatekeeper).
+- **Curated Output:** Filtered to "Top 3 Bets Per Game" + Deduplicated (Best EV Only).
+- **Visuals:** Canvas expanded to 1200px (No text truncation).
+- **Workflows:**
+    - **05:00 AM:** Data Sync + Settlement (`data_sync.yml`) + PM Bot Morning Brief (Work Notes).
+    - **10:00 AM:** Morning Brief (`daily_briefing.yml`) -> Visual Game Notes.
+    - **06:00 PM:** Evening Lock (`evening_slate_lock.yml`) -> Visual Game Notes.
+    - **08:00 PM:** Nightly Debrief (`nightly_debrief.yml`) -> PM Bot Nightly Brief (Work Notes).
 
-| Metric | Result (RMSE) | Assessment |
-| :--- | :--- | :--- |
-| **Points (PTS)** | **5.92** | ✅ **SOLID** (< 7.0 target). The model predicts scoring variance accurately. |
-| **Rebounds (REB)** | **2.47** | ✅ **ELITE**. We are dialed in on board crashing. |
-| **Assists (AST)** | **1.81** | ✅ **ELITE**. Playmaking volume is predictable. |
+### 2. Settlement & Data (Complete)
+- **Ledger:** Created `settle_bets.py`.
+- **Fix:** Resolved "NULL Outcome" bug by mapping `STEALS`, `BLOCKS`, `TURNOVERS` in stat map.
+- **Result:** Settled 4,000+ pending bets. Jan 12 Win Rate: 49.6%.
 
-**Hypothesis Confirmation:**
--   *Slashers* (e.g., Giannis) consistently draw more fouls vs "Hackers" (IND/CHA).
--   *Stretch Bigs* (e.g., KAT) shoot more 3s vs "Paint Pack" (OKC/BOS).
+### 3. Foundation Repair (Complete)
+- **Database:** Repaired 92 records with missing team names.
+- **Git:** Cleaned up untracked submodules.
 
-## 3. ARCHITECTURE STATUS
--   **Scenario Forks:** Logic is active. We now simulate "If [Star] SITS" vs "If [Star] PLAYS" for every GTD scenario.
--   **Math Integrity:** Validated. Worse odds (-150) correctly reduce EV compared to standard odds (-110).
--   **Yak Intel:** Enhanced. The system now "reads" beat writer tweets and coach quotes for nuanced injury context.
+---
 
-## 4. NEXT STEPS (The Roadmap)
-1.  **Deploy `module_e` to Production:** The new logic is live in the codebase.
-2.  **Monitor "Hub Bigs":** Keep an eye on Sabonis to ensure he settles into the correct tier (Heliocentric vs Hub vs Generalist).
-3.  **Refine "Ref Impact":** Now that player archetypes are solid, we can revisit `module_g` to ensure "Foul Prone" refs punish "Physical" teams correctly.
+## 🔄 ACTIVE PROCESSES
+**DO NOT STOP OR DELETE:**
+1.  **Tracking Data Sync:** `scripts/sync_tracking_complete.py` is running in the background (PID 27480). It is backfilling shot quality/tracking data into `cache/nba_api/` and `ludi.db`.
+2.  **Backtest Results:** `regression_backtest_*.csv` files contain the latest regression analysis.
 
-**Recommendation:**
-The system is "Game Ready" for the next slate. The lens is sharp.
+---
+
+## ⏳ NEXT STEPS (JAN 14)
+**Target Slate:** CLE@PHI, NYK@SAC, UTA@CHI
+
+### Priority 1: Validation Phase C (Referee Impact)
+- Create `backtest_refs.py`.
+- Prove that the `1.007x` impact factor in the logs is statistically significant against the 60-day window.
+
+### Priority 2: Multi-Bookmaker Tracking
+- Enhance `Module A` to persistently store line discrepancies (Sharp vs Public) for future "Closing Line Value" analysis.
+
+### Priority 3: Monitor Tracking Sync
+- Ensure the background process completes successfully.
+- Validate `player_game_tracking` table count (Target: ~15,000 records).
+
+---
+
+## 🛠️ QUICK COMMANDS
+**Generate Today's Card (Manual Override):**
+```bash
+python morning_brief.py --mode morning
+```
+
+**Generate Evening Update (Manual Override):**
+```bash
+python morning_brief.py --mode evening
+```
+
+**Check Settlement:**
+```bash
+python settle_bets.py
+```

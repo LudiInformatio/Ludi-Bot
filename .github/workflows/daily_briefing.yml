@@ -2,9 +2,9 @@ name: Daily Morning Briefing
 
 on:
   schedule:
-    # 5:00 AM EST is 10:00 AM UTC (Standard Time)
+    # 10:00 AM EST is 15:00 UTC (Standard Time)
     # Note: GitHub Actions uses UTC.
-    - cron: '0 10 * * *'
+    - cron: '0 15 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -34,4 +34,4 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python main.py --mode pm_briefing
+          python morning_brief.py

@@ -212,9 +212,27 @@ def migrate_games(conn, legacy_data):
                 home_team = team_abbr
                 away_team = matchup.split(' vs. ')[1] if ' vs. ' in matchup else ''
             else:
-                # Fallback
-                home_team = ''
-                away_team = ''
+                # Fallback: Attempt to parse from Tank01 ID format (e.g., 20260112_LAL@SAC)
+                if '@' in str(game_id) and '_' in str(game_id):
+                    try:
+                        # Split '20260112_LAL@SAC' -> ['20260112', 'LAL@SAC']
+                        parts = str(game_id).split('_')
+                        if len(parts) >= 2:
+                            matchup_part = parts[1] # 'LAL@SAC'
+                            if '@' in matchup_part:
+                                away_team, home_team = matchup_part.split('@')
+                            else:
+                                home_team = ''
+                                away_team = ''
+                        else:
+                            home_team = ''
+                            away_team = ''
+                    except:
+                        home_team = ''
+                        away_team = ''
+                else:
+                    home_team = ''
+                    away_team = ''
 
             unique_games[game_id] = {
                 'date': game_date,

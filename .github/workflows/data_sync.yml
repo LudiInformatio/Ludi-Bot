@@ -2,8 +2,8 @@ name: Daily Data Sync
 
 on:
   schedule:
-    # 3am EST = 8am UTC (during EST, 4am EDT = 8am UTC during daylight saving)
-    - cron: '0 8 * * *'
+    # 5am EST = 10am UTC (Standard Time)
+    - cron: '0 10 * * *'
   workflow_dispatch:  # Allow manual trigger for testing
 
 jobs:
@@ -79,17 +79,27 @@ jobs:
           conn.close()
           "
 
+      - name: Settle Pending Bets
+        run: python settle_bets.py
+
+      - name: Send PM Bot Morning Brief (Work Notes)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python utils/pm_bot.py --mode morning
+
       - name: Commit and push if changes
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
-          git add ludi.db ludi_history_db.json
+          git add ludi.db ludi_history_db.json logs/bets/
           
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit - database already up to date"
           else
-            git commit -m "chore: automated data sync $(date +'%Y-%m-%d')"
+            git commit -m "chore: data sync & settlement $(date +'%Y-%m-%d')"
             git push
             echo "✅ Database updated and pushed!"
           fi

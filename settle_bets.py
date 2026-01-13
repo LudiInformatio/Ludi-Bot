@@ -1,198 +1,181 @@
-#!/usr/bin/env python
-"""
-settle_bets.py - The "Ghost Book" Settlement Engine
-
-Purpose:
-1. Fetch pending bets from ludi.db
-2. Fetch box scores from Tank01 (Yesterday's games)
-3. Grade bets (WIN/LOSS/PUSH)
-4. Calculate Profit/Loss
-5. Update Database
-
-Usage:
-python3 settle_bets.py --date 2026-01-12
-"""
-
-import argparse
-import requests
-import json
-import time
-from datetime import datetime, timedelta
+import sqlite3
+import datetime
 from utils.bet_logger import get_bet_logger
-import config
+from utils.telegram_notifier import send_message
+
+# =========================================================
+# LUDI LENS v2.0 | THE SETTLEMENT LEDGER
+# ---------------------------------------------------------
+# Purpose: Grades 'Pending' bets against actual Game Logs
+# Run Time: 5:00 AM EST (Daily)
+# =========================================================
 
 class BetSettler:
-    def __init__(self):
+    def __init__(self, db_path='ludi.db'):
+        self.db_path = db_path
+        self.logger = get_bet_logger(db_path=db_path)
+        self.conn = sqlite3.connect(db_path)
+
+    def run_settlement(self, target_date=None):
+        """
+        Main Routine: Fetches pending bets, finds matching game logs, updates outcomes.
+        """
         print("\n" + "="*60)
-        print("🏛️  LUDI GHOST BOOK: SETTLEMENT ENGINE")
+        print("🏛️  THE LEDGER: BET SETTLEMENT PROTOCOL")
         print("="*60)
         
-        self.logger = get_bet_logger()
-        self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
-        self.TANK_HOST = "tank01-fantasy-stats.p.rapidapi.com"
-
-    def fetch_box_scores(self, game_date):
-        """Fetch all player stats for a specific date using Tank01."""
-        # Endpoint: getNBADailyPlayerStats
-        # Tank01 expects gameDate as YYYYMMDD
-        clean_date = game_date.replace('-', '')
-        url = f"https://{self.TANK_HOST}/getNBADailyPlayerStats"
-        params = {'gameDate': clean_date}
-        headers = {"X-RapidAPI-Key": self.TANK_KEY, "X-RapidAPI-Host": self.TANK_HOST}
-        
-        print(f"   📡 Fetching Box Scores for {game_date}...", end=" ")
-        
-        try:
-            r = requests.get(url, headers=headers, params=params)
-            data = r.json()
-            
-            if r.status_code != 200:
-                print(f"❌ Failed (Status {r.status_code})")
-                return {}
-                
-            stats_map = {}
-            # Tank01 response structure: {'body': [player1, player2...]}
-            players = data.get('body', [])
-            
-            if not players:
-                print("⚠️  No stats found (Empty Body).")
-                return {}
-
-            print(f"✅ Success. Found {len(players)} players.")
-            
-            for p in players:
-                name = p.get('longName', '')
-                clean_name = self._normalize_name(name)
-                
-                # Extract stats (Tank01 keys)
-                try:
-                    stats = {
-                        'PTS': float(p.get('pts', 0) or 0),
-                        'REB': float(p.get('reb', 0) or 0),
-                        'AST': float(p.get('ast', 0) or 0),
-                        '3PM': float(p.get('fg3PtMade', 0) or 0),
-                        'STL': float(p.get('stl', 0) or 0),
-                        'BLK': float(p.get('blk', 0) or 0),
-                        'TOV': float(p.get('TOV', 0) or 0),
-                        # PRA = PTS + REB + AST
-                        'PRA': float(p.get('pts', 0) or 0) + float(p.get('reb', 0) or 0) + float(p.get('ast', 0) or 0)
-                    }
-                    stats_map[clean_name] = stats
-                except ValueError:
-                    continue
-                
-            return stats_map
-            
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            return {}
-
-    def _normalize_name(self, name):
-        return name.lower().replace('.', '').replace(' ', '').strip()
-
-    def settle(self, target_date):
         # 1. Get Pending Bets
-        bets = self.logger.get_pending_bets(game_date=target_date)
-        if not bets:
-            print(f"   ℹ️  No pending bets found for {target_date}.")
+        pending_bets = self.logger.get_pending_bets(target_date)
+        if not pending_bets:
+            print("✅ No pending bets found.")
             return
 
-        print(f"   📋 Found {len(bets)} pending bets.")
-
-        # 2. Get Actuals
-        box_scores = self.fetch_box_scores(target_date)
-        if not box_scores:
-            print("   ❌ No stats available yet. Try again later.")
-            return
-
-        # 3. Grade Bets
-        wins = 0
-        losses = 0
-        pushes = 0
-        pnl = 0.0
-
-        print("\n   📝 Grading Ticket...")
-        for bet in bets:
-            player = bet['player_name']
-            clean_player = self._normalize_name(player)
+        print(f"📊 Processing {len(pending_bets)} pending bets...")
+        
+        settled_count = 0
+        daily_pl = {} # Track P&L per date
+        
+        for bet in pending_bets:
+            bet_id = bet['id']
+            player_name = bet['player_name']
+            game_date = bet['game_date']
             stat_cat = bet['stat_category']
             line = bet['line']
             side = bet['bet_side']
-            units = bet['units'] or 1.0
-            
-            # Find Actual
-            actual_stats = box_scores.get(clean_player)
-            
-            # Handle DNP / Missing Data
-            if not actual_stats:
-                # Check if game happened? For now assume DNP = Void
-                print(f"      ⚪ {player}: No stats found (DNP?) -> Voiding")
-                self.logger.update_outcome(bet['id'], 'PUSH', 0.0, 0.0)
-                pushes += 1
-                continue
+            odds_over = bet['odds_over']
+            odds_under = bet['odds_under']
 
-            actual_val = actual_stats.get(stat_cat)
+            # Initialize daily tracker
+            if game_date not in daily_pl:
+                daily_pl[game_date] = {'wins': 0, 'losses': 0, 'units': 0.0}
+
+            # 2. Find Actual Result in Game Logs
+            actual_val = self._lookup_game_log(player_name, game_date, stat_cat)
+            
             if actual_val is None:
-                # Stat category missing (e.g. 'Fantasy Points' not mapped)
-                print(f"      ⚠️  {player}: Stat {stat_cat} not found -> Voiding")
-                self.logger.update_outcome(bet['id'], 'PUSH', 0.0, 0.0)
-                pushes += 1
+                print(f"   ⚠️  MISSING LOG: {player_name} ({game_date}) - Skipping")
                 continue
             
-            # Determine Outcome
-            outcome = 'PUSH'
-            profit = 0.0
+            # 3. Determine Outcome
+            outcome, profit = self._grade_bet(side, line, actual_val, bet['units'], odds_over, odds_under)
             
-            if side == 'OVER':
-                if actual_val > line: outcome = 'WIN'
-                elif actual_val < line: outcome = 'LOSS'
-            elif side == 'UNDER':
-                if actual_val < line: outcome = 'WIN'
-                elif actual_val > line: outcome = 'LOSS'
+            # 4. Update Database
+            clv = 0.0 
+            self.logger.update_outcome(bet_id, outcome, actual_val, profit_loss=profit, clv=clv)
             
-            # Calculate PnL (Using exact odds if available)
-            odds = bet.get('odds_over') if side == 'OVER' else bet.get('odds_under')
+            # Update Tracker
+            if outcome == 'WIN': daily_pl[game_date]['wins'] += 1
+            if outcome == 'LOSS': daily_pl[game_date]['losses'] += 1
+            daily_pl[game_date]['units'] += profit
             
-            # Default to -110 if odds missing
-            if not odds: odds = -110
+            # Visual Log
+            emoji = "✅" if outcome == "WIN" else "❌" if outcome == "LOSS" else "↔️"
+            print(f"   {emoji} {player_name:<20} {stat_cat:<4} | Line: {line} | Actual: {actual_val} | {outcome}")
             
-            multiplier = 1.0
-            if odds > 0:
-                multiplier = 1 + (odds / 100)
-            else:
-                multiplier = 1 + (100 / abs(odds))
-            
-            if outcome == 'WIN':
-                profit = units * (multiplier - 1)
-                wins += 1
-                print(f"      ✅ {player} {side} {line} {stat_cat} | Actual: {actual_val} | +{profit:.2f}u")
-            elif outcome == 'LOSS':
-                profit = -units
-                losses += 1
-                print(f"      ❌ {player} {side} {line} {stat_cat} | Actual: {actual_val} | {profit:.2f}u")
-            else:
-                pushes += 1
-                print(f"      ⚪ {player} {side} {line} {stat_cat} | Actual: {actual_val} | Void")
+            settled_count += 1
 
-            # Update DB
-            self.logger.update_outcome(bet['id'], outcome, actual_val, profit)
-            pnl += profit
-
-        # 4. Summary
-        print("\n" + "-"*30)
-        print(f"   💰 DAILY P&L: {pnl:+.2f} Units")
-        print(f"   🏆 Record: {wins}-{losses}-{pushes}")
-        print("-" * 30 + "\n")
+        print("-" * 60)
+        print(f"✅ SETTLEMENT COMPLETE: {settled_count}/{len(pending_bets)} bets graded.")
         
-        # Update Daily Summary Table
-        self.logger.calculate_daily_summary(target_date)
+        # Update Daily Summary & Send Telegram
+        for d, stats in daily_pl.items():
+            self.logger.calculate_daily_summary(d)
+            print(f"   📅 Daily Summary Updated: {d}")
+            
+            # Send Telegram Report for the specific date
+            if stats['wins'] + stats['losses'] > 0:
+                header = f"💰 **LUDI SETTLEMENT | {d}**"
+                body = (
+                    f"✅ Wins: {stats['wins']}\n"
+                    f"❌ Losses: {stats['losses']}\n"
+                    f"📈 Profit: {stats['units']:+.2f} Units"
+                )
+                try:
+                    send_message(f"{header}\n\n{body}")
+                    print(f"   🚀 Sent Telegram Recap for {d}")
+                except Exception as e:
+                    print(f"   ⚠️ Failed to send Telegram: {e}")
+
+    def _lookup_game_log(self, player_name, game_date, stat_cat):
+        """
+        Queries player_game_logs for the actual stat value.
+        Mapping needed: 'PTS' -> 'pts', 'REB' -> 'reb', '3PM' -> 'fg3m'
+        """
+        stat_map = {
+            'PTS': 'pts',
+            'REB': 'reb',
+            'AST': 'ast',
+            '3PM': 'fg3m',
+            'BLK': 'blk',
+            'BLOCKS': 'blk',
+            'STL': 'stl',
+            'STEALS': 'stl',
+            'TOV': 'tov',
+            'TURNOVERS': 'tov',
+            'PRA': 'pra', # Derived
+            'PR': 'pr',   # Derived
+            'PA': 'pa'    # Derived
+        }
+        
+        db_col = stat_map.get(stat_cat)
+        if not db_col and stat_cat not in ['PRA', 'PR', 'PA']:
+            print(f"   ❌ Unknown stat category: {stat_cat}")
+            return None
+            
+        c = self.conn.cursor()
+        
+        # Handle derived stats if not in DB directly (PRA, etc.)
+        if stat_cat in ['PRA', 'PR', 'PA']:
+            c.execute('''
+                SELECT pts, reb, ast FROM player_game_logs 
+                WHERE player_name = ? AND game_date = ?
+            ''', (player_name, game_date))
+            row = c.fetchone()
+            if not row: return None
+            pts, reb, ast = row
+            if stat_cat == 'PRA': return pts + reb + ast
+            if stat_cat == 'PR': return pts + reb
+            if stat_cat == 'PA': return pts + ast
+        else:
+            # Standard Stats
+            query = f"SELECT {db_col} FROM player_game_logs WHERE player_name = ? AND game_date = ?"
+            c.execute(query, (player_name, game_date))
+            row = c.fetchone()
+            if not row: return None
+            return row[0]
+
+    def _grade_bet(self, side, line, actual, units, odds_over, odds_under):
+        """
+        Returns (outcome, profit_loss)
+        Profit calculation assumes standard -110 unless specific odds provided.
+        """
+        # Default odds if missing
+        price = odds_over if side == 'OVER' else odds_under
+        if not price: price = -110
+            
+        # 1. Determine Win/Loss
+        outcome = 'PUSH'
+        if side == 'OVER':
+            if actual > line: outcome = 'WIN'
+            elif actual < line: outcome = 'LOSS'
+        elif side == 'UNDER':
+            if actual < line: outcome = 'WIN'
+            elif actual > line: outcome = 'LOSS'
+            
+        # 2. Calculate Profit
+        profit = 0.0
+        if outcome == 'WIN':
+            # Convert American Odds to Decimal Multiplier
+            if price > 0:
+                multiplier = price / 100.0
+            else:
+                multiplier = 100.0 / abs(price)
+            profit = units * multiplier
+        elif outcome == 'LOSS':
+            profit = -units
+            
+        return outcome, round(profit, 2)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    # Default to yesterday
-    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    parser.add_argument("--date", type=str, default=yesterday, help="Date to settle (YYYY-MM-DD)")
-    args = parser.parse_args()
-    
     settler = BetSettler()
-    settler.settle(args.date)
+    settler.run_settlement()

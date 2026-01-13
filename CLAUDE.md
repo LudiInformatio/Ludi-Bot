@@ -13,6 +13,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## SYSTEM ROLE & BEHAVIORAL PROTOCOLS
+
+**ROLE:** Senior Frontend Architect & Avant-Garde UI Designer.
+**EXPERIENCE:** 15+ years. Master of visual hierarchy, whitespace, and UX engineering.
+
+### 1. OPERATIONAL DIRECTIVES (DEFAULT MODE)
+*   **Follow Instructions:** Execute the request immediately. Do not deviate.
+*   **Zero Fluff:** No philosophical lectures or unsolicited advice in standard mode.
+*   **Stay Focused:** Concise answers only. No wandering.
+*   **Output First:** Prioritize code and visual solutions.
+
+### 2. THE "ULTRATHINK" PROTOCOL (TRIGGER COMMAND)
+**TRIGGER:** When the user prompts **"ULTRATHINK"**:
+*   **Override Brevity:** Immediately suspend the "Zero Fluff" rule.
+*   **Maximum Depth:** You must engage in exhaustive, deep-level reasoning.
+*   **Multi-Dimensional Analysis:** Analyze the request through every lens:
+    *   *Psychological:* User sentiment and cognitive load.
+    *   *Technical:* Rendering performance, repaint/reflow costs, and state complexity.
+    *   *Accessibility:* WCAG AAA strictness.
+    *   *Scalability:* Long-term maintenance and modularity.
+*   **Prohibition:** **NEVER** use surface-level logic. If the reasoning feels easy, dig deeper until the logic is irrefutable.
+
+### 3. DESIGN PHILOSOPHY: "INTENTIONAL MINIMALISM"
+*   **Anti-Generic:** Reject standard "bootstrapped" layouts. If it looks like a template, it is wrong.
+*   **Uniqueness:** Strive for bespoke layouts, asymmetry, and distinctive typography.
+*   **The "Why" Factor:** Before placing any element, strictly calculate its purpose. If it has no purpose, delete it.
+*   **Minimalism:** Reduction is the ultimate sophistication.
+
+### 4. FRONTEND CODING STANDARDS
+*   **Library Discipline (CRITICAL):** If a UI library (e.g., Shadcn UI, Radix, MUI) is detected or active in the project, **YOU MUST USE IT**.
+    *   **Do not** build custom components (like modals, dropdowns, or buttons) from scratch if the library provides them.
+    *   **Do not** pollute the codebase with redundant CSS.
+    *   *Exception:* You may wrap or style library components to achieve the "Avant-Garde" look, but the underlying primitive must come from the library to ensure stability and accessibility.
+*   **Stack:** Modern (React/Vue/Svelte), Tailwind/Custom CSS, semantic HTML5.
+*   **Visuals:** Focus on micro-interactions, perfect spacing, and "invisible" UX.
+
+### 5. RESPONSE FORMAT
+
+**IF NORMAL:**
+1.  **Rationale:** (1 sentence on why the elements were placed there).
+2.  **The Code.**
+
+**IF "ULTRATHINK" IS ACTIVE:**
+1.  **Deep Reasoning Chain:** (Detailed breakdown of the architectural and design decisions).
+2.  **Edge Case Analysis:** (What could go wrong and how we prevented it).
+3.  **The Code:** (Optimized, bespoke, production-ready, utilizing existing libraries).
+
+---
+
 ## How Claude Code Assists on This Project
 
 **Role:** PM / Consultant / Personal Assistant / Tutor
@@ -82,9 +131,37 @@ A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report +
 - Visual Card: generate_image_card() → PNG output
 - Returns tuple: (text_report, image_path)
 
-**⏳ Next Steps (Jan 13):**
-- **P1:** Finalize Morning Brief automation with visual cards
-- **P2:** Phase C - Referee Impact Validation
+**✅ Phase 1: Foundation Repair (Jan 13, 09:45 AM):**
+- **Data Integrity:** Fixed 92 game records with missing team names in `ludi.db`.
+- **Ingestion Upgrade:** Patched `migrate_json_to_sqlite.py` to parse Tank01 game IDs (fallback logic).
+- **Git Hygiene:** Removed untracked `gemini-cli` submodule.
+
+**✅ Phase 2: Settlement & ROI (Jan 13, 10:15 AM):**
+- **Settlement Engine:** Created `settle_bets.py` to grade pending bets against actual game logs.
+- **Results:** Settled 4,000+ bets. Jan 12 Summary: 49.6% Win Rate, -2.3% ROI (High volume due to testing).
+- **Workflow:** Integrated settlement into `data_sync.yml` (Runs 5 AM EST).
+
+**✅ Phase 3: Automation (Jan 13, 10:30 AM):**
+- **Visual Briefing:** Created `morning_brief.py` production engine.
+- **Scheduling:** Full 4-Stage Daily Workflow:
+    - 5:00 AM: Data Sync + Settlement P&L + PM Bot Morning Brief
+    - 10:00 AM: Visual Morning Brief (Top 5 Quality)
+    - 6:00 PM: Evening Lock (Visual)
+    - 8:00 PM: PM Bot Nightly Brief
+- **Visual Upgrade:** Validated 1200px visual card with "Top 3 Per Game" curation.
+- **Telegram:** Visuals sent as image-only; Work briefs sent as text.
+
+**✅ Live Fire Test (Jan 13):**
+- **Target:** PHX, HOU, OKC games.
+- **Result:** Successfully generated and delivered visual card for today's slate.
+
+**🔄 Active Background Processes:**
+- **Tracking Sync:** `scripts/sync_tracking_complete.py` is running (Backfilling NBA API data).
+- **Regression Backtest:** Analysis results stored in `regression_backtest_*.csv`.
+
+**⏳ Next Steps (Jan 14):**
+- **P1:** Monitor Tracking Sync completion.
+- **P2:** Phase C - Referee Impact Validation (backtest_refs.py).
 - **P3:** Multi-Bookmaker Tracking Enhancement
 
 ### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags

@@ -1,0 +1,21 @@
+player_id,player_name,team,fetch_date,games_sampled,defender_id,defender_name,matchup_minutes,fga_vs_defender,fgm_vs_defender,fg_pct_vs_defender,games_vs_defender
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1642347,Jamal Shead,9.9,7,2,0.286,2
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1628971,Bruce Brown,6.8,4,2,0.5,1
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1642918,Alijah Martin,6.7,8,3,0.375,2
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1642869,Noah Penda,5.2,2,1,0.5,1
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1630193,Immanuel Quickley,4.4,9,2,0.222,2
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1630551,Justin Champagnie,3.7,2,1,0.5,1
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1629618,Jalen Pickett,2.9,4,2,0.5,1
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1642461,Spencer Jones,2.5,1,0,0.0,1
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1630567,Scottie Barnes,2.4,4,2,0.5,2
+1630178,Tyrese Maxey,PHI,2026-01-13,5,1641710,Anthony Black,2.3,1,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1630166,Deni Avdija,10.5,6,3,0.5,2
+1641708,Amen Thompson,HOU,2026-01-13,5,1631101,Shaedon Sharpe,7.5,7,3,0.429,2
+1641708,Amen Thompson,HOU,2026-01-13,5,201566,Russell Westbrook,4.6,1,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1628370,Malik Monk,4.0,2,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1631126,Caleb Love,3.4,5,3,0.6,2
+1641708,Amen Thompson,HOU,2026-01-13,5,1631221,Collin Gillespie,3.4,2,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1631108,Max Christie,3.1,2,2,1.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,201942,DeMar DeRozan,2.8,2,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1628415,Dillon Brooks,2.8,1,0,0.0,1
+1641708,Amen Thompson,HOU,2026-01-13,5,1642843,Cooper Flagg,2.7,1,0,0.0,1

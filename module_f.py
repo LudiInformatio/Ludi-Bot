@@ -39,7 +39,7 @@ class LudiReporter:
             print(f"⚠️  Tag classifier unavailable: {e}")
             self.tag_classifier = None
 
-    def generate_report(self, processed_slate):
+    def generate_report(self, processed_slate, title="LUDI GAME BRIEF"):
         """
         Final synthesis of the simulation results into actionable alerts.
         Processes the slate and applies 2026 sharp-market filters.
@@ -252,6 +252,20 @@ class LudiReporter:
                 
                 all_props.extend(player_props)
 
+        # --- DEDUPLICATION (Best Bet Per Player/Stat) ---
+        # Prioritize highest EV if multiple lines exist (e.g. 8.5 vs 9.5)
+        unique_props = {}
+        for p in all_props:
+            key = (p['name'], p['stat'])
+            if key not in unique_props:
+                unique_props[key] = p
+            else:
+                # Keep the one with higher EV
+                if p['ev'] > unique_props[key]['ev']:
+                    unique_props[key] = p
+        
+        all_props = list(unique_props.values())
+
         # Sort by EV descending for the "Diamond" ranking
         all_props.sort(key=lambda x: x['ev'], reverse=True)
 
@@ -273,24 +287,38 @@ class LudiReporter:
             except Exception as e:
                 print(f"⚠️  Failed to log daily summary: {e}")
 
+        # --- PREPARE VISUALS (CURATED TOP 3 PER GAME) ---
+        visual_props = []
+        grouped = {}
+        for p in all_props:
+            m = p.get('matchup', 'Unknown')
+            if m not in grouped: grouped[m] = []
+            grouped[m].append(p)
+            
+        for m in sorted(grouped.keys()):
+            # Sort by EV and take top 3
+            grouped[m].sort(key=lambda x: x['ev'], reverse=True)
+            visual_props.extend(grouped[m][:3])
+
         # Generate visual card (V4.6 - Visual Upgrade)
-        image_path = self.generate_image_card(all_props)
+        image_path = self.generate_image_card(visual_props, title=title)
         
         return self.create_daily_briefing(all_props), image_path
 
-    def generate_image_card(self, props: list) -> str:
+    def generate_image_card(self, props: list, title: str = "LUDI GAME BRIEF") -> str:
         """
         Generate a visual briefing card PNG from props data.
         
         Args:
             props: List of prop dictionaries from generate_report
+            title: Title text for the card
             
         Returns:
             Path to generated PNG file
         """
         try:
             from utils.render_full_report import create_briefing_card
-            image_path = create_briefing_card(props)
+            image_path = create_briefing_card(props, title=title)
             return image_path
         except Exception as e:
             print(f"⚠️  Visual card generation failed: {e}")

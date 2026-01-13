@@ -1,10 +1,19 @@
 from PIL import Image, ImageDraw, ImageFont
-from pilmoji import Pilmoji
+try:
+    from pilmoji import Pilmoji
+except ImportError:
+    print("⚠️  Pilmoji not found. Emojis will be rendered as text.")
+    class Pilmoji:
+        def __init__(self, img, source=None):
+            self.draw = ImageDraw.Draw(img)
+        def text(self, xy, text, fill=None, font=None, *args, **kwargs):
+            self.draw.text(xy, text, fill=fill, font=font, *args, **kwargs)
+
 import os
 from datetime import datetime
 
 # === Configuration ===
-WIDTH = 800
+WIDTH = 1200
 HEIGHT = 1400
 BACKGROUND_COLOR = (253, 251, 247)  # Moleskine Cream
 
@@ -110,12 +119,13 @@ def transform_props_to_briefing_data(props_list: list) -> list:
     return briefing_data
 
 
-def create_briefing_card(props_data: list = None) -> str:
+def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF") -> str:
     """
     Generate a visual briefing card from props data.
     
     Args:
         props_data: List of dicts with keys: matchup, name, bet_on, line, stat, proj, ev, tags, note
+        title: The title text to display at the top (e.g., "LUDI MORNING BRIEF", "LUDI EVENING LOCK")
     
     Returns:
         Path to generated PNG file
@@ -168,7 +178,7 @@ def create_briefing_card(props_data: list = None) -> str:
 
     # Date Header
     date_str = datetime.now().strftime('%b %d, %Y').upper()
-    header_text = f"DAILY SHARP BRIEFING | {date_str}"
+    header_text = f"{title} | {date_str}"
     header_w = draw.textlength(header_text, font=font_header)
     draw.text(((WIDTH - header_w) / 2, current_y), header_text, font=font_header, fill=COLOR_NAVY)
     current_y += FONT_SIZE_HEADER + SECTION_SPACING

@@ -1,0 +1,3 @@
+player_id,player_name,team,fetch_date,total_fgm,total_fga,total_fg_pct,restricted_area_fga,restricted_area_fg_pct,paint_non_ra_fga,paint_non_ra_fg_pct,midrange_fga,midrange_fg_pct,corner_3_fga,corner_3_fg_pct,above_break_3_fga,above_break_3_fg_pct,very_tight_fga,very_tight_fg_pct,tight_fga,tight_fg_pct,open_fga,open_fg_pct,wide_open_fga,wide_open_fg_pct,contested_shot_pct
+1630178,Tyrese Maxey,PHI,2026-01-13,141,280,0.504,83,0.663,53,0.377,29,0.517,6,0.333,105,0.457,10,0.3,107,0.551,74,0.527,89,0.449,0.418
+1641708,Amen Thompson,HOU,2026-01-13,112,196,0.571,95,0.768,54,0.5,20,0.35,10,0.2,8,0.125,9,0.222,102,0.676,52,0.635,32,0.219,0.569

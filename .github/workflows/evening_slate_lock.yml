@@ -9,8 +9,6 @@ on:
 jobs:
   evening_lock:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -35,18 +33,5 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          # Run logic AND send telegram directly (bypassing AI if needed)
-          python main.py --games CLE SAC LAC --send-telegram
-
-      - name: Commit results
-        run: |
-          git config user.name "Ludi Bot"
-          git config user.email "bot@ludi.com"
-          git add daily_briefing.txt
-          # Only commit if changes exist
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Briefing: Evening Lock $(date)"
-            git push
-          fi
+          # Run Visual Engine in Evening Mode (Final Lines/Injuries)
+          python morning_brief.py --mode evening

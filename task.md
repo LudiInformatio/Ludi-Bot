@@ -107,7 +107,25 @@
     - [x] Verified: UTA@CLE, LAL@SAC, BKN@DAL game notes sent
     - [x] Finalized: Morning Brief "Top 5 Quality" format
 
-- [ ] **Morning Brief Automation (Jan 13)**
-    - [ ] Update GitHub Actions workflow for visual cards
-    - [ ] Integrate curated "Diamond + SGP" template
+- [x] **Morning Brief Automation (Jan 13)**
+    - [x] Created `morning_brief.py` (Visual Production Engine)
+    - [x] Updated `daily_briefing.yml` (10 AM EST schedule)
+    - [x] Integrate curated "Diamond + SGP" template (via `morning_brief.py`)
+    - [x] Updated `evening_slate_lock.yml` (6 PM EST schedule)
+
+- [x] **Phase 1: Foundation Repair (Jan 13, 09:45 AM)**
+    - [x] Created `scripts/fix_empty_game_teams.py`
+    - [x] Repaired 92 broken game records in `ludi.db`
+    - [x] Patched `migrate_json_to_sqlite.py` for fallback parsing
+    - [x] Removed `gemini-cli` from git tracking
+
+- [x] **Phase 2: Settlement & ROI (Jan 13, 10:15 AM)**
+    - [x] Created `settle_bets.py`
+    - [x] Settled 4,455 pending bets (incl. Jan 12 slate)
+    - [x] Updated `data_sync.yml` to run settlement at 5 AM EST
+
+- [ ] **Validation Phase C: Referee Impact & Final Report**
+    - [ ] Implement `backtest_refs.py` (Crew Analysis)
+    - [ ] Generate WEEK 3 VALIDATION REPORT
+
 

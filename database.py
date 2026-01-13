@@ -133,6 +133,100 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_roster_history_date ON roster_history(change_date)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_roster_history_season ON roster_history(season_id)')
 
+        # 6. Player Shot Quality Table (NBA API Tracking - Phase 1.3)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_shot_quality (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT,
+                season TEXT DEFAULT '2025-26',
+                -- Shot areas
+                restricted_area_fga REAL,
+                restricted_area_fg_pct REAL,
+                paint_fga REAL,
+                paint_fg_pct REAL,
+                mid_range_fga REAL,
+                mid_range_fg_pct REAL,
+                corner_3_fga REAL,
+                corner_3_fg_pct REAL,
+                above_break_3_fga REAL,
+                above_break_3_fg_pct REAL,
+                -- Shot difficulty (defender distance)
+                very_tight_fga REAL,
+                very_tight_fg_pct REAL,
+                tight_fga REAL,
+                tight_fg_pct REAL,
+                open_fga REAL,
+                open_fg_pct REAL,
+                wide_open_fga REAL,
+                wide_open_fg_pct REAL,
+                contested_shot_pct REAL,
+                -- Metadata
+                fetch_date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_shot_quality_player ON player_shot_quality(player_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_shot_quality_season ON player_shot_quality(season)')
+
+        # 7. Player Workload Table (NBA API Tracking - Phase 1.3)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_workload (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT,
+                season TEXT DEFAULT '2025-26',
+                -- Games
+                games_played INTEGER,
+                -- Rebounding workload
+                total_reb REAL,
+                oreb REAL,
+                dreb REAL,
+                contested_reb REAL,
+                uncontested_reb REAL,
+                contested_reb_pct REAL,
+                -- Passing workload
+                total_passes REAL,
+                total_assists REAL,
+                -- Metadata
+                fetch_date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_workload_player ON player_workload(player_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_workload_season ON player_workload(season)')
+
+        # 8. Defender Matchups Table (NBA API Tracking - Phase 1.3)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS defender_matchups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT,
+                defender_id TEXT NOT NULL,
+                defender_name TEXT,
+                season TEXT DEFAULT '2025-26',
+                -- Matchup stats
+                matchup_minutes REAL,
+                games_vs_defender INTEGER,
+                fga INTEGER,
+                fgm INTEGER,
+                fg_pct REAL,
+                -- Metadata
+                games_sampled INTEGER,
+                fetch_date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, defender_id, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_matchups_player ON defender_matchups(player_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_matchups_defender ON defender_matchups(defender_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_matchups_season ON defender_matchups(season)')
+
         # Add new columns to players table (for existing databases)
         # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)
         try:
