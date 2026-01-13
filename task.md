@@ -96,3 +96,18 @@
     - [x] Validate Regression/SOS Logic
     - [x] Validate Rotation/Depth Chart Logic
     - [x] Validate Shooting Luck Logic
+
+- [x] **Visual Reporting Upgrade (Jan 12, 8:40 PM)**
+    - [x] Create `utils/render_full_report.py` - Python PNG generator
+    - [x] Implement Moleskine Cream background (#FDFBF7)
+    - [x] Add Navy Ludi Wreath logo (transparent bg)
+    - [x] Add `generate_image_card()` to `module_f.py`
+    - [x] Update `send_single_game_notes.py` for image delivery
+    - [x] Create `utils/mock_morning_brief.py` for template testing
+    - [x] Verified: UTA@CLE, LAL@SAC, BKN@DAL game notes sent
+    - [x] Finalized: Morning Brief "Top 5 Quality" format
+
+- [ ] **Morning Brief Automation (Jan 13)**
+    - [ ] Update GitHub Actions workflow for visual cards
+    - [ ] Integrate curated "Diamond + SGP" template
+

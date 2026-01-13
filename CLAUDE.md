@@ -45,11 +45,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 🎯 Current Status (Updated Jan 12, 2026, 11:50 AM ET)
+## 🎯 Current Status (Updated Jan 12, 2026, 8:40 PM ET)
 
-### Week 2: ✅ IN PROGRESS - Integration & Validation
+### Week 2: ✅ COMPLETE - Visual Upgrade & Pipeline Integration
 
-**✅ Jan 12 Completed Work:**
+**✅ Jan 12 Evening Session (8:40 PM):**
+- **Visual Reporting Upgrade:** Implemented Python-based PNG generator for game notes
+- **Single Game Notes:** Now sends visual card + text via Telegram
+- **Morning Brief Template:** Curated "Top 5" plays format verified (Diamond + SGP tiers)
+- **Files Modified:**
+  - `utils/render_full_report.py` - Visual card generator (Pillow + Pilmoji)
+  - `module_f.py` - Added `generate_image_card()` method
+  - `send_single_game_notes.py` - Image + text delivery
+  - `utils/mock_morning_brief.py` - Morning Brief template
+
+**✅ Design Specifications:**
+- **Background:** Moleskine Cream (#FDFBF7)
+- **Ink Color:** Deep Navy (#0F172A / 26,44,66)
+- **Highlight:** Teal (#00A896)
+- **Logo:** Ludi Wreath Seal (Navy, Transparent Background)
+- **Font:** Arimo (Sans) + Tinos (Serif)
+
+**✅ Jan 12 AM Completed Work:**
 - **Cloud Fixes (9:55 AM):** Added `lxml`, `numpy` to requirements.txt, fixed workflow tier vars
 - **Module D Integration (10:00 AM):** Wired `yak.get_player_status()` into main.py
 - **Module E Integration (11:35 AM):** Wired `calib.calibrate_player()` into pipeline
@@ -57,24 +74,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **✅ Pipeline Now Complete:**
 ```
-A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report)
+A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report + Visual)
 ```
 
-**✅ Module C (Oracle V3.2) - Engine Verification:**
-- **Hybrid S.A.V.A.G.E. Engine:** Verified.
-- **Logic:** Normal Distribution (High-Vol) + Poisson (Rare Events).
-- **Speed:** 5,000 sims < 200ms.
+**✅ Module F (Alchemist V4.6) - Visual Upgrade:**
+- Text Report: create_daily_briefing()
+- Visual Card: generate_image_card() → PNG output
+- Returns tuple: (text_report, image_path)
 
-**✅ Module E (Calibrator V5.6) - Matchup Logic:**
-- 8 Archetypes: SLASHER, STRETCH_BIG, BALL_HOG, RIM_RUNNER, SNIPER, TWO_WAY_WING, FACILITATOR, GENERALIST
-- 5 Defensive Schemes: PAINT_PACK, BLITZ, PERIMETER, FUNNEL, HACKERS
-- Blowout Tax: -6% when spread > 12.5
-- Minutes Limit: -25% from Yak MINUTES_LIMIT status
-
-**⏳ Next Steps (Jan 12 Afternoon):**
-- **P1:** Archetype Backtest Setup (backtest_archetypes.py)
+**⏳ Next Steps (Jan 13):**
+- **P1:** Finalize Morning Brief automation with visual cards
 - **P2:** Phase C - Referee Impact Validation
-- **Tonight 8 PM:** Nightly Brief (cloud test)
+- **P3:** Multi-Bookmaker Tracking Enhancement
 
 ### Week 2: ✅ COMPLETE - Data Sync, Automation, Tags
 

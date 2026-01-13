@@ -122,7 +122,14 @@ def send_specific_game_notes(home_team=None, away_team=None):
     
     # Generate report (Module F)
     print("[7] Generating Report (Module F)...")
-    standard_report = app.reporter.generate_report(processed_slate)
+    report_result = app.reporter.generate_report(processed_slate)
+    
+    # Handle tuple return (text, image_path) from updated Module F
+    if isinstance(report_result, tuple):
+        standard_report, image_path = report_result
+    else:
+        standard_report = report_result
+        image_path = None
     
     # Custom header with ref info
     header = f"📋 **GAME NOTES: {away_team} @ {home_team}**\\n"
@@ -143,6 +150,14 @@ def send_specific_game_notes(home_team=None, away_team=None):
     
     # Send to Telegram
     print("\\n📨 Sending Game Notes to Telegram...")
+    
+    # Send visual card first if available
+    if image_path:
+        from utils.telegram_notifier import send_photo
+        send_photo(image_path, caption=f"🏀 {away_team} @ {home_team} | Visual Brief")
+        print("✅ Visual card sent!")
+    
+    # Then send text report
     send_message(full_message)
     print("✅ Done!")
 

@@ -273,7 +273,28 @@ class LudiReporter:
             except Exception as e:
                 print(f"⚠️  Failed to log daily summary: {e}")
 
-        return self.create_daily_briefing(all_props)
+        # Generate visual card (V4.6 - Visual Upgrade)
+        image_path = self.generate_image_card(all_props)
+        
+        return self.create_daily_briefing(all_props), image_path
+
+    def generate_image_card(self, props: list) -> str:
+        """
+        Generate a visual briefing card PNG from props data.
+        
+        Args:
+            props: List of prop dictionaries from generate_report
+            
+        Returns:
+            Path to generated PNG file
+        """
+        try:
+            from utils.render_full_report import create_briefing_card
+            image_path = create_briefing_card(props)
+            return image_path
+        except Exception as e:
+            print(f"⚠️  Visual card generation failed: {e}")
+            return None
 
     def _map_stat(self, p, key):
         """Maps internal projection keys to common sportsbook prop keys."""
