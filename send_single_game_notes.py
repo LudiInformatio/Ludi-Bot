@@ -148,17 +148,18 @@ def send_specific_game_notes(home_team=None, away_team=None):
     
     full_message = header + standard_report
     
-    # Send to Telegram
+    # Send to Telegram (Visual Card Only - No Redundant Text)
     print("\\n📨 Sending Game Notes to Telegram...")
     
-    # Send visual card first if available
     if image_path:
         from utils.telegram_notifier import send_photo
-        send_photo(image_path, caption=f"🏀 {away_team} @ {home_team} | Visual Brief")
+        send_photo(image_path, caption=f"🏀 {away_team} @ {home_team} | Sharp Brief")
         print("✅ Visual card sent!")
+    else:
+        # Fallback to text only if image generation failed
+        send_message(full_message)
+        print("✅ Text fallback sent!")
     
-    # Then send text report
-    send_message(full_message)
     print("✅ Done!")
 
 if __name__ == "__main__":
