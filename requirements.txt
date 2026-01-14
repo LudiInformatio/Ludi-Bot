@@ -10,3 +10,5 @@ unidecode
 pytz
 inputimeout
 nba_api>=1.4.1
+Pillow
+pilmoji
