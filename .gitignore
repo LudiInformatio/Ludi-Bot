@@ -20,3 +20,4 @@ cache/nba_api/
 
 # NOTE: ludi.db and ludi_history_db.json are NOT ignored
 # They are committed to enable GitHub Actions data sync automation
+gemini-cli/
