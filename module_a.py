@@ -222,16 +222,47 @@ class Gatekeeper:
                                 print(f"         [DEBUG] FanDuel Markets: {[m['key'] for m in book['markets']]}")
                                 
                             for market in book['markets']:
-                                key = market['key'] 
+                                key = market['key']
                                 for outcome in market['outcomes']:
                                     player = outcome['description']
                                     line = outcome.get('point', 'N/A')
+                                    price = outcome.get('price', -110)  # Capture odds!
+                                    side = outcome.get('name', '').lower()  # 'Over' or 'Under'
+
                                     if player not in self.games[g_id]['props']:
                                         self.games[g_id]['props'][player] = {}
+
                                     short_key = key.replace('player_', '')
-                                    # Only set if not already set OR if this is a priority book
-                                    if short_key not in self.games[g_id]['props'][player] or book['title'] in priority_books:
-                                        self.games[g_id]['props'][player][short_key] = line
+
+                                    # Initialize dict structure if not exists or priority book overwrites
+                                    existing = self.games[g_id]['props'][player].get(short_key)
+                                    is_new = existing is None
+                                    is_priority = book['title'] in priority_books
+
+                                    if is_new or is_priority:
+                                        # Migrate old scalar format to dict
+                                        if existing is not None and not isinstance(existing, dict):
+                                            existing = {'line': existing, 'odds_over': None, 'odds_under': None}
+                                        elif existing is None:
+                                            existing = {'line': None, 'odds_over': None, 'odds_under': None}
+
+                                        # Update line (priority book takes precedence)
+                                        existing['line'] = line
+
+                                        # Store odds by side
+                                        if 'over' in side:
+                                            existing['odds_over'] = price
+                                        elif 'under' in side:
+                                            existing['odds_under'] = price
+
+                                        self.games[g_id]['props'][player][short_key] = existing
+                                    else:
+                                        # Non-priority book: only fill missing odds
+                                        if isinstance(existing, dict):
+                                            if 'over' in side and existing.get('odds_over') is None:
+                                                existing['odds_over'] = price
+                                            elif 'under' in side and existing.get('odds_under') is None:
+                                                existing['odds_under'] = price
                     
                     # Call BDL Backup
                     self.fetch_props_balldontlie(g_id)
