@@ -1,58 +1,71 @@
-# LUDI LENS v2.0 | STATUS REPORT (JAN 13, 2026)
+# LUDI LENS v2.0 | STATUS REPORT (JAN 13, 2026, 10:19 PM ET)
 
 ## 🚨 SYSTEM STATE: LIVE FIRE
-**Date:** Tuesday, Jan 13, 2026
-**Mode:** Targeted Live Testing (Week 2/3 Transition)
+**Date:** Monday, Jan 13, 2026 (10:19 PM ET)
+**Mode:** Week 3 Validation + Telegram Systems Hardening
 **Core Engine:** Modules A-H (Production v2.0)
 
 ---
 
-## ✅ ACCOMPLISHMENTS (TODAY)
-### 1. Automation & Scheduling (Complete)
-- **Visual Engine:** Created `morning_brief.py` - Single Unified Brain (no split Gatekeeper).
-- **Curated Output:** Filtered to "Top 3 Bets Per Game" + Deduplicated (Best EV Only).
-- **Visuals:** Canvas expanded to 1200px (No text truncation).
-- **Workflows:**
-    - **05:00 AM:** Data Sync + Settlement (`data_sync.yml`) + PM Bot Morning Brief (Work Notes).
-    - **10:00 AM:** Morning Brief (`daily_briefing.yml`) -> Visual Game Notes.
-    - **06:00 PM:** Evening Lock (`evening_slate_lock.yml`) -> Visual Game Notes.
-    - **08:00 PM:** Nightly Debrief (`nightly_debrief.yml`) -> PM Bot Nightly Brief (Work Notes).
+## ✅ ACCOMPLISHMENTS (TODAY - JAN 13)
 
-### 2. Settlement & Data (Complete)
-- **Ledger:** Created `settle_bets.py`.
-- **Fix:** Resolved "NULL Outcome" bug by mapping `STEALS`, `BLOCKS`, `TURNOVERS` in stat map.
-- **Result:** Settled 4,000+ pending bets. Jan 12 Win Rate: 49.6%.
+### Evening Session (10:19 PM) - Telegram Systems Audit
+- **Full Audit:** Distinguished Work Notes (PM Bot) from Game Notes (Visual Cards)
+- **Settlement Summary:** Created `scripts/send_settlement_summary.py` for 5 AM P&L reports
+- **PM Bot Fix:** Added argparse to `utils/pm_bot.py` (was ignoring `--mode` argument!)
+- **Workflow Update:** Added settlement summary step to `data_sync.yml`
+- **Live Test:** Settlement report sent to Telegram
+  - **Result:** 52.4% win rate | +37.59u | +0.9% ROI (4,280 bets graded)
 
-### 3. Foundation Repair (Complete)
-- **Database:** Repaired 92 records with missing team names.
-- **Git:** Cleaned up untracked submodules.
-- **Pipeline Fixes (6:40 PM):**
-    - **Evening Lock:** Fixed title logic in `morning_brief.py` to correctly display "LUDI EVENING LOCK".
-    - **Monitoring:** Created `monitor_sync.sh` (Python-based) to safely track data sync progress.
+### Morning Session - Automation & Scheduling
+- **Visual Engine:** Created `morning_brief.py` - Single Unified Brain
+- **Curated Output:** Filtered to "Top 3 Bets Per Game" + Deduplicated (Best EV Only)
+- **Visuals:** Canvas expanded to 1200px (No text truncation)
+
+### Final Telegram Schedule (VERIFIED):
+| Time (EST) | Type | Content |
+|------------|------|---------|
+| **5:00 AM** | 📋 Work Notes | Settlement P&L → PM Bot Morning Brief |
+| **10:00 AM** | 🎯 Game Notes | Visual Cards (post-ref assignments) |
+| **6:00 PM** | 🎯 Game Notes | Evening Lock Visual |
+| **8:00 PM** | 📋 Work Notes | PM Bot Nightly Debrief |
+
+### Settlement & Data
+- **Ledger:** `settle_bets.py` fully operational
+- **Fix:** Resolved "NULL Outcome" bug by mapping `STEALS`, `BLOCKS`, `TURNOVERS`
+- **Result:** 4,280 bets settled. Jan 13 Summary: 52.4% Win Rate, +0.9% ROI
+
+### Foundation Repair
+- **Database:** Repaired 92 records with missing team names
+- **Git:** Cleaned up untracked submodules
+- **Evening Lock:** Verified `--mode evening` displays "LUDI EVENING LOCK" correctly
 
 ---
 
 ## 🔄 ACTIVE PROCESSES
 **DO NOT STOP OR DELETE:**
-1.  **Tracking Data Sync:** `scripts/sync_tracking_fast.py` is running in the background (PID 17663). It is backfilling shot quality/tracking data.
-    - **Check Status:** `./monitor_sync.sh`
-2.  **Backtest Results:** `regression_backtest_*.csv` files contain the latest regression analysis.
+1. **Tracking Data Sync:** `scripts/sync_tracking_complete.py` running (PID 17663)
+   - **ETA:** ~32 hours → Jan 14 midnight
+   - **Check Status:** `./monitor_sync.sh`
+   - **Current:** 1,491 records | 54 players | 491 queued
+2. **Backtest Results:** `regression_backtest_*.csv` files contain latest analysis
 
 ---
 
 ## ⏳ NEXT STEPS (JAN 14)
 **Target Slate:** CLE@PHI, NYK@SAC, UTA@CHI
 
-### Priority 1: Validation Phase C (Referee Impact)
-- Create `backtest_refs.py`.
-- Prove that the `1.007x` impact factor in the logs is statistically significant against the 60-day window.
+### Priority 1: Monitor Tracking Sync Completion
+- Verify `player_game_tracking` table (Target: ~15,000 records)
+- Validate speed stats populated
 
-### Priority 2: Multi-Bookmaker Tracking
-- Enhance `Module A` to persistently store line discrepancies (Sharp vs Public) for future "Closing Line Value" analysis.
+### Priority 2: Validation Phase C (Referee Impact)
+- Create `backtest_refs.py`
+- Prove `1.007x` impact factor is statistically significant
 
-### Priority 3: Monitor Tracking Sync
-- Ensure the background process completes successfully.
-- Validate `player_game_tracking` table count (Target: ~15,000 records).
+### Priority 3: Multi-Bookmaker Tracking
+- Enhance `Module A` for line discrepancies (Sharp vs Public)
+- Future "Closing Line Value" analysis
 
 ---
 

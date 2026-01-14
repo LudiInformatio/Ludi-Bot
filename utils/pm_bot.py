@@ -141,5 +141,11 @@ class ProjectManagerBot:
             return False
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Vibe Starters Assistant")
+    parser.add_argument("--mode", choices=["morning", "nightly"], default="morning",
+                        help="Briefing mode: morning or nightly")
+    args = parser.parse_args()
+
     bot = ProjectManagerBot()
-    bot.generate_briefing(mode="morning")
+    bot.generate_briefing(mode=args.mode)
