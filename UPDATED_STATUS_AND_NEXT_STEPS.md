@@ -1,13 +1,29 @@
-# LUDI LENS v2.0 | STATUS REPORT (JAN 13, 2026, 10:19 PM ET)
+# LUDI LENS v2.0 | STATUS REPORT (JAN 14, 2026, 12:15 AM ET)
 
 ## 🚨 SYSTEM STATE: LIVE FIRE
-**Date:** Monday, Jan 13, 2026 (10:19 PM ET)
-**Mode:** Week 3 Validation + Telegram Systems Hardening
+**Date:** Tuesday, Jan 14, 2026 (12:15 AM ET)
+**Mode:** Week 3 Validation + Math Accuracy Hardening
 **Core Engine:** Modules A-H (Production v2.0)
 
 ---
 
-## ✅ ACCOMPLISHMENTS (TODAY - JAN 13)
+## ✅ ACCOMPLISHMENTS (JAN 13-14)
+
+### Late Night Session (12:15 AM) - MATH FIX: Edge Accuracy
+**CRITICAL FIX: Real Odds Capture + Historical Corrections**
+
+#### Module A Enhancement
+- **Odds Capture:** Now stores `{line, odds_over, odds_under}` dict format
+- **Before:** All bets defaulted to -110/-110 → `fair_prob = 0.500`
+- **After:** Real odds flow through → `fair_prob` varies (0.45-0.60)
+- **Impact:** EV/Edge calculations now accurate (was inflated 2-4x)
+
+#### Historical Data Correction
+- **Fixed:** 908 bet_side inversions (proj < line but marked OVER)
+- **Recalculated:** 2,100 outcomes with correct bet_side logic
+- **Win Rate:** 52.4% → **56.1%** (+3.7%)
+- **Net Units:** +37.59u → **+332.51u** (+295u)
+- **Commit:** `c120f88`
 
 ### Evening Session (10:19 PM) - Telegram Systems Audit
 - **Full Audit:** Distinguished Work Notes (PM Bot) from Game Notes (Visual Cards)
@@ -15,7 +31,7 @@
 - **PM Bot Fix:** Added argparse to `utils/pm_bot.py` (was ignoring `--mode` argument!)
 - **Workflow Update:** Added settlement summary step to `data_sync.yml`
 - **Live Test:** Settlement report sent to Telegram
-  - **Result:** 52.4% win rate | +37.59u | +0.9% ROI (4,280 bets graded)
+  - **CORRECTED Result:** 56.1% win rate | +332.51u | +7.8% ROI (4,285 bets graded)
 
 ### Morning Session - Automation & Scheduling
 - **Visual Engine:** Created `morning_brief.py` - Single Unified Brain

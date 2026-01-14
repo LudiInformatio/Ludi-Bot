@@ -131,6 +131,13 @@
     - [x] Updated `data_sync.yml` with settlement summary step
     - [x] Verified: Settlement report sent to Telegram (+37.59u, 52.4% win rate)
 
+- [x] **Phase 5: MATH FIX - Edge Accuracy (Jan 14, 12:15 AM)**
+    - [x] Fixed Module A odds capture (lines 224-265) - stores {line, odds_over, odds_under}
+    - [x] Fixed 908 historical bet_side inversions (proj < line but marked OVER)
+    - [x] Recalculated 2,100 outcomes with correct logic
+    - [x] **Result:** Win rate 52.4% → 56.1% | Units +37.59u → +332.51u
+    - [x] Commit: `c120f88`
+
 - [x] **Tracking Data Sync (Jan 13 - Background)**
     - [x] Started `scripts/sync_tracking_complete.py` (NBA API tracking data)
     - [x] Created `monitor_sync.sh` for progress monitoring
