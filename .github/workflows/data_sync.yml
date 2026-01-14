@@ -41,13 +41,13 @@ jobs:
       - name: Migrate JSON to SQLite
         run: python migrate_json_to_sqlite.py
 
-      - name: Sync PBP Stats (Shot Quality)
+      - name: Sync PBP Stats Season Totals (Shot Quality)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
-        run: python scripts/sync_pbp_daily.py
+        run: python scripts/sync_pbp_totals.py
 
       - name: Deduplicate database
         run: |
