@@ -236,5 +236,6 @@ class LudiHistorian:
             return []
 
 if __name__ == "__main__":
+    config.validate_config()
     h = LudiHistorian()
     h.update_database()

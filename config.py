@@ -164,6 +164,6 @@ def validate_config():
     else:
         print("✅ All optional API keys loaded")
 
-# Run validation on import (can be disabled for testing)
-if __name__ != "__main__":
+# Run validation ONLY when executed directly, not on import
+if __name__ == "__main__":
     validate_config()

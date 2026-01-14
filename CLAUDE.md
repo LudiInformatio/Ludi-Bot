@@ -94,9 +94,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 🎯 Current Status (Updated Jan 14, 2026, 12:15 PM ET)
+## 🎯 Current Status (Updated Jan 14, 2026, 4:57 PM ET)
 
 ### Week 3: ✅ Data Resilience & Filtering - IMPLEMENTED
+
+**✅ Jan 14 PM Session (4:57 PM):**
+- **PBP Stats API Fix:** Switched automation from broken `get-game-stats` to working `get-totals` endpoint
+- **Game ID Resolution:** Created `scripts/backfill_nba_game_ids.py` to map Tank01 IDs → NBA.com format
+- **Season Quality Sync:** Created `scripts/sync_pbp_totals.py` for season-level shot quality data
+- **Database Updates:**
+  - Added `nba_game_id` column to `games` table (1,089/1,091 mapped)
+  - Created `player_season_quality` table (500 players synced)
+- **Tracking Backfill Resumed:** Launched 2 parallel workers (PIDs 11698, 11699) to complete historical backfill
+  - Current: 240/847 players (28.3% complete)
+  - Target: 100% coverage for 2025-26 season
+  - ETA: ~8 hours (3.0s delay per request)
+- **Automation Updated:** `.github/workflows/data_sync.yml` now uses stable PBP endpoint
+- **Scripts Archived:** Moved obsolete scripts to `scripts/archive/` and old docs to `docs/archive/`
 
 **✅ Jan 14 Implementation Session (12:15 PM):**
 - **Phase 1 Complete:** Target game filtering via `config/daily_locks.json`

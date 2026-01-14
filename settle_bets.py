@@ -176,6 +176,9 @@ class BetSettler:
             
         return outcome, round(profit, 2)
 
+import config
+
 if __name__ == "__main__":
+    config.validate_config()
     settler = BetSettler()
     settler.run_settlement()

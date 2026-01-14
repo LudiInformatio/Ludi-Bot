@@ -415,6 +415,60 @@ def get_player_on_off_impact(player_id: str, team_id: str,
     }
 
 
+def get_shot_quality(game_id: str) -> Optional[List[Dict]]:
+    """
+    Get shot quality data for all players in a specific game.
+
+    This is a convenience wrapper around get_game_stats that formats
+    the data for the daily sync script's database insertion.
+
+    Args:
+        game_id: NBA.com game ID (e.g., "0022500500")
+
+    Returns:
+        List of dicts with player shot quality data:
+            - player_id
+            - player_name
+            - shot_quality_avg (FG% as proxy)
+            - shot_distance_avg (estimated from 2pt/3pt ratio)
+            - shots_taken (FGA)
+            - shots_made (FGM)
+    """
+    game_data = get_game_stats(game_id, "Player")
+    if not game_data:
+        return None
+
+    players = game_data.get('multi_row_table_data', [])
+    if not players:
+        return None
+
+    result = []
+    for p in players:
+        fga = p.get('FGA', 0) or 0
+        fgm = p.get('FGM', 0) or 0
+        fg3a = p.get('FG3A', 0) or 0
+
+        # Calculate FG% as shot quality proxy
+        fg_pct = (fgm / fga) if fga > 0 else 0
+
+        # Estimate avg shot distance from 3pt attempt ratio
+        # Higher 3pt ratio = longer avg distance
+        three_pt_ratio = (fg3a / fga) if fga > 0 else 0
+        # Approximate: at-rim ~4ft, mid-range ~15ft, 3pt ~24ft
+        est_distance = 4 + (three_pt_ratio * 20)  # Ranges from ~4 to ~24 ft
+
+        result.append({
+            'player_id': p.get('PlayerId'),
+            'player_name': p.get('Name'),
+            'shot_quality_avg': round(fg_pct, 3),
+            'shot_distance_avg': round(est_distance, 1),
+            'shots_taken': fga,
+            'shots_made': fgm
+        })
+
+    return result
+
+
 if __name__ == "__main__":
     print("[PBP_STATS] Testing API client (using official spec)...\n")
     
