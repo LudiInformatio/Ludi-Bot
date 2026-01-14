@@ -10,6 +10,7 @@ from typing import List, Dict, Optional
 
 # EST timezone handling
 from utils.time_utils import get_est_today
+from utils.daily_lock import get_target_config, filter_slate_by_config, apply_filters
 
 # --- IMPORT ARCHITECTURE (MODULES A-H) ---
 try:
@@ -166,21 +167,41 @@ class LudiOrchestrator:
         print("   Mode: Production v2.0")
         print("="*50)
 
+        # STEP 0: LOAD DAILY LOCK CONFIG
+        lock_config = get_target_config()
+        if lock_config:
+            mode = lock_config.get('mode', 'LIVE')
+            print(f"   📋 Daily Lock: {lock_config.get('lock_date')} | Mode: {mode}")
+
         # STEP 1: FETCH SLATE
         self.gate.fetch_live_slate()
         
-        # --- CRITICAL: FILTER TARGET TEAMS ---
+        # --- APPLY DAILY LOCK FILTERING (if TESTING mode) ---
+        if lock_config:
+            # Convert games dict to list for filtering
+            games_list = [{'game_id': gid, **gdata} for gid, gdata in self.gate.games.items()]
+            
+            # Apply matchup filtering
+            games_list = filter_slate_by_config(games_list, lock_config)
+            
+            # Apply spread/total filters
+            games_list = apply_filters(games_list, lock_config)
+            
+            # Convert back to dict
+            self.gate.games = {g['game_id']: g for g in games_list}
+        
+        # --- LEGACY: CLI TARGET TEAMS FILTER (still supported) ---
         if self.target_teams:
             targets = [t.upper() for t in self.target_teams]
             print(f"   🎯 TARGET FILTER ACTIVE: {targets}")
             
             filtered = {}
             for gid, gdata in self.gate.games.items():
-                h = self.gate._get_abbr(gdata['home'])
-                a = self.gate._get_abbr(gdata['away'])
+                h = self.gate._get_abbr(gdata.get('home', ''))
+                a = self.gate._get_abbr(gdata.get('away', ''))
                 if h in targets or a in targets:
                     filtered[gid] = gdata
-                    print(f"      ✅ LOCKED: {gdata['matchup']}")
+                    print(f"      ✅ LOCKED: {gdata.get('matchup', gid)}")
             
             self.gate.games = filtered
             print(f"   ✅ Slate reduced to {len(self.gate.games)} games.")

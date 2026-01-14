@@ -1,0 +1,106 @@
+name: Daily Reports
+
+on:
+  schedule:
+    # 5am EST = 10am UTC - Work Notes (PM Bot + Settlement Grading)
+    - cron: '0 10 * * *'
+    # 6am EST = 11am UTC - Bet Summary to Telegram
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'Report type to run'
+        required: true
+        default: 'work_notes'
+        type: choice
+        options:
+          - work_notes
+          - bet_summary
+          - both
+
+jobs:
+  work-notes:
+    runs-on: ubuntu-latest
+    # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
+    if: github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests python-dotenv pytz google-genai pillow pilmoji
+
+      - name: Settle Pending Bets
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python settle_bets.py
+
+      - name: Send PM Bot Morning Brief (Work Notes)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python utils/pm_bot.py --mode morning
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Ludi Bot"
+          git config user.email "noreply@ludibot.com"
+          git add ludi.db logs/bets/
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: settlement & work notes $(date +'%Y-%m-%d')"
+            git push
+          fi
+
+  bet-summary:
+    runs-on: ubuntu-latest
+    # Run at 6am EST (11am UTC) or when triggered manually with bet_summary/both
+    if: github.event.schedule == '0 11 * * *' || github.event.inputs.report_type == 'bet_summary' || github.event.inputs.report_type == 'both'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests python-dotenv pytz
+
+      - name: Send Settlement Summary to Telegram
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/send_settlement_summary.py

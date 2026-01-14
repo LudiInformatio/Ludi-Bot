@@ -171,6 +171,28 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_shot_quality_player ON player_shot_quality(player_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_shot_quality_season ON player_shot_quality(season)')
 
+        # 7a. Shot Quality Table (PBP Stats - Derived Metrics)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS shot_quality (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                player_name TEXT,
+                shot_quality_avg REAL,
+                shot_distance_avg REAL,
+                shots_taken INTEGER,
+                shots_made INTEGER,
+                leverage_score REAL,
+                wowy_on_off REAL,
+                source TEXT DEFAULT 'pbp_stats',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(game_id, player_id)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_pbp_shot_quality_game ON shot_quality(game_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_pbp_shot_quality_player ON shot_quality(player_id)')
+
         # 7. Player Workload Table (NBA API Tracking - Phase 1.3)
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_workload (

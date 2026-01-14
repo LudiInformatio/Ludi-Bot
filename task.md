@@ -91,7 +91,13 @@
     - [ ] Update `module_c.py` for percentiles
     - [ ] Update `module_f.py` for risk display
 
-- [-] Execute Backtesting Protocol (Week 3) <!-- id: 4 -->
+- [x] **Phase 3: Resilience & Validation (Week 3)** <!-- id: 3 -->
+    - [x] Fix GitHub Actions date/timezone bug <!-- id: 3.1 -->
+    - [x] Implement Target Game Filtering (`daily_locks.json`) <!-- id: 3.2 -->
+    - [x] Integrate PBP Stats API (Shot Quality/Leverage) <!-- id: 3.3 -->
+    - [ ] Finalize "Top 5" Live Filtering <!-- id: 3.4 -->
+    - [x] Create Daily Tracking Data Workflow <!-- id: 3.5 -->
+- [ ] **Phase 4: Visual Polish (Week 3)** <!-- id: 4 -->
     - [x] Run `backtest_model.py` on 50 historical games
     - [x] Validate Regression/SOS Logic
     - [x] Validate Rotation/Depth Chart Logic

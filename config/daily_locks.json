@@ -1,0 +1,10 @@
+{
+    "lock_date": "2026-01-14",
+    "mode": "LIVE",
+    "target_matchups": [],
+    "filters": {
+        "max_spread": null,
+        "min_total": null
+    },
+    "notes": "Default configuration. Set mode to TESTING and add target_matchups for filtered runs."
+}
