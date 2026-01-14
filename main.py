@@ -8,6 +8,9 @@ import json
 from datetime import datetime
 from typing import List, Dict, Optional
 
+# EST timezone handling
+from utils.time_utils import get_est_today
+
 # --- IMPORT ARCHITECTURE (MODULES A-H) ---
 try:
     import config
@@ -150,7 +153,7 @@ class LudiOrchestrator:
         return [{
             'game_id': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_'),
             'matchup': game_data.get('matchup', 'UNKNOWN'),
-            'game_date': datetime.now().strftime('%Y-%m-%d'),
+            'game_date': get_est_today(),
             'home_team': home, 'away_team': away, 'opponent': '',
             'spread': abs(spread) if spread != 'N/A' else 0,
             'ref_impact': game_data.get('archetypes', {}).get('ref_impact', 1.0),

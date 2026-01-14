@@ -4,6 +4,7 @@ import config
 from utils.devig import get_fair_probability, calculate_true_edge, american_to_implied
 from utils.bet_logger import get_bet_logger
 from utils.tag_classifier import get_tag_classifier
+from utils.time_utils import get_est_today, format_est_date
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
@@ -192,7 +193,7 @@ class LudiReporter:
                             # --- BET LOGGING (V4.5) ---
                             if self.bet_logger:
                                 try:
-                                    run_date = datetime.now().strftime('%Y-%m-%d')
+                                    run_date = get_est_today()
                                     rec_data = {
                                         'run_date': run_date,
                                         'game_id': game.get('game_id', ''),
@@ -272,7 +273,7 @@ class LudiReporter:
         # --- DAILY SUMMARY LOGGING ---
         if self.bet_logger and all_props:
             try:
-                run_date = datetime.now().strftime('%Y-%m-%d')
+                run_date = get_est_today()
                 summary_data = {
                     'run_date': run_date,
                     'total_bets': len(all_props),
@@ -388,7 +389,7 @@ class LudiReporter:
 
     def create_daily_briefing(self, props):
         """Formats the final briefing output for bot and console display."""
-        report = f"\n📰 LUDI ELITE BRIEFING ({datetime.now().strftime('%b %d, %Y')})\n"
+        report = f"\n📰 LUDI ELITE BRIEFING ({format_est_date('%b %d, %Y')})\n"
         report += "================================\n"
         
         # 1. Group by Game

@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.telegram_notifier import send_message
+from utils.time_utils import get_est_yesterday
 
 
 def get_settlement_summary():
@@ -21,8 +22,8 @@ def get_settlement_summary():
     conn = sqlite3.connect('ludi.db')
     c = conn.cursor()
 
-    # Get yesterday's date
-    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    # Get yesterday's date (EST)
+    yesterday = get_est_yesterday()
 
     # Query settled bets from yesterday
     # Column names: outcome (WIN/LOSS/PUSH), profit_loss (units won/lost)
