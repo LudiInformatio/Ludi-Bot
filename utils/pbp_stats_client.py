@@ -1,24 +1,28 @@
 """
 PBP Stats API Client
-Fetches shot quality, WOWY, and leverage data from api.pbpstats.com
+Fetches shot quality, WOWY, leverage, and on/off data from api.pbpstats.com
+
+Based on official OpenAPI spec: https://api.pbpstats.com/openapi.json
+No API key required.
 """
 import requests
 from typing import Dict, List, Optional
 
 
 BASE_URL = "https://api.pbpstats.com"
+CURRENT_SEASON = "2025-26"
 
 
 def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
     """
-    Fetch player or team stats for a specific game.
+    Get game stats by player or lineup.
     
     Args:
-        game_id: NBA game ID (e.g., "0022500XXX")
-        stat_type: "Player" or "Team"
+        game_id: NBA.com game ID (e.g., "0022500500")
+        stat_type: "Player" or "Lineup"
     
     Returns:
-        Dict with game stats or None if error
+        Dict with game stats
     """
     url = f"{BASE_URL}/get-game-stats"
     params = {
@@ -35,237 +39,401 @@ def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
         return None
 
 
-def get_shot_quality(game_id: str) -> Optional[List[Dict]]:
+def get_game_logs(entity_id: str, entity_type: str = "Player", 
+                  season: str = CURRENT_SEASON, season_type: str = "Regular Season") -> Optional[Dict]:
     """
-    Fetch shot quality data for all players in a game.
-    
-    Returns list of dicts with:
-        - player_id
-        - shot_quality_avg (0-1 score, higher = better shot selection)
-        - shot_distance_avg
-    """
-    url = f"{BASE_URL}/get-shots"
-    params = {
-        "GameId": game_id
-    }
-    
-    try:
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Aggregate by player
-        player_shots = {}
-        for shot in data.get('shots', []):
-            player_id = shot.get('PlayerId')
-            if player_id not in player_shots:
-                player_shots[player_id] = {
-                    'player_id': player_id,
-                    'player_name': shot.get('PlayerName', ''),
-                    'shots': [],
-                    'made': 0,
-                    'total': 0
-                }
-            
-            player_shots[player_id]['shots'].append(shot)
-            player_shots[player_id]['total'] += 1
-            if shot.get('Made', False):
-                player_shots[player_id]['made'] += 1
-        
-        # Calculate shot quality averages
-        results = []
-        for player_id, data in player_shots.items():
-            shots = data['shots']
-            if not shots:
-                continue
-            
-            # Calculate average shot distance and quality
-            distances = [s.get('ShotDistance', 0) for s in shots if s.get('ShotDistance')]
-            avg_distance = sum(distances) / len(distances) if distances else 0
-            
-            # Shot quality approximation (closer to basket = higher quality, except for 3s)
-            quality_scores = []
-            for s in shots:
-                dist = s.get('ShotDistance', 0)
-                if dist <= 4:  # At rim
-                    quality_scores.append(0.65)
-                elif dist <= 10:  # Mid-range short
-                    quality_scores.append(0.45)
-                elif dist <= 16:  # Mid-range long
-                    quality_scores.append(0.40)
-                elif dist <= 24:  # 3-pointer
-                    quality_scores.append(0.38)
-                else:  # Deep 3
-                    quality_scores.append(0.35)
-            
-            avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
-            
-            results.append({
-                'player_id': player_id,
-                'player_name': data['player_name'],
-                'shot_quality_avg': round(avg_quality, 3),
-                'shot_distance_avg': round(avg_distance, 1),
-                'shots_taken': data['total'],
-                'shots_made': data['made']
-            })
-        
-        return results
-    except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching shot quality for {game_id}: {e}")
-        return None
-
-
-def get_game_logs(player_id: str, season: str = "2025-26", league: str = "nba") -> Optional[List[Dict]]:
-    """
-    Fetch game logs for a player for the season.
+    Get game logs for player/team/lineup.
     
     Args:
-        player_id: PBP Stats player ID
+        entity_id: Player ID, Team ID, or Lineup ID (dash-separated player IDs)
+        entity_type: "Player", "Team", or "Lineup"
         season: Season string (e.g., "2025-26")
-        league: League identifier
+        season_type: "Regular Season" or "Playoffs"
     
     Returns:
-        List of game log entries
+        Dict with game log data
     """
-    url = f"{BASE_URL}/get-game-logs/{league}"
+    url = f"{BASE_URL}/get-game-logs/nba"
     params = {
         "Season": season,
-        "PlayerId": player_id
+        "SeasonType": season_type,
+        "EntityType": entity_type,
+        "EntityId": entity_id
     }
     
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
-        return response.json().get('multi_row_table_data', [])
+        return response.json()
     except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching game logs for {player_id}: {e}")
+        print(f"[PBP_STATS] Error fetching game logs for {entity_id}: {e}")
         return None
 
 
-def get_wowy_data(player_id: str, teammate_id: str, season: str = "2025-26") -> Optional[Dict]:
+def get_totals(entity_type: str = "Player", team_id: str = None,
+               season: str = CURRENT_SEASON, season_type: str = "Regular Season",
+               leverage: str = None) -> Optional[Dict]:
     """
-    Fetch With-Or-Without-You data for a player pair.
+    Get season totals for players/teams/lineups.
     
     Args:
-        player_id: Primary player ID
-        teammate_id: Teammate to compare (e.g., star player)
+        entity_type: "Player", "Team", "Lineup", or "Opponent"
+        team_id: NBA.com team ID (optional filter)
         season: Season string
+        season_type: "Regular Season" or "Playoffs"
+        leverage: Filter by leverage ("Low", "Medium", "High", "VeryHigh")
     
     Returns:
-        Dict with on/off court efficiency differentials
+        Dict with totals data
     """
-    # Note: PBP Stats WOWY requires specific endpoint structure
-    # This is a simplified implementation - may need adjustment based on actual API
-    url = f"{BASE_URL}/get-lineups/nba"
+    url = f"{BASE_URL}/get-totals/nba"
     params = {
         "Season": season,
+        "SeasonType": season_type,
+        "Type": entity_type
+    }
+    
+    if team_id:
+        params["TeamId"] = team_id
+    if leverage:
+        params["Leverage"] = leverage
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching totals: {e}")
+        return None
+
+
+def get_wowy_stats(team_id: str, player_ids: List[str],
+                   season: str = CURRENT_SEASON, season_type: str = "Regular Season",
+                   entity_type: str = "Team") -> Optional[Dict]:
+    """
+    Get WOWY (With-Or-Without-You) stats for given players.
+    
+    This endpoint shows team/lineup stats when specific players are on/off.
+    
+    Args:
+        team_id: NBA.com team ID
+        player_ids: List of player IDs to analyze
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+        entity_type: "Team" or "Player"
+    
+    Returns:
+        Dict with WOWY stats
+    """
+    url = f"{BASE_URL}/get-wowy-stats/nba"
+    params = {
+        "Season": season,
+        "SeasonType": season_type,
+        "TeamId": team_id,
+        "Type": entity_type,
+        # Player filters are added as special params
+        "0Exactly1OnFloor": ",".join(player_ids)
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching WOWY stats: {e}")
+        return None
+
+
+def get_wowy_combination_stats(team_id: str, player_ids: List[str],
+                               season: str = CURRENT_SEASON, 
+                               season_type: str = "Regular Season") -> Optional[Dict]:
+    """
+    Get all on/off combinations for selected players.
+    
+    Args:
+        team_id: NBA.com team ID
+        player_ids: List of player IDs (comma-separated in request)
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+    
+    Returns:
+        Dict with all combination stats (on/off efficiency)
+    """
+    url = f"{BASE_URL}/get-wowy-combination-stats/nba"
+    params = {
+        "Season": season,
+        "SeasonType": season_type,
+        "TeamId": team_id,
+        "PlayerIds": ",".join(player_ids)
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching WOWY combo stats: {e}")
+        return None
+
+
+def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
+               season: str = CURRENT_SEASON, season_type: str = "Regular Season",
+               leverage: str = None) -> Optional[Dict]:
+    """
+    Get on/off data for a player.
+    
+    Args:
+        team_id: NBA.com team ID
+        player_id: NBA.com player ID
+        stat_type: "player", "team", or "stat"
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+        leverage: Optional filter ("Medium,High,VeryHigh")
+    
+    Returns:
+        Dict with on/off stats
+    """
+    url = f"{BASE_URL}/get-on-off/nba/{stat_type}"
+    params = {
+        "Season": season,
+        "SeasonType": season_type,
+        "TeamId": team_id,
         "PlayerId": player_id
     }
     
+    if leverage:
+        params["Leverage"] = leverage
+    
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
-        data = response.json()
-        
-        # Parse lineup data to find with/without teammate scenarios
-        with_teammate = []
-        without_teammate = []
-        
-        for lineup in data.get('multi_row_table_data', []):
-            players = lineup.get('PlayerIds', [])
-            if teammate_id in players:
-                with_teammate.append(lineup)
-            else:
-                without_teammate.append(lineup)
-        
-        # Calculate averages
-        def calc_avg(lineups, key):
-            vals = [l.get(key, 0) for l in lineups if l.get(key)]
-            return sum(vals) / len(vals) if vals else 0
-        
-        return {
-            'player_id': player_id,
-            'teammate_id': teammate_id,
-            'with_teammate': {
-                'minutes': sum(l.get('Minutes', 0) for l in with_teammate),
-                'off_rtg': calc_avg(with_teammate, 'OffRtg'),
-                'def_rtg': calc_avg(with_teammate, 'DefRtg')
-            },
-            'without_teammate': {
-                'minutes': sum(l.get('Minutes', 0) for l in without_teammate),
-                'off_rtg': calc_avg(without_teammate, 'OffRtg'),
-                'def_rtg': calc_avg(without_teammate, 'DefRtg')
-            }
-        }
+        return response.json()
     except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching WOWY data: {e}")
+        print(f"[PBP_STATS] Error fetching on/off data: {e}")
         return None
 
 
-def get_leverage_stats(game_id: str) -> Optional[List[Dict]]:
+def get_shots(entity_id: str, entity_type: str = "Player",
+              season: str = CURRENT_SEASON, season_type: str = "Regular Season") -> Optional[Dict]:
     """
-    Fetch leverage/clutch stats for a game.
+    Get all shots for a player/team.
     
-    Returns player performance in high-pressure situations.
+    Args:
+        entity_id: Player ID or Team ID
+        entity_type: "Player" or "Team"
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+    
+    Returns:
+        Dict with shot data including distance, location, result
     """
-    url = f"{BASE_URL}/get-possessions"
+    url = f"{BASE_URL}/get-shots/nba"
     params = {
-        "GameId": game_id
+        "Season": season,
+        "SeasonType": season_type,
+        "EntityType": entity_type,
+        "EntityId": entity_id
     }
     
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
-        data = response.json()
-        
-        # Filter for clutch possessions (last 5 min, within 5 points)
-        clutch = []
-        for poss in data.get('possessions', []):
-            remaining = poss.get('SecondsRemaining', 300)
-            margin = abs(poss.get('ScoreMargin', 0))
-            
-            if remaining <= 300 and margin <= 5:
-                clutch.append(poss)
-        
-        # Aggregate by player
-        player_clutch = {}
-        for poss in clutch:
-            player_id = poss.get('PrimaryPlayerId')
-            if player_id:
-                if player_id not in player_clutch:
-                    player_clutch[player_id] = {'possessions': 0, 'points': 0}
-                player_clutch[player_id]['possessions'] += 1
-                player_clutch[player_id]['points'] += poss.get('Points', 0)
-        
-        return [
-            {
-                'player_id': pid,
-                'clutch_possessions': data['possessions'],
-                'clutch_points': data['points'],
-                'leverage_score': data['points'] / max(data['possessions'], 1)
-            }
-            for pid, data in player_clutch.items()
-        ]
+        return response.json()
     except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching leverage stats: {e}")
+        print(f"[PBP_STATS] Error fetching shots: {e}")
         return None
+
+
+def get_team_leverage_summary(season: str = CURRENT_SEASON, 
+                              leverage: str = None) -> Optional[Dict]:
+    """
+    Get team stats broken down by leverage state.
+    
+    Args:
+        season: Season string
+        leverage: Filter ("Low", "Medium", "High", "VeryHigh" or comma-separated)
+    
+    Returns:
+        Dict with team leverage summary
+    """
+    url = f"{BASE_URL}/get-team-leverage-summary/nba"
+    params = {"Season": season}
+    
+    if leverage:
+        params["Leverage"] = leverage
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching leverage summary: {e}")
+        return None
+
+
+def get_live_games() -> Optional[Dict]:
+    """
+    Get all today's NBA games.
+    
+    Returns:
+        Dict with today's game list
+    """
+    url = f"{BASE_URL}/live/games/nba"
+    
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching live games: {e}")
+        return None
+
+
+def get_all_players() -> Optional[Dict]:
+    """
+    Get all NBA players.
+    
+    Returns:
+        Dict with all player IDs and names
+    """
+    url = f"{BASE_URL}/get-all-players-for-league/nba"
+    
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching all players: {e}")
+        return None
+
+
+def get_team_players(team_id: str, season: str = CURRENT_SEASON,
+                     season_type: str = "Regular Season") -> Optional[Dict]:
+    """
+    Get all players who played for a team in a season.
+    
+    Args:
+        team_id: NBA.com team ID
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+    
+    Returns:
+        Dict with player list
+    """
+    url = f"{BASE_URL}/get-team-players-for-season"
+    params = {
+        "Season": season,
+        "SeasonType": season_type,
+        "TeamId": team_id
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[PBP_STATS] Error fetching team players: {e}")
+        return None
+
+
+# --- Helper functions for Ludi Bot integration ---
+
+def get_player_shot_quality(player_id: str, season: str = CURRENT_SEASON) -> Optional[Dict]:
+    """
+    Calculate shot quality metrics for a player.
+    
+    Returns dict with:
+        - at_rim_pct: % of shots at rim
+        - mid_range_pct: % of shots in mid-range
+        - three_pt_pct: % of shots from 3
+        - shot_quality_score: Weighted quality score (0-1)
+    """
+    shots_data = get_shots(player_id, "Player", season)
+    if not shots_data:
+        return None
+    
+    shots = shots_data.get('multi_row_table_data', [])
+    if not shots:
+        return None
+    
+    # Count by zone
+    at_rim = sum(1 for s in shots if s.get('ShotType') == 'AtRim')
+    short_mid = sum(1 for s in shots if s.get('ShotType') == 'ShortMidRange')
+    long_mid = sum(1 for s in shots if s.get('ShotType') == 'LongMidRange')
+    corner_3 = sum(1 for s in shots if s.get('ShotType') == 'Corner3')
+    arc_3 = sum(1 for s in shots if s.get('ShotType') == 'Arc3')
+    
+    total = len(shots)
+    
+    # Quality scoring (at-rim and corner 3s are highest value)
+    quality_score = (at_rim * 0.65 + corner_3 * 0.40 + arc_3 * 0.36 + 
+                     short_mid * 0.40 + long_mid * 0.38) / (total or 1)
+    
+    return {
+        'player_id': player_id,
+        'total_shots': total,
+        'at_rim_pct': at_rim / total if total else 0,
+        'mid_range_pct': (short_mid + long_mid) / total if total else 0,
+        'three_pt_pct': (corner_3 + arc_3) / total if total else 0,
+        'corner_3_pct': corner_3 / total if total else 0,
+        'shot_quality_score': round(quality_score, 3)
+    }
+
+
+def get_player_on_off_impact(player_id: str, team_id: str, 
+                              season: str = CURRENT_SEASON) -> Optional[Dict]:
+    """
+    Get player's on/off court impact.
+    
+    Returns dict with:
+        - on_court_off_rtg: Team offensive rating with player on
+        - off_court_off_rtg: Team offensive rating with player off
+        - on_off_diff: Difference (positive = player helps)
+    """
+    on_off = get_on_off(team_id, player_id, "player", season)
+    if not on_off:
+        return None
+    
+    data = on_off.get('multi_row_table_data', [])
+    if len(data) < 2:
+        return None
+    
+    # First row is typically "On", second is "Off"
+    on_row = next((d for d in data if d.get('OnOff') == 'On'), data[0])
+    off_row = next((d for d in data if d.get('OnOff') == 'Off'), data[1] if len(data) > 1 else {})
+    
+    return {
+        'player_id': player_id,
+        'team_id': team_id,
+        'on_court_off_rtg': on_row.get('OffRtg', 0),
+        'off_court_off_rtg': off_row.get('OffRtg', 0),
+        'on_court_def_rtg': on_row.get('DefRtg', 0),
+        'off_court_def_rtg': off_row.get('DefRtg', 0),
+        'on_off_diff': on_row.get('OffRtg', 0) - off_row.get('OffRtg', 0),
+        'on_court_poss': on_row.get('OffPoss', 0),
+        'off_court_poss': off_row.get('OffPoss', 0)
+    }
 
 
 if __name__ == "__main__":
-    # Test the client
-    print("[PBP_STATS] Testing API client...")
+    print("[PBP_STATS] Testing API client (using official spec)...\n")
     
-    # Test with a sample game ID (use a real one for actual testing)
-    test_game = "0022500500"
+    # Test live games
+    print("1. Fetching today's games...")
+    games = get_live_games()
+    if games:
+        print(f"   ✅ Found data: {type(games)}")
     
-    print(f"\nFetching game stats for {test_game}...")
-    stats = get_game_stats(test_game)
-    if stats:
-        print(f"Got stats: {len(stats)} entries")
+    # Test all players
+    print("\n2. Fetching all players...")
+    players = get_all_players()
+    if players:
+        print(f"   ✅ Found player data")
     
-    print(f"\nFetching shot quality for {test_game}...")
-    shots = get_shot_quality(test_game)
-    if shots:
-        print(f"Got shot quality for {len(shots)} players")
-        for s in shots[:3]:
-            print(f"  {s['player_name']}: SQ={s['shot_quality_avg']}")
+    # Test team totals
+    print("\n3. Fetching team totals (Lakers: 1610612747)...")
+    totals = get_totals("Team", "1610612747", CURRENT_SEASON)
+    if totals:
+        print(f"   ✅ Got totals data")
+    
+    print("\n✅ API client tests complete")
