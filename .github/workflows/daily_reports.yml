@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests python-dotenv pytz google-genai pillow pilmoji
+          pip install -r requirements.txt
 
       - name: Settle Pending Bets
         env:
@@ -93,7 +93,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests python-dotenv pytz
+          pip install -r requirements.txt
 
       - name: Send Settlement Summary to Telegram
         env:
