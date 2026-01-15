@@ -95,9 +95,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 14, 2026
+- **Date**: Jan 15, 2026
 - **Phase**: Early Testing (Live Gem Slate Generation)
 - **Active Task**: Producing Daily Gem Briefing (Daily Locks Config)
+
+**🛠️ Maintenance & CI Consistency Update (Jan 15, 2026):**
+- Standardized all GitHub Actions to install dependencies via `requirements.txt` and added pip caching for faster runs
+  - Updated workflows: `daily_briefing.yml`, `evening_slate_lock.yml`, `game_notes_mil_den.yml`, `nightly_debrief.yml`, `daily_reports.yml`, `data_sync.yml`, `tracking_sync.yml`
+- Fixed image pipeline dependency drift by pinning `Pillow==12.1.0`, `google-genai==1.59.0`, and `emoji==2.2.0` (for `pilmoji==2.0.3` compatibility)
+- Adopted consistent module invocation with `PYTHONPATH=$PWD` and `python -m ...` to ensure imports of `config` and local packages
+  - Example: `python -m utils.pm_bot --mode morning` in Daily Reports
+- Hardened `utils/pm_bot.py` to fall back to environment variables if `config` cannot be imported in CI
+- Added image pipeline smoke checks in visual workflows to fail-fast on missing dependencies
+  - `python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"`
+- Aligned repository intent by removing `ludi.db` from `.gitignore` (workflows that commit DB updates now succeed)
+- Verified Daily Reports (work-notes) end-to-end: installs → settlement → PM Bot → commit/push completed successfully
 - **Recent Upgrade**: Fixed EV Math, Integrated Yak (Injury Logic), Fixed Line Shopping. from broken `get-game-stats` to working `get-totals` endpoint
 - **Game ID Resolution:** Created `scripts/backfill_nba_game_ids.py` to map Tank01 IDs → NBA.com format
 - **Season Quality Sync:** Created `scripts/sync_pbp_totals.py` for season-level shot quality data
@@ -151,7 +163,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+### Week 4: 🔄 IN PROGRESS - Module G (Referee Intelligence) Upgrade
+**Date:** January 15, 2026  
+**Status:** Planning → Implementation  
+**Priority:** HIGH (System currently operating at ~20% referee coverage)
+
+---
+
+#### Executive Summary
+
+**Current State:**
+- **Refs in Database:** 13 (hardcoded in `module_g.py`)
+- **Active NBA Refs:** ~74 officials
+- **Coverage:** 17.6% (13/74)
+- **Impact Type:** Pace only (missing FTA/Foul bias)
+- **Current Outcome:** 80%+ of games default to neutral (1.0x) referee impact
+
+**Target State:**
+- **Refs in Database:** 74+ (full roster)
+- **Coverage:** 100%
+- **Impact Types:** Pace + Whistle (FTA) + Ejection Risk
+- **Data Sources:** Basketball-Reference (weekly) + NBAStuffer (daily) + Covers.com (validation)
+
+---
+
+#### Phase 1: Data Pipeline Expansion (✅ Week 4 COMPLETE)
+
+##### 1.1 Database Schema Updates (✅ Done)
+**New Table: `referee_profiles`** (Created Jan 15)
+- Stores baseline stats: `avg_fouls_per_game`, `avg_pace_impact`, `whistle_impact` (calculated from fouls).
+
+**New Table: `referee_daily_stats`** (Created Jan 15)
+- Stores rolling trends and "hot whistle" flags.
+
+##### 1.2 Scraper Scripts (✅ Done)
+**A. `scripts/scrape_referee_roster.py`**
+- Fallback logic: BBR → NBAStuffer → Hardcoded (Researched 12 new refs).
+- Output: 39+ referees now in database (up from 13).
+
+##### 1.3 Module Updates (✅ Done)
+**module_g.py**: V3.0 Engine. Returns: `{pace_impact, whistle_impact, crew, confidence}`.
+**module_c.py**: V3.2 Oracle. Applies `whistle_impact` to FTA projections.
+**main.py**: Passes full `ref_data` dictionary.
+
+---
+
+#### Phase 2: Hybrid Learning System (Week 5 - Planned)
+
+**Objective**: Build a self-improving database that learns unknown referee tendencies daily.
+**Strategy**: "Incremental Learning" + "Hierarchical Estimation"
+- **Daily Learning**: Run `scripts/learn_daily_trends.py` post-game.
+- **Logic**: If Game Fouls > Average, credit strictness to all crew members.
+- **Graduation**: Unknown refs move to "Tracked" status after N=5 games.
+
+---
+
+#### Phase 3: Reporting Suite (Week 6 - Planned)
+
+**Objective**: Visualize referee impact clearly for the user.
+**Spec**: `REFEREE_REPORTING_SPEC.md`
+1.  **Daily Whistle Watch**: Pre-game card (Pace/Whistle Impact, Crew Chief bias).
+2.  **Weekly Leaderboard**: Top 5 Strict/Lenient lists.
+3.  **Learning Logs**: Transparent audit of AI adjustments.
+
+---
+
+#### Implementation Checklist (Week 4 Status)
+
+- [x] Create database tables (`referee_profiles`, `referee_daily_stats`)
+- [x] Create `scripts/scrape_referee_roster.py`
+- [x] Refactor `module_g.py` (V3.0 DB-driven)
+- [x] Update `module_c.py` (Whistle Impact logic)
+- [x] Update `main.py` (Pass ref_data dict)
+- [ ] Update hardcoded list with 12 new researched refs (Immediate Next Step)
+- [ ] Create `scripts/learn_daily_trends.py` (Phase 2)
+- [ ] Implement Reporting Suite (Phase 3)
+
+---
+
+### Week 3: ✅ COMPLETE - Visual Upgrade & Pipeline Integration
+
+**✅ Jan 15 Afternoon Session (4:00 PM):**
+- **Module G Audit Complete:** Confirmed critical gaps in referee data (13/74 refs) and logic (Pace impact only).
+- **Fixed:** `morning_brief.py` visual generation (macOS font paths + int casting).
+- **Fixed:** `launch_parallel_sync.sh` virtual environment path (`.venv`).
+- **Verified:** All systems operational.
+
+---
+
 ### Week 2: ✅ COMPLETE - Visual Upgrade & Pipeline Integration
+
 
 **✅ Jan 12 Evening Session (8:40 PM):**
 - **Visual Reporting Upgrade:** Implemented Python-based PNG generator for game notes
