@@ -67,7 +67,7 @@ jobs:
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
-          git add ludi.db logs/bets/
+          git add logs/bets/
           
           if git diff --staged --quiet; then
             echo "No changes to commit"
