@@ -208,36 +208,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-#### Phase 2: Hybrid Learning System (Week 5 - Planned)
+#### Phase 2: Hybrid Learning System (✅ Week 5 COMPLETE)
 
 **Objective**: Build a self-improving database that learns unknown referee tendencies daily.
 **Strategy**: "Incremental Learning" + "Hierarchical Estimation"
-- **Daily Learning**: Run `scripts/learn_daily_trends.py` post-game.
-- **Logic**: If Game Fouls > Average, credit strictness to all crew members.
-- **Graduation**: Unknown refs move to "Tracked" status after N=5 games.
+**Script**: `scripts/learn_daily_trends.py`
+- **Daily Learning**: Run post-game (2 AM EST recommended)
+- **Logic**: Exponential moving average (15% weight to new data)
+- **Crew Attribution**: Each ref gets 1/3 credit from game deviation
+- **Graduation**: Unknown refs auto-added when discovered
+- **CLI**: `python scripts/learn_daily_trends.py --date YYYY-MM-DD [--dry-run]`
 
 ---
 
-#### Phase 3: Reporting Suite (Week 6 - Planned)
+#### Phase 3: Reporting Suite (✅ Week 6 COMPLETE)
 
 **Objective**: Visualize referee impact clearly for the user.
-**Spec**: `REFEREE_REPORTING_SPEC.md`
-1.  **Daily Whistle Watch**: Pre-game card (Pace/Whistle Impact, Crew Chief bias).
-2.  **Weekly Leaderboard**: Top 5 Strict/Lenient lists.
-3.  **Learning Logs**: Transparent audit of AI adjustments.
+
+**Deliverables:**
+1.  **Daily Whistle Watch** (`utils/referee_briefing.py`): Pre-game card integrated into morning brief.
+2.  **Weekly Leaderboard** (`scripts/generate_weekly_zebra_report.py`): 
+    - Top 5 Strict / Lenient
+    - Rookie Watch (12 new refs)
+    - Betting implications
+3.  **Morning Brief Integration** (`scripts/generate_morning_brief.py`): Full slate + referee intelligence.
 
 ---
 
-#### Implementation Checklist (Week 4 Status)
+#### Implementation Checklist (Week 4-6 Status)
 
 - [x] Create database tables (`referee_profiles`, `referee_daily_stats`)
 - [x] Create `scripts/scrape_referee_roster.py`
 - [x] Refactor `module_g.py` (V3.0 DB-driven)
 - [x] Update `module_c.py` (Whistle Impact logic)
 - [x] Update `main.py` (Pass ref_data dict)
-- [ ] Update hardcoded list with 12 new researched refs (Immediate Next Step)
-- [ ] Create `scripts/learn_daily_trends.py` (Phase 2)
-- [ ] Implement Reporting Suite (Phase 3)
+- [x] Update hardcoded list with 12 new researched refs (51 total)
+- [x] Create `scripts/learn_daily_trends.py` (Phase 2)
+- [x] Create `utils/referee_briefing.py` (Daily Whistle Watch)
+- [x] Create `scripts/generate_morning_brief.py` (Integrated Brief)
+- [x] Create `scripts/generate_weekly_zebra_report.py` (Weekly Leaderboard)
 
 ---
 
