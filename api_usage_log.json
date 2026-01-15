@@ -19656,5 +19656,613 @@
       "requests_remaining": "985",
       "requests_limit": "1000"
     }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:09.705563",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:12.355948",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:19.258148",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:21.506920",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:28.261642",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:30.193602",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:37.304037",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:38.942238",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:45.630094",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:47.783066",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:54.888684",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:49:56.707726",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:04.108056",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:05.839915",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:12.879518",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:14.742997",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:21.868961",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:25.033755",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:31.927602",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:33.696762",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:40.839381",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:42.560513",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:49.411912",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:51.183034",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:50:57.939373",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:00.073652",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:06.953122",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:08.756537",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:15.553416",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:17.552917",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:24.375785",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:26.191092",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:35.751749",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:37.466227",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:44.228886",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:46.273140",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:53.231113",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:51:55.282526",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:02.244460",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:04.091392",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:10.794595",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:12.664679",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:19.453818",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:21.330513",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:29.303530",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:31.145955",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:37.874377",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:39.738465",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:53.544028",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:52:55.303545",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:02.794421",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:04.515940",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:11.262018",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:13.421261",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:20.883469",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:24.762199",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:33.037129",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:34.671206",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:41.384197",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:43.246598",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:49.902445",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:51.898985",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:53:59.201240",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:00.816806",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:07.437801",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:09.838361",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:17.305460",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:19.054140",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:25.817276",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:28.265964",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:35.162621",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:36.811326",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:44.103374",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:45.948612",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:53.058161",
+    "api": "nba_api",
+    "endpoint": "shooting_splits",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
+  },
+  {
+    "timestamp": "2026-01-15T10:54:54.688209",
+    "api": "nba_api",
+    "endpoint": "shot_difficulty",
+    "rate_limit_info": {
+      "error": "Unknown API"
+    }
   }
 ]
