@@ -48,15 +48,18 @@ class LudiOracle:
             scen_name = scenario.get('scenario_name', 'BASE')
             
             # --- UPSTREAM DATA INGESTION ---
-            ref_factor = scenario.get('ref_impact', 1.0)
-            whistle_factor = scenario.get('ref_whistle', 1.0) 
+            # V3.0: Unpack ref_data dict (pace_impact, whistle_impact, crew, confidence)
+            ref_data = scenario.get('ref_data', {})
+            ref_pace = ref_data.get('pace_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_impact', 1.0)
+            ref_whistle = ref_data.get('whistle_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_whistle', 1.0)
+            
             days_rest = scenario.get('days_rest', 1)
             fatigue_tax = self._calculate_fatigue_tax(days_rest)
             
             macro_mods = {
-                "pace": scenario.get('pace_factor', 1.0) * ref_factor * fatigue_tax,
+                "pace": scenario.get('pace_factor', 1.0) * ref_pace * fatigue_tax,
                 "def_rtg": scenario.get('def_factor', 1.0),
-                "whistle": whistle_factor,
+                "whistle": ref_whistle,  # Applied to FTA in _simulate_volume
                 "fatigue": fatigue_tax,
                 "team_min": 240
             }

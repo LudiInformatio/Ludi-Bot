@@ -269,6 +269,46 @@ class LudiHistorian:
         # Add composite index for season-aware roster queries
         c.execute('CREATE INDEX IF NOT EXISTS idx_players_season_team ON players(season_id, team, is_active)')
 
+        # 9. Referee Profiles Table (Module G v2.0 - Jan 15, 2026)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS referee_profiles (
+                referee_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referee_name TEXT UNIQUE NOT NULL,
+                seasons_active INTEGER DEFAULT 1,
+                -- Weekly baseline stats (from Basketball-Reference)
+                avg_fouls_per_game REAL DEFAULT 0.0,
+                avg_pace_impact REAL DEFAULT 1.0,
+                avg_technical_rate REAL DEFAULT 0.0,
+                -- Classification
+                style TEXT DEFAULT 'NEUTRAL',  -- LENIENT, NEUTRAL, STRICT
+                -- Metadata
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                data_source TEXT DEFAULT 'basketball-reference'
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_referee_name ON referee_profiles(referee_name)')
+
+        # 10. Referee Daily Stats Table (Module G v2.0 - Jan 15, 2026)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS referee_daily_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referee_id INTEGER,
+                -- Last 5 games (from NBAStuffer)
+                last5_fouls_avg REAL DEFAULT 0.0,
+                last5_pace_impact REAL DEFAULT 1.0,
+                last5_over_under_record TEXT,
+                -- Recency flags
+                is_hot_whistle BOOLEAN DEFAULT 0,
+                is_fast_paced BOOLEAN DEFAULT 0,
+                -- Metadata
+                sync_date DATE DEFAULT CURRENT_DATE,
+                data_source TEXT DEFAULT 'nbastuffer',
+                FOREIGN KEY (referee_id) REFERENCES referee_profiles(referee_id)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_date ON referee_daily_stats(sync_date)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_ref ON referee_daily_stats(referee_id)')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

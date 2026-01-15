@@ -1,41 +1,30 @@
 import pandas as pd
 import requests
+import sqlite3
 import time
 from datetime import datetime
-from io import StringIO  # <--- Added for the clean fix
+from io import StringIO
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE G: THE ZEBRAS
-# V2.2 - OFFICIATING IMPACT ENGINE (FutureWarning Fixed)
+# V3.0 - DATABASE-DRIVEN OFFICIATING IMPACT ENGINE (Jan 15, 2026)
 # ==============================================================================
 
+DB_PATH = "ludi.db"
+
 class LudiRefEngine:
-    def __init__(self):
+    def __init__(self, db_path=DB_PATH):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE G (ZEBRAS) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE")
         print(f"{'='*40}")
         
+        self.db_path = db_path
         self.daily_assignments = {}
         
-        # 1. THE CHEAT SHEET (2025-26 TENDENCIES)
-        self.IMPACT_MAP = {
-            "Andy Nagy": 1.04,
-            "Jacyn Goble": 1.03,
-            "Phenizee Ransom": 1.03,
-            "John Goble": 1.02,
-            "Zach Zarba": 1.02,
-            "Ed Malloy": 1.02,
-            "Bill Kennedy": 1.01,
-            "Josh Tiven": 1.01,
-            "Scott Foster": 0.96,
-            "Courtney Kirkland": 0.97,
-            "James Williams": 0.97,
-            "Sean Wright": 0.98,
-            "Tony Brothers": 0.99,
-            "Marc Davis": 0.99
-        }
-
-        # 2. TEAM NAME RESOLVER
+        # League average baseline (used for unknown refs)
+        self.LEAGUE_AVG_FOULS = 21.5
+        
+        # Team name resolver (still needed for scraping assignments)
         self.TEAM_MAP = {
             "Atlanta": "ATL", "Boston": "BOS", "Brooklyn": "BKN", "Charlotte": "CHA",
             "Chicago": "CHI", "Cleveland": "CLE", "Dallas": "DAL", "Denver": "DEN",
@@ -48,6 +37,75 @@ class LudiRefEngine:
             "Portland": "POR", "Sacramento": "SAC", "San Antonio": "SAS", "Toronto": "TOR",
             "Utah": "UTA", "Washington": "WAS"
         }
+        
+        # Check database connectivity and referee count
+        self._verify_database()
+
+    def _verify_database(self):
+        """Verify referee_profiles table exists and has data."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM referee_profiles")
+            count = c.fetchone()[0]
+            conn.close()
+            print(f"   [ZEBRAS] 📊 Database: {count} referees loaded")
+        except Exception as e:
+            print(f"   [ZEBRAS] ⚠️ Database error: {e}")
+            print(f"   [ZEBRAS] 💡 Run: python scripts/scrape_referee_roster.py")
+
+    def _get_referee_profile(self, ref_name):
+        """
+        Query database for referee profile by name.
+        Uses fuzzy matching (LIKE) to handle name variations.
+        
+        Returns:
+            dict with pace_impact, whistle_impact, style, or None if not found
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            
+            # Try exact match first
+            c.execute("""
+                SELECT referee_name, avg_fouls_per_game, avg_pace_impact, style
+                FROM referee_profiles
+                WHERE referee_name = ?
+            """, (ref_name,))
+            result = c.fetchone()
+            
+            # If no exact match, try fuzzy match (last name)
+            if not result and ' ' in ref_name:
+                last_name = ref_name.split()[-1]
+                c.execute("""
+                    SELECT referee_name, avg_fouls_per_game, avg_pace_impact, style
+                    FROM referee_profiles
+                    WHERE referee_name LIKE ?
+                """, (f'%{last_name}%',))
+                result = c.fetchone()
+            
+            conn.close()
+            
+            if result:
+                avg_fouls = result[1]
+                pace_impact = result[2]
+                style = result[3]
+                
+                # Calculate whistle_impact from fouls/game relative to league avg
+                # Higher fouls = more FTA opportunities
+                whistle_impact = round(avg_fouls / self.LEAGUE_AVG_FOULS, 3)
+                
+                return {
+                    'name': result[0],
+                    'pace_impact': pace_impact,
+                    'whistle_impact': whistle_impact,
+                    'style': style
+                }
+            return None
+            
+        except Exception as e:
+            print(f"   [ZEBRAS] DB Error: {e}")
+            return None
 
     def build_ref_database(self):
         """
@@ -124,32 +182,69 @@ class LudiRefEngine:
         return None
 
     def get_game_impact(self, home_team_abbr):
-        crew = self.daily_assignments.get(home_team_abbr, [])
-        if not crew: return 1.0 
+        """
+        Calculate referee impact for a game, now returning a dict with
+        separate pace and whistle impact factors.
         
-        total_impact = 0.0
-        known_refs_count = 0
+        Returns:
+            dict: {
+                'pace_impact': float,      # Multiplier for game pace
+                'whistle_impact': float,   # Multiplier for FTA projections
+                'crew': list,              # List of referee names
+                'confidence': float        # 0.0-1.0, how many refs we have data for
+            }
+        """
+        crew = self.daily_assignments.get(home_team_abbr, [])
+        
+        # Default neutral response
+        neutral_response = {
+            'pace_impact': 1.0,
+            'whistle_impact': 1.0,
+            'crew': crew,
+            'confidence': 0.0
+        }
+        
+        if not crew:
+            return neutral_response
+        
+        pace_factors = []
+        whistle_factors = []
+        known_count = 0
         
         for ref in crew:
-            for key_ref, impact_val in self.IMPACT_MAP.items():
-                if key_ref in ref:
-                    total_impact += impact_val
-                    known_refs_count += 1
-                    break
+            profile = self._get_referee_profile(ref)
+            if profile:
+                pace_factors.append(profile['pace_impact'])
+                whistle_factors.append(profile['whistle_impact'])
+                known_count += 1
+            else:
+                # Unknown ref, use neutral
+                pace_factors.append(1.0)
+                whistle_factors.append(1.0)
         
-        if known_refs_count > 0:
-            crew_size = len(crew)
-            unknowns = crew_size - known_refs_count
-            final_impact = (total_impact + (unknowns * 1.0)) / crew_size
-            return round(final_impact, 3)
+        # Calculate crew averages
+        avg_pace = sum(pace_factors) / len(pace_factors)
+        avg_whistle = sum(whistle_factors) / len(whistle_factors)
+        confidence = known_count / len(crew)
         
-        return 1.0
+        return {
+            'pace_impact': round(avg_pace, 3),
+            'whistle_impact': round(avg_whistle, 3),
+            'crew': crew,
+            'confidence': round(confidence, 2)
+        }
+
 
 if __name__ == "__main__":
     zebras = LudiRefEngine()
     assignments = zebras.build_ref_database()
     
     if assignments:
-        print("\n--- TEST: First 3 Games ---")
+        print("\n--- TEST: First 3 Games (New V3.0 Output) ---")
         for team in list(assignments.keys())[:3]:
-            print(f"{team}: {zebras.get_game_impact(team)}")
+            impact = zebras.get_game_impact(team)
+            print(f"\n🏀 {team}:")
+            print(f"   Crew: {impact['crew']}")
+            print(f"   Pace Impact: {impact['pace_impact']}x")
+            print(f"   Whistle Impact: {impact['whistle_impact']}x")
+            print(f"   Confidence: {impact['confidence'] * 100:.0f}%")

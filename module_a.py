@@ -84,9 +84,9 @@ class Gatekeeper:
                 utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
                 est_time = utc_time.astimezone(self.est_tz)
                 
-                # 2. Calculate Ref Impact
+                # 2. Calculate Ref Impact (V3.0: Returns dict with pace_impact, whistle_impact)
                 home_abbr = self._get_abbr(home)
-                ref_impact = self.zebras.get_game_impact(home_abbr)
+                ref_data = self.zebras.get_game_impact(home_abbr)
                 
                 # 3. Store in Master Dictionary
                 self.games[game_id] = {
@@ -102,7 +102,7 @@ class Gatekeeper:
                     },
                     'props': {}, 
                     'archetypes': {
-                        'ref_impact': ref_impact, 
+                        'ref_data': ref_data,  # V3.0: Now a dict with pace/whistle/crew/confidence
                         'home_pace': 0, 
                         'home_def_rtg': 0
                     },
@@ -131,7 +131,7 @@ class Gatekeeper:
                     'matchup': f"{away} @ {home}",
                     'spread': self.games[game_id]['vegas']['spread'],
                     'total': self.games[game_id]['vegas']['total'],
-                    'ref_impact': ref_impact,
+                    'ref_data': ref_data,  # V3.0: Full dict
                     'sort_key': est_time
                 })
 
@@ -158,7 +158,11 @@ class Gatekeeper:
                     print(f"   === {current_header} {label} ===")
                 
                 print(f"   🏀 {g['matchup']}")
-                print(f"      > Time: {g['time_str']} | Line: {g['spread']} | Total: {g['total']} | Ref Impact: {g['ref_impact']}x")
+                ref_d = g.get('ref_data', {})
+                pace_x = ref_d.get('pace_impact', 1.0) if isinstance(ref_d, dict) else 1.0
+                whistle_x = ref_d.get('whistle_impact', 1.0) if isinstance(ref_d, dict) else 1.0
+                conf_pct = ref_d.get('confidence', 0.0) * 100 if isinstance(ref_d, dict) else 0
+                print(f"      > Time: {g['time_str']} | Line: {g['spread']} | Total: {g['total']} | Pace: {pace_x}x | Whistle: {whistle_x}x ({conf_pct:.0f}% conf)")
             
             print("   ----------------------------------------")
                 
@@ -366,7 +370,9 @@ class Gatekeeper:
             if not info['props']: continue
             
             print(f"🏀 {info['matchup']}")
-            print(f"   1. [GAME] Spread: {info['vegas']['spread']} | Ref Impact: {info['archetypes']['ref_impact']}")
+            ref_d = info['archetypes'].get('ref_data', {})
+            pace_x = ref_d.get('pace_impact', 1.0) if isinstance(ref_d, dict) else 1.0
+            print(f"   1. [GAME] Spread: {info['vegas']['spread']} | Pace: {pace_x}x")
             
             # Show Book Coverage Count
             print(f"   2. [DATA] Props Loaded.")

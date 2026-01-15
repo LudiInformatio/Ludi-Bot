@@ -120,9 +120,13 @@ class LudiOrchestrator:
         return matched
 
     def build_simulation_scenario(self, game_data: Dict, home_roster: List[Dict], away_roster: List[Dict]) -> Dict:
+        # Get referee data (now a dict with pace_impact, whistle_impact, crew, confidence)
+        ref_data = game_data.get('archetypes', {}).get('ref_data', {
+            'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0
+        })
         return {
             'scenario_name': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_').replace(' ', '_'),
-            'ref_impact': game_data.get('archetypes', {}).get('ref_impact', 1.0),
+            'ref_data': ref_data,  # Pass full dict for pace AND whistle impact
             'pace_factor': 1.0, 'def_factor': 1.0, 'days_rest': 1,
             'players': home_roster + away_roster
         }
@@ -211,7 +215,7 @@ class LudiOrchestrator:
             'game_date': get_est_today(),
             'home_team': home, 'away_team': away, 'opponent': '',
             'spread': abs(spread) if spread != 'N/A' else 0,
-            'ref_impact': game_data.get('archetypes', {}).get('ref_impact', 1.0),
+            'ref_data': game_data.get('archetypes', {}).get('ref_data', {'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0}),
             'players': players
         }]
 
