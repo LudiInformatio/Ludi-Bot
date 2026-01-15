@@ -2,7 +2,14 @@ import os
 import datetime
 from pathlib import Path
 from google import genai
-from config import GEMINI_API_KEY, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+
+try:
+    from config import GEMINI_API_KEY, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+except ModuleNotFoundError:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+    TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
 from utils.telegram_notifier import send_photo, send_message
 
 class ProjectManagerBot:

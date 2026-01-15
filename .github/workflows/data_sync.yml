@@ -24,10 +24,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests python-dotenv pytz
+          pip install -r requirements.txt
 
       - name: Run Module H (Fetch recent games)
         env:
@@ -36,10 +44,14 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
-        run: python module_h_historian.py
+        run: |
+          export PYTHONPATH=$PWD
+          python module_h_historian.py
 
       - name: Migrate JSON to SQLite
-        run: python migrate_json_to_sqlite.py
+        run: |
+          export PYTHONPATH=$PWD
+          python migrate_json_to_sqlite.py
 
       - name: Sync PBP Stats Season Totals (Shot Quality)
         env:
@@ -47,7 +59,9 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
-        run: python scripts/sync_pbp_totals.py
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/sync_pbp_totals.py
 
       - name: Deduplicate database
         run: |

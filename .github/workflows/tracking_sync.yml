@@ -23,10 +23,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests python-dotenv pytz nba_api
+          pip install -r requirements.txt
 
       - name: Sync NBA API Tracking Data (Full Slate)
         env:
@@ -34,7 +42,9 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
-        run: python scripts/run_daily_cycle.py
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/run_daily_cycle.py
 
       - name: Commit and push if changes
         run: |
