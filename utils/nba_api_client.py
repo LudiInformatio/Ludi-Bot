@@ -92,9 +92,9 @@ class NBAAPIClient:
 
     def _ensure_cache_dir(self):
         """Create cache directory if it doesn't exist."""
+        os.makedirs(self.cache_dir, exist_ok=True)
         if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
-            print(f"   [NBA-API] Created cache directory: {self.cache_dir}")
+             print(f"   [NBA-API] Created cache directory: {self.cache_dir}")
 
     def _rate_limit(self):
         """Enforce 1 request per second rate limit."""

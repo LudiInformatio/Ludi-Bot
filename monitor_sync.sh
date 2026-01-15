@@ -19,7 +19,7 @@ fi
 
 echo ""
 echo "=== DATABASE RECORDS ==="
-./venv/bin/python -c "
+./.venv/bin/python -c "
 import sqlite3
 conn = sqlite3.connect('ludi.db')
 c = conn.cursor()
@@ -59,7 +59,7 @@ conn.close()
 echo ""
 echo "=== PROGRESS FILE ==="
 if [ -f logs/tracking_sync_progress.json ]; then
-    ./venv/bin/python -c "
+    ./.venv/bin/python -c "
 import json
 with open('logs/tracking_sync_progress.json') as f:
     prog = json.load(f)

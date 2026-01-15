@@ -23,10 +23,14 @@ COLOR_TEAL = (0, 168, 150)   # Teal for highlights
 COLOR_RED =  (220, 38, 38)   # Alert Red
 
 # Paths
-FONT_PATH_SANS_REG = "/usr/share/fonts/chromeos/croscore/Arimo-Regular.ttf"
-FONT_PATH_SANS_BOLD = "/usr/share/fonts/chromeos/croscore/Arimo-Bold.ttf"
-FONT_PATH_SERIF = "/usr/share/fonts/chromeos/croscore/Tinos-Regular.ttf"
-LOGO_IMAGE_PATH = "/home/mnprice86/.gemini/antigravity/brain/b25297a4-052f-47a9-abcb-a2bfc821945c/uploaded_image_1_1768264766933.jpg"
+# Paths - macOS Compatible
+FONT_PATH_SANS_REG = "/System/Library/Fonts/Supplemental/Arial.ttf"
+FONT_PATH_SANS_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+FONT_PATH_SERIF = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+
+# Resolve absolute path to project root for assets
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOGO_IMAGE_PATH = os.path.join(PROJECT_ROOT, "ludi_header_exact_v1.png")
 
 # Font Sizes
 FONT_SIZE_TITLE = 60
@@ -180,7 +184,7 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
     date_str = datetime.now().strftime('%b %d, %Y').upper()
     header_text = f"{title} | {date_str}"
     header_w = draw.textlength(header_text, font=font_header)
-    draw.text(((WIDTH - header_w) / 2, current_y), header_text, font=font_header, fill=COLOR_NAVY)
+    draw.text((int((WIDTH - header_w) / 2), current_y), header_text, font=font_header, fill=COLOR_NAVY)
     current_y += FONT_SIZE_HEADER + SECTION_SPACING
     
     # Divider
@@ -197,7 +201,7 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
             for segment in line_segments:
                 text_content = segment["text"]
                 text_color = segment["color"]
-                pm.text((current_x, current_y), text_content, font=font_body, fill=text_color)
+                pm.text((int(current_x), int(current_y)), text_content, font=font_body, fill=text_color)
                 segment_w = draw.textlength(text_content, font=font_body)
                 current_x += segment_w
             current_y += FONT_SIZE_BODY + LINE_SPACING
@@ -206,7 +210,7 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(230,230,230), width=1)
         current_y += SECTION_SPACING
 
-    output_path = "/home/mnprice86/ludi_bot/ludi_generated_briefing.png"
+    output_path = os.path.join(PROJECT_ROOT, "ludi_generated_briefing.png")
     img.save(output_path)
     print(f"✅ Visual briefing generated: {output_path}")
     return output_path
