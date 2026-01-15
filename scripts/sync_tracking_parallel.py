@@ -313,8 +313,13 @@ def main():
     parser.add_argument("--season", default="2025-26")
     parser.add_argument("--start-date", default="2025-11-14")
     parser.add_argument("--end-date", default="2026-01-14")
+    parser.add_argument("--delay", type=float, default=3.0, help="Delay between requests in seconds")
     
     args = parser.parse_args()
+    
+    # Set global delay
+    global REQUEST_DELAY
+    REQUEST_DELAY = args.delay
     
     run_worker(args.chunk_index, args.total_chunks, args.season, args.start_date, args.end_date)
 

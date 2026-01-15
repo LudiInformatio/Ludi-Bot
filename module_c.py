@@ -98,6 +98,7 @@ class LudiOracle:
         return 1.0
 
     def _simulate_volume(self, player, mods):
+        """Returns FULL distribution arrays, not just means."""
         vol = {}
         for stat in ['FGA', 'FG3A', 'FTA']:
             base = player.get(stat, 0.0)
@@ -105,42 +106,96 @@ class LudiOracle:
             if stat == 'FTA': stat_mod *= mods['whistle']
             
             adj_base = base * stat_mod
-            # Normal Dist for Volume (allows for hot/cold nights)
-            res = np.random.normal(adj_base, adj_base * 0.12, self.sim_count)
-            vol[stat] = round(np.mean(np.maximum(res, 0)), 1)
+            # Normal Dist for Volume - KEEP FULL DISTRIBUTION
+            # Increased variance to 0.40 for conservative/realistic NBA volatility
+            vol[stat] = np.maximum(np.random.normal(adj_base, adj_base * 0.40, self.sim_count), 0)
         return vol
 
-    def _simulate_outcomes(self, player, vol, mods):
-        out = vol.copy()
+    def _simulate_outcomes(self, player, vol_dist, mods):
+        """Simulates outcomes and returns both mean AND full distributions."""
+        out = {}
+        distributions = {}  # NEW: Store full distributions for hit rate calculation
         
         # EFFICIENCY TAXES
         fg_pct = player.get('FG_PCT', 0.45) * mods['def_rtg'] * mods['fatigue']
         fg3_pct = player.get('FG3_PCT', 0.35) * mods['fatigue']
         ft_pct = player.get('FT_PCT', 0.75)
         
-        out['FGM'] = round(out['FGA'] * fg_pct, 1)
-        out['FG3M'] = round(out['FG3A'] * fg3_pct, 1)
-        out['FTM'] = round(out['FTA'] * ft_pct, 1)
+        # Field goals - use distribution
+        fgm_dist = vol_dist['FGA'] * fg_pct
+        fg3m_dist = vol_dist['FG3A'] * fg3_pct
+        ftm_dist = vol_dist['FTA'] * ft_pct
         
-        # SCORING
-        out['PTS'] = round(((out['FGM'] - out['FG3M']) * 2) + (out['FG3M'] * 3) + out['FTM'], 1)
+        # Store distributions for hit rate calculation
+        distributions['FGM'] = fgm_dist
+        distributions['FG3M'] = fg3m_dist
+        distributions['FTM'] = ftm_dist
         
-        # POSSESSION-BASED ACCOUNTING
+        # SCORING - full distribution
+        pts_dist = ((fgm_dist - fg3m_dist) * 2) + (fg3m_dist * 3) + ftm_dist
+        distributions['PTS'] = pts_dist
+        out['PTS'] = round(np.mean(pts_dist), 1)
+        
+        # Store volume means
+        out['FGA'] = round(np.mean(vol_dist['FGA']), 1)
+        out['FG3A'] = round(np.mean(vol_dist['FG3A']), 1)
+        out['FTA'] = round(np.mean(vol_dist['FTA']), 1)
+        out['FGM'] = round(np.mean(fgm_dist), 1)
+        out['FG3M'] = round(np.mean(fg3m_dist), 1)
+        out['FTM'] = round(np.mean(ftm_dist), 1)
+        
+        # POSSESSION-BASED STATS - keep distributions
         for stat in ['AST', 'REB', 'OREB', 'DREB', 'STL', 'BLK', 'TOV']:
             base = player.get(stat, 0.0) * mods['pace']
             
             if stat in ['STL', 'BLK']:
                 # POISSON for Rare Events
-                # No variance parameter needed for poisson, variance = mean
-                res = np.random.poisson(base, self.sim_count)
+                res = np.random.poisson(max(base, 0.1), self.sim_count)
             else:
-                # NORMAL for High-Volume stats (AST, REB, TOV)
-                # Allows tuning variance (0.28 factor)
-                res = np.random.normal(base, base * 0.28, self.sim_count)
-                
-            out[stat] = round(np.mean(np.maximum(res, 0)), 1)
+                # NORMAL for High-Volume stats
+                # Variance 0.40 matches volume variance (conservative)
+                res = np.maximum(np.random.normal(base, base * 0.40, self.sim_count), 0)
             
+            distributions[stat] = res
+            out[stat] = round(np.mean(res), 1)
+        
+        # Store distributions for hit rate calculation
+        out['_distributions'] = distributions
+        
         return out
+
+    def calculate_hit_rates(self, sim_profile, sportsbook_lines):
+        """
+        NEW: Calculate probability of going OVER each sportsbook line.
+        This is the CORRECT way to get probabilities from Monte Carlo.
+        
+        Args:
+            sim_profile: Result from _simulate_outcomes (contains _distributions)
+            sportsbook_lines: Dict like {'pts': 25.5, 'reb': 8.5, 'ast': 6.5}
+            
+        Returns:
+            Dict of hit rates like {'pts': 0.62, 'reb': 0.55, 'ast': 0.48}
+        """
+        hit_rates = {}
+        distributions = sim_profile.get('_distributions', {})
+        
+        stat_key_map = {
+            'pts': 'PTS', 'reb': 'REB', 'ast': 'AST',
+            '3pm': 'FG3M', 'oreb': 'OREB', 'stl': 'STL', 'blk': 'BLK'
+        }
+        
+        for prop_key, line in sportsbook_lines.items():
+            if line is None or line == 'N/A':
+                continue
+                
+            stat_key = stat_key_map.get(prop_key.lower())
+            if stat_key and stat_key in distributions:
+                dist = distributions[stat_key]
+                # THE MAGIC: What % of 5000 simulations went OVER the line?
+                hit_rate = np.mean(dist > float(line))
+                hit_rates[prop_key] = round(hit_rate, 4)
+        
+        return hit_rates
 
     def _calculate_usage(self, sim, player, team, mods):
         try:

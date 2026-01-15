@@ -62,16 +62,20 @@ class LudiReporter:
                 player_props = []
                 if 'sportsbook_props' in p:
                     for stat_key, prop_data in p['sportsbook_props'].items():
-                        # Handle both old format (line only) and new format (dict with odds)
+                        # Handle both old format (line only) and new format (dict with odds + books)
                         if isinstance(prop_data, dict):
                             line = prop_data.get('line', 0)
                             odds_over = prop_data.get('odds_over', -110)
                             odds_under = prop_data.get('odds_under', -110)
+                            book_over = prop_data.get('book_over', 'consensus')  # NEW: Line Shopping V2.0
+                            book_under = prop_data.get('book_under', 'consensus')
                         else:
                             # Legacy format: just the line value
                             line = prop_data
                             odds_over = -110  # Assume standard juice
                             odds_under = -110
+                            book_over = 'consensus'
+                            book_under = 'consensus'
 
                         # Map internal projection keys to common sportsbook prop keys
                         # Ensure line is numeric
@@ -83,10 +87,16 @@ class LudiReporter:
                         # Apply Final 2026 Blowout Modifier
                         final_proj = raw_val * blowout_mult
 
-                        # --- DEVIGGED EDGE CALCULATION (V4.4) ---
-                        # Calculate our model's probability of going OVER the line
-                        # Using projection vs line difference scaled by typical variance
-                        our_prob = self._estimate_over_probability(final_proj, line, stat_key)
+                        # --- V5.0: SIMULATION-BASED PROBABILITY (CORRECT) ---
+                        # Use ACTUAL hit rate from 5000 Monte Carlo simulations
+                        sim_hit_rates = p.get('sim_hit_rates', {})
+                        
+                        if stat_key in sim_hit_rates:
+                            # USE REAL SIMULATION DATA
+                            our_prob = sim_hit_rates[stat_key]
+                        else:
+                            # Fallback to heuristic
+                            our_prob = self._estimate_over_probability(final_proj, line, stat_key)
 
                         # Determine bet direction
                         bet_direction = 'over' if final_proj > line else 'under'
@@ -153,6 +163,10 @@ class LudiReporter:
                                 ref_val = game.get('ref_impact')
                                 ref_note = f"⚖️ Refs Boost Overs ({ref_val}x)" if ref_val > 1.0 else f"⚖️ Refs Drag Unders ({ref_val}x)"
                                 note_elements.append(ref_note)
+
+                            # F) Yak Decision Note (V2.0 - Explicit Injury Confirmation)
+                            if p.get('decision_note'):
+                                note_elements.append(p['decision_note'])
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
@@ -226,7 +240,7 @@ class LudiReporter:
                                         'referee_impact': game.get('ref_impact', 1.0),
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
-                                        'bookmaker': 'consensus'
+                                        'bookmaker': book_over if bet_direction == 'over' else book_under  # Line Shopping V2.0
                                     }
                                     bet_id = self.bet_logger.log_recommendation(rec_data)
                                 except Exception as e:
@@ -240,7 +254,7 @@ class LudiReporter:
                                 "bet_on": bet_direction.upper(),
                                 "line": line,
                                 "proj": round(final_proj, 2),
-                                "ev": ev,
+                                "ev": edge,  # V2.1: Now using devigged edge (not inflated ev)
                                 "units": units,
                                 "note": " | ".join(note_elements),
                                 "tags": tags_formatted  # Week 2, Days 3-4: Tag classification

@@ -63,18 +63,22 @@ class LudiOrchestrator:
         self.db_path = "ludi.db"
 
     def get_active_roster(self, team_abbr: str, limit: int = 8) -> List[Dict]:
-        """Query database for top N players by minutes."""
+        """Query database for top N players by minutes, joined with PBP Shot Quality."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         query = '''
-            SELECT player_id, player_name, team_abbreviation, AVG(pts), AVG(reb), AVG(ast), 
-                   AVG(fga), AVG(fg3a), AVG(fta), AVG(oreb), AVG(dreb), AVG(stl), AVG(blk), 
-                   AVG(tov), AVG(minutes), AVG(fg_pct), AVG(fg3_pct), AVG(ft_pct), COUNT(*)
-            FROM player_game_logs
-            WHERE team_abbreviation = ? AND game_date >= date('now', '-30 days')
-            GROUP BY player_id, player_name, team_abbreviation
-            HAVING COUNT(*) >= 3
-            ORDER BY AVG(minutes) DESC LIMIT ?
+            SELECT pgl.player_id, pgl.player_name, pgl.team_abbreviation, 
+                   AVG(pgl.pts), AVG(pgl.reb), AVG(pgl.ast), 
+                   AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta), 
+                   AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk), 
+                   AVG(pgl.tov), AVG(pgl.minutes), 
+                   MAX(psq.shot_quality_avg), MAX(psq.at_rim_frequency), MAX(psq.corner3_frequency)
+            FROM player_game_logs pgl
+            LEFT JOIN player_season_quality psq ON pgl.player_id = psq.player_id AND psq.season = '2025-26'
+            WHERE pgl.team_abbreviation = ? AND pgl.game_date >= date('now', '-30 days')
+            GROUP BY pgl.player_id, pgl.player_name, pgl.team_abbreviation
+            HAVING COUNT(pgl.player_id) >= 3
+            ORDER BY AVG(pgl.minutes) DESC LIMIT ?
         '''
         cursor.execute(query, (team_abbr, limit))
         rows = cursor.fetchall()
@@ -84,13 +88,22 @@ class LudiOrchestrator:
         for row in rows:
             fga, fta, tov, mins = row[6] or 0, row[8] or 0, row[13] or 0, row[14] or 0
             base_usg = round(((fga + 0.44*fta + tov)/mins)/2.1, 3) if mins > 0 else 0
+            
+            # Extract PBP Stats
+            shot_quality = row[15] if row[15] is not None else 0.53  # League avg fallback
+            at_rim_freq = row[16] if row[16] is not None else 0.0
+            corner3_freq = row[17] if row[17] is not None else 0.0
+
             roster.append({
                 'player_id': row[0], 'PLAYER_NAME': row[1], 'TEAM_ABBREVIATION': row[2],
                 'PTS': round(row[3] or 0, 1), 'REB': round(row[4] or 0, 1), 'AST': round(row[5] or 0, 1),
                 'FGA': round(fga, 1), 'FG3A': round(row[7] or 0, 1), 'FTA': round(fta, 1),
                 'OREB': round(row[9] or 0, 1), 'DREB': round(row[10] or 0, 1),
                 'STL': round(row[11] or 0, 1), 'BLK': round(row[12] or 0, 1), 'TOV': round(tov, 1),
-                'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1)
+                'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1),
+                'pbp_shot_quality': round(shot_quality, 3),
+                'pbp_rim_freq': round(at_rim_freq, 3),
+                'pbp_corner3_freq': round(corner3_freq, 3)
             })
         return roster
 
@@ -115,7 +128,11 @@ class LudiOrchestrator:
         }
 
     def build_reporter_input(self, sim_results: List[Dict], game_data: Dict, props_data: Dict) -> List[Dict]:
-        STAT_MAPPING = {'PTS': 'proj_pts', 'REB': 'proj_reb', 'AST': 'proj_ast', 'FG3M': 'proj_3pm', 'OREB': 'proj_oreb', 'MIN': 'proj_min'}
+        STAT_MAPPING = {
+            'PTS': 'proj_pts', 'REB': 'proj_reb', 'AST': 'proj_ast',
+            'FG3M': 'proj_3pm', 'OREB': 'proj_oreb', 'MIN': 'proj_min',
+            'FGA': 'proj_fga', 'FTA': 'proj_fta'
+        }
         home, away = self.gate._get_abbr(game_data.get('home')), self.gate._get_abbr(game_data.get('away'))
         spread = game_data.get('vegas', {}).get('spread', 0)
         total = game_data.get('vegas', {}).get('total', 0)
@@ -128,6 +145,7 @@ class LudiOrchestrator:
             p_dict = {
                 'name': p_name, 'team': sim.get('TEAM'), 'opponent': away if sim.get('TEAM') == home else home,
                 'status': sim.get('status', 'Active'), 'scenario': sim.get('SCENARIO', 'BASE'),
+                'decision_note': sim.get('decision_note', ''),  # Captured from Yak
                 'notes': '', 'odds': {'spread': spread, 'total': total},
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
                 'base_ast': sim.get('AST', 0), 'base_3pm': sim.get('FG3M', 0),
@@ -141,13 +159,49 @@ class LudiOrchestrator:
             props_fmt = {}
             for k, v in props_data[p_name].items():
                 try: 
-                    line = float(v)
+                    # Handle both new format (dict with odds) and old format (line only)
+                    if isinstance(v, dict):
+                        # Module A v9.3+ format (with line shopping)
+                        line = float(v.get('line', 0))
+                        
+                        # Fix: Handle explicit None values (key exists but value is None)
+                        val_over = v.get('odds_over')
+                        val_under = v.get('odds_under')
+                        
+                        o_over = val_over if val_over is not None else -110
+                        o_under = val_under if val_under is not None else -110
+                        
+                        # NEW: Extract bookmaker sources (Line Shopping V2.0)
+                        book_over = v.get('book_over', 'consensus')
+                        book_under = v.get('book_under', 'consensus')
+                    else:
+                        # Legacy fallback
+                        line = float(v)
+                        o_over = -110
+                        o_under = -110
+                        book_over = 'legacy'
+                        book_under = 'legacy'
+
                     mk = {'points': 'pts', 'rebounds': 'reb', 'assists': 'ast', 'threes': '3pm', 'offensive_rebounds': 'oreb'}.get(k, k)
-                    props_fmt[mk] = {'line': line, 'odds_over': -110, 'odds_under': -110}
+                    props_fmt[mk] = {
+                        'line': line, 
+                        'odds_over': o_over, 
+                        'odds_under': o_under,
+                        'book_over': book_over,
+                        'book_under': book_under
+                    }
                 except: continue
             
             if props_fmt:
                 p_dict['sportsbook_props'] = props_fmt
+                
+                # NEW: Calculate hit rates from simulation distributions
+                # This is the CORRECT probability from 5000 Monte Carlo runs
+                if '_distributions' in sim:
+                    lines_for_calc = {k: v.get('line') for k, v in props_fmt.items() if isinstance(v, dict)}
+                    hit_rates = self.sim.calculate_hit_rates(sim, lines_for_calc)
+                    p_dict['sim_hit_rates'] = hit_rates  # e.g. {'pts': 0.62, 'reb': 0.55}
+                
                 yak = {'status': sim.get('status', 'ACTIVE'), 'note': sim.get('injury_note', '')}
                 players.append(self.calib.calibrate_player(p_dict, yak))
 
@@ -253,21 +307,43 @@ class LudiOrchestrator:
             for sc in forks:
                 all_scenarios.append({'scenario': sc, 'game_data': game_data, 'props_data': self.fetch_props_for_game(game_id)})
 
-        # STEP 4: RUN SIMS
+        # STEP 4: RUN SIMS & RESOLVE SCENARIOS
         print(f"[step 4] Running Monte Carlo Simulations ({len(all_scenarios)} scenarios)...")
-        processed_slate = []
+        
+        # Group scenarios by game to handle forks correctly
+        games_batch = {}
         for item in all_scenarios:
+            gid = item['game_data']['matchup']
+            if gid not in games_batch: games_batch[gid] = []
+            games_batch[gid].append(item)
+            
+        processed_slate = []
+        
+        for gid, items in games_batch.items():
             try:
-                res = self.sim.run_simulation_batch([item['scenario']])
-                # Propagate scenario name
-                for r in res: r['SCENARIO'] = item['scenario']['scenario_name']
-                processed_slate.extend(self.build_reporter_input(res, item['game_data'], item['props_data']))
+                # 1. Run all sims for this game (Base + Forks)
+                game_sim_results = []
+                for item in items:
+                    res = self.sim.run_simulation_batch([item['scenario']])
+                    # Propagate scenario name
+                    for r in res: r['SCENARIO'] = item['scenario']['scenario_name']
+                    game_sim_results.extend(res)
+                
+                # 2. Resolve Scenarios via Yak (Handle Injuries)
+                # This picks the correct scenario for each player based on live status
+                final_game_results = self.yak.resolve_scenarios(game_sim_results)
+                
+                # 3. Build Report
+                # Use game/props data from the first item (same for all in batch)
+                first = items[0]
+                processed_slate.extend(self.build_reporter_input(final_game_results, first['game_data'], first['props_data']))
+                
             except Exception as e:
-                print(f"⚠️  Sim failed: {e}")
+                print(f"⚠️  Sim failed for {gid}: {e}")
 
         # STEP 5: REPORT
         print("[step 5] Generating Daily Briefing (Module F)...")
-        briefing = self.reporter.generate_report(processed_slate)
+        briefing, image_path = self.reporter.generate_report(processed_slate)
         print("\n" + "="*50)
         print("DAILY BRIEFING GENERATED")
         print("="*50)
@@ -275,6 +351,7 @@ class LudiOrchestrator:
         
         with open("daily_briefing.txt", "w") as f: f.write(briefing)
         print("\n✅ Saved to daily_briefing.txt")
+        print(f"✅ Visual Card saved to: {image_path}")
         
         if self.send_telegram:
             print("[step 6] Sending Telegram Briefing...")

@@ -34,7 +34,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
-        run: python scripts/sync_tracking_daily.py
+        run: python scripts/run_daily_cycle.py
 
       - name: Commit and push if changes
         run: |

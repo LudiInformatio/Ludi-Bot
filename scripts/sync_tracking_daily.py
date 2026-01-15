@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.time_utils import get_est_yesterday
 
 DB_PATH = "ludi.db"
-MAX_WORKERS = 5  # Parallel game processing
+MAX_WORKERS = 2  # Reduced from 5 to prevent timeouts
 
 
 def get_yesterday_game_ids():
@@ -138,8 +138,30 @@ def save_tracking_data(records, conn):
     return inserted
 
 
+def check_game_synced(game_id):
+    """Check if game tracking data already exists."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM tracking_data WHERE game_id = ?', (game_id,))
+    count = c.fetchone()[0]
+    conn.close()
+    return count > 0
+
 def process_game(game_id):
     """Process a single game (for parallel execution)."""
+    # Rate limit (3.0s delay per thread)
+    time.sleep(3.0)
+    
+    # Check if already done (Resume capability)
+    if check_game_synced(game_id):
+        return {
+            'game_id': game_id,
+            'records': [],
+            'count': 0,
+            'elapsed': 0,
+            'skipped': True
+        }
+
     start = time.time()
     records = fetch_tracking_for_game(game_id)
     elapsed = time.time() - start
@@ -148,7 +170,8 @@ def process_game(game_id):
         'game_id': game_id,
         'records': records,
         'count': len(records),
-        'elapsed': elapsed
+        'elapsed': elapsed,
+        'skipped': False
     }
 
 
@@ -186,7 +209,9 @@ def run_daily_sync(target_date=None, parallel=True):
                 result = future.result()
                 game_id = result['game_id']
                 
-                if result['records']:
+                if result.get('skipped'):
+                    print(f"[{i}/{len(games)}] {game_id}: Skipped (Already Synced)")
+                elif result['records']:
                     inserted = save_tracking_data(result['records'], conn)
                     total_inserted += inserted
                     conn.commit()

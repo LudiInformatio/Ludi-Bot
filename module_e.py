@@ -126,7 +126,38 @@ class LudiCalibrator:
             self._boost_stat(calibrated, 'proj_reb', 1.10)
             calibrated['notes'] += " | Size Mismatch (Guard)"
 
-        # === 5. NUANCE CHECKS ===
+        # 5. PBP SHOT QUALITY (NEW)
+        # Using 2025-26 Season Data from scripts/sync_pbp_totals.py
+        pbp_sq = calibrated.get('pbp_shot_quality', 0.53)
+        rim_freq = calibrated.get('pbp_rim_freq', 0.0)
+        corner_freq = calibrated.get('pbp_corner3_freq', 0.0)
+
+        # A) Efficiency Boost for High Quality Shot Takers
+        # League Avg SQ is ~0.53. Players > 0.55 get easy looks.
+        if pbp_sq > 0.55:
+            self._boost_stat(calibrated, 'proj_pts', 1.04)
+            self._boost_stat(calibrated, 'proj_fg_pct', 1.03) 
+            calibrated['notes'] += " | High SQ Efficiency"
+        elif pbp_sq < 0.48:
+            # Bad shot selection penalty (Only hit efficiency/points, not hustle stats)
+            self._boost_stat(calibrated, 'proj_pts', 0.96)
+            self._boost_stat(calibrated, 'proj_fg_pct', 0.96)
+            calibrated['notes'] += " | Low SQ Tax"
+
+        # B) Slasher Validation (Rim Pressure)
+        # If Rim Freq > 40%, they are legitimate paint threats -> Foul magnets
+        if rim_freq > 0.40:
+            self._boost_stat(calibrated, 'proj_fta', 1.15)
+            if archetype == "SLASHER":
+                calibrated['notes'] += " | Confirmed Rim Pressure"
+
+        # C) Corner Specialist Logic
+        # Corner 3s are the counter to 'PAINT_PACK' defenses
+        if corner_freq > 0.20 and def_style == "PAINT_PACK":
+            self._boost_stat(calibrated, 'proj_3pm', 1.12)
+            calibrated['notes'] += " | Corner Specialist vs Pack"
+
+        # === 6. NUANCE CHECKS ===
         # Westbrook/Giddey Rule: Guards who crash boards
         if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_CREATOR"] and calibrated.get('base_reb', 0) > 5.5:
             self._boost_stat(calibrated, 'proj_reb', 1.10)

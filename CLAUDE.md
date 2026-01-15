@@ -94,17 +94,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 🎯 Current Status (Updated Jan 14, 2026, 4:57 PM ET)
-
-### Week 3: ✅ Data Resilience & Filtering - IMPLEMENTED
-
-**✅ Jan 14 PM Session (4:57 PM):**
-- **PBP Stats API Fix:** Switched automation from broken `get-game-stats` to working `get-totals` endpoint
+## Current Status
+- **Date**: Jan 14, 2026
+- **Phase**: Early Testing (Live Gem Slate Generation)
+- **Active Task**: Producing Daily Gem Briefing (Daily Locks Config)
+- **Recent Upgrade**: Fixed EV Math, Integrated Yak (Injury Logic), Fixed Line Shopping. from broken `get-game-stats` to working `get-totals` endpoint
 - **Game ID Resolution:** Created `scripts/backfill_nba_game_ids.py` to map Tank01 IDs → NBA.com format
 - **Season Quality Sync:** Created `scripts/sync_pbp_totals.py` for season-level shot quality data
 - **Database Updates:**
   - Added `nba_game_id` column to `games` table (1,089/1,091 mapped)
-  - Created `player_season_quality` table (500 players synced)
 - **Tracking Backfill Resumed:** Launched 2 parallel workers (PIDs 11698, 11699) to complete historical backfill
   - Current: 240/847 players (28.3% complete)
   - Target: 100% coverage for 2025-26 season
@@ -848,4 +846,11 @@ if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
 **Concept:** Identify unsustainable efficiency variance.
 - **Signal:** Large gap between Season FG% (48%) and L5 FG% (25%).
 - **Action:** Bet on **Positive Regression** (Buy Low).
+
+### Strategic Roadmap: PBP Stats Expansion
+PBP Stats API capability verification complete (Jan 14). The following data layers are unlocked for future integration:
+1.  **WOWY Impact (Scenario Builder):** Use `get_player_on_off_impact` to replace usage vacuum heuristics with real On/Off OffRtg splits.
+2.  **Clutch/Leverage:** Use `get_team_leverage_summary` to identify "Clutch Killers" (high performance in High Leverage).
+3.  **Lineup Analysis:** Use `get_game_stats(Type="Lineup")` to fade/target specific bench units.
+4.  **Shot Distance:** Use shot location data to refine "Rim Runner" vs "Pop Big" archetypes.
 

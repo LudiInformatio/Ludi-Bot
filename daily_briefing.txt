@@ -1,0 +1,130 @@
+
+📰 LUDI ELITE BRIEFING (Jan 14, 2026)
+================================
+💎 TOP TARGETS BY GAME
+
+🏀 Brooklyn Nets @ New Orleans Pelicans
+   💎 Derik Queen | OVER 0.5 3PM
+      Proj: 0.7 | EV: +143.2% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Jordan Poole | OVER 1.5 REB
+      Proj: 2.4 | EV: +86.9% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 Terance Mann | UNDER 7.5 PTS
+      Proj: 4.9 | EV: +80.8% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+
+🏀 Cleveland Cavaliers @ Philadelphia 76ers
+   💎 Evan Mobley | UNDER 8.5 REB
+      Proj: 6.93 | EV: +76.5% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Jarrett Allen | OVER 2.5 AST
+      Proj: 3.0 | EV: +70.0% | 1.5u
+      🏷️  RIM_RUNNER | vs_NEUTRAL
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 VJ Edgecombe | OVER 14.5 PTS
+      Proj: 20.1 | EV: +58.6% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [TWO_WAY_WING] [🔥 CORRELATED SGP]
+
+🏀 Denver Nuggets @ Dallas Mavericks
+   💎 Peyton Watson | UNDER 19.5 PTS
+      Proj: 12.1 | EV: +107.6% | 1.5u
+      🏷️  GENERALIST | vs_PERIMETER
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 Peyton Watson | UNDER 6.5 REB
+      Proj: 4.0 | EV: +86.2% | 1.5u
+      🏷️  GENERALIST | vs_PERIMETER
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 P.J. Washington | UNDER 14.5 PTS
+      Proj: 10.6 | EV: +67.4% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+
+🏀 Memphis Grizzlies @ Orlando Magic
+   💎 Noah Penda | OVER 7.5 PTS
+      Proj: 10.3 | EV: +56.6% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Anthony Black | OVER 4.5 AST
+      Proj: 6.3 | EV: +56.1% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [TWO_WAY_WING] [🔥 CORRELATED SGP]
+   💎 Cam Spencer | UNDER 2.5 3PM
+      Proj: 1.9 | EV: +39.5% | 1.5u
+      🏷️  FACILITATOR | vs_PAINT_PACK | CORRELATED_SGP
+      📝 [FACILITATOR] [🔥 CORRELATED SGP]
+
+🏀 New York Knicks @ Sacramento Kings
+   💎 Jordan Clarkson | OVER 1.5 3PM
+      Proj: 1.69 | EV: +88.5% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL | CORRELATED_SGP
+      📝 [GENERALIST] | 📉 BLOWOUT TAX (-6% Volume) [🔥 CORRELATED SGP]
+   💎 Jordan Clarkson | OVER 7.5 PTS
+      Proj: 10.62 | EV: +71.7% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [GENERALIST] | 📉 BLOWOUT TAX (-6% Volume) [🔥 CORRELATED SGP]
+   💎 Karl-Anthony Towns | UNDER 2.5 AST
+      Proj: 1.88 | EV: +70.8% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard | 📉 BLOWOUT TAX (-6% Volume) [🔥 CORRELATED SGP]
+
+🏀 Oklahoma City Thunder @ Houston Rockets
+   💎 Shai Gilgeous-Alexander | UNDER 30.5 PTS
+      Proj: 25.3 | EV: +52.0% | 1.5u
+      🏷️  GENERALIST | vs_BLITZ
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 Chet Holmgren | UNDER 16.5 PTS
+      Proj: 13.9 | EV: +37.5% | 1.5u
+      🏷️  GENERALIST | vs_BLITZ
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Chet Holmgren | UNDER 1.5 3PM
+      Proj: 1.2 | EV: +36.5% | 1.5u
+      🏷️  GENERALIST | vs_BLITZ | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+
+🏀 Toronto Raptors @ Indiana Pacers
+   💎 Brandon Ingram | UNDER 1.5 3PM
+      Proj: 1.0 | EV: +98.8% | 1.5u
+      🏷️  GENERALIST | vs_HACKERS | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Collin Murray-Boyles | UNDER 0.5 3PM
+      Proj: 0.2 | EV: +82.9% | 1.5u
+      🏷️  RIM_RUNNER | vs_HACKERS | CORRELATED_SGP
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+   💎 Brandon Ingram | UNDER 25.5 PTS
+      Proj: 15.3 | EV: +80.6% | 1.5u
+      🏷️  GENERALIST | vs_HACKERS
+      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+
+🏀 Utah Jazz @ Chicago Bulls
+   💎 Keyonte George | UNDER 26.5 PTS
+      Proj: 19.47 | EV: +74.8% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 Coby White | UNDER 19.5 PTS
+      Proj: 15.55 | EV: +72.1% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+   💎 Keyonte George | UNDER 3.5 3PM
+      Proj: 2.06 | EV: +64.5% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL | CORRELATED_SGP
+      📝 [GENERALIST] [🔥 CORRELATED SGP]
+
+🏀 Washington Wizards @ Los Angeles Clippers
+   💎 John Collins | UNDER 0.5 AST
+      Proj: 0.37 | EV: +101.4% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [GENERALIST] | Hustle Guard | 📉 BLOWOUT TAX (-8% Volume) [🔥 CORRELATED SGP]
+   💎 John Collins | UNDER 15.5 PTS
+      Proj: 9.82 | EV: +90.3% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [GENERALIST] | Hustle Guard | 📉 BLOWOUT TAX (-8% Volume) [🔥 CORRELATED SGP]
+   💎 Kyshawn George | OVER 4.5 AST
+      Proj: 5.6 | EV: +69.1% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL
+      📝 [GENERALIST] | 📉 BLOWOUT TAX (-8% Volume) [🔥 CORRELATED SGP]

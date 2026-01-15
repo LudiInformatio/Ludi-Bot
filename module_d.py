@@ -211,9 +211,10 @@ class LudiYak:
         grouped = {}
         
         for res in sim_results:
-            key = f"{res['PLAYER_NAME']}_{res['stat']}"
+            # V2.0 Fix: Group by Player Name only (Sim results are full profiles, not single stats)
+            key = res['PLAYER_NAME']
             if key not in grouped: grouped[key] = {}
-            grouped[key][res['scenario']] = res
+            grouped[key][res['SCENARIO']] = res
 
         for key, scenarios in grouped.items():
             base_res = scenarios.get("BASE")
