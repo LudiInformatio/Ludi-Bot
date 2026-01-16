@@ -16,8 +16,8 @@ class Gatekeeper:
     def __init__(self):
         print("========================================")
         print(f"LUDI INFORMATIO: MODULE A (GATEKEEPER) ONLINE")
-        print(f"   >>> PIPELINE: V9.3 (NC LEGAL + REFS)")
-        print(f"   >>> TARGETS: FD/DK/MGM/CZR/365 | SHARPS | DFS")
+        print(f"   >>> PIPELINE: V9.4 (4-TIER LINE SHOPPING)")
+        print(f"   >>> TIERS: NC_LEGAL | SHARP | DFS | SOCIAL")
         print("========================================")
 
         self.session = requests.Session()
@@ -193,7 +193,7 @@ class Gatekeeper:
             url = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{g_id}/odds'
             params = {
                 'api_key': config.ODDS_API_KEY,
-                'regions': 'us,us2,us_dfs', 
+                'regions': 'us,us2,us_dfs,us_ex',  # V9.4: Added us_ex for Novig/ProphetX
                 'markets': markets,
                 'oddsFormat': 'american'
             }
@@ -209,124 +209,137 @@ class Gatekeeper:
                     found_books = [b['title'] for b in data.get('bookmakers', [])]
                     print(f"      ↳ Found Books: {found_books}")
                     
+                    # --- V9.4: 4-TIER BOOK STRUCTURE ---
+                    # Tier 1: NC Legal (betting) | Tier 2: Sharp (CLV) | Tier 3: DFS | Tier 4: Social/Exchange
+                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet']
+                    sharps = ['Pinnacle', 'Bovada', 'BetOnline.ag']
+                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Dabble']
+                    social = ['Novig', 'ProphetX', 'Fliff']
+
+                    target_books = nc_legal + sharps + dfs + social
+                    priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars']  # For consensus line
+
+                    # Helper function for odds comparison
+                    def odds_value(odds):
+                        if odds is None: return 0
+                        if odds > 0: return 1 + (odds / 100)
+                        return 1 + (100 / abs(odds))
+
+                    # PHASE 1: Collect all lines and odds from all books
                     for book in data.get('bookmakers', []):
-                        
-                        # --- THE MASTER BOOK LIST ---
-                        nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet']
-                        sharps = ['Bovada', 'Pinnacle', 'BetOnline']
-                        dfs = ['PrizePicks', 'Underdog Fantasy', 'Dabble']
-                        
-                        target_books = nc_legal + sharps + dfs
-                        
-                        # PRIORITY: NC Legal first, then sharps, then DFS
-                        # Only capture line if we don't have one yet (avoids alt line overwrites)
-                        priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365']
-                        if book['title'] in target_books:
-                            if book['title'] == 'FanDuel' and g_id == target_ids[0]:
-                                print(f"         [DEBUG] FanDuel Markets: {[m['key'] for m in book['markets']]}")
-                                
-                            for market in book['markets']:
-                                key = market['key']
-                                for outcome in market['outcomes']:
-                                    player = outcome['description']
-                                    line = outcome.get('point', 'N/A')
-                                    price = outcome.get('price', -110)  # Capture odds!
-                                    side = outcome.get('name', '').lower()  # 'Over' or 'Under'
+                        book_name = book['title']
+                        if book_name not in target_books:
+                            continue
 
-                                    if player not in self.games[g_id]['props']:
-                                        self.games[g_id]['props'][player] = {}
+                        is_priority = book_name in priority_books
 
-                                    short_key = key.replace('player_', '')
+                        if book_name == 'FanDuel' and g_id == target_ids[0]:
+                            print(f"         [DEBUG] FanDuel Markets: {[m['key'] for m in book['markets']]}")
 
-                                    # --- LINE SHOPPING LOGIC V2.1 (Main Line Only) ---
-                                    # Only compare odds at the SAME line (ignore alt lines)
-                                    
-                                    if player not in self.games[g_id]['props']:
-                                        self.games[g_id]['props'][player] = {}
-                                    
-                                    # Determine if this is a priority book (establishes main line)
-                                    priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars']
-                                    book_name = book['title']
-                                    is_priority = book_name in priority_books
-                                    
-                                    if short_key not in self.games[g_id]['props'][player]:
-                                        # Initialize - first priority book sets the main line
-                                        if is_priority:
-                                            self.games[g_id]['props'][player][short_key] = {
-                                                'line': line,  # Main line from priority book
-                                                'odds_over': None,
-                                                'odds_under': None,
-                                                'book_over': None,
-                                                'book_under': None,
-                                                '_all_books': {}
-                                            }
-                                        else:
-                                            continue  # Skip non-priority books until main line is set
-                                    
-                                    prop = self.games[g_id]['props'][player][short_key]
-                                    main_line = prop['line']
-                                    
-                                    # CRITICAL: Only capture odds if this book offers the SAME line
-                                    # This filters out alt lines (e.g., 24.5 vs 25.5)
-                                    if line != main_line:
-                                        continue  # Skip alt lines
-                                    
-                                    # Store this book's odds for the main line
-                                    if book_name not in prop['_all_books']:
-                                        prop['_all_books'][book_name] = {'over': None, 'under': None}
-                                    
-                                    if 'over' in side:
-                                        prop['_all_books'][book_name]['over'] = price
-                                    elif 'under' in side:
-                                        prop['_all_books'][book_name]['under'] = price
-                                    
-                                    # Compare Sharp vs NC-Legal for BEST odds at MAIN line
-                                    def odds_value(odds):
-                                        if odds is None: return 0
-                                        if odds > 0: return 1 + (odds / 100)
-                                        else: return 1 + (100 / abs(odds))
-                                    
-                                    sharp_books = ['Bovada', 'Pinnacle', 'BetOnline.ag']
-                                    nc_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'Hard Rock Bet']
-                                    
-                                    # Find best Sharp
-                                    best_sharp_over = {'book': None, 'odds': None, 'value': 0}
-                                    best_sharp_under = {'book': None, 'odds': None, 'value': 0}
-                                    for sb in sharp_books:
-                                        if sb in prop['_all_books']:
-                                            o = prop['_all_books'][sb].get('over')
-                                            u = prop['_all_books'][sb].get('under')
-                                            if o and odds_value(o) > best_sharp_over['value']:
-                                                best_sharp_over = {'book': sb, 'odds': o, 'value': odds_value(o)}
-                                            if u and odds_value(u) > best_sharp_under['value']:
-                                                best_sharp_under = {'book': sb, 'odds': u, 'value': odds_value(u)}
-                                    
-                                    # Find best NC Legal
-                                    best_nc_over = {'book': None, 'odds': None, 'value': 0}
-                                    best_nc_under = {'book': None, 'odds': None, 'value': 0}
-                                    for ncb in nc_books:
-                                        if ncb in prop['_all_books']:
-                                            o = prop['_all_books'][ncb].get('over')
-                                            u = prop['_all_books'][ncb].get('under')
-                                            if o and odds_value(o) > best_nc_over['value']:
-                                                best_nc_over = {'book': ncb, 'odds': o, 'value': odds_value(o)}
-                                            if u and odds_value(u) > best_nc_under['value']:
-                                                best_nc_under = {'book': ncb, 'odds': u, 'value': odds_value(u)}
-                                    
-                                    # Pick BEST (Sharp wins if better, else NC Legal)
-                                    if best_sharp_over['value'] > best_nc_over['value']:
-                                        prop['odds_over'] = best_sharp_over['odds']
-                                        prop['book_over'] = best_sharp_over['book']
-                                    elif best_nc_over['odds']:
-                                        prop['odds_over'] = best_nc_over['odds']
-                                        prop['book_over'] = best_nc_over['book']
-                                    
-                                    if best_sharp_under['value'] > best_nc_under['value']:
-                                        prop['odds_under'] = best_sharp_under['odds']
-                                        prop['book_under'] = best_sharp_under['book']
-                                    elif best_nc_under['odds']:
-                                        prop['odds_under'] = best_nc_under['odds']
-                                        prop['book_under'] = best_nc_under['book']
+                        for market in book['markets']:
+                            key = market['key']
+                            short_key = key.replace('player_', '')
+
+                            for outcome in market['outcomes']:
+                                player = outcome['description']
+                                line = outcome.get('point', 'N/A')
+                                price = outcome.get('price', -110)
+                                side = outcome.get('name', '').lower()
+
+                                if not isinstance(line, (int, float)):
+                                    continue
+
+                                if player not in self.games[g_id]['props']:
+                                    self.games[g_id]['props'][player] = {}
+
+                                if short_key not in self.games[g_id]['props'][player]:
+                                    self.games[g_id]['props'][player][short_key] = {
+                                        '_line_votes': {},  # {27.5: 4, 26.5: 1}
+                                        '_all_books': {},   # {book: {line: {over, under}}}
+                                        'line': None,
+                                        # Tier 1: NC Legal (FOR BETTING)
+                                        'odds_over': None, 'book_over': None,
+                                        'odds_under': None, 'book_under': None,
+                                        # Tier 2: Sharp (FOR CLV CONTEXT)
+                                        'sharp_odds_over': None, 'sharp_book_over': None,
+                                        'sharp_odds_under': None, 'sharp_book_under': None,
+                                        # Tier 3: DFS
+                                        'dfs_odds_over': None, 'dfs_book_over': None,
+                                        # Tier 4: Social/Exchange (zero-vig benchmark)
+                                        'novig_odds_over': None, 'novig_book_over': None,
+                                    }
+
+                                prop = self.games[g_id]['props'][player][short_key]
+
+                                # Record line vote (priority books vote more)
+                                vote_weight = 2 if is_priority else 1
+                                if line not in prop['_line_votes']:
+                                    prop['_line_votes'][line] = 0
+                                prop['_line_votes'][line] += vote_weight
+
+                                # Store odds by book and line
+                                if book_name not in prop['_all_books']:
+                                    prop['_all_books'][book_name] = {}
+                                if line not in prop['_all_books'][book_name]:
+                                    prop['_all_books'][book_name][line] = {'over': None, 'under': None}
+
+                                if 'over' in side:
+                                    prop['_all_books'][book_name][line]['over'] = price
+                                elif 'under' in side:
+                                    prop['_all_books'][book_name][line]['under'] = price
+
+                    # PHASE 2: Determine consensus line and assign tiered odds
+                    for player, stats in self.games[g_id]['props'].items():
+                        for stat_key, prop in stats.items():
+                            if not prop.get('_line_votes'):
+                                continue
+
+                            # Find consensus line (most votes)
+                            main_line = max(prop['_line_votes'].keys(), key=lambda x: prop['_line_votes'][x])
+                            prop['line'] = main_line
+
+                            # Find best NC Legal at main line (FOR BETTING)
+                            for book in nc_legal:
+                                if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
+                                    odds = prop['_all_books'][book][main_line]
+                                    if odds.get('over') and odds_value(odds['over']) > odds_value(prop.get('odds_over')):
+                                        prop['odds_over'] = odds['over']
+                                        prop['book_over'] = book
+                                    if odds.get('under') and odds_value(odds['under']) > odds_value(prop.get('odds_under')):
+                                        prop['odds_under'] = odds['under']
+                                        prop['book_under'] = book
+
+                            # Find best Sharp at main line (FOR CLV CONTEXT)
+                            for book in sharps:
+                                if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
+                                    odds = prop['_all_books'][book][main_line]
+                                    if odds.get('over') and odds_value(odds['over']) > odds_value(prop.get('sharp_odds_over')):
+                                        prop['sharp_odds_over'] = odds['over']
+                                        prop['sharp_book_over'] = book
+                                    if odds.get('under') and odds_value(odds['under']) > odds_value(prop.get('sharp_odds_under')):
+                                        prop['sharp_odds_under'] = odds['under']
+                                        prop['sharp_book_under'] = book
+
+                            # Find DFS odds at main line
+                            for book in dfs:
+                                if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
+                                    odds = prop['_all_books'][book][main_line]
+                                    if odds.get('over'):
+                                        prop['dfs_odds_over'] = odds['over']
+                                        prop['dfs_book_over'] = book
+                                        break
+
+                            # Find Social/Exchange odds (zero-vig benchmark)
+                            for book in social:
+                                if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
+                                    odds = prop['_all_books'][book][main_line]
+                                    if odds.get('over'):
+                                        prop['novig_odds_over'] = odds['over']
+                                        prop['novig_book_over'] = book
+                                        break
+
+                            # Clean up internal tracking (optional - keep for debugging)
+                            # del prop['_line_votes']
                     
                     # Call BDL Backup
                     self.fetch_props_balldontlie(g_id)

@@ -95,12 +95,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 15, 2026 @ 09:30 PM EST
-- **Phase**: Series G (Referee Intelligence) - Phase 5 Complete / Audit Refinement
-- **Active Task**: Documentation Sync & Hardening (Audit Remediation)
-- **Last Updated**: Jan 15, 2026 - Module G Phase 5 Deployed (Playwright Scraper)
+- **Date**: Jan 16, 2026 @ 10:30 AM EST
+- **Phase**: Module A/F Upgrade - Line Shopping V9.4 + EV Calibration
+- **Active Task**: Testing pipeline after line shopping and EV fixes
+- **Last Updated**: Jan 16, 2026 - Module A V9.4 + Module F V4.6 Deployed
 
-**🛠️ Engineering Log (Jan 15, 2026 - 09:30 PM EST):**
+**🛠️ Engineering Log (Jan 16, 2026 - 10:30 AM EST):**
+- **Module A (Gatekeeper) V9.4:**
+  - **4-Tier Book Structure:** NC Legal (betting) | Sharp (CLV) | DFS | Social/Exchange
+  - **Consensus Line Detection:** Weighted voting across books to find main line
+  - **NC Legal Always for Betting:** `odds_over`/`book_over` now ONLY from FD/DK/MGM/CZR/365/HRB
+  - **Sharp Books for CLV:** `sharp_odds_over`/`sharp_book_over` stored separately
+  - **Social/Exchange Added:** Novig, ProphetX, Fliff via `us_ex` API region
+  - **API Region Updated:** `'regions': 'us,us2,us_dfs,us_ex'`
+- **Module F (Alchemist) V4.6:**
+  - **Win Prob Clamp Removed:** Now uses real model probability (was capped at 0.51-0.75)
+  - **EV Sanity Flags:** >25% EV flagged as "⚠️ VERIFY LINE", >15% as "📊 EXCEPTIONAL"
+  - **Industry Standard EV:** 5-15% is typical for sharp bets
+- **Files Modified:**
+  - `module_a.py` - Lines 15-21, 196, 212-342 (complete line shopping rewrite)
+  - `module_f.py` - Lines 22, 119-140, 178-180 (EV calibration)
+
+**📊 Previous Session (Jan 15, 2026 - 09:30 PM EST):**
 - **Module G (Referee Intelligence) Status:**
   - **Phase 4 (Bias Engine):** ✅ COMPLETE. Hybrid seeding (78 refs) + Star Bias tracking live.
   - **Phase 5 (Betting Intel):** ✅ COMPLETE. Playwright scraper (`scripts/sync_external_intelligence.py`) harvesting Covers/OddsShark data weekly.
@@ -195,22 +211,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-### Week 5: 🔄 IN PROGRESS - Module H (Historian Backfill)
-**Status:** Planning
-**Priority:** MEDIUM
+### Week 5: ✅ COMPLETE - Ghost Protocol (Historical Backfill Engine)
+**Status:** Ready for Launch (Jan 16, 2026)
+**Priority:** HIGH
 
-#### Implementation Checklist (Week 4-6 Status)
+#### Phase 6: Ghost Protocol Backfill Engine (Jan 15-16)
+**Challenge:** NBA API blocking persistent, parallel sync stalled at 100% timeout rate.
+**Solution:** Pivoted to browser-based scraping using Playwright ("Ghost Protocol").
+**Architecture:**
+- **Script:** `scripts/sync_browser_backfill.py` (v2.1)
+- **Method:** Manifest-driven scraping with anti-detection (headless=False, human emulation)
+- **Data Sources:** Drives, Catch & Shoot, Pull-Ups, Speed/Distance, Advanced, Clutch
+- **Database:** Expanded `player_game_tracking`, created `player_game_advanced` and `player_clutch_stats`
+- **ID Fix:** Extracts official NBA Player IDs from HTML hrefs for Module C/E compatibility
 
-- [x] Create database tables (`referee_profiles`, `referee_daily_stats`)
-- [x] Create `scripts/scrape_referee_roster.py`
-- [x] Refactor `module_g.py` (V3.0 DB-driven)
-- [x] Update `module_c.py` (Whistle Impact logic)
-- [x] Update `main.py` (Pass ref_data dict)
-- [x] Update hardcoded list with 12 new researched refs (51 total)
-- [x] Create `scripts/learn_daily_trends.py` (Phase 2)
-- [x] Create `utils/referee_briefing.py` (Daily Whistle Watch)
-- [x] Create `scripts/generate_morning_brief.py` (Integrated Brief)
-- [x] Create `scripts/generate_weekly_zebra_report.py` (Weekly Leaderboard)
+#### Implementation Checklist (Week 5)
+- [x] Database schema expansion (`player_game_tracking`, `player_game_advanced`, `player_clutch_stats`)
+- [x] Create `scripts/sync_browser_backfill.py` with DATA_MANIFEST architecture
+- [x] Implement anti-bot measures (Playwright config, pagination handling)
+- [x] Fix ID compatibility (extract numeric IDs from hrefs vs string slugs)
+- [x] Verify extraction logic via browser testing
+- [x] Update `CLAUDE.md` with Ghost Protocol architecture
+- [ ] Execute Phase 1 Backfill (Nov 14, 2025 → Present)
 
 ---
 
@@ -655,7 +677,11 @@ The system uses a **sequential pipeline** where data flows through 9 specialized
 
 Supporting Modules:
   MODULE G: Zebras (referee pace impact, scraped daily)
-  MODULE H: Historian (database sync, historical backfill)
+  MODULE H: Ghost Protocol (browser-based backfill engine, v2.1)
+    - Playwright automation bypassing stats.nba.com WAF
+    - Extracts Tracking (Drives, C&S, Pull-Ups, Speed), Advanced, Clutch stats
+    - Hydrates: player_game_tracking, player_game_advanced, player_clutch_stats
+    - ID-compatible: Extracts official NBA Player IDs from HTML
   MODULE X: Scenario Builder (injury "what-if" toggles)
   MODULE I: Aggregator (future unified data layer - placeholder)
 ```

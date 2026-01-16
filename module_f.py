@@ -19,7 +19,7 @@ from utils.time_utils import get_est_today, format_est_date
 class LudiReporter:
     def __init__(self):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE F (V4.5) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE F (V4.6) ONLINE")
         print(f"   >>> DETERMINISTIC REPORTING | NO SPECULATION")
         print(f"   >>> BET LOGGING ENABLED")
         print(f"{'='*40}")
@@ -116,8 +116,8 @@ class LudiReporter:
 
                         # --- 2. THE SHARP FILTER (5% Minimum Edge) ---
                         if abs(edge) >= 5.0:
-                            # Use our model probability directly (already calculated)
-                            win_prob = min(max(model_prob, 0.51), 0.75)
+                            # V4.6: Use real model probability (removed 0.51-0.75 clamp)
+                            win_prob = model_prob
 
                             # Calculate Decimal Odds for accurate EV
                             bet_odds = odds_over if bet_direction == 'over' else odds_under
@@ -128,7 +128,14 @@ class LudiReporter:
 
                             # EV Calculation using actual odds
                             ev = round(((win_prob * decimal_odds) - 1) * 100, 2)
-                            
+
+                            # V4.6: Sanity check - flag unrealistic EV
+                            ev_flag = ""
+                            if ev > 25:
+                                ev_flag = "⚠️ VERIFY LINE"
+                            elif ev > 15:
+                                ev_flag = "📊 EXCEPTIONAL"
+
                             # Bankroll Unit Sizing (0.25u to 1.5u)
                             units = min(max(round(ev / 8.0, 2), 0.25), 1.5) if ev >= 1.0 else 0
 
@@ -167,6 +174,10 @@ class LudiReporter:
                             # F) Yak Decision Note (V2.0 - Explicit Injury Confirmation)
                             if p.get('decision_note'):
                                 note_elements.append(p['decision_note'])
+
+                            # G) EV Sanity Flag (V4.6)
+                            if ev_flag:
+                                note_elements.append(ev_flag)
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
