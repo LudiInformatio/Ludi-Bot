@@ -281,6 +281,12 @@ class LudiHistorian:
                 avg_technical_rate REAL DEFAULT 0.0,
                 -- Classification
                 style TEXT DEFAULT 'NEUTRAL',  -- LENIENT, NEUTRAL, STRICT
+                -- Betting Intelligence (Phase 5 - Jan 15, 2026)
+                ou_record TEXT,             -- e.g. "19-9"
+                ou_percentage REAL,         -- e.g. 0.679 (68% Over)
+                avg_total REAL,             -- Avg game total points
+                home_ats_record TEXT,       -- e.g. "18-6"
+                home_ats_bias REAL,         -- e.g. 0.75 (75% Home Cover)
                 -- Metadata
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 data_source TEXT DEFAULT 'basketball-reference'
