@@ -952,45 +952,50 @@ if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
 # Measure if you beat sharp market (most efficient pricing)
 ```
 
-### 2025-26 NBA Season Examples
+### 2025-26 NBA Season Examples (ACTIVE PLAYERS)
 
-**Example 1: Jan 15, 2026 - Jayson Tatum vs BKN**
+**Example 1: Jan 15, 2026 (9:26 PM EST) - Luka Doncic Points**
 ```
-Player: Jayson Tatum Points
-Line: 27.5 (main line from FanDuel)
+Player: Luka Doncic Points (ACTIVE - playing tonight)
+Line: 28.5 (main line from FanDuel)
 
 NC LEGAL BOOKS (Can Bet):
-FanDuel:    27.5 @ -108  (1.926 decimal) ✅ BEST
-DraftKings: 27.5 @ -115  (1.870 decimal)
-BetMGM:     27.5 @ -110  (1.909 decimal)
+FanDuel:    28.5 @ -108  (1.926 decimal) ✅ BEST
+DraftKings: 28.5 @ -115  (1.870 decimal)
+BetMGM:     28.5 @ -110  (1.909 decimal)
+Caesars:    28.5 @ -112  (1.893 decimal)
 
 SHARP BOOKS (CLV Benchmark):
-Pinnacle:   27.5 @ -105  (1.952 decimal) - Close line: -120
-Bovada:     27.5 @ -107  (1.935 decimal) - Close line: -118
+Pinnacle:   28.5 @ -105  (1.952 decimal) - Close line target: -120
+Bovada:     28.5 @ -107  (1.935 decimal) - Close line target: -118
 
 DECISION:
-- Bet: FanDuel -108 (best NC Legal)
-- CLV Target: Beat Pinnacle -120 closing
-- Result: If Pinnacle closes -120, user's -108 bet = +12 cents CLV
+- Bet: FanDuel -108 (best NC Legal available)
+- Line shopping edge: 18 cents vs DraftKings (-115)
+- CLV Target: Beat Pinnacle's -120 closing line
+- Result: If Pinnacle closes -120, user's -108 bet = +12 cents CLV (beat efficient market)
 ```
 
-**Example 2: Jan 15, 2026 - Luka Doncic vs ORL**
+**Example 2: Jan 15, 2026 (9:26 PM EST) - Donovan Mitchell Assists**
 ```
-Player: Luka Doncic Assists
-Line: 8.5 (main line from DraftKings)
+Player: Donovan Mitchell Assists (ACTIVE - playing tonight)
+Line: 7.5 (main line from DraftKings)
 
-NC LEGAL BOOKS:
-FanDuel:    8.5 @ -118  (1.847 decimal)
-DraftKings: 8.5 @ -110  (1.909 decimal) ✅ BEST
-BetMGM:     8.5 @ -115  (1.870 decimal)
+NC LEGAL BOOKS (Can Bet):
+FanDuel:    7.5 @ -118  (1.847 decimal)
+DraftKings: 7.5 @ -110  (1.909 decimal) ✅ BEST
+BetMGM:     7.5 @ -115  (1.870 decimal)
+bet365:     7.5 @ -112  (1.893 decimal)
 
-SHARP BOOKS (CLV):
-Pinnacle:   8.5 @ -108  (1.926 decimal) - Close: -125
+SHARP BOOKS (CLV Benchmark):
+Pinnacle:   7.5 @ -108  (1.926 decimal) - Close line target: -125
+Bovada:     7.5 @ -109  (1.917 decimal) - Close line target: -124
 
 DECISION:
 - Bet: DraftKings -110 (best NC Legal)
-- DK's -110 beat FD's -118 by 8 cents (8 cents EV on line alone)
-- CLV upside: If Pinnacle closes -125, DK beat closing by 15 cents
+- Line shopping edge: 8 cents vs FanDuel (-118)
+- CLV Target: Beat Pinnacle's -125 closing line
+- Result: If Pinnacle closes -125, DK's -110 beats closing by 15 cents (strong validation)
 ```
 
 ### EV Calculation & Devigging (Module F)
@@ -1006,24 +1011,28 @@ DECISION:
 4. **Filter:** Only recommend bets with ≥5% edge (sharp market standard)
 5. **Size units:** Use 12.5% fractional Kelly (conservative vs 25-50% recommended)
 
-**Example:**
+**Example (Active Player - 2025-26 Season):**
 ```
-Tatum Over 27.5 @ FanDuel -108
+Doncic Over 28.5 @ FanDuel -108 (Jan 15, 2026)
 
 Devigging:
 - Raw implied (FD -108): 51.95%
 - Devigged fair prob: 50.8% (removes 1.15% vig)
 
-Model says: 62% (from simulation)
+Model says: 62% (from 5,000 Poisson simulations)
 
 Edge calculation:
-- Raw edge: 62% - 51.95% = 10.05%
-- TRUE edge: (62% - 50.8%) / 50.8% = 22.0%
+- Raw edge: 62% - 51.95% = 10.05% (understated!)
+- TRUE edge: (62% - 50.8%) / 50.8% = 22.0% (real value revealed)
 
 Unit sizing:
 - EV = 0.62 × 1.926 - 1 = 0.195 = 19.5%
 - Units = 19.5% / 8 = 2.44u
-- Capped at 1.5u (conservative Kelly)
+- Capped at 1.5u (conservative Kelly - avoid ruin)
+
+Conclusion:
+- Devigging revealed 12% more edge than raw odds (22% vs 10%)
+- This is why devigging is CRITICAL for accurate edge calculation
 ```
 
 ### CLV Tracking System (NEW - Added Jan 15, 2026)
@@ -1062,17 +1071,20 @@ ALTER TABLE bet_recommendations ADD COLUMN closing_time TEXT;
 - Optional: Streamlit dashboard section showing CLV trends
 - Metric: Average CLV over last 30 days (target: +5 cents or higher)
 
-**CLV Example (2025-26 Season):**
+**CLV Example (Active Player - 2025-26 Season):**
 ```
-Bet: Tatum Over 27.5 @ FanDuel -108 (Jan 15, 2026, 2:00 PM)
-Closing: Pinnacle Over 27.5 @ -120 (Jan 15, 2026, 7:55 PM)
+Bet: Doncic Over 28.5 @ FanDuel -108 (Jan 15, 2026, 2:00 PM)
+Closing: Pinnacle Over 28.5 @ -120 (Jan 15, 2026, 7:55 PM - 5 min before tipoff)
 
 CLV Analysis:
 - Your FD odds: -108 = 1.926 decimal
 - Pinnacle closing: -120 = 1.833 decimal
-- CLV: +9.3 cents (you beat market)
+- CLV: +9.3 cents (you beat sharp market)
 
-Interpretation: Market moved against your side, proving you got better value
+Interpretation:
+- Market moved 12 cents against your position
+- Proves you found value before sharp money recognized it
+- This is the signal that your model is SHARP
 ```
 
 ### Best Practices (Research-Backed)
