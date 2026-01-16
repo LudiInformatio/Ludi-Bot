@@ -29,8 +29,12 @@ FONT_PATH_SANS_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 FONT_PATH_SERIF = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
 
 # Resolve absolute path to project root for assets
+import sqlite3
+
+# Resolve absolute path to project root for assets
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGO_IMAGE_PATH = os.path.join(PROJECT_ROOT, "ludi_header_exact_v1.png")
+DB_PATH = os.path.join(PROJECT_ROOT, "ludi.db")
 
 # Font Sizes
 FONT_SIZE_TITLE = 60
@@ -38,6 +42,7 @@ FONT_SIZE_HEADER = 34
 FONT_SIZE_GAME_TITLE = 32
 FONT_SIZE_BODY = 26
 FONT_SIZE_CONTEXT = 22
+FONT_SIZE_FOOTER = 24
 
 # Layout
 PADDING_X = 40
@@ -61,6 +66,27 @@ def make_bg_transparent(img, tolerance=30):
             newData.append(item)
     img.putdata(newData)
     return img
+
+def get_notable_refs():
+    """Fetch top strict and lenient referees for the footer."""
+    if not os.path.exists(DB_PATH):
+        return None
+        
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        c.execute("SELECT referee_name, avg_fouls_per_game FROM referee_profiles WHERE style='STRICT' ORDER BY avg_fouls_per_game DESC LIMIT 3")
+        strict = c.fetchall()
+        
+        c.execute("SELECT referee_name, avg_fouls_per_game FROM referee_profiles WHERE style='LENIENT' ORDER BY avg_fouls_per_game ASC LIMIT 3")
+        lenient = c.fetchall()
+        
+        conn.close()
+        return {"strict": strict, "lenient": lenient}
+    except Exception as e:
+        print(f"⚠️  Database error fetching refs: {e}")
+        return None
 
 def transform_props_to_briefing_data(props_list: list) -> list:
     """
@@ -146,8 +172,9 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         }]
     
     # Calculate dynamic height
-    total_lines = sum(len(g["lines"]) for g in briefing_data) + len(briefing_data) * 2
-    calculated_height = max(800, 300 + total_lines * 40)
+    # Base height + ref footer padding
+    content_lines = sum(len(g["lines"]) for g in briefing_data) + len(briefing_data) * 2
+    calculated_height = max(900, 350 + content_lines * 45 + 200) # Extra 200 for ref footer
     
     img = Image.new('RGB', (WIDTH, calculated_height), color=BACKGROUND_COLOR)
     draw = ImageDraw.Draw(img)
@@ -158,6 +185,8 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         font_header = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_HEADER)
         font_game_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_GAME_TITLE)
         font_body = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_BODY)
+        font_footer_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_FOOTER)
+        font_footer_reg = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_FOOTER)
     except IOError:
         print("Error: Font files not found.")
         return None
@@ -209,6 +238,34 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         current_y += SECTION_SPACING // 2
         draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(230,230,230), width=1)
         current_y += SECTION_SPACING
+        
+    # === WHISTLE WATCH FOOTER ===
+    current_y += SECTION_SPACING
+    draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(0,0,0), width=3) # Thicker divider
+    current_y += SECTION_SPACING
+    
+    pm.text((PADDING_X, current_y), "📢 LUDI WHISTLE WATCH", font=font_footer_bold, fill=COLOR_NAVY)
+    current_y += FONT_SIZE_FOOTER + LINE_SPACING
+    
+    refs = get_notable_refs()
+    if refs:
+        # Strict Column
+        col1_x = PADDING_X
+        pm.text((col1_x, current_y), "🔥 STRICT (High Fouls)", font=font_footer_bold, fill=COLOR_RED)
+        y_temp = current_y + FONT_SIZE_FOOTER + 5
+        for r in refs['strict']:
+            pm.text((col1_x, y_temp), f"{r[0]} ({r[1]} PF/G)", font=font_footer_reg, fill=COLOR_NAVY)
+            y_temp += FONT_SIZE_FOOTER + 5
+            
+        # Lenient Column
+        col2_x = WIDTH // 2 + PADDING_X
+        pm.text((col2_x, current_y), "❄️ LENIENT (Let 'em Play)", font=font_footer_bold, fill=COLOR_TEAL)
+        y_temp = current_y + FONT_SIZE_FOOTER + 5
+        for r in refs['lenient']:
+            pm.text((col2_x, y_temp), f"{r[0]} ({r[1]} PF/G)", font=font_footer_reg, fill=COLOR_NAVY)
+            y_temp += FONT_SIZE_FOOTER + 5
+    else:
+        pm.text((PADDING_X, current_y + 10), "No referee data available.", font=font_footer_reg, fill=COLOR_NAVY)
 
     output_path = os.path.join(PROJECT_ROOT, "ludi_generated_briefing.png")
     img.save(output_path)

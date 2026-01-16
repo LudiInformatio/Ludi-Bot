@@ -163,77 +163,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-### Week 4: 🔄 IN PROGRESS - Module G (Referee Intelligence) Upgrade
-**Date:** January 15, 2026  
-**Status:** Planning → Implementation  
-**Priority:** HIGH (System currently operating at ~20% referee coverage)
+### Week 4: ✅ COMPLETE - Module G (Referee Intelligence) Upgrade
+**Date:** January 15, 2026
+**Status:** ✅ COMPLETE
+**Priority:** LOW (Maintenance)
 
 ---
 
 #### Executive Summary
 
-**Current State:**
-- **Refs in Database:** 13 (hardcoded in `module_g.py`)
-- **Active NBA Refs:** ~74 officials
-- **Coverage:** 17.6% (13/74)
-- **Impact Type:** Pace only (missing FTA/Foul bias)
-- **Current Outcome:** 80%+ of games default to neutral (1.0x) referee impact
-
-**Target State:**
-- **Refs in Database:** 74+ (full roster)
-- **Coverage:** 100%
-- **Impact Types:** Pace + Whistle (FTA) + Ejection Risk
-- **Data Sources:** Basketball-Reference (weekly) + NBAStuffer (daily) + Covers.com (validation)
+**Achievement:**
+- **Refs in Database:** 78 (Full Roster) with accurate 2025-26 Season Stats
+- **Coverage:** 100% (Up from 17.6%)
+- **Impact Types:** Pace + Whistle (FTA) + Ejection Risk + Star Bias
+- **Data Sources:** Basketball-Reference (Seeded) + NBAStuffer (Daily Trend) + Box Scores (Star Bias)
 
 ---
 
-#### Phase 1: Data Pipeline Expansion (✅ Week 4 COMPLETE)
-
-##### 1.1 Database Schema Updates (✅ Done)
+#### Phase 1: Data Pipeline Expansion (✅ COMPLETE)
 **New Table: `referee_profiles`** (Created Jan 15)
 - Stores baseline stats: `avg_fouls_per_game`, `avg_pace_impact`, `whistle_impact` (calculated from fouls).
 
 **New Table: `referee_daily_stats`** (Created Jan 15)
 - Stores rolling trends and "hot whistle" flags.
 
-##### 1.2 Scraper Scripts (✅ Done)
-**A. `scripts/scrape_referee_roster.py`**
-- Fallback logic: BBR → NBAStuffer → Hardcoded (Researched 12 new refs).
-- Output: 39+ referees now in database (up from 13).
-
-##### 1.3 Module Updates (✅ Done)
-**module_g.py**: V3.0 Engine. Returns: `{pace_impact, whistle_impact, crew, confidence}`.
-**module_c.py**: V3.2 Oracle. Applies `whistle_impact` to FTA projections.
-**main.py**: Passes full `ref_data` dictionary.
-
----
-
-#### Phase 2: Hybrid Learning System (✅ Week 5 COMPLETE)
-
-**Objective**: Build a self-improving database that learns unknown referee tendencies daily.
-**Strategy**: "Incremental Learning" + "Hierarchical Estimation"
+#### Phase 2: Hybrid Learning System (✅ COMPLETE)
 **Script**: `scripts/learn_daily_trends.py`
-- **Daily Learning**: Run post-game (2 AM EST recommended)
-- **Logic**: Exponential moving average (15% weight to new data)
-- **Crew Attribution**: Each ref gets 1/3 credit from game deviation
-- **Graduation**: Unknown refs auto-added when discovered
-- **CLI**: `python scripts/learn_daily_trends.py --date YYYY-MM-DD [--dry-run]`
+- **Logic**: Incremental updating of referee profiles based on nightly results.
 
----
-
-#### Phase 3: Reporting Suite (✅ Week 6 COMPLETE)
-
-**Objective**: Visualize referee impact clearly for the user.
-
+#### Phase 3: Reporting Suite (✅ COMPLETE)
 **Deliverables:**
-1.  **Daily Whistle Watch** (`utils/referee_briefing.py`): Pre-game card integrated into morning brief.
-2.  **Weekly Leaderboard** (`scripts/generate_weekly_zebra_report.py`): 
-    - Top 5 Strict / Lenient
-    - Rookie Watch (12 new refs)
-    - Betting implications
-3.  **Morning Brief Integration** (`scripts/generate_morning_brief.py`): Full slate + referee intelligence.
+1.  **Daily Whistle Watch** (`utils/referee_briefing.py`)
+2.  **Weekly Leaderboard** (`scripts/generate_weekly_zebra_report.py`)
+3.  **Visual Integration** (`utils/render_full_report.py` - Added Referee Footer)
+
+#### Phase 4: Advanced Bias Engine (✅ Verified)
+**Challenge:** `nba_api` restricted access to historical games.
+**Solution:** Built `scripts/seed_referees.py` using browser-extracted JSON from Basketball-Reference (Active Roster).
+**Forward Learning:** Created `scripts/analyze_star_bias.py` to track "Star Killer" trends daily.
+**Automation:** Created `scripts/ludi_cron_master.sh` to run the 3-step pipeline.
 
 ---
+
+### Week 5: 🔄 IN PROGRESS - Module H (Historian Backfill)
+**Status:** Planning
+**Priority:** MEDIUM
 
 #### Implementation Checklist (Week 4-6 Status)
 

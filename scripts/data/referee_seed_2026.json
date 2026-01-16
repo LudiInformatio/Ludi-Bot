@@ -1,0 +1,626 @@
+[
+    {
+        "name": "Agon Abazi",
+        "g": 2,
+        "pf": 41,
+        "pts": 237,
+        "home_pf": 19,
+        "visitor_pf": 22
+    },
+    {
+        "name": "Ray Acosta",
+        "g": 34,
+        "pf": 41.1,
+        "pts": 230.9,
+        "home_pf": 20.6,
+        "visitor_pf": 20.4
+    },
+    {
+        "name": "Brandon Adair",
+        "g": 20,
+        "pf": 40.3,
+        "pts": 233.6,
+        "home_pf": 20.1,
+        "visitor_pf": 20.2
+    },
+    {
+        "name": "Brent Barnaky",
+        "g": 28,
+        "pf": 41.7,
+        "pts": 228.3,
+        "home_pf": 20.8,
+        "visitor_pf": 20.9
+    },
+    {
+        "name": "Dannica Baroody",
+        "g": 20,
+        "pf": 39.6,
+        "pts": 231.7,
+        "home_pf": 19.2,
+        "visitor_pf": 20.4
+    },
+    {
+        "name": "Curtis Blair",
+        "g": 24,
+        "pf": 40,
+        "pts": 226.7,
+        "home_pf": 20.3,
+        "visitor_pf": 19.8
+    },
+    {
+        "name": "Tony Brothers",
+        "g": 27,
+        "pf": 40.5,
+        "pts": 229.9,
+        "home_pf": 20.9,
+        "visitor_pf": 19.6
+    },
+    {
+        "name": "Nick Buchert",
+        "g": 31,
+        "pf": 43.7,
+        "pts": 234.9,
+        "home_pf": 21.6,
+        "visitor_pf": 22.1
+    },
+    {
+        "name": "John Butler",
+        "g": 32,
+        "pf": 40.7,
+        "pts": 230.6,
+        "home_pf": 20.3,
+        "visitor_pf": 20.4
+    },
+    {
+        "name": "James Capers Jr.",
+        "g": 31,
+        "pf": 41.3,
+        "pts": 234,
+        "home_pf": 20,
+        "visitor_pf": 21.2
+    },
+    {
+        "name": "Gina Catanzariti",
+        "g": 3,
+        "pf": 39.3,
+        "pts": 227,
+        "home_pf": 21.3,
+        "visitor_pf": 18
+    },
+    {
+        "name": "Nate Cearley",
+        "g": 8,
+        "pf": 41.3,
+        "pts": 234,
+        "home_pf": 21,
+        "visitor_pf": 20.3
+    },
+    {
+        "name": "Derrick Collins",
+        "g": 20,
+        "pf": 42.2,
+        "pts": 232.6,
+        "home_pf": 20.5,
+        "visitor_pf": 21.7
+    },
+    {
+        "name": "John Conley",
+        "g": 22,
+        "pf": 41,
+        "pts": 231.2,
+        "home_pf": 20.5,
+        "visitor_pf": 20.5
+    },
+    {
+        "name": "Sean Corbin",
+        "g": 32,
+        "pf": 40.2,
+        "pts": 237.2,
+        "home_pf": 19.8,
+        "visitor_pf": 20.4
+    },
+    {
+        "name": "Kevin Cutler",
+        "g": 32,
+        "pf": 39.7,
+        "pts": 231.6,
+        "home_pf": 19,
+        "visitor_pf": 20.7
+    },
+    {
+        "name": "Mousa Dagher",
+        "g": 28,
+        "pf": 43.2,
+        "pts": 233,
+        "home_pf": 21.6,
+        "visitor_pf": 21.6
+    },
+    {
+        "name": "Eric Dalen",
+        "g": 31,
+        "pf": 39.5,
+        "pts": 222.9,
+        "home_pf": 19.7,
+        "visitor_pf": 19.8
+    },
+    {
+        "name": "Marc Davis",
+        "g": 31,
+        "pf": 41.1,
+        "pts": 238.9,
+        "home_pf": 19.8,
+        "visitor_pf": 21.3
+    },
+    {
+        "name": "J.B. DeRosa",
+        "g": 33,
+        "pf": 40.3,
+        "pts": 229.7,
+        "home_pf": 20.2,
+        "visitor_pf": 20.2
+    },
+    {
+        "name": "Mitchell Ervin",
+        "g": 33,
+        "pf": 42.3,
+        "pts": 232.8,
+        "home_pf": 21.2,
+        "visitor_pf": 21.1
+    },
+    {
+        "name": "Che Flores",
+        "g": 23,
+        "pf": 41.2,
+        "pts": 231.9,
+        "home_pf": 20,
+        "visitor_pf": 21.2
+    },
+    {
+        "name": "Tyler Ford",
+        "g": 30,
+        "pf": 40.6,
+        "pts": 229.7,
+        "home_pf": 20.4,
+        "visitor_pf": 20.2
+    },
+    {
+        "name": "Brian Forte",
+        "g": 26,
+        "pf": 40.5,
+        "pts": 227.2,
+        "home_pf": 20.4,
+        "visitor_pf": 20.1
+    },
+    {
+        "name": "Scott Foster",
+        "g": 31,
+        "pf": 42.5,
+        "pts": 234.5,
+        "home_pf": 21.5,
+        "visitor_pf": 20.9
+    },
+    {
+        "name": "Pat Fraher",
+        "g": 31,
+        "pf": 42.8,
+        "pts": 235.9,
+        "home_pf": 20.9,
+        "visitor_pf": 21.9
+    },
+    {
+        "name": "Jacyn Goble",
+        "g": 33,
+        "pf": 42.9,
+        "pts": 237.1,
+        "home_pf": 21,
+        "visitor_pf": 21.9
+    },
+    {
+        "name": "John Goble",
+        "g": 29,
+        "pf": 40.1,
+        "pts": 231.5,
+        "home_pf": 19.9,
+        "visitor_pf": 20.1
+    },
+    {
+        "name": "Jason Goldenberg",
+        "g": 30,
+        "pf": 41.1,
+        "pts": 231.7,
+        "home_pf": 20.2,
+        "visitor_pf": 20.9
+    },
+    {
+        "name": "Nate Green",
+        "g": 29,
+        "pf": 42.6,
+        "pts": 233.7,
+        "home_pf": 20.7,
+        "visitor_pf": 21.9
+    },
+    {
+        "name": "David Guthrie",
+        "g": 6,
+        "pf": 42.3,
+        "pts": 232.2,
+        "home_pf": 20,
+        "visitor_pf": 22.3
+    },
+    {
+        "name": "Brent Haskill",
+        "g": 8,
+        "pf": 42,
+        "pts": 236.9,
+        "home_pf": 22.5,
+        "visitor_pf": 19.5
+    },
+    {
+        "name": "Robert Hussey",
+        "g": 22,
+        "pf": 40.3,
+        "pts": 229.5,
+        "home_pf": 21,
+        "visitor_pf": 19.2
+    },
+    {
+        "name": "Intae Hwang",
+        "g": 1,
+        "pf": 43,
+        "pts": 237,
+        "home_pf": 23,
+        "visitor_pf": 20
+    },
+    {
+        "name": "Simone Jelks",
+        "g": 22,
+        "pf": 41,
+        "pts": 230.6,
+        "home_pf": 20.7,
+        "visitor_pf": 20.3
+    },
+    {
+        "name": "Matt Kallio",
+        "g": 20,
+        "pf": 40.4,
+        "pts": 229.3,
+        "home_pf": 20.1,
+        "visitor_pf": 20.3
+    },
+    {
+        "name": "Bill Kennedy",
+        "g": 24,
+        "pf": 39.3,
+        "pts": 236.2,
+        "home_pf": 19.4,
+        "visitor_pf": 19.9
+    },
+    {
+        "name": "Courtney Kirkland",
+        "g": 30,
+        "pf": 41.5,
+        "pts": 232,
+        "home_pf": 20.3,
+        "visitor_pf": 21.2
+    },
+    {
+        "name": "Marat Kogut",
+        "g": 27,
+        "pf": 41.3,
+        "pts": 232.3,
+        "home_pf": 21.1,
+        "visitor_pf": 20.2
+    },
+    {
+        "name": "Karl Lane",
+        "g": 26,
+        "pf": 38.7,
+        "pts": 140,
+        "home_pf": 18.9,
+        "visitor_pf": 19.8
+    },
+    {
+        "name": "Mark Lindsay",
+        "g": 31,
+        "pf": 43.1,
+        "pts": 229.7,
+        "home_pf": 21.5,
+        "visitor_pf": 21.7
+    },
+    {
+        "name": "Tre Maddox",
+        "g": 20,
+        "pf": 40.5,
+        "pts": 239.5,
+        "home_pf": 19.3,
+        "visitor_pf": 21.2
+    },
+    {
+        "name": "Ed Malloy",
+        "g": 8,
+        "pf": 41.5,
+        "pts": 226.8,
+        "home_pf": 20.9,
+        "visitor_pf": 20.6
+    },
+    {
+        "name": "Biniam Maru",
+        "g": 20,
+        "pf": 41.8,
+        "pts": 235,
+        "home_pf": 20.8,
+        "visitor_pf": 21.1
+    },
+    {
+        "name": "Suyash Mehta",
+        "g": 23,
+        "pf": 40.5,
+        "pts": 232.5,
+        "home_pf": 19.2,
+        "visitor_pf": 21.3
+    },
+    {
+        "name": "Sha'Rae Mitchell",
+        "g": 17,
+        "pf": 41.5,
+        "pts": 229.3,
+        "home_pf": 19.7,
+        "visitor_pf": 21.8
+    },
+    {
+        "name": "Rodney Mott",
+        "g": 14,
+        "pf": 43.6,
+        "pts": 227.1,
+        "home_pf": 21.5,
+        "visitor_pf": 22.1
+    },
+    {
+        "name": "Ashley Moyer-Gleich",
+        "g": 13,
+        "pf": 40.2,
+        "pts": 235.9,
+        "home_pf": 20.5,
+        "visitor_pf": 19.7
+    },
+    {
+        "name": "Klajdi Mulla",
+        "g": 3,
+        "pf": 44.7,
+        "pts": 251,
+        "home_pf": 23.7,
+        "visitor_pf": 21
+    },
+    {
+        "name": "Matt Myers",
+        "g": 23,
+        "pf": 39.7,
+        "pts": 238.2,
+        "home_pf": 18.7,
+        "visitor_pf": 20.9
+    },
+    {
+        "name": "Andy Nagy",
+        "g": 31,
+        "pf": 38.9,
+        "pts": 237.5,
+        "home_pf": 19.5,
+        "visitor_pf": 19.4
+    },
+    {
+        "name": "Brett Nansel",
+        "g": 12,
+        "pf": 39.4,
+        "pts": 228.6,
+        "home_pf": 20,
+        "visitor_pf": 19.4
+    },
+    {
+        "name": "Pat O'Connell",
+        "g": 21,
+        "pf": 42.1,
+        "pts": 232.2,
+        "home_pf": 20.9,
+        "visitor_pf": 21.2
+    },
+    {
+        "name": "J.T. Orr",
+        "g": 23,
+        "pf": 41.5,
+        "pts": 225.8,
+        "home_pf": 20.9,
+        "visitor_pf": 20.6
+    },
+    {
+        "name": "C.P. Painter",
+        "g": 3,
+        "pf": 40.7,
+        "pts": 216.7,
+        "home_pf": 22.7,
+        "visitor_pf": 18
+    },
+    {
+        "name": "Gediminas Petraitis",
+        "g": 32,
+        "pf": 39.8,
+        "pts": 231.5,
+        "home_pf": 19.7,
+        "visitor_pf": 20.2
+    },
+    {
+        "name": "J.D. Ralls",
+        "g": 22,
+        "pf": 40.5,
+        "pts": 228.5,
+        "home_pf": 19.9,
+        "visitor_pf": 20.6
+    },
+    {
+        "name": "Phenizee Ransom",
+        "g": 28,
+        "pf": 40.9,
+        "pts": 235.8,
+        "home_pf": 20.3,
+        "visitor_pf": 20.6
+    },
+    {
+        "name": "Jenna Reneau",
+        "g": 21,
+        "pf": 39.8,
+        "pts": 232.6,
+        "home_pf": 20,
+        "visitor_pf": 19.8
+    },
+    {
+        "name": "Tyler Ricks",
+        "g": 21,
+        "pf": 39.2,
+        "pts": 225.4,
+        "home_pf": 19.7,
+        "visitor_pf": 19.6
+    },
+    {
+        "name": "Natalie Sago",
+        "g": 32,
+        "pf": 40.9,
+        "pts": 233.2,
+        "home_pf": 20,
+        "visitor_pf": 20.9
+    },
+    {
+        "name": "Jenna Schroeder",
+        "g": 24,
+        "pf": 41,
+        "pts": 235.8,
+        "home_pf": 20.3,
+        "visitor_pf": 20.7
+    },
+    {
+        "name": "Brandon Schwab",
+        "g": 28,
+        "pf": 39.2,
+        "pts": 234.9,
+        "home_pf": 19.6,
+        "visitor_pf": 19.6
+    },
+    {
+        "name": "Danielle Scott",
+        "g": 22,
+        "pf": 40.9,
+        "pts": 237,
+        "home_pf": 20.3,
+        "visitor_pf": 20.6
+    },
+    {
+        "name": "Evan Scott",
+        "g": 20,
+        "pf": 40.4,
+        "pts": 227.3,
+        "home_pf": 20.4,
+        "visitor_pf": 20
+    },
+    {
+        "name": "Kevin Scott",
+        "g": 31,
+        "pf": 40.4,
+        "pts": 231.1,
+        "home_pf": 20.6,
+        "visitor_pf": 19.7
+    },
+    {
+        "name": "Michael Smith",
+        "g": 20,
+        "pf": 43.4,
+        "pts": 236,
+        "home_pf": 21.7,
+        "visitor_pf": 21.8
+    },
+    {
+        "name": "Jonathan Sterling",
+        "g": 25,
+        "pf": 39.7,
+        "pts": 234.8,
+        "home_pf": 19.6,
+        "visitor_pf": 20.1
+    },
+    {
+        "name": "Dedric Taylor",
+        "g": 29,
+        "pf": 41.9,
+        "pts": 229.5,
+        "home_pf": 19.6,
+        "visitor_pf": 22.3
+    },
+    {
+        "name": "Josh Tiven",
+        "g": 30,
+        "pf": 39.7,
+        "pts": 227.8,
+        "home_pf": 19.4,
+        "visitor_pf": 20.3
+    },
+    {
+        "name": "Scott Twardoski",
+        "g": 30,
+        "pf": 42.2,
+        "pts": 229.1,
+        "home_pf": 20.3,
+        "visitor_pf": 21.9
+    },
+    {
+        "name": "Justin Van Duyne",
+        "g": 31,
+        "pf": 39.9,
+        "pts": 232.4,
+        "home_pf": 19.9,
+        "visitor_pf": 20
+    },
+    {
+        "name": "C.J. Washington",
+        "g": 20,
+        "pf": 42.6,
+        "pts": 238.9,
+        "home_pf": 20.9,
+        "visitor_pf": 21.7
+    },
+    {
+        "name": "James Williams",
+        "g": 32,
+        "pf": 39.4,
+        "pts": 232.8,
+        "home_pf": 20,
+        "visitor_pf": 19.4
+    },
+    {
+        "name": "Marcy Williams",
+        "g": 2,
+        "pf": 43.5,
+        "pts": 241,
+        "home_pf": 22.5,
+        "visitor_pf": 21
+    },
+    {
+        "name": "Leon Wood",
+        "g": 20,
+        "pf": 39.9,
+        "pts": 227.5,
+        "home_pf": 20,
+        "visitor_pf": 19.9
+    },
+    {
+        "name": "Sean Wright",
+        "g": 29,
+        "pf": 43,
+        "pts": 234.2,
+        "home_pf": 21.1,
+        "visitor_pf": 21.9
+    },
+    {
+        "name": "Zach Zarba",
+        "g": 25,
+        "pf": 41.4,
+        "pts": 232.5,
+        "home_pf": 21.3,
+        "visitor_pf": 20.2
+    }
+]

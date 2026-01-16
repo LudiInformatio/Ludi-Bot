@@ -309,6 +309,23 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_date ON referee_daily_stats(sync_date)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_ref ON referee_daily_stats(referee_id)')
 
+        # 11. Referee Player Bias Table (Module G Phase 4 - Jan 15, 2026)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS referee_player_bias (
+                referee_id INTEGER,
+                player_id TEXT,
+                player_name TEXT,
+                games_officiated INTEGER DEFAULT 0,
+                avg_pf_called REAL DEFAULT 0.0,
+                avg_fta_awarded REAL DEFAULT 0.0,
+                points_impact_vs_avg REAL DEFAULT 0.0,
+                last_updated DATE,
+                PRIMARY KEY (referee_id, player_id),
+                FOREIGN KEY (referee_id) REFERENCES referee_profiles(referee_id)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_ref_bias_player ON referee_player_bias(player_id)')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
