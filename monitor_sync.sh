@@ -73,11 +73,19 @@ else
 fi
 
 echo ""
-echo "=== LAST LOG LINES ==="
-if [ -f logs/tracking_sync.log ]; then
-    tail -5 logs/tracking_sync.log 2>/dev/null || echo "  (empty)"
-else
-    echo "  No log file"
+echo "=== SYNC LOGS ==="
+for log in logs/worker_*.log; do
+    if [ -f "$log" ]; then
+        echo "--- $log ---"
+        tail -n 5 "$log"
+    fi
+done
+
+if [ ! -f logs/worker_0.log ]; then
+    if [ -f logs/tracking_sync.log ]; then
+        echo "--- logs/tracking_sync.log ---"
+        tail -n 5 logs/tracking_sync.log
+    fi
 fi
 
 echo ""

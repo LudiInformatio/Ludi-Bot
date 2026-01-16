@@ -95,33 +95,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 15, 2026 @ 2:45 PM ET
-- **Phase**: Week 3 (Validation) - Line Shopping & CLV Analysis
-- **Active Task**: Documenting line shopping strategy, implementing CLV tracking
-- **Last Updated**: Jan 15, 2026 - Line Shopping Methodology & CLV Tracking Plan
+- **Date**: Jan 15, 2026 @ 09:30 PM EST
+- **Phase**: Series G (Referee Intelligence) - Phase 5 Complete / Audit Refinement
+- **Active Task**: Documentation Sync & Hardening (Audit Remediation)
+- **Last Updated**: Jan 15, 2026 - Module G Phase 5 Deployed (Playwright Scraper)
 
-**🛠️ Maintenance & CI Consistency Update (Jan 15, 2026):**
-- Standardized all GitHub Actions to install dependencies via `requirements.txt` and added pip caching for faster runs
-  - Updated workflows: `daily_briefing.yml`, `evening_slate_lock.yml`, `game_notes_mil_den.yml`, `nightly_debrief.yml`, `daily_reports.yml`, `data_sync.yml`, `tracking_sync.yml`
-- Fixed image pipeline dependency drift by pinning `Pillow==12.1.0`, `google-genai==1.59.0`, and `emoji==2.2.0` (for `pilmoji==2.0.3` compatibility)
-- Adopted consistent module invocation with `PYTHONPATH=$PWD` and `python -m ...` to ensure imports of `config` and local packages
-  - Example: `python -m utils.pm_bot --mode morning` in Daily Reports
-- Hardened `utils/pm_bot.py` to fall back to environment variables if `config` cannot be imported in CI
-- Added image pipeline smoke checks in visual workflows to fail-fast on missing dependencies
-  - `python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"`
-- Aligned repository intent by removing `ludi.db` from `.gitignore` (workflows that commit DB updates now succeed)
-- Verified Daily Reports (work-notes) end-to-end: installs → settlement → PM Bot → commit/push completed successfully
-- **Recent Upgrade**: Fixed EV Math, Integrated Yak (Injury Logic), Fixed Line Shopping. from broken `get-game-stats` to working `get-totals` endpoint
-- **Game ID Resolution:** Created `scripts/backfill_nba_game_ids.py` to map Tank01 IDs → NBA.com format
-- **Season Quality Sync:** Created `scripts/sync_pbp_totals.py` for season-level shot quality data
-- **Database Updates:**
-  - Added `nba_game_id` column to `games` table (1,089/1,091 mapped)
-- **Tracking Backfill Resumed:** Launched 2 parallel workers (PIDs 11698, 11699) to complete historical backfill
-  - Current: 240/847 players (28.3% complete)
-  - Target: 100% coverage for 2025-26 season
-  - ETA: ~8 hours (3.0s delay per request)
-- **Automation Updated:** `.github/workflows/data_sync.yml` now uses stable PBP endpoint
-- **Scripts Archived:** Moved obsolete scripts to `scripts/archive/` and old docs to `docs/archive/`
+**🛠️ Engineering Log (Jan 15, 2026 - 09:30 PM EST):**
+- **Module G (Referee Intelligence) Status:**
+  - **Phase 4 (Bias Engine):** ✅ COMPLETE. Hybrid seeding (78 refs) + Star Bias tracking live.
+  - **Phase 5 (Betting Intel):** ✅ COMPLETE. Playwright scraper (`scripts/sync_external_intelligence.py`) harvesting Covers/OddsShark data weekly.
+  - **Audit Status:** 🏗️ IN PROGRESS. External audit received. Remediation plan (Thresholds, Name Map, Logging) active.
+- **Data Integrity:**
+  - **Ref Database:** Fully populated with 2025-26 Season Stats (Fouls, O/U, ATS).
+  - **Columns Added:** `ou_record`, `ou_percentage`, `avg_total`, `home_ats_record`, `home_ats_bias`.
+- **Infrastructure:**
+  - **Playwright:** Installed & Configured for "Ghost Browser" operations.
+  - **Automation:** `ludi_cron_master.sh` updated to include new sync steps.
 
 **✅ Jan 14 Implementation Session (12:15 PM):**
 - **Phase 1 Complete:** Target game filtering via `config/daily_locks.json`
