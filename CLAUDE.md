@@ -95,9 +95,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 15, 2026
-- **Phase**: Early Testing (Live Gem Slate Generation)
-- **Active Task**: Producing Daily Gem Briefing (Daily Locks Config)
+- **Date**: Jan 15, 2026 @ 2:45 PM ET
+- **Phase**: Week 3 (Validation) - Line Shopping & CLV Analysis
+- **Active Task**: Documenting line shopping strategy, implementing CLV tracking
+- **Last Updated**: Jan 15, 2026 - Line Shopping Methodology & CLV Tracking Plan
 
 **🛠️ Maintenance & CI Consistency Update (Jan 15, 2026):**
 - Standardized all GitHub Actions to install dependencies via `requirements.txt` and added pip caching for faster runs
@@ -906,12 +907,221 @@ if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
 - **End-to-end tests**: Run `main.py` with `limit_games=1` to test full pipeline on single game
 - **Validation tests**: Week 5 backtesting framework (50+ historical games)
 
+---
+
+## Line Shopping & EV Calculation Methodology (Added Jan 15, 2026)
+
+### Overview: Two-Tier Line Shopping Strategy
+
+**Core Principle:** Find the best odds available at NC Legal books (where user can actually bet), then validate model sharpness against sharp book closing lines.
+
+**Why This Approach:**
+- **Tier 1 (Betting):** NC Legal books (FanDuel, DK, BetMGM, Caesars, bet365, HRB) are the ONLY books accessible in North Carolina
+- **Tier 2 (Validation):** Sharp books (Pinnacle, Bovada, BetOnline) used for CLV measurement to prove model finds real value
+
+**Research Validation:** TopEndSports guide shows "Shopping lines on props can add 5-10% to your edge" - this system maximizes that edge by finding best NC Legal book for each market.
+
+### Line Shopping Algorithm (Module A)
+
+**Location:** `module_a.py` Lines 241-329
+
+**Step 1: Establish Main Line**
+```python
+# NC Legal books set the main line (e.g., 27.5 for Tatum Points)
+# Only ONE line per player/market to enable fair comparison
+```
+
+**Step 2: Filter Alt Lines**
+```python
+# Ignore alt lines (26.5, 28.5, etc.)
+# Only compare same line across all books
+# This ensures apples-to-apples edge calculations
+```
+
+**Step 3: Select Best NC Legal Odds**
+```python
+# Compare all NC Legal books at main line
+# Choose HIGHEST decimal odds (best return for bettor)
+# Example: FD -108 (1.926) beats DK -115 (1.870)
+```
+
+**Step 4: Track Sharp Books (CLV Validation)**
+```python
+# Log Pinnacle/Bovada closing line separately
+# NOT for betting, but for post-bet CLV measurement
+# Measure if you beat sharp market (most efficient pricing)
+```
+
+### 2025-26 NBA Season Examples
+
+**Example 1: Jan 15, 2026 - Jayson Tatum vs BKN**
+```
+Player: Jayson Tatum Points
+Line: 27.5 (main line from FanDuel)
+
+NC LEGAL BOOKS (Can Bet):
+FanDuel:    27.5 @ -108  (1.926 decimal) ✅ BEST
+DraftKings: 27.5 @ -115  (1.870 decimal)
+BetMGM:     27.5 @ -110  (1.909 decimal)
+
+SHARP BOOKS (CLV Benchmark):
+Pinnacle:   27.5 @ -105  (1.952 decimal) - Close line: -120
+Bovada:     27.5 @ -107  (1.935 decimal) - Close line: -118
+
+DECISION:
+- Bet: FanDuel -108 (best NC Legal)
+- CLV Target: Beat Pinnacle -120 closing
+- Result: If Pinnacle closes -120, user's -108 bet = +12 cents CLV
+```
+
+**Example 2: Jan 15, 2026 - Luka Doncic vs ORL**
+```
+Player: Luka Doncic Assists
+Line: 8.5 (main line from DraftKings)
+
+NC LEGAL BOOKS:
+FanDuel:    8.5 @ -118  (1.847 decimal)
+DraftKings: 8.5 @ -110  (1.909 decimal) ✅ BEST
+BetMGM:     8.5 @ -115  (1.870 decimal)
+
+SHARP BOOKS (CLV):
+Pinnacle:   8.5 @ -108  (1.926 decimal) - Close: -125
+
+DECISION:
+- Bet: DraftKings -110 (best NC Legal)
+- DK's -110 beat FD's -118 by 8 cents (8 cents EV on line alone)
+- CLV upside: If Pinnacle closes -125, DK beat closing by 15 cents
+```
+
+### EV Calculation & Devigging (Module F)
+
+**Location:** `module_f.py` Lines 105-133 + `utils/devig.py`
+
+**Critical Insight:** Without devigging, edge calculations understate true value by 3-5%
+
+**Process:**
+1. **Devig NC Legal odds:** Remove bookmaker vig to find fair probability
+2. **Compare to model:** Module C generates probability from 5,000 Poisson simulations
+3. **Calculate edge:** (model_prob - fair_prob) / fair_prob × 100
+4. **Filter:** Only recommend bets with ≥5% edge (sharp market standard)
+5. **Size units:** Use 12.5% fractional Kelly (conservative vs 25-50% recommended)
+
+**Example:**
+```
+Tatum Over 27.5 @ FanDuel -108
+
+Devigging:
+- Raw implied (FD -108): 51.95%
+- Devigged fair prob: 50.8% (removes 1.15% vig)
+
+Model says: 62% (from simulation)
+
+Edge calculation:
+- Raw edge: 62% - 51.95% = 10.05%
+- TRUE edge: (62% - 50.8%) / 50.8% = 22.0%
+
+Unit sizing:
+- EV = 0.62 × 1.926 - 1 = 0.195 = 19.5%
+- Units = 19.5% / 8 = 2.44u
+- Capped at 1.5u (conservative Kelly)
+```
+
+### CLV Tracking System (NEW - Added Jan 15, 2026)
+
+**Definition:** Closing Line Value measures whether your NC Legal bet odds beat the final sharp closing line.
+
+**Why CLV > Win Rate:**
+- Win rate is noisy (luck variance, blowouts, etc.)
+- CLV is signal (you consistently found value the market adjusts to)
+- Professional bettors beat closing line 55-60% of the time
+- CLV > 0 over 30+ days = model is SHARP
+
+**Implementation:**
+
+**Phase 1: Database Schema**
+```sql
+ALTER TABLE bet_recommendations ADD COLUMN closing_odds_over INTEGER;
+ALTER TABLE bet_recommendations ADD COLUMN closing_odds_under INTEGER;
+ALTER TABLE bet_recommendations ADD COLUMN clv_cents INTEGER;
+ALTER TABLE bet_recommendations ADD COLUMN closing_time TEXT;
+```
+
+**Phase 2: Capture Closing Lines**
+- New script: `scripts/capture_closing_lines.py`
+- Runs 5 minutes before tipoff via GitHub Actions
+- Fetches sharp book closing line from The-Odds-API
+- Stores in database for CLV calculation
+
+**Phase 3: CLV Calculation**
+- New utility: `utils/clv_calculator.py`
+- Formula: `(opening_decimal - closing_decimal) × 100` = CLV in cents
+- Example: FD -108 (1.926) vs Pinnacle closing -120 (1.833) = +9.3 cents
+
+**Phase 4: CLV Reporting**
+- Updated: `utils/pm_bot.py` - daily CLV summary
+- Optional: Streamlit dashboard section showing CLV trends
+- Metric: Average CLV over last 30 days (target: +5 cents or higher)
+
+**CLV Example (2025-26 Season):**
+```
+Bet: Tatum Over 27.5 @ FanDuel -108 (Jan 15, 2026, 2:00 PM)
+Closing: Pinnacle Over 27.5 @ -120 (Jan 15, 2026, 7:55 PM)
+
+CLV Analysis:
+- Your FD odds: -108 = 1.926 decimal
+- Pinnacle closing: -120 = 1.833 decimal
+- CLV: +9.3 cents (you beat market)
+
+Interpretation: Market moved against your side, proving you got better value
+```
+
+### Best Practices (Research-Backed)
+
+**Do:**
+- ✅ Compare all NC Legal books at main line
+- ✅ Use devigging for true edge (multiplicative method)
+- ✅ Filter by ≥5% edge minimum
+- ✅ Track sharp closing lines for CLV validation
+- ✅ Size bets with conservative Kelly (12.5% fractional)
+- ✅ Report daily CLV (not win rate)
+
+**Don't:**
+- ❌ Use consensus average odds (line shopping beats averaging)
+- ❌ Bet on alt lines (25.5 vs 27.5 creates apples-to-oranges comparisons)
+- ❌ Skip devigging (edge is understated by 3-5%)
+- ❌ Bet sharp books (Bovada/Pinnacle not accessible in NC)
+- ❌ Use aggressive Kelly sizing (1.5u max prevents ruin)
+- ❌ Trust win rate alone (CLV is the signal)
+
+### Current Implementation Status
+
+**Existing (Working):**
+- ✅ Line shopping algorithm (Module A) - finds best NC Legal book
+- ✅ Devigging engine (utils/devig.py) - multiplicative method
+- ✅ EV calculation (Module F) - true edge vs model probability
+- ✅ 5% threshold filter - quality bet selection
+- ✅ Kelly sizing (12.5% fractional) - unit management
+
+**In Progress (Jan 15, 2026):**
+- 🔄 CLV tracking system - capture closing lines, calculate CLV
+- 🔄 CLV reporting - daily metrics in PM Bot
+- 🔄 CLAUDE.md documentation - this section
+
+**Future (Not Yet):**
+- ⏳ DFS multiplier conversion (PrizePicks/Underdog) - LOW priority
+- ⏳ Steam detection (rapid line movement alerts)
+- ⏳ Multi-book arbitrage detection
+
+---
+
 ## Resources
 
-- **Implementation Plan**: See `implementation_plan_REVISED_8WEEK.md` for full roadmap
+- **Implementation Plan**: See `/Users/flyprice/.claude/plans/tranquil-coalescing-patterson.md` (updated Jan 15, 2026)
 - **Project History**: See `original vision/more_relevant_history.md` for context
 - **Week Status**: See `UPDATED_STATUS_AND_NEXT_STEPS.md` for current progress
 - **Completion Reports**: See `WEEK1_DAY2-4_COMPLETION_REPORT.md` for past milestones
+- **Line Shopping Analysis**: See `docs/LINE_SHOPPING_GUIDE.md` (being created)
+- **CLV Tracking Guide**: See `docs/CLV_TRACKING_GUIDE.md` (being created)
 
 ## Strategic Roadmap: The Road to "Pro" (Week 6+ Concepts)
 *These concepts identify "Smart Money" regression spots and are slated for the Calibration Phase.*
