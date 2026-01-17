@@ -101,11 +101,31 @@ jobs:
           conn.close()
           "
 
+      - name: Learn Daily Referee Trends
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/learn_daily_trends.py
+
+      - name: Analyze Star Bias
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/analyze_star_bias.py
+
       - name: Commit and push if changes
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
-          git add ludi.db ludi_history_db.json
+          git add ludi.db ludi_history_db.json logs/
           
           # Only commit if there are changes
           if git diff --staged --quiet; then

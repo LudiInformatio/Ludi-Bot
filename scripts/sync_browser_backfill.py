@@ -141,6 +141,21 @@ DATA_MANIFEST = {
             "OPP BLK": "opp_blk",
             "OPP PTS": "opp_pts"
         }
+    },
+    "hustle": {
+        "url": "https://www.nba.com/stats/players/hustle?DateFrom={date}&DateTo={date}",
+        "type": "hustle",
+        "label": "Hustle Stats",
+        "col_map": {
+            "SCREEN ASSISTS": "screen_assists",
+            "SCREEN ASSISTS PTS": "screen_assists_pts",
+            "DEFLECTIONS": "deflections",
+            "LOOSE BALLS RECOVERED": "loose_balls_recovered",
+            "CHARGES DRAWN": "charges_drawn",
+            "CONTESTED 2PT SHOTS": "contested_2pt_shots",
+            "CONTESTED 3PT SHOTS": "contested_3pt_shots",
+            "CONTESTED SHOTS": "contested_shots"
+        }
     }
 }
 
@@ -162,7 +177,7 @@ def handle_pagination(page, category_label=None):
         if page.is_visible(select_selector):
             page.select_option(select_selector, value="-1")
             # Increase wait for slower-loading tables
-            slow_categories = ["Speed & Distance", "Opponent Stats"]
+            slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
             wait_ms = 4000 if category_label in slow_categories else 2000
             page.wait_for_timeout(wait_ms) 
     except Exception as e:
@@ -183,7 +198,7 @@ def scrape_table(page, label):
     print(f"      Scanning {label} table...")
     
     # First wait for table to appear with RETRIES
-    slow_categories = ["Speed & Distance", "Opponent Stats"]
+    slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
     timeout = 25000 if label in slow_categories else 15000
     
     table_found = False
@@ -248,6 +263,8 @@ def process_item(item_key, data, date_str):
         return process_clutch_row(data, date_str, col_map)
     elif table_type == "opponent":
         return process_opponent_row(data, date_str, col_map)
+    elif table_type == "hustle":
+        return process_hustle_row(data, date_str, col_map)
     return 0
 
 def extract_id_from_href(href):
@@ -486,6 +503,60 @@ def process_opponent_row(data, date_str, col_map):
             
             sql = f'''
                 INSERT INTO player_game_opponent (
+                    player_id, player_name, team_abbrev, game_date, nba_game_id, synced_at, {col_names}
+                ) VALUES (?, ?, ?, ?, 'GHOST', CURRENT_TIMESTAMP, {placeholders})
+                ON CONFLICT(player_id, game_date) DO UPDATE SET
+                {update_excluded}, synced_at = CURRENT_TIMESTAMP
+            '''
+            
+            params = [pid, player_name, team_val, date_str] + values
+            c.execute(sql, params)
+            count += 1
+        except Exception:
+            continue
+    conn.commit()
+    conn.close()
+    return count
+
+def process_hustle_row(data, date_str, col_map):
+    headers = data['headers']
+    rows = data['rows']
+    header_idx = {h: i for i, h in enumerate(headers)}
+    if 'PLAYER' not in header_idx: return 0
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    count = 0
+    
+    for row_obj in rows:
+        try:
+            row_data = row_obj['data']
+            href = row_obj['href']
+            
+            player_name = row_data[header_idx['PLAYER']]
+            team_val = row_data[header_idx.get('TEAM', 1)]
+            
+            pid = extract_id_from_href(href)
+            if not pid:
+                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            values = []
+            cols = []
+            for csv_head, db_col in col_map.items():
+                if csv_head in header_idx:
+                    val_str = row_data[header_idx[csv_head]]
+                    val = 0.0
+                    if val_str != '-':
+                        val = float(val_str.replace('%', ''))
+                    cols.append(db_col)
+                    values.append(val)
+            
+            col_names = ", ".join(cols)
+            placeholders = ", ".join(['?'] * len(cols))
+            update_excluded = ", ".join([f"{col} = excluded.{col}" for col in cols])
+            
+            sql = f'''
+                INSERT INTO player_game_hustle (
                     player_id, player_name, team_abbrev, game_date, nba_game_id, synced_at, {col_names}
                 ) VALUES (?, ?, ?, ?, 'GHOST', CURRENT_TIMESTAMP, {placeholders})
                 ON CONFLICT(player_id, game_date) DO UPDATE SET

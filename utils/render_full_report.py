@@ -11,6 +11,7 @@ except ImportError:
 
 import os
 from datetime import datetime
+import sqlite3
 
 # === Configuration ===
 WIDTH = 1200
@@ -21,15 +22,14 @@ BACKGROUND_COLOR = (253, 251, 247)  # Moleskine Cream
 COLOR_NAVY = (26, 44, 66)    # Deep Navy
 COLOR_TEAL = (0, 168, 150)   # Teal for highlights
 COLOR_RED =  (220, 38, 38)   # Alert Red
+COLOR_WHITE = (255, 255, 255)
+COLOR_GRAY = (100, 116, 139) # Slate 500
 
 # Paths
-# Paths - macOS Compatible
+# Paths - macOS Compatible (with fallbacks if needed in future)
 FONT_PATH_SANS_REG = "/System/Library/Fonts/Supplemental/Arial.ttf"
 FONT_PATH_SANS_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 FONT_PATH_SERIF = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
-
-# Resolve absolute path to project root for assets
-import sqlite3
 
 # Resolve absolute path to project root for assets
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,14 +41,18 @@ FONT_SIZE_TITLE = 60
 FONT_SIZE_HEADER = 34
 FONT_SIZE_GAME_TITLE = 32
 FONT_SIZE_BODY = 26
+FONT_SIZE_BADGE = 22
 FONT_SIZE_CONTEXT = 22
 FONT_SIZE_FOOTER = 24
 
 # Layout
 PADDING_X = 40
 PADDING_Y = 30
-LINE_SPACING = 8
-SECTION_SPACING = 25
+LINE_SPACING = 12
+SECTION_SPACING = 30
+BADGE_PADDING_X = 12
+BADGE_PADDING_Y = 6
+BADGE_RADIUS = 10
 
 def make_bg_transparent(img, tolerance=30):
     """Remove background from logo by sampling corner color."""
@@ -88,6 +92,26 @@ def get_notable_refs():
         print(f"⚠️  Database error fetching refs: {e}")
         return None
 
+def draw_badge(draw, xy, text, font, bg_color, text_color):
+    """Draws a rounded rectangle badge with centered text."""
+    x, y = xy
+    text_bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = text_bbox[2] - text_bbox[0]
+    text_h = text_bbox[3] - text_bbox[1]
+    
+    w = text_w + (BADGE_PADDING_X * 2)
+    h = text_h + (BADGE_PADDING_Y * 2)
+    
+    # Draw rounded rect
+    draw.rounded_rectangle([x, y, x + w, y + h], radius=BADGE_RADIUS, fill=bg_color)
+    
+    # Draw text centered
+    text_x = x + BADGE_PADDING_X
+    text_y = y + BADGE_PADDING_Y - 2 # slight adjustment for baseline
+    draw.text((text_x, text_y), text, font=font, fill=text_color)
+    
+    return w
+
 def transform_props_to_briefing_data(props_list: list) -> list:
     """
     Transform Module F props list into the visual template format.
@@ -121,25 +145,50 @@ def transform_props_to_briefing_data(props_list: list) -> list:
             note = play.get('note', '')
             
             # Line 1: Player | Side Line Stat
+            # Format: "LeBron James | O 24.5 PTS"
             line1 = [
-                {"text": f"{name} | {bet_on[0]} {line} {stat}", "color": COLOR_NAVY}
+                {"text": f"{name}", "color": COLOR_NAVY, "is_bold": True},
+                {"text": f" | {bet_on[0]} {line} {stat}", "color": COLOR_NAVY, "is_bold": False}
             ]
             
-            # Line 2: Proj | EV | Context
-            line2_parts = [
-                {"text": f"Proj: {proj}", "color": COLOR_NAVY},
-                {"text": f" | EV: +{ev}%", "color": COLOR_TEAL}
-            ]
+            # Line 2: Badges and Context
+            line2_parts = []
             
-            # Add tags/note if present
-            context = ""
+            # Proj Badge
+            line2_parts.append({
+                "text": f"Proj: {proj}", 
+                "color": COLOR_NAVY, 
+                "bg_color": (226, 232, 240), # Slate 200
+                "is_badge": True
+            })
+            
+            # EV Badge (Teal if > 5%, else Navy)
+            ev_color = COLOR_TEAL if ev >= 5 else COLOR_NAVY
+            line2_parts.append({
+                "text": f"EV: +{ev}%", 
+                "color": COLOR_WHITE, 
+                "bg_color": ev_color,
+                "is_badge": True
+            })
+            
+            # Parse Tags/Note
+            context_text = ""
             if note:
-                context = note[:40]  # Truncate
+                context_text = note[:40]
             elif tags and tags != "[]":
-                context = tags.replace("[", "").replace("]", "").replace('"', '')[:40]
+                # Clean up list string: "['TAG']" -> "TAG"
+                cleaned = tags.replace("[", "").replace("]", "").replace('"', "").replace("'", "")
+                # Take first 2 tags if multiple
+                tag_list = [t.strip() for t in cleaned.split(',')]
+                context_text = " • ".join(tag_list[:2])
             
-            if context:
-                line2_parts.append({"text": f" | {context}", "color": COLOR_NAVY})
+            if context_text:
+                line2_parts.append({
+                    "text": context_text,
+                    "color": COLOR_GRAY,
+                    "is_badge": False,
+                    "is_context": True
+                })
             
             game_entry["lines"].append(line1)
             game_entry["lines"].append(line2_parts)
@@ -152,29 +201,28 @@ def transform_props_to_briefing_data(props_list: list) -> list:
 def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF") -> str:
     """
     Generate a visual briefing card from props data.
-    
-    Args:
-        props_data: List of dicts with keys: matchup, name, bet_on, line, stat, proj, ev, tags, note
-        title: The title text to display at the top (e.g., "LUDI MORNING BRIEF", "LUDI EVENING LOCK")
-    
-    Returns:
-        Path to generated PNG file
     """
-    # Transform props to visual format
     if props_data:
         briefing_data = transform_props_to_briefing_data(props_data)
     else:
-        # Fallback demo data
         briefing_data = [{
             "game_title": "🏀 DEMO GAME",
-            "lines": [[{"text": "Demo Player | O 25.5 PTS", "color": COLOR_NAVY}],
-                      [{"text": "Proj: 28.0 | EV: +15%", "color": COLOR_TEAL}]]
+            "lines": [
+                [
+                    {"text": "Demo Player", "color": COLOR_NAVY, "is_bold": True},
+                    {"text": " | O 25.5 PTS", "color": COLOR_NAVY, "is_bold": False}
+                ],
+                [
+                    {"text": "Proj: 28.0", "color": COLOR_NAVY, "bg_color": (226, 232, 240), "is_badge": True},
+                    {"text": "EV: +15%", "color": COLOR_WHITE, "bg_color": COLOR_TEAL, "is_badge": True},
+                    {"text": "VACUUM: Star Out", "color": COLOR_GRAY, "is_badge": False, "is_context": True}
+                ]
+            ]
         }]
     
     # Calculate dynamic height
-    # Base height + ref footer padding
     content_lines = sum(len(g["lines"]) for g in briefing_data) + len(briefing_data) * 2
-    calculated_height = max(900, 350 + content_lines * 45 + 200) # Extra 200 for ref footer
+    calculated_height = max(900, 350 + content_lines * 55 + 200) 
     
     img = Image.new('RGB', (WIDTH, calculated_height), color=BACKGROUND_COLOR)
     draw = ImageDraw.Draw(img)
@@ -185,11 +233,22 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         font_header = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_HEADER)
         font_game_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_GAME_TITLE)
         font_body = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_BODY)
+        font_body_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BODY)
+        font_badge = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BADGE)
+        font_context = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_CONTEXT)
         font_footer_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_FOOTER)
         font_footer_reg = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_FOOTER)
     except IOError:
-        print("Error: Font files not found.")
-        return None
+        print("Error: Font files not found. Using default.")
+        # Fallback to default if needed (though macOS paths usually work)
+        font_header = ImageFont.load_default()
+        font_game_bold = ImageFont.load_default()
+        font_body = ImageFont.load_default()
+        font_body_bold = ImageFont.load_default()
+        font_badge = ImageFont.load_default()
+        font_context = ImageFont.load_default()
+        font_footer_bold = ImageFont.load_default()
+        font_footer_reg = ImageFont.load_default()
 
     current_y = PADDING_Y
 
@@ -212,6 +271,7 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
     # Date Header
     date_str = datetime.now().strftime('%b %d, %Y').upper()
     header_text = f"{title} | {date_str}"
+    # draw.textlength requires font object
     header_w = draw.textlength(header_text, font=font_header)
     draw.text((int((WIDTH - header_w) / 2), current_y), header_text, font=font_header, fill=COLOR_NAVY)
     current_y += FONT_SIZE_HEADER + SECTION_SPACING
@@ -227,13 +287,34 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
 
         for line_segments in game["lines"]:
             current_x = PADDING_X
+            max_h = 0
+            
             for segment in line_segments:
+                is_badge = segment.get("is_badge", False)
                 text_content = segment["text"]
                 text_color = segment["color"]
-                pm.text((int(current_x), int(current_y)), text_content, font=font_body, fill=text_color)
-                segment_w = draw.textlength(text_content, font=font_body)
-                current_x += segment_w
-            current_y += FONT_SIZE_BODY + LINE_SPACING
+                
+                if is_badge:
+                    bg_color = segment.get("bg_color", COLOR_NAVY)
+                    badge_w = draw_badge(draw, (current_x, current_y), text_content, font_badge, bg_color, text_color)
+                    current_x += badge_w + 10
+                    max_h = max(max_h, FONT_SIZE_BADGE + BADGE_PADDING_Y * 2)
+                else:
+                    # Regular text
+                    is_bold = segment.get("is_bold", False)
+                    is_context = segment.get("is_context", False)
+                    
+                    font_to_use = font_body_bold if is_bold else (font_context if is_context else font_body)
+                    
+                    # Vertical alignment adjustment for text next to badges
+                    text_y = current_y + (BADGE_PADDING_Y if is_context else 0)
+                    
+                    pm.text((int(current_x), int(text_y)), text_content, font=font_to_use, fill=text_color)
+                    segment_w = draw.textlength(text_content, font=font_to_use)
+                    current_x += segment_w
+                    max_h = max(max_h, FONT_SIZE_BODY)
+
+            current_y += max_h + LINE_SPACING
         
         current_y += SECTION_SPACING // 2
         draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(230,230,230), width=1)
@@ -241,7 +322,7 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
         
     # === WHISTLE WATCH FOOTER ===
     current_y += SECTION_SPACING
-    draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(0,0,0), width=3) # Thicker divider
+    draw.line([(PADDING_X, current_y), (WIDTH - PADDING_X, current_y)], fill=(0,0,0), width=3)
     current_y += SECTION_SPACING
     
     pm.text((PADDING_X, current_y), "📢 LUDI WHISTLE WATCH", font=font_footer_bold, fill=COLOR_NAVY)
@@ -267,14 +348,18 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
     else:
         pm.text((PADDING_X, current_y + 10), "No referee data available.", font=font_footer_reg, fill=COLOR_NAVY)
 
-    output_path = os.path.join(PROJECT_ROOT, "ludi_generated_briefing.png")
+    # Ensure directory exists
+    output_dir = os.path.join(PROJECT_ROOT, "assets", "generated")
+    os.makedirs(output_dir, exist_ok=True)
+    
+    output_path = os.path.join(output_dir, "ludi_generated_briefing.png")
     img.save(output_path)
     print(f"✅ Visual briefing generated: {output_path}")
     return output_path
 
 
 if __name__ == "__main__":
-    # Demo with sample data
+    # Demo with sample data to verify visuals
     demo_props = [
         {"matchup": "HOU @ BKN", "name": "Amen Thompson", "bet_on": "OVER", "line": 13.5, "stat": "PTS", "proj": 19.5, "ev": 44, "note": "🚀 VACUUM: Sengun OUT"},
         {"matchup": "HOU @ BKN", "name": "Jalen Green", "bet_on": "UNDER", "line": 24.5, "stat": "PTS", "proj": 20.1, "ev": 18, "tags": "[\"#PaceUp\"]"},

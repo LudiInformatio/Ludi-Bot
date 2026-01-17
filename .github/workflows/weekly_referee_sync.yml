@@ -1,0 +1,84 @@
+name: Weekly Referee Intelligence Sync
+
+on:
+  schedule:
+    # Monday 5:00 AM ET = 9:00 UTC (Standard Time) / 8:00 UTC (Daylight Time)
+    # TODO: Update cron to '0 8 * * 1' on March 9, 2026 (DST starts)
+    # TODO: Update cron back to '0 9 * * 1' on November 1, 2026 (DST ends)
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual trigger for testing
+
+jobs:
+  sync-referee-intelligence:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git operations
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Scrape Covers + OddsShark (O/U & H/A)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/sync_external_intelligence.py
+
+      - name: Generate Weekly Zebra Report
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/generate_weekly_zebra_report.py --save-to-logs
+
+      - name: Send Zebra Report to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          REPORT_FILE="logs/weekly_zebra_reports/$(date +'%Y-%m-%d').md"
+          if [ -f "$REPORT_FILE" ]; then
+            python -c "from utils.telegram_notifier import send_message; report = open('$REPORT_FILE', 'r').read(); send_message('📊 Weekly Zebra Report\n\n' + report)"
+            echo "✅ Zebra report sent to Telegram"
+          else
+            echo "⚠️ Report file not found"
+          fi
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "Ludi Bot"
+          git config user.email "noreply@ludibot.com"
+          git add ludi.db logs/
+
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit - database already up to date"
+          else
+            git commit -m "chore: weekly referee intelligence sync $(date +'%Y-%m-%d')"
+            git push
+            echo "✅ Weekly referee intelligence synced and pushed!"
+          fi

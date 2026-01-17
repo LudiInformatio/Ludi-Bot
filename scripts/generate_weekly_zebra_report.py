@@ -285,8 +285,17 @@ def main():
         action='store_true',
         help='Print report to stdout instead of saving to file'
     )
-    
+    parser.add_argument(
+        '--save-to-logs',
+        action='store_true',
+        help='Save report to logs/weekly_zebra_reports/ directory'
+    )
+
     args = parser.parse_args()
+
+    # Override output_dir if --save-to-logs is specified
+    if args.save_to_logs:
+        args.output_dir = 'logs/weekly_zebra_reports'
     
     print("\n" + "=" * 60)
     print("LUDI INFORMATIO | WEEKLY ZEBRA REPORT GENERATOR")

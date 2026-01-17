@@ -6,11 +6,28 @@ Based on official OpenAPI spec: https://api.pbpstats.com/openapi.json
 No API key required.
 """
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from typing import Dict, List, Optional
 
 
 BASE_URL = "https://api.pbpstats.com"
 CURRENT_SEASON = "2025-26"
+
+def _get_session():
+    session = requests.Session()
+    retry = Retry(
+        total=5, 
+        backoff_factor=1, 
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET"]
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+_session = _get_session()
 
 
 def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
@@ -31,7 +48,7 @@ def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -62,7 +79,7 @@ def get_game_logs(entity_id: str, entity_type: str = "Player",
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -99,7 +116,7 @@ def get_totals(entity_type: str = "Player", team_id: str = None,
         params["Leverage"] = leverage
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -136,7 +153,7 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -168,7 +185,7 @@ def get_wowy_combination_stats(team_id: str, player_ids: List[str],
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -205,7 +222,7 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
         params["Leverage"] = leverage
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -236,7 +253,7 @@ def get_shots(entity_id: str, entity_type: str = "Player",
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -263,7 +280,7 @@ def get_team_leverage_summary(season: str = CURRENT_SEASON,
         params["Leverage"] = leverage
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -281,7 +298,7 @@ def get_live_games() -> Optional[Dict]:
     url = f"{BASE_URL}/live/games/nba"
     
     try:
-        response = requests.get(url, timeout=30)
+        response = _session.get(url, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -299,7 +316,7 @@ def get_all_players() -> Optional[Dict]:
     url = f"{BASE_URL}/get-all-players-for-league/nba"
     
     try:
-        response = requests.get(url, timeout=30)
+        response = _session.get(url, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -328,7 +345,7 @@ def get_team_players(team_id: str, season: str = CURRENT_SEASON,
     }
     
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -419,8 +436,8 @@ def get_shot_quality(game_id: str) -> Optional[List[Dict]]:
     """
     Get shot quality data for all players in a specific game.
 
-    This is a convenience wrapper around get_game_stats that formats
-    the data for the daily sync script's database insertion.
+    Uses native ShotQualityAvg from PBP Stats API (expected field goal value
+    based on shot distance, defender proximity, etc).
 
     Args:
         game_id: NBA.com game ID (e.g., "0022500500")
@@ -429,8 +446,8 @@ def get_shot_quality(game_id: str) -> Optional[List[Dict]]:
         List of dicts with player shot quality data:
             - player_id
             - player_name
-            - shot_quality_avg (FG% as proxy)
-            - shot_distance_avg (estimated from 2pt/3pt ratio)
+            - shot_quality_avg (native from API - expected FG%)
+            - shot_distance_avg (weighted avg of 2pt/3pt distances)
             - shots_taken (FGA)
             - shots_made (FGM)
     """
@@ -438,30 +455,45 @@ def get_shot_quality(game_id: str) -> Optional[List[Dict]]:
     if not game_data:
         return None
 
-    players = game_data.get('multi_row_table_data', [])
-    if not players:
+    # Parse stats structure: stats.Away.1[] + stats.Home.1[]
+    stats = game_data.get('stats', {})
+    away_players = stats.get('Away', {}).get('1', [])
+    home_players = stats.get('Home', {}).get('1', [])
+
+    all_players = away_players + home_players
+    if not all_players:
         return None
 
     result = []
-    for p in players:
-        fga = p.get('FGA', 0) or 0
-        fgm = p.get('FGM', 0) or 0
+    for p in all_players:
+        # Skip team totals row
+        if p.get('EntityId') == '0' or p.get('Name') == 'Team':
+            continue
+
+        # Get native shot quality and distance from API
+        shot_quality = p.get('ShotQualityAvg', 0) or 0
+        avg_2pt_dist = p.get('Avg2ptShotDistance', 8) or 8
+        avg_3pt_dist = p.get('Avg3ptShotDistance', 24) or 24
+
+        # Calculate FGA/FGM from component attempts
+        fg2a = p.get('FG2A', 0) or 0
         fg3a = p.get('FG3A', 0) or 0
+        fg2m = p.get('FG2M', 0) or 0
+        fg3m = p.get('FG3M', 0) or 0
+        fga = fg2a + fg3a
+        fgm = fg2m + fg3m
 
-        # Calculate FG% as shot quality proxy
-        fg_pct = (fgm / fga) if fga > 0 else 0
-
-        # Estimate avg shot distance from 3pt attempt ratio
-        # Higher 3pt ratio = longer avg distance
-        three_pt_ratio = (fg3a / fga) if fga > 0 else 0
-        # Approximate: at-rim ~4ft, mid-range ~15ft, 3pt ~24ft
-        est_distance = 4 + (three_pt_ratio * 20)  # Ranges from ~4 to ~24 ft
+        # Calculate weighted average shot distance
+        if fga > 0:
+            avg_distance = (fg2a * avg_2pt_dist + fg3a * avg_3pt_dist) / fga
+        else:
+            avg_distance = 0
 
         result.append({
-            'player_id': p.get('PlayerId'),
+            'player_id': p.get('EntityId'),
             'player_name': p.get('Name'),
-            'shot_quality_avg': round(fg_pct, 3),
-            'shot_distance_avg': round(est_distance, 1),
+            'shot_quality_avg': round(shot_quality, 4),
+            'shot_distance_avg': round(avg_distance, 1),
             'shots_taken': fga,
             'shots_made': fgm
         })

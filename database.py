@@ -414,6 +414,32 @@ class LudiHistorian:
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_opponent_date ON player_game_opponent(game_date)')
 
+        # 18. Player Game Hustle (New - Phase 4)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_game_hustle (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT,
+                player_name TEXT,
+                team_abbrev TEXT,
+                game_date TEXT,
+                
+                screen_assists REAL,
+                screen_assists_pts REAL,
+                deflections REAL,
+                loose_balls_recovered REAL,
+                charges_drawn REAL,
+                contested_2pt_shots REAL,
+                contested_3pt_shots REAL,
+                contested_shots REAL,
+                box_outs REAL,
+                
+                nba_game_id TEXT,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, game_date)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_hustle_date ON player_game_hustle(game_date)')
+
         # Add new columns to players table (for existing databases)
         # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)
         try:

@@ -95,10 +95,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 16, 2026 @ 10:30 AM EST
-- **Phase**: Module A/F Upgrade - Line Shopping V9.4 + EV Calibration
-- **Active Task**: Testing pipeline after line shopping and EV fixes
-- **Last Updated**: Jan 16, 2026 - Module A V9.4 + Module F V4.6 Deployed
+- **Date**: Jan 17, 2026 @ 1:00 PM EST
+- **Phase**: Module G Phase 5 Complete - Day Forward Referee Intelligence
+- **Active Task**: Phase 1 loose ends tied up, ready for Phase 2 (Learning Engine Activation)
+- **Last Updated**: Jan 17, 2026 - Module G Phase 5 + Weekly Intelligence Automation Deployed
 
 **🛠️ Engineering Log (Jan 16, 2026 - 10:30 AM EST):**
 - **Module A (Gatekeeper) V9.4:**
@@ -209,6 +209,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Forward Learning:** Created `scripts/analyze_star_bias.py` to track "Star Killer" trends daily.
 **Automation:** Created `scripts/ludi_cron_master.sh` to run the 3-step pipeline.
 
+#### Phase 5: Day Forward Capture System (✅ COMPLETE - Jan 17, 2026)
+**Strategic Pivot:** Abandoned historical backfill (data unavailable), built proprietary dataset organically
+
+**New Scripts:**
+1. **`scripts/sync_daily_referees.py`** (319 lines)
+   - Runs: Daily at 9:30 AM ET via `referee_sync.yml`
+   - Scrapes: official.nba.com/referee-assignments/
+   - Populates: games.referee_crew for today's slate
+   - Auto-registers: New referees to referee_profiles (neutral baseline)
+
+2. **`scripts/sync_external_intelligence.py`** (Playwright)
+   - Runs: Weekly (Mondays 5 AM ET) via `weekly_referee_sync.yml`
+   - Scrapes: Covers.com (O/U records) + OddsShark (Home ATS bias)
+   - Updates: referee_profiles with betting trends (ou_record, home_ats_record)
+
+3. **`scripts/generate_weekly_zebra_report.py`** (318 lines)
+   - Runs: Weekly (Mondays 6 AM ET) after intelligence sync
+   - Output: Telegram + logs/weekly_zebra_reports/YYYY-MM-DD.md
+   - Features: Top 5 Strict/Lenient, Rookie Watch, betting implications
+
+**GitHub Actions Workflows:**
+- `.github/workflows/referee_sync.yml` (daily, 9:30 AM ET)
+- `.github/workflows/weekly_referee_sync.yml` (Monday, 5 AM ET)
+
+**Data Pipeline:**
+- Day 1: Crew assignments captured → games.referee_crew populated
+- Day 2: learn_daily_trends.py runs → referee_profiles updated (Phase 2)
+- Day 7: analyze_star_bias.py activates → referee_player_bias starts accumulating
+- Weekly: sync_external_intelligence.py refreshes O/U & H/A betting trends
+
+**Strategic Value:**
+- Proprietary dataset (90 days by playoffs)
+- Competitive advantage (no public historical data exists)
+- Zero wasted effort on unreliable backfilling
+
 ---
 
 ### Week 5: ✅ COMPLETE - Ghost Protocol (Historical Backfill Engine)
@@ -236,6 +271,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [x] Execute Phase 1 Backfill (Drives, C&S, Pull-Ups, Speed) - ✅ COMPLETE
 - [x] Execute Phase 2 Backfill (Advanced, Clutch) - ✅ COMPLETE
 - [x] Execute Phase 3 Backfill (Opponent Stats / Defense) - ✅ COMPLETE (8,967 Records)
+- [x] Execute Phase 4 Backfill (Hustle Stats / Heart) - ✅ COMPLETE (8,693 Records)
+
 
 ---
 
@@ -1144,14 +1181,64 @@ Interpretation:
 
 ---
 
+## Asset Management & Visual Reporting (V4.6 Update - Jan 17, 2026)
+
+### Directory Structure
+To maintain a clean root directory, all visual assets are organized in the `assets/` folder:
+
+- `assets/generated/`: Stores the final output images (e.g., `ludi_generated_briefing.png`).
+- `assets/screenshots/`: Stores captured screenshots and evidence.
+- `assets/concepts/`: Stores design concepts and prototypes.
+- `assets/header_*.png`: Core branding assets (Morning/Nightly headers).
+
+### Visual Engine (`utils/render_full_report.py`)
+The visual reporting engine has been upgraded to V1.5 (Badge System).
+
+**Key Features:**
+- **Badges:** Rounded rectangles for metadata (EV, Proj) instead of plain text.
+- **Color Coding:** 
+  - **Teal (#00A896):** EV > 5% (Actionable Edge)
+  - **Navy (#1A2C42):** Standard Info / Projections
+  - **Gray (#64748B):** Context / Tags
+- **Output:** Images are automatically saved to `assets/generated/ludi_generated_briefing.png`.
+- **Integration:** `module_f.py` and `morning_brief.py` rely on the *returned path* from `create_briefing_card`, ensuring they always grab the correct file regardless of location.
+
+### Brand Identity
+- **Background:** Moleskine Cream (#FDFBF7)
+- **Primary Ink:** Deep Navy (#0F172A)
+- **Highlights:** Teal (#00A896) and Alert Red (#DC2626)
+- **Font Stack:** Arial (Sans) / Times New Roman (Serif) fallback system.
+
+---
+
 ## Resources
 
 - **Implementation Plan**: See `/Users/flyprice/.claude/plans/tranquil-coalescing-patterson.md` (updated Jan 15, 2026)
 - **Project History**: See `original vision/more_relevant_history.md` for context
 - **Week Status**: See `UPDATED_STATUS_AND_NEXT_STEPS.md` for current progress
-- **Completion Reports**: See `WEEK1_DAY2-4_COMPLETION_REPORT.md` for past milestones
+- **Completion Reports**: See `docs/archive/` for archived completion reports and prompts
 - **Line Shopping Analysis**: See `docs/LINE_SHOPPING_GUIDE.md` (being created)
 - **CLV Tracking Guide**: See `docs/CLV_TRACKING_GUIDE.md` (being created)
+
+## Archived Documentation
+
+Historical documentation has been organized in `docs/archive/` (as of Jan 17, 2026):
+
+- **module_g/**: Module G (Referee Intelligence) upgrade documentation (8 files)
+  - REFEREE_UPGRADE_PLAN.md, research files, audit reports, fix summaries
+- **ghost_protocol/**: Ghost Protocol (Historical Backfill) documentation (3 files)
+  - GHOST_PROTOCOL_PLAN.md, Phase 1 & 2 backfill prompts
+- **implementation_plans/**: Original 8-week implementation plans (2 files)
+  - implementation_plan.md, implementation_plan_REVISED_8WEEK.md
+- **prompts/**: Historical prompts for various tasks (2 files)
+  - ARCHETYPE_UPDATE_PROMPT.md, VERIFICATION_PROMPT.md
+- **old_status/**: Old status reports and validation results (4 files)
+  - PROJECT_HEALTH_REPORT.md, MISSION_COMPLETE.md, VALIDATION_RESULTS.md, MIGRATION_LOG.md
+- **Week 1-3 Reports**: DAY1_SUMMARY.md, WEEK1/WEEK2 completion reports, startup prompts
+
+**Database Backups:** `backups/database/` contains automated database backups with retention policy documented in `backups/README.md`
+
+**Total Archived Files:** 32 markdown files organized by topic for easy reference
 
 ## Strategic Roadmap: The Road to "Pro" (Week 6+ Concepts)
 *These concepts identify "Smart Money" regression spots and are slated for the Calibration Phase.*
