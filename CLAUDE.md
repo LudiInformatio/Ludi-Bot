@@ -212,8 +212,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ### Week 5: ✅ COMPLETE - Ghost Protocol (Historical Backfill Engine)
-**Status:** Ready for Launch (Jan 16, 2026)
+**Status:** Phases 1 & 2 Verified (Jan 16, 2026)
 **Priority:** HIGH
+**Final Yield:** ~14,700 records (Physics: 9.4k | Brain: 5.3k)
 
 #### Phase 6: Ghost Protocol Backfill Engine (Jan 15-16)
 **Challenge:** NBA API blocking persistent, parallel sync stalled at 100% timeout rate.
@@ -221,18 +222,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Architecture:**
 - **Script:** `scripts/sync_browser_backfill.py` (v2.1)
 - **Method:** Manifest-driven scraping with anti-detection (headless=False, human emulation)
-- **Data Sources:** Drives, Catch & Shoot, Pull-Ups, Speed/Distance, Advanced, Clutch
-- **Database:** Expanded `player_game_tracking`, created `player_game_advanced` and `player_clutch_stats`
+- **Data Sources:** Drives, Catch & Shoot, Pull-Ups, Speed/Distance, Advanced, Clutch, Opponent Stats
+- **Database:** Expanded `player_game_tracking`, created `player_game_advanced`, `player_clutch_stats`, `player_game_opponent`
 - **ID Fix:** Extracts official NBA Player IDs from HTML hrefs for Module C/E compatibility
 
 #### Implementation Checklist (Week 5)
-- [x] Database schema expansion (`player_game_tracking`, `player_game_advanced`, `player_clutch_stats`)
+- [x] Database schema expansion (Tracking, Advanced, Clutch, Opponent)
 - [x] Create `scripts/sync_browser_backfill.py` with DATA_MANIFEST architecture
 - [x] Implement anti-bot measures (Playwright config, pagination handling)
 - [x] Fix ID compatibility (extract numeric IDs from hrefs vs string slugs)
 - [x] Verify extraction logic via browser testing
 - [x] Update `CLAUDE.md` with Ghost Protocol architecture
-- [ ] Execute Phase 1 Backfill (Nov 14, 2025 → Present)
+- [x] Execute Phase 1 Backfill (Drives, C&S, Pull-Ups, Speed) - ✅ COMPLETE
+- [x] Execute Phase 2 Backfill (Advanced, Clutch) - ✅ COMPLETE
+- [x] Execute Phase 3 Backfill (Opponent Stats / Defense) - ✅ COMPLETE (8,967 Records)
 
 ---
 

@@ -249,6 +249,171 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_matchups_defender ON defender_matchups(defender_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_matchups_season ON defender_matchups(season)')
 
+        # 14. Player Game Tracking (Unified Tracking Table)
+        # Note: Merged legacy and new schemas.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_game_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT,
+                player_name TEXT,
+                team_abbrev TEXT,
+                game_date TEXT,
+                matchup TEXT,
+                w_l TEXT,
+                min INTEGER,
+                
+                -- Drives
+                drives_fga REAL,
+                drives_fgm REAL,
+                drives_fg_pct REAL,
+                drives_pts REAL,
+                drives_pass_pct REAL,
+                
+                -- Catch & Shoot
+                catch_shoot_fga REAL,
+                catch_shoot_fgm REAL,
+                catch_shoot_fg_pct REAL,
+                catch_shoot_3pa REAL,
+                catch_shoot_3pm REAL,
+                catch_shoot_3p_pct REAL,
+                catch_shoot_efg_pct REAL,
+                
+                -- Pull-Up Shooting
+                pull_up_fga REAL,
+                pull_up_fgm REAL,
+                pull_up_fg_pct REAL,
+                pull_up_3pa REAL,
+                pull_up_3pm REAL,
+                pull_up_3p_pct REAL,
+                pull_up_efg_pct REAL,
+
+                -- Speed & Distance
+                dist_miles_off REAL,
+                dist_miles_def REAL,
+                avg_speed_off REAL,
+                avg_speed_def REAL,
+                
+                -- Shot Difficulty
+                shot_dist_0_2_fga REAL,
+                shot_dist_2_4_fga REAL,
+                shot_dist_4_6_fga REAL,
+                shot_dist_6_plus_fga REAL,
+                
+                nba_game_id TEXT,
+                synced_at TIMESTAMP,
+                
+                UNIQUE(player_id, game_date)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_tracking_date ON player_game_tracking(game_date)')
+
+        # MIGRATION: Add new columns to existing player_game_tracking table
+        new_tracking_cols = [
+            'pull_up_fga REAL', 'pull_up_fgm REAL', 'pull_up_fg_pct REAL',
+            'pull_up_3pa REAL', 'pull_up_3pm REAL', 'pull_up_3p_pct REAL', 'pull_up_efg_pct REAL',
+            'dist_miles_off REAL', 'dist_miles_def REAL', 'avg_speed_off REAL', 'avg_speed_def REAL',
+            'catch_shoot_3pa REAL', 'catch_shoot_3pm REAL', 'catch_shoot_3p_pct REAL', 'catch_shoot_efg_pct REAL'
+        ]
+        for col_def in new_tracking_cols:
+            col_name = col_def.split()[0]
+            try:
+                c.execute(f'ALTER TABLE player_game_tracking ADD COLUMN {col_def}')
+            except:
+                pass # Column exists
+
+        # 16. Player Game Advanced (New)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_game_advanced (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT,
+                player_name TEXT,
+                team_abbrev TEXT,
+                game_date TEXT,
+                matchup TEXT,
+                w_l TEXT,
+                min INTEGER,
+                off_rating REAL,
+                def_rating REAL,
+                net_rating REAL,
+                ast_pct REAL,
+                ast_to REAL,
+                ast_ratio REAL,
+                oreb_pct REAL,
+                dreb_pct REAL,
+                reb_pct REAL,
+                tov_pct REAL,
+                efg_pct REAL,
+                ts_pct REAL,
+                usg_pct REAL,
+                pace REAL,
+                pie REAL,
+                nba_game_id TEXT,
+                synced_at TIMESTAMP,
+                UNIQUE(player_id, game_date)
+            )
+        ''')
+
+        # 10. Player Clutch Stats (NBA API - Traditional Clutch)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_clutch_stats (
+                nba_player_id TEXT NOT NULL,
+                player_name TEXT,
+                team_abbr TEXT,
+                game_date TEXT NOT NULL,
+                -- Clutch Totals
+                clutch_min REAL,
+                clutch_pts REAL,
+                clutch_rebs REAL,
+                clutch_asts REAL,
+                clutch_stl REAL,
+                clutch_blk REAL,
+                -- Clutch Shooting
+                clutch_fgm REAL,
+                clutch_fga REAL,
+                clutch_fg_pct REAL,
+                clutch_3pm REAL,
+                clutch_3pa REAL,
+                clutch_3p_pct REAL,
+                clutch_ftm REAL,
+                clutch_fta REAL,
+                clutch_ft_pct REAL,
+                -- Metadata
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (nba_player_id, game_date)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_clutch_date ON player_clutch_stats(game_date)')
+
+        # 17. Player Game Opponent (New - Phase 3)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_game_opponent (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT,
+                player_name TEXT,
+                team_abbrev TEXT,
+                game_date TEXT,
+                opp_fgm REAL,
+                opp_fga REAL,
+                opp_fg_pct REAL,
+                opp_3pm REAL,
+                opp_3pa REAL,
+                opp_3p_pct REAL,
+                opp_ftm REAL,
+                opp_fta REAL,
+                opp_ft_pct REAL,
+                opp_reb REAL,
+                opp_ast REAL,
+                opp_tov REAL,
+                opp_stl REAL,
+                opp_blk REAL,
+                opp_pts REAL,
+                nba_game_id TEXT,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, game_date)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_opponent_date ON player_game_opponent(game_date)')
+
         # Add new columns to players table (for existing databases)
         # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)
         try:

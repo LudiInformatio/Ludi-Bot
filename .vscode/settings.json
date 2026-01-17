@@ -5,5 +5,9 @@
         "antigravity.globalArtifactsEditorInput": true,
         "antigravity.artifactsEditorInput": true,
         "workbench.input.interactive": true
+    },
+    "chat.tools.terminal.autoApprove": {
+        "code": true,
+        "/Applications/Visual\\": true
     }
 }
