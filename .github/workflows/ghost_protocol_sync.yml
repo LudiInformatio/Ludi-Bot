@@ -1,0 +1,51 @@
+name: Ghost Protocol Tracking Sync
+
+on:
+  schedule:
+    # Wednesday 11:00 UTC (6 AM EST)
+    - cron: '0 11 * * 3'
+    # Sunday 11:00 UTC (6 AM EST)  
+    - cron: '0 11 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghost-protocol-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-tracking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours for large backfill
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Run Ghost Protocol sync (last 7 days)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+        run: |
+          python scripts/sync_browser_backfill.py --days 7 --headless
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ludi-db-post-tracking-sync
+          path: ludi.db
+          retention-days: 7

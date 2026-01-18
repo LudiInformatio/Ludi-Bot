@@ -11,7 +11,10 @@ class LudiHistorian:
         self._initialize_db()
 
     def _get_conn(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+        return conn
 
     def _initialize_db(self):
         """
@@ -439,6 +442,33 @@ class LudiHistorian:
             )
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_hustle_date ON player_game_hustle(game_date)')
+
+        # 19. Player WOWY Stats (With-Or-Without-You On/Off Splits)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_wowy_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT,
+                player_name TEXT,
+                team_abbrev TEXT,
+                game_date TEXT,
+                game_id TEXT,
+                
+                on_court_minutes REAL,
+                off_court_minutes REAL,
+                on_court_off_rtg REAL,
+                off_court_off_rtg REAL,
+                on_off_diff REAL,
+                on_court_pts_per_100 REAL,
+                off_court_pts_per_100 REAL,
+                on_court_possessions INTEGER,
+                off_court_possessions INTEGER,
+                
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, game_date)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_wowy_player_date ON player_wowy_stats(player_id, game_date)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_wowy_date ON player_wowy_stats(game_date)')
 
         # Add new columns to players table (for existing databases)
         # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)

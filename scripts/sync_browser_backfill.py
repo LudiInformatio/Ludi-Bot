@@ -574,10 +574,11 @@ def process_hustle_row(data, date_str, col_map):
 
 # Redundant definitions removed.
 
-def run_ghost_protocol(start_date, end_date):
+def run_ghost_protocol(start_date, end_date, headless=False):
     print("\n" + "="*50)
     print(f"👻 LUDI GHOST PROTOCOL v2.0 | FULL SPECTRUM")
     print(f"📅 Range: {start_date} -> {end_date}")
+    print(f"🖥️  Mode: {'Headless' if headless else 'Visible Browser'}")
     print("="*50)
 
     delta = end_date - start_date
@@ -585,7 +586,7 @@ def run_ghost_protocol(start_date, end_date):
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=False,
+            headless=headless,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',
@@ -647,6 +648,7 @@ if __name__ == "__main__":
     parser.add_argument("--start-date", help="YYYY-MM-DD")
     parser.add_argument("--end-date", help="YYYY-MM-DD")
     parser.add_argument("--days", type=int, help="Number of days back to sync (1 = yesterday)")
+    parser.add_argument("--headless", action="store_true", help="Run browser in headless mode (for CI)")
     args = parser.parse_args()
 
     end = datetime.now()
@@ -661,4 +663,4 @@ if __name__ == "__main__":
         if args.days == 1:
             end = start
 
-    run_ghost_protocol(start, end)
+    run_ghost_protocol(start, end, headless=args.headless)
