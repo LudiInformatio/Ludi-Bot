@@ -40,7 +40,7 @@ If the workflow reports database corruption:
    cp ludi.db ludi.db.corrupted
    
    # Restore from backup
-   cp backups/database/ludi.db.backup_YYYYMMDD_HHMMSS ludi.db
+   cp backups/database/ludi.db.backup_YYYYMMDD_HHMMSS.sqlite ludi.db
    ```
 
 3. **Verify Restored Database**
@@ -90,7 +90,7 @@ This tests:
 **Issue**: Workflow failing with exit code 1 due to database corruption  
 **Root Cause**: Multiple invalid page references in ludi.db (pages 5373-6190)  
 **Resolution**: 
-1. Database restored from `backups/database/ludi.db.backup_20260115_135412`
+1. Database restored from `backups/database/ludi.db.backup_20260115_135412.sqlite`
 2. Workflow updated to handle corruption gracefully (no longer fails on corruption)
 3. Corrupted backups now marked and uploaded with warnings
 

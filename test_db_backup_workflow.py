@@ -7,7 +7,7 @@ import os
 import sqlite3
 import sys
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def test_integrity_check(db_path):
@@ -50,7 +50,7 @@ def test_backup_creation(db_path, backup_dir, status):
     print("Testing: Create backup")
     print("=" * 60)
     
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     
     # Add status suffix if corrupted
     suffix = ".corrupted" if status == "corrupted" else ""
