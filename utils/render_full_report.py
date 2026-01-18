@@ -10,6 +10,7 @@ except ImportError:
             self.draw.text(xy, text, fill=fill, font=font, *args, **kwargs)
 
 import os
+import platform
 from datetime import datetime
 import sqlite3
 
@@ -25,16 +26,56 @@ COLOR_RED =  (220, 38, 38)   # Alert Red
 COLOR_WHITE = (255, 255, 255)
 COLOR_GRAY = (100, 116, 139) # Slate 500
 
-# Paths
-# Paths - macOS Compatible (with fallbacks if needed in future)
-FONT_PATH_SANS_REG = "/System/Library/Fonts/Supplemental/Arial.ttf"
-FONT_PATH_SANS_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-FONT_PATH_SERIF = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
-
 # Resolve absolute path to project root for assets
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGO_IMAGE_PATH = os.path.join(PROJECT_ROOT, "ludi_header_exact_v1.png")
 DB_PATH = os.path.join(PROJECT_ROOT, "ludi.db")
+
+# === FONT PATH RESOLUTION (Cross-Platform) ===
+# Priority: 1. Bundled fonts (repo) → 2. System fonts (platform-specific) → 3. PIL default
+FONT_DIR = os.path.join(PROJECT_ROOT, "assets", "fonts")
+
+def _resolve_font_paths():
+    """Resolve font paths with fallback chain: Bundled → System → Default"""
+    # Option 1: Bundled fonts in repo (most reliable for CI/CD)
+    bundled_sans_reg = os.path.join(FONT_DIR, "LiberationSans-Regular.ttf")
+    bundled_sans_bold = os.path.join(FONT_DIR, "LiberationSans-Bold.ttf")
+    bundled_serif = os.path.join(FONT_DIR, "LiberationSerif-Regular.ttf")
+    
+    if os.path.exists(bundled_sans_reg):
+        print("[FONTS] ✅ Using bundled Liberation fonts")
+        return bundled_sans_reg, bundled_sans_bold, bundled_serif
+    
+    # Option 2: System fonts (platform-specific)
+    if platform.system() == "Darwin":  # macOS
+        macos_sans_reg = "/System/Library/Fonts/Supplemental/Arial.ttf"
+        macos_sans_bold = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+        macos_serif = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+        if os.path.exists(macos_sans_reg):
+            print("[FONTS] ✅ Using macOS system fonts (Arial)")
+            return macos_sans_reg, macos_sans_bold, macos_serif
+    else:  # Linux (Ubuntu/GitHub Actions)
+        linux_sans_reg = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        linux_sans_bold = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        linux_serif = "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"
+        if os.path.exists(linux_sans_reg):
+            print("[FONTS] ✅ Using Linux system fonts (Liberation)")
+            return linux_sans_reg, linux_sans_bold, linux_serif
+        
+        # Alternative Linux path (DejaVu as backup)
+        dejavu_sans = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        dejavu_sans_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        dejavu_serif = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
+        if os.path.exists(dejavu_sans):
+            print("[FONTS] ⚠️ Using Linux fallback fonts (DejaVu)")
+            return dejavu_sans, dejavu_sans_bold, dejavu_serif
+    
+    # Option 3: No fonts found - will use PIL default later
+    print("[FONTS] ⚠️ No system fonts found - will use PIL default")
+    return None, None, None
+
+# Initialize font paths at module load
+FONT_PATH_SANS_REG, FONT_PATH_SANS_BOLD, FONT_PATH_SERIF = _resolve_font_paths()
 
 # Font Sizes
 FONT_SIZE_TITLE = 60
@@ -228,19 +269,23 @@ def create_briefing_card(props_data: list = None, title: str = "LUDI GAME BRIEF"
     draw = ImageDraw.Draw(img)
     pm = Pilmoji(img)
 
-    # Load Fonts
+    # Load Fonts with enhanced fallback
+    use_default_fonts = False
     try:
-        font_header = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_HEADER)
-        font_game_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_GAME_TITLE)
-        font_body = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_BODY)
-        font_body_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BODY)
-        font_badge = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BADGE)
-        font_context = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_CONTEXT)
-        font_footer_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_FOOTER)
-        font_footer_reg = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_FOOTER)
-    except IOError:
-        print("Error: Font files not found. Using default.")
-        # Fallback to default if needed (though macOS paths usually work)
+        if FONT_PATH_SANS_REG and os.path.exists(FONT_PATH_SANS_REG):
+            font_header = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_HEADER)
+            font_game_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_GAME_TITLE)
+            font_body = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_BODY)
+            font_body_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BODY)
+            font_badge = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_BADGE)
+            font_context = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_CONTEXT)
+            font_footer_bold = ImageFont.truetype(FONT_PATH_SANS_BOLD, FONT_SIZE_FOOTER)
+            font_footer_reg = ImageFont.truetype(FONT_PATH_SANS_REG, FONT_SIZE_FOOTER)
+        else:
+            raise IOError("Font paths not resolved")
+    except (IOError, OSError) as e:
+        print(f"Error: Font files not found ({e}). Using PIL default.")
+        use_default_fonts = True
         font_header = ImageFont.load_default()
         font_game_bold = ImageFont.load_default()
         font_body = ImageFont.load_default()
