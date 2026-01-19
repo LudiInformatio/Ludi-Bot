@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Product Name**: Ludi Lens v2.0 (The Front Office War Room)
 - **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | 5k Runs | Usage Vacuum)
-- **Current Phase**: Week 3 (Validation) -> Week 6 (Ludi Lens Dashboard Build)
+- **Current Phase**: Week 6 (Ludi Lens Dashboard Build & Data Pipeline Hardening)
 - **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
@@ -95,10 +95,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 19, 2026 @ 12:30 PM EST
-- **Phase**: Security & Infrastructure Hardening (Complete)
-- **Active Task**: Preparing for Week 6 (War Room Dashboard)
-- **Last Updated**: Jan 19, 2026 - Docker Migration + Secret Keymaster + Supply Chain Audit
+- **Date**: Jan 19, 2026 @ 01:00 PM EST
+- **Phase**: Data Pipeline Upgrade - The "Twin Engine" Era
+- **Active Task**: Blending NBA Tracking (Physical) with PBP Stats (Quality)
+- **Last Updated**: Jan 19, 2026 - PBP Stats Integration + Ghost Protocol V2.1
+
+---
+
+## 🚀 Jan 19, 2026: The "Twin Engine" Upgrade
+
+We have established two distinct data engines to power the "Super Signal" (Actual vs Expected).
+
+### Engine A: The "Visible Ghost" (Legacy/Stable)
+**Purpose:** Scrapes proprietary NBA.com data (Lineups, Defense, Speed) that has no public API.
+*   **Upgraded Script:** `scripts/sync_wowy_hybrid.py`
+*   **The Fix:** Now intelligently falls back to **Visible Browser Mode** when running on Self-Hosted runners (`IS_SELF_HOSTED=true`). This bypasses the NBA's WAF which blocks Headless browsers.
+*   **Stealth Tech:** `scripts/sync_browser_backfill.py` uses stealth injections and mouse randomization to mimic human behavior.
+
+### Engine B: PBP Stats (New/Clean)
+**Purpose:** Fetches "Shot Quality" and "Expected eFG%" via API.
+*   **New Script:** `scripts/sync_pbp_shot_quality.py`
+*   **New Client:** `utils/pbp_stats_client.py` (upgraded with browser headers).
+*   **New Data:** `player_shot_quality` table in `ludi.db`.
+*   **Status:** **ACTIVE**. 499 players synced for 2025-26.
+
+### The "Super Signal" Methodology
+We blend these two engines to find the **Ludi Regression Index**:
+*   **Physical Layer (NBA API):** Volume & Opportunity (Drives, Touches).
+*   **Quality Layer (PBP Stats):** Efficiency Context (Shot Quality, Expected eFG%).
+*   **The Signal:** If `Shot Quality` > `Actual Results` = **💎 DIAMOND PLAY (Buy Low)**.
 
 ---
 
