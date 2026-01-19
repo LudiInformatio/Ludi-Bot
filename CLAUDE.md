@@ -95,10 +95,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 18, 2026 @ 11:00 PM EST
-- **Phase**: Week 6 - WOWY Integration & Smart Blowout Tax Complete
-- **Active Task**: Database Revival + WOWY Calculator + Module Upgrades
-- **Last Updated**: Jan 18, 2026 - Full WOWY Integration + Evening Slate Test Verified
+- **Date**: Jan 19, 2026 @ 12:30 PM EST
+- **Phase**: Security & Infrastructure Hardening (Complete)
+- **Active Task**: Preparing for Week 6 (War Room Dashboard)
+- **Last Updated**: Jan 19, 2026 - Docker Migration + Secret Keymaster + Supply Chain Audit
+
+---
+
+## 🛡️ INFRASTRUCTURE & SECURITY (Self-Hosted)
+*Architecture upgraded Jan 19, 2026 for bare-metal security.*
+
+### 1. The Containment Layer (Docker)
+- **Strategy:** All automated workflows run inside the `ludi-core` Docker container.
+- **Image:** `ludi-core:latest` (Local build, based on `python:3.11-slim`).
+- **Capabilities:** Pre-installed Playwright (Chromium/FFMPEG), SQLite3, Git.
+- **Persistence:** Workflows bind-mount the project root to `/app`.
+- **Reasoning:** Isolates execution from the host macOS system. If a script goes rogue, it destroys a disposable container, not the host.
+
+### 2. The Keymaster Protocol (Secrets)
+- **Strategy:** Zero-trust secret handling in production.
+- **Implementation:** `config.py` detects `IS_SELF_HOSTED` env var.
+- **Behavior:**
+  - **Local Dev:** Loads `.env` file (legacy behavior).
+  - **Docker/CI:** IGNORS `.env` file. Secrets must be injected by the runner.
+- **Benefit:** Prevents secret leakage via volume mounts or log artifacts.
+
+### 3. Supply Chain Defense
+- **Tool:** `pip-audit`.
+- **Integration:** Runs during `docker build`.
+- **Policy:** The build FAILS if any `requirements.txt` package has known vulnerabilities.
+
+### 4. Database Fortification
+- **Mode:** WAL (Write-Ahead Logging) enabled (`PRAGMA journal_mode=WAL`).
+- **Backups:** `backup_local_data.sh` upgraded to use SQLite Hot Backup API (`.backup`).
+- **Retention:** Automated 7-day rotation of backup files.
 
 ---
 

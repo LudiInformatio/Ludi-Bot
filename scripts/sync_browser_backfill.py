@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-LUDI INFORMATIO | GHOST PROTOCOL BACKFILL v2.0
-==============================================
+LUDI INFORMATIO | GHOST PROTOCOL BACKFILL v2.1 (Stealth Upgrade)
+================================================================
 Browser-based synchronization of historical NBA tracking data.
 Now supports comprehensive tracking, advanced stats, and misc data via DATA_MANIFEST.
 
-Scope:
-- Tracking: Drives, Catch & Shoot, Pull Up, Speed & Distance
-- Advanced: Advanced Stats
-- Clutch: Traditional Clutch Stats
+Features:
+- "Human Ghost" Stealth Mode (Bypasses NBA WAF)
+- Random Mouse/Scroll Interactions
+- Optimized Wait Strategies (domcontentloaded)
 
 Usage:
     python scripts/sync_browser_backfill.py --days 1 (syncs yesterday)
@@ -159,16 +159,43 @@ DATA_MANIFEST = {
     }
 }
 
+# Updated User Agents (Modern Chrome/Firefox)
 USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.1; rv:109.0) Gecko/20100101 Firefox/119.0"
 ]
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def simulate_human_interaction(page):
+    """
+    Performs random mouse movements, scrolling, and clicks to simulate human behavior.
+    Crucial for triggering lazy-loaded elements and bypassing bot detection.
+    """
+    try:
+        # Random mouse movements
+        for _ in range(random.randint(2, 4)):
+            x = random.randint(100, 1000)
+            y = random.randint(100, 800)
+            page.mouse.move(x, y, steps=5)
+            time.sleep(random.uniform(0.1, 0.3))
+
+        # Random scroll
+        page.mouse.wheel(0, random.randint(300, 700))
+        time.sleep(random.uniform(0.5, 1.0))
+        
+        # Scroll back up a bit sometimes
+        if random.random() > 0.7:
+            page.mouse.wheel(0, -random.randint(100, 300))
+            time.sleep(random.uniform(0.2, 0.5))
+            
+    except Exception as e:
+        print(f"      ⚠️ Interaction Error: {e}")
 
 def handle_pagination(page, category_label=None):
     """Ensure all rows are visible by selecting 'All' in pagination."""
@@ -197,9 +224,13 @@ def scrape_table(page, label):
     """Extract generic table data."""
     print(f"      Scanning {label} table...")
     
+    # Simulate human attention before scanning
+    simulate_human_interaction(page)
+    
     # First wait for table to appear with RETRIES
     slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
-    timeout = 25000 if label in slow_categories else 15000
+    # Increased timeout to 30s
+    timeout = 30000 if label in slow_categories else 20000
     
     table_found = False
     for attempt in range(3):
@@ -210,6 +241,7 @@ def scrape_table(page, label):
         except:
             if attempt < 2:
                 print(f"      ⏳ Retry {attempt+1}/3: Table not found, waiting...")
+                simulate_human_interaction(page) # Trigger load
                 page.wait_for_timeout(3000)
     
     if not table_found:
@@ -225,7 +257,7 @@ def scrape_table(page, label):
         return ths.map(th => th.innerText.trim());
     }''')
     headers = [h.replace('\xa0', ' ').replace('\n', ' ') for h in headers]
-    print(f"      [DEBUG] Headers: {headers}")
+    # print(f"      [DEBUG] Headers: {headers}")
     
     # Rows with HREF extraction
     rows = page.evaluate('''() => {
@@ -346,7 +378,7 @@ def process_tracking_row(data, date_str, col_map):
             c.execute(sql_clean, params)
             count += 1
         except Exception as e:
-            print(f"       Row Error: {e}")
+            # print(f"       Row Error: {e}")
             continue
             
     conn.commit()
@@ -572,11 +604,13 @@ def process_hustle_row(data, date_str, col_map):
     conn.close()
     return count
 
-# Redundant definitions removed.
+# ============================================================
+# MAIN GHOST PROTOCOL LOOP
+# ============================================================
 
 def run_ghost_protocol(start_date, end_date, headless=False):
     print("\n" + "="*50)
-    print(f"👻 LUDI GHOST PROTOCOL v2.0 | FULL SPECTRUM")
+    print(f"👻 LUDI GHOST PROTOCOL v2.1 | HUMAN STEALTH MODE")
     print(f"📅 Range: {start_date} -> {end_date}")
     print(f"🖥️  Mode: {'Headless' if headless else 'Visible Browser'}")
     print("="*50)
@@ -585,6 +619,7 @@ def run_ghost_protocol(start_date, end_date, headless=False):
     date_list = [start_date + timedelta(days=i) for i in range(delta.days + 1)]
 
     with sync_playwright() as p:
+        # Browser Launch Args for Stealth
         browser = p.chromium.launch(
             headless=headless,
             args=[
@@ -594,21 +629,34 @@ def run_ghost_protocol(start_date, end_date, headless=False):
                 '--disable-infobars',
                 '--window-position=0,0',
                 '--ignore-certificate-errors',
-                '--ignore-ssl-errors'
+                '--ignore-ssl-errors',
+                '--disable-extensions',
+                '--disable-popup-blocking',
+                '--disable-http2'  # Force HTTP/1.1 to avoid protocol errors
             ]
         )
         
         context = browser.new_context(
             user_agent=random.choice(USER_AGENTS),
-            viewport={'width': 1366, 'height': 768},
+            viewport={'width': 1920, 'height': 1080},
             ignore_https_errors=True,
-            java_script_enabled=True
+            java_script_enabled=True,
+            locale='en-US',
+            timezone_id='America/New_York'
         )
         
+        # INJECT STEALTH SCRIPTS
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
             });
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en']
+            });
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+            window.chrome = { runtime: {} };
         """)
         
         page = context.new_page()
@@ -626,17 +674,22 @@ def run_ghost_protocol(start_date, end_date, headless=False):
                 
                 try:
                     url = url_template.format(date=nba_date)
-                    # Go to page
-                    page.goto(url, timeout=45000)
                     
-                    # Scrape
+                    # 1. Navigate with optimized wait strategy
+                    # Use 'domcontentloaded' to avoid hanging on ads/tracking pixels
+                    # Increase timeout to 90s for safety
+                    page.goto(url, wait_until='domcontentloaded', timeout=90000)
+                    
+                    # 2. Scrape (includes human interaction)
                     data = scrape_table(page, label)
                     
-                    # Process
+                    # 3. Process
                     count = process_item(key, data, db_date)
                     print(f"   ✓ {label}: {count} records")
                     
-                    time.sleep(random.uniform(2.0, 4.0))
+                    # Human-like pause between tables
+                    time.sleep(random.uniform(3.0, 6.0))
+                    
                 except Exception as e:
                     print(f"   ❌ {label} Error: {e}")
 

@@ -1,26 +1,26 @@
 #!/bin/bash
-# Quick backup of local-only data (not in git)
 
-BACKUP_DIR="backups/local_data_$(date +%Y%m%d_%H%M%S)"
+# Configuration
+BACKUP_DIR="backups/database"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+DB_FILE="ludi.db"
+BACKUP_FILE="$BACKUP_DIR/ludi_$TIMESTAMP.db"
+
+# Ensure backup directory exists
 mkdir -p "$BACKUP_DIR"
 
-echo "Backing up local data to $BACKUP_DIR..."
+# Perform safe hot backup using SQLite native command
+# This prevents copying a locked/corrupt file during writes
+echo "📦 Starting backup of $DB_FILE..."
+sqlite3 "$DB_FILE" ".backup '$BACKUP_FILE'"
 
-# Database
-cp ludi.db "$BACKUP_DIR/ludi.db"
-echo "  ✓ ludi.db ($(du -h ludi.db | cut -f1))"
-
-# CSVs
-cp -r data/raw_nba_data "$BACKUP_DIR/"
-echo "  ✓ data/raw_nba_data/"
-
-# Progress logs
-cp logs/tracking_sync_progress.json "$BACKUP_DIR/" 2>/dev/null || true
-echo "  ✓ logs/tracking_sync_progress.json"
-
-# Cache (optional - large)
-# cp -r cache/ "$BACKUP_DIR/" 2>/dev/null || true
-
-echo ""
-echo "Backup complete: $BACKUP_DIR"
-du -sh "$BACKUP_DIR"
+if [ $? -eq 0 ]; then
+    echo "✅ Backup successful: $BACKUP_FILE"
+    
+    # Rotation: Keep only the last 7 days of backups
+    echo "🧹 Cleaning up old backups (retention: 7 days)..."
+    find "$BACKUP_DIR" -name "ludi_*.db" -type f -mtime +7 -delete
+else
+    echo "❌ Backup FAILED!"
+    exit 1
+fi

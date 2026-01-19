@@ -36,7 +36,7 @@ GHOST_THRESHOLD_DAYS = 14  # Use Ghost automatically if > 14 days requested
 # Standard headers required for NBA.com (Copied from utils/nba_api_client.py)
 HEADERS = {
     'Host': 'stats.nba.com',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Referer': 'https://www.nba.com/',
     'Origin': 'https://www.nba.com',
     'x-nba-stats-origin': 'stats',
@@ -68,7 +68,7 @@ def sync_via_api(target_date: datetime) -> int:
             date_from_nullable=nba_date_str,
             date_to_nullable=nba_date_str,
             headers=HEADERS,
-            timeout=60
+            timeout=120
         )
         
         # Rate limit
@@ -181,11 +181,15 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
             use_ghost = True
             
     if use_ghost:
-        if is_ci:
-            print("❌ Cannot run Ghost Protocol in CI (Requires visible browser). Skipping.")
+        # Allow Ghost in CI if self-hosted (Tier 2 supported via headless browser)
+        if is_ci and not os.environ.get('IS_SELF_HOSTED'):
+            print("❌ Cannot run Ghost Protocol in Cloud CI (No browser). Skipping.")
             return
+
         print("👻 Engaging Ghost Protocol (Browser Mode)...")
-        run_ghost_protocol(start_date, end_date, headless=False)
+        # FORCE VISIBLE MODE for Self-Hosted (Headless is blocked by WAF)
+        is_headless = False if os.environ.get('IS_SELF_HOSTED') else is_ci
+        run_ghost_protocol(start_date, end_date, headless=is_headless)
         return
 
     # TIER 1: API EXECUTION
@@ -216,10 +220,15 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
             api_failures += 1
             
             # Smart Fallback Logic
-            if not is_ci and api_failures >= 2:
+            # Allow fallback if local OR self-hosted CI
+            can_fallback = not is_ci or os.environ.get('IS_SELF_HOSTED')
+            
+            if can_fallback and api_failures >= 2:
                 print("\n⚠️  Too many API failures. NBA WAF might be blocking.")
                 print("   👉 Switching to Tier 2: Ghost Protocol for remaining dates...")
-                run_ghost_protocol(current_date, end_date, headless=False)
+                # FORCE VISIBLE MODE for Self-Hosted (Headless is blocked by WAF)
+                is_headless = False if os.environ.get('IS_SELF_HOSTED') else is_ci
+                run_ghost_protocol(current_date, end_date, headless=is_headless)
                 return
 
         current_date += timedelta(days=1)

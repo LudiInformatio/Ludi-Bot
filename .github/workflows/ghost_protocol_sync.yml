@@ -17,29 +17,26 @@ concurrency:
 
 jobs:
   sync-tracking:
-    runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 hours for large backfill
+    runs-on: self-hosted
+    container:
+      image: ludi-core:latest
+      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
+    timeout-minutes: 360
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install playwright
-          playwright install chromium --with-deps
+      # Python setup and dependency installation removed - handled by ludi-core
 
       - name: Run Ghost Protocol sync (last 7 days)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: |
+          git config --global --add safe.directory /app
+          # Ensure playwright browsers path is set correctly if not inherited
+          export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
           python scripts/sync_browser_backfill.py --days 7 --headless
 
       - name: Upload database artifact

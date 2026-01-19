@@ -8,9 +8,12 @@ on:
 jobs:
   sync-referee-intelligence:
     runs-on: self-hosted
+    container:
+      image: ludi-core:latest
+      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
     env:
       IS_SELF_HOSTED: 'true'
-      PYTHONPATH: ${{ github.workspace }}
+      PYTHONPATH: /app
     permissions:
       contents: write
 
@@ -20,11 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r requirements.txt
-          playwright install chromium
+      # Dependency installation (including Playwright) removed - handled by ludi-core
 
       - name: Scrape Covers + OddsShark
         env:
@@ -44,6 +43,7 @@ jobs:
 
       - name: Commit and push if changes
         run: |
+          git config --global --add safe.directory /app
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
           git add ludi.db logs/

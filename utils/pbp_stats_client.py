@@ -16,6 +16,12 @@ CURRENT_SEASON = "2025-26"
 
 def _get_session():
     session = requests.Session()
+    # Add browser-like headers to avoid 403 Forbidden
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.pbpstats.com/',
+        'Origin': 'https://www.pbpstats.com'
+    })
     retry = Retry(
         total=5, 
         backoff_factor=1, 

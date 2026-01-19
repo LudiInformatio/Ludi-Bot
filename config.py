@@ -6,8 +6,12 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file ONLY if not in production/CI
+# This prevents local .env files from overriding injected secrets in Docker/CI
+if not os.getenv('IS_SELF_HOSTED'):
+    load_dotenv()
+else:
+    print("🔒 Running in Self-Hosted Mode: Skipping .env load (relying on injected secrets)")
 
 # ====================================================
 # 1. ODDS & LINES PROVIDERS
