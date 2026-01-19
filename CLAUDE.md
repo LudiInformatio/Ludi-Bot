@@ -95,12 +95,138 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 17, 2026 @ 1:00 PM EST
-- **Phase**: Module G Phase 5 Complete - Day Forward Referee Intelligence
-- **Active Task**: Phase 1 loose ends tied up, ready for Phase 2 (Learning Engine Activation)
-- **Last Updated**: Jan 17, 2026 - Module G Phase 5 + Weekly Intelligence Automation Deployed
+- **Date**: Jan 18, 2026 @ 11:00 PM EST
+- **Phase**: Week 6 - WOWY Integration & Smart Blowout Tax Complete
+- **Active Task**: Database Revival + WOWY Calculator + Module Upgrades
+- **Last Updated**: Jan 18, 2026 - Full WOWY Integration + Evening Slate Test Verified
 
-**🛠️ Engineering Log (Jan 16, 2026 - 10:30 AM EST):**
+---
+
+## 🚀 Jan 18, 2026: Major System Upgrade (WOWY + Smart Tax)
+
+### Database Revival (Morning Session)
+**Problem:** `team_lineups` table had empty `possessions` column after 60-day backfill
+**Solution:** Calculated possessions from pace × minutes / 48 formula
+
+**Verification Results:**
+| Metric | Value | Status |
+|--------|-------|--------|
+| Total Lineup Records | 10,669 | ✅ |
+| Records with Possessions | 9,314 | ✅ 87.3% |
+| Teams Covered | 30/30 | ✅ 100% |
+| Date Range | Nov 19 - Jan 17 | ✅ 60 days |
+| Duplicate Check | 0 | ✅ Clean |
+| Game Days | 45 | ✅ |
+| High-Quality Lineups (150+ poss) | 27 | ✅ |
+
+**SQL Used:**
+```sql
+UPDATE team_lineups 
+SET possessions = CAST(pace * minutes / 48.0 AS INTEGER)
+WHERE possessions IS NULL OR possessions = 0;
+```
+
+### WOWY Calculator Integration (NEW - Phase 6)
+**Strategic Achievement:** Built proprietary WOWY (With Or Without You) lineup analysis system
+
+**New Utility Created: `utils/wowy_calculator.py` (450 lines)**
+- **Confidence Tiers:** HIGH (500+ poss), MEDIUM (350+ poss), LOW (150+ poss), INSUFFICIENT (<150)
+- **Key Methods:**
+  - `get_player_impact()` - WITH vs WITHOUT efficiency comparison
+  - `find_beneficiaries()` - Usage vacuum analysis for OUT players
+  - `get_team_best_lineups()` - Top lineups by NetRtg
+  - `get_team_worst_lineups()` - Worst lineups by NetRtg
+- **Confidence Weighting:** HIGH=1.0, MEDIUM=0.7, LOW=0.4, INSUFFICIENT=0.0
+
+**CLI Testing:**
+```bash
+# Show best lineups for Denver
+python3 utils/wowy_calculator.py --best DEN --limit 5 --min-poss 10
+
+# Show worst lineups for Lakers
+python3 utils/wowy_calculator.py --worst LAL --limit 5 --min-poss 10
+```
+
+### Smart Blowout Tax (V4.7) - Replaced Double Taxation
+**Problem:** Old system taxed twice (Module E -6% flat + Module F sliding scale)
+**Solution:** Consolidated to context-aware per-player calculation in Module F only
+
+**New Utility Created: `utils/blowout_tax.py` (200 lines)**
+- **Tax Logic:**
+  - **Favorites (Starters):** Tax starts at 10pt spread (-10% at 15pt, -20% at 20pt, -30% at 25pt)
+  - **Favorites (Bench):** BOOST in blowouts (+5% at 15pt, +10% at 20pt - garbage time)
+  - **Underdogs:** Neutral (no tax - keep fighting)
+- **Floor/Cap:** 70% minimum (30% max tax), 120% maximum (20% max boost)
+
+**Tax Table (CLI Output):**
+```
+Spread    |   5pt |  10pt |  12pt |  15pt |  18pt |  20pt |  25pt |
+Favorite Starter|    0%  |    0%  |    -4% |   -10% |   -16% |   -20% |   -30% |
+Favorite Bench  |    0%  |    0%  |    +2% |    +5% |    +8% |   +10% |   +15% |
+Underdog (both) |    0%  |    0%  |    0%  |    0%  |    0%  |    0%  |    0%  |
+```
+
+**CLI Testing:**
+```bash
+python3 utils/blowout_tax.py --table
+python3 utils/blowout_tax.py --spread 15 --favorite --starter
+```
+
+### Module Updates (Jan 18)
+
+**Module E (Calibrator):**
+- **Removed:** Spread >12.5 flat -6% blowout tax (lines 85-90)
+- **Reason:** Consolidated all blowout logic to Module F
+
+**Module F (Alchemist V4.7):**
+- **Added:** Smart blowout tax per player (favorite/underdog, starter/bench aware)
+- **Added:** WOWY confidence notes in bet briefings ("✅ WOWY: HIGH confidence")
+- **Import:** `from utils.blowout_tax import calculate_blowout_tax`
+
+**Module X (Scenario Builder V3.8):**
+- **Rewrote:** `_infer_dynamic_backup()` to query WOWY first, fallback to 60/30 heuristic
+- **Returns:** `{'matrix': {name: absorption_rate}, 'confidence': 'high'/'medium'/None}`
+- **Integration:** WOWY data drives usage vacuum calculations when sample size sufficient
+
+**Tag Classifier Update:**
+- **BENEFICIARY_CONFIRMED:** 500+ possessions (very reliable WOWY data)
+- **BENEFICIARY_LIKELY:** 350+ possessions (reliable WOWY data)
+- **BENEFICIARY:** Heuristic fallback (60/30 split)
+
+### GitHub Actions Update
+**Modified: `.github/workflows/weekly_referee_sync.yml`**
+- **Added Step:** `Sync WOWY Lineup Data (7-Day Backfill)`
+- **Command:** `python scripts/sync_wowy_backfill.py --days 7`
+- **Schedule:** Mondays 5 AM ET (alongside referee intelligence sync)
+
+### Files Modified/Created (Jan 18)
+| File | Action | Lines | Purpose |
+|------|--------|-------|---------|
+| `utils/blowout_tax.py` | NEW | 200 | Smart context-aware blowout tax |
+| `utils/wowy_calculator.py` | NEW | 450 | WOWY lineup analysis calculator |
+| `module_e.py` | MODIFIED | 5 | Removed double taxation |
+| `module_f.py` | MODIFIED | 50+ | Smart tax + WOWY notes integration |
+| `module_x_scenario.py` | MODIFIED | 100+ | WOWY integration in usage vacuum |
+| `utils/tag_classifier.py` | MODIFIED | 25 | Confidence-based BENEFICIARY tags |
+| `weekly_referee_sync.yml` | MODIFIED | 10 | Added WOWY sync step |
+| `UPDATED_STATUS_AND_NEXT_STEPS.md` | MODIFIED | 60 | Phase 6 documentation |
+
+### Evening Slate Test (Verified Working)
+**Target Games:** 3 Late Games (Jan 18, 8PM+ EST)
+- Charlotte @ Denver (8:10 PM) | Spread: +1.0 | Total: 228.5
+- Portland @ Sacramento (9:10 PM) | Spread: +2.5 | Total: 228.0
+- Toronto @ LA Lakers (9:40 PM) | Spread: +1.5 | Total: 223.0
+
+**Pipeline Results:**
+- ✅ All modules initialized (A-H + X)
+- ✅ 3 games processed with referee assignments (100% confidence)
+- ✅ Props fetched from 21 books
+- ✅ 135 bets logged, 159.4 units total
+- ✅ Visual card generated + sent to Telegram
+
+---
+
+## 🛠️ Engineering Log (Jan 17, 2026 - 3:00 PM EST):
 - **Module A (Gatekeeper) V9.4:**
   - **4-Tier Book Structure:** NC Legal (betting) | Sharp (CLV) | DFS | Social/Exchange
   - **Consensus Line Detection:** Weighted voting across books to find main line

@@ -49,6 +49,15 @@ jobs:
           export PYTHONPATH=$PWD
           python scripts/sync_external_intelligence.py
 
+      - name: Sync WOWY Lineup Data (7-Day Backfill)
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          export PYTHONPATH=$PWD
+          python scripts/sync_wowy_backfill.py --days 7
+          echo "✅ WOWY lineup data refreshed (last 7 days)"
+
       - name: Generate Weekly Zebra Report
         run: |
           export PYTHONPATH=$PWD

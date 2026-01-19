@@ -6,6 +6,14 @@ from utils.bet_logger import get_bet_logger
 from utils.tag_classifier import get_tag_classifier
 from utils.time_utils import get_est_today, format_est_date
 
+# WOWY & Smart Blowout Tax (V4.7)
+try:
+    from utils.blowout_tax import calculate_blowout_tax
+    BLOWOUT_TAX_AVAILABLE = True
+except ImportError:
+    BLOWOUT_TAX_AVAILABLE = False
+    print("⚠️ [Module F] utils/blowout_tax.py not found - using fallback")
+
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
 # V4.4 - DEVIGGED EDGE CALCULATION | 2026 PRO-SHARP META
@@ -48,16 +56,39 @@ class LudiReporter:
         all_props = []
         
         for game in processed_slate:
-            # --- 1. SLIDING SCALE BLOWOUT TAX ---
-            # Logic: Starter volume decays as spread widens beyond 7 pts.
-            spread = abs(game.get('spread', 0))
-            blowout_mult = 1.0 - (max(0, spread - 7.0) * 0.015)
-
+            # --- 1. SMART BLOWOUT TAX (V4.7) ---
+            # Context-aware: Favorites get taxed, underdogs neutral, bench gets boost
+            spread = game.get('spread', 0)  # Positive = underdog, Negative = favorite
+            
+            # Determine favorite status: negative spread = favorite
+            game_is_favorite = spread < 0
+            
+            # For fallback (old logic if utility not available)
+            if not BLOWOUT_TAX_AVAILABLE:
+                blowout_mult_fallback = 1.0 - (max(0, abs(spread) - 10.0) * 0.02)
+            
             for p in game['players']:
                 # UPSTREAM GUARDRAIL: Skip players with zero projected minutes 
                 # or those explicitly ruled OUT by Module D (The Yak).
                 if p.get('proj_min', 0) <= 0 or p.get('status') == 'OUT':
                     continue
+                
+                # Calculate player-specific blowout tax
+                if BLOWOUT_TAX_AVAILABLE:
+                    # Player on home team: spread is from home perspective
+                    # Player on away team: flip the spread
+                    player_team = p.get('TEAM_ABBREVIATION', '')
+                    home_team = game.get('home_team', '')
+                    player_is_favorite = game_is_favorite if player_team == home_team else not game_is_favorite
+                    player_is_starter = p.get('base_min', 0) >= 28.0
+                    blowout_mult = calculate_blowout_tax(
+                        spread=abs(spread),  # Use absolute spread
+                        is_favorite=player_is_favorite,
+                        is_starter=player_is_starter,
+                        base_min=p.get('base_min', 0)
+                    )
+                else:
+                    blowout_mult = blowout_mult_fallback
                 
                 player_props = []
                 if 'sportsbook_props' in p:
@@ -160,6 +191,12 @@ class LudiReporter:
                             if "WITHOUT" in scenario_raw:
                                 absent_star = scenario_raw.replace("WITHOUT ", "")
                                 note_elements.append(f"🚀 VACUUM: {absent_star} OUT")
+                                
+                                # C2) WOWY Confidence Note (V4.7)
+                                wowy_conf = p.get('wowy_confidence', None)
+                                if wowy_conf in ['high', 'medium']:
+                                    conf_emoji = "✅" if wowy_conf == 'high' else "📊"
+                                    note_elements.append(f"{conf_emoji} WOWY: {wowy_conf.upper()} confidence")
                             
                             # D) Status Flag (from Module D)
                             if p.get('status') in ['Q', 'GTD']:

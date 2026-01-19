@@ -1,12 +1,63 @@
-# LUDI LENS v2.1 | STATUS REPORT (JAN 17, 2026, 3:00 PM EST)
-## 🚨 SYSTEM STATE: MODULE G PHASE 5 COMPLETE
-**Date:** Saturday, Jan 17, 2026 (3:00 PM EST)
-**Mode:** Module G - Referee Learning Engines Activated
-**Core Engine:** Modules A-H (Production v2.1)
+# LUDI LENS v2.2 | STATUS REPORT (JAN 18, 2026 @ 11:00 PM EST)
+## 🚨 SYSTEM STATE: WOWY & SMART BLOWOUT TAX INTEGRATION COMPLETE
+**Date:** Saturday, Jan 18, 2026 @ 11:00 PM EST
+**Mode:** Module X/F - WOWY Calculator + Smart Blowout Tax
+**Core Engine:** Modules A-H + X (Production v2.2)
+**Last Updated:** Jan 18, 2026 @ 11:00 PM EST
 
 ---
 
-## ✅ ACCOMPLISHMENTS (JAN 17)
+## ✅ ACCOMPLISHMENTS (JAN 18)
+
+### Database Revival (Morning)
+**Issue:** `team_lineups.possessions` column was empty after 60-day WOWY backfill
+**Fix:** Calculated from `pace × minutes / 48` formula
+**Result:** 9,314/10,669 records now have possessions data (87.3%)
+
+### WOWY Calculator Integration (NEW - Phase 6)
+**Strategic Achievement:** Built proprietary WOWY (With Or Without You) lineup analysis system
+- **Database:** 10,669 lineup records in `team_lineups` table (60 days, 30 NBA teams)
+- **Possessions:** 9,314 records with calculated possessions (pace × minutes / 48)
+- **Confidence Tiers:** HIGH (500+ poss), MEDIUM (350+ poss), LOW (150+ poss)
+- **Utilities Created:**
+  - `utils/wowy_calculator.py` - Lineup analysis with `get_player_impact()`, `find_beneficiaries()`
+  - `utils/blowout_tax.py` - Context-aware tax (favorite/underdog, starter/bench)
+- **Weekly Sync:** Added to `weekly_referee_sync.yml` (Mondays 5 AM ET)
+
+### Smart Blowout Tax (V4.7)
+**Strategic Achievement:** Replaced double taxation with context-aware system
+- **Old Logic:** Module E (-6% flat for spread >12.5) + Module F (sliding scale >7)
+- **New Logic:** Module F only, smart per-player calculation:
+  - **Favorites:** Tax starts at 10pt spread (-10% at 15pt, -20% at 20pt)
+  - **Underdogs:** Neutral (no tax - keep fighting)
+  - **Bench:** +Boost in blowouts (garbage time opportunity)
+- **Module E:** Removed blowout logic (lines 85-90 commented out)
+
+### Tag Classifier Update (BENEFICIARY Confidence)
+- **BENEFICIARY_CONFIRMED:** 500+ possessions (very reliable)
+- **BENEFICIARY_LIKELY:** 350+ possessions (reliable)
+- **BENEFICIARY:** Heuristic fallback (60/30 split)
+
+### Evening Slate Test (VERIFIED WORKING)
+**Target:** 3 Late Games (CHA@DEN, POR@SAC, TOR@LAL)
+**Result:** ✅ Full pipeline executed successfully
+- 135 bets logged, 159.4 units total
+- Visual card generated + sent to Telegram
+
+### Files Modified/Created:
+| File | Action | Purpose |
+|------|--------|---------|
+| `utils/blowout_tax.py` | NEW | Smart blowout tax calculator |
+| `utils/wowy_calculator.py` | NEW | WOWY lineup analysis |
+| `module_e.py` | MODIFIED | Removed double taxation |
+| `module_f.py` | MODIFIED | Smart tax + WOWY notes |
+| `module_x_scenario.py` | MODIFIED | WOWY integration |
+| `utils/tag_classifier.py` | MODIFIED | Confidence-based tags |
+| `weekly_referee_sync.yml` | MODIFIED | Added WOWY sync step |
+
+---
+
+## ✅ PREVIOUS ACCOMPLISHMENTS (JAN 17)
 
 ### Module G - Phase 5: Day Forward Capture System (COMPLETE)
 **Strategic Achievement:** Built proprietary referee intelligence system without historical backfill
@@ -71,6 +122,19 @@
 ---
 
 ## 🛠️ QUICK COMMANDS
+
+**Test Blowout Tax (NEW):**
+```bash
+python3 utils/blowout_tax.py --table
+python3 utils/blowout_tax.py --spread 15 --favorite --starter
+```
+
+**Test WOWY Calculator (NEW):**
+```bash
+python3 utils/wowy_calculator.py --best DEN --limit 5 --min-poss 10
+python3 utils/wowy_calculator.py --worst LAL --limit 5 --min-poss 10
+```
+
 **Sync Betting Trends (Weekly):**
 ```bash
 python scripts/sync_external_intelligence.py

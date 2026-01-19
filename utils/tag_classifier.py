@@ -145,17 +145,26 @@ class TagClassifier:
         Example:
             >>> player = {'scenario': 'WITHOUT Luka Doncic', 'status': 'ACTIVE', ...}
             >>> tags = classifier.assign_scenario_tags(player, game_ctx, yak)
-            ['BENEFICIARY', 'HOT_STREAK']
+            ['BENEFICIARY_CONFIRMED', 'HOT_STREAK']
         """
         tags = []
 
-        # 1. BENEFICIARY TAG
+        # 1. BENEFICIARY TAG (with WOWY confidence levels)
         # Triggered when scenario indicates "WITHOUT [PLAYER]"
         scenario = player.get('scenario', 'BASE')
         if "WITHOUT" in scenario:
             # Extract absent player name (format: "WITHOUT PlayerName")
             absent_star = scenario.replace("WITHOUT ", "").strip()
-            tags.append("BENEFICIARY")
+            
+            # Check for WOWY confidence metadata (added by Module X)
+            wowy_confidence = player.get('wowy_confidence', None)
+            
+            if wowy_confidence == 'high':
+                tags.append("BENEFICIARY_CONFIRMED")  # 500+ possessions
+            elif wowy_confidence == 'medium':
+                tags.append("BENEFICIARY_LIKELY")     # 350+ possessions
+            else:
+                tags.append("BENEFICIARY")            # Heuristic/low confidence
 
         # 2. USAGE_VACUUM TAG
         # This player is OUT and has high usage (creating vacuum for teammates)

@@ -82,9 +82,10 @@ class LudiCalibrator:
         total = float(odds.get('total', 0)) if odds.get('total') else 0
         spread = abs(float(odds.get('spread', 0))) if odds.get('spread') else 0
         
-        if spread > 12.5 and calibrated.get('base_min', 0) > 30.0:
-            self._apply_factor(calibrated, 0.94)
-            calibrated['notes'] += f" | Spread {spread} Blowout Risk"
+        # REMOVED: Blowout tax consolidated to Module F (smart blowout_tax.py)
+        # Old logic: if spread > 12.5 → -6% for starters
+        # New logic: Context-aware (favorite/underdog, starter/bench) in Module F
+        
         if total > 238.0: self._apply_factor(calibrated, 1.03)
         elif total > 0 and total < 218.0: self._apply_factor(calibrated, 0.97)
 

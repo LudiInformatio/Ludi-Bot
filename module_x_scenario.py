@@ -57,7 +57,17 @@ class ScenarioBuilder:
         scenario['players'] = [] 
         
         # DYNAMIC: Find the backup from the current roster
-        minutes_matrix = self._infer_dynamic_backup(game['players'], starter_out)
+        # V3.8: Returns dict with 'matrix' and 'confidence' keys if WOWY used
+        backup_data = self._infer_dynamic_backup(game['players'], starter_out)
+        
+        # Extract matrix and confidence
+        if isinstance(backup_data, dict) and 'matrix' in backup_data:
+            minutes_matrix = backup_data['matrix']
+            wowy_confidence = backup_data.get('confidence', None)
+        else:
+            # Fallback: Old format (just dict of names:rates)
+            minutes_matrix = backup_data if isinstance(backup_data, dict) else {}
+            wowy_confidence = None
         
         vacated_usage = starter_out.get('base_usg', 0)
         vacated_mins = starter_out.get('base_min', 0)
@@ -92,6 +102,10 @@ class ScenarioBuilder:
                 scale_ratio = new_min / old_min if old_min > 0 else 1.0
                 
                 new_p['MIN'] = new_min
+                
+                # Attach WOWY confidence for tag classifier
+                if wowy_confidence:
+                    new_p['wowy_confidence'] = wowy_confidence
                 
                 # Efficiency Tax (10% decay on volume efficiency)
                 dampened_ratio = 1.0 + ((scale_ratio - 1.0) * 0.90)
@@ -129,10 +143,37 @@ class ScenarioBuilder:
 
     def _infer_dynamic_backup(self, all_players, starter_out):
         """
-        Scans the game roster to find the most likely backup
-        based on Minutes and Team alignment.
+        Scans the game roster to find the most likely backup.
+        
+        V3.8 UPGRADE: Uses WOWY data when available (350+ poss confidence),
+        falls back to heuristic 60/30 split for insufficient samples.
+        
+        Returns:
+            dict with 'matrix' (name:absorption_rate) and 'confidence' (high/medium/low/None)
         """
         team_abbr = starter_out.get('TEAM_ABBREVIATION')
+        
+        # TRY WOWY FIRST (real lineup data)
+        try:
+            from utils.wowy_calculator import WOWYCalculator
+            wowy = WOWYCalculator()
+            beneficiaries = wowy.find_beneficiaries(
+                starter_out.get('PLAYER_NAME', ''),
+                team_abbr
+            )
+            
+            # Use WOWY if medium+ confidence (350+ possessions)
+            if beneficiaries:
+                high_conf = [b for b in beneficiaries if b.get('confidence') in ['high', 'medium']]
+                if high_conf:
+                    print(f"[Module X] Using WOWY data for {starter_out.get('PLAYER_NAME')} beneficiaries")
+                    matrix = {b['player_name']: b['absorption_rate'] for b in high_conf[:2]}
+                    confidence = high_conf[0].get('confidence', 'medium')
+                    return {'matrix': matrix, 'confidence': confidence}
+        except Exception as e:
+            print(f"[Module X] WOWY lookup failed: {e}. Using heuristic.")
+        
+        # FALLBACK: Heuristic 60/30 split (original logic)
         bench_candidates = []
         
         for p in all_players:
@@ -144,7 +185,7 @@ class ScenarioBuilder:
                     bench_candidates.append(p)
         
         if not bench_candidates:
-            return {}
+            return {'matrix': {}, 'confidence': None}
             
         # Sort candidates by Usage Rate (Best proxy for "Sixth Man")
         bench_candidates.sort(key=lambda x: x.get('base_usg', 0), reverse=True)
@@ -155,8 +196,9 @@ class ScenarioBuilder:
             matrix[bench_candidates[0]['PLAYER_NAME']] = 0.60
         if len(bench_candidates) >= 2:
             matrix[bench_candidates[1]['PLAYER_NAME']] = 0.30
-            
-        return matrix
+        
+        print(f"[Module X] Using heuristic backup matrix (WOWY unavailable)")
+        return {'matrix': matrix, 'confidence': None}
 
     def _apply_vegas_guardrail(self, players, odds):
         spread = odds.get('spread', 0)
