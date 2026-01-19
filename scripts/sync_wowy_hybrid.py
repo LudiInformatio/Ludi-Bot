@@ -33,6 +33,16 @@ API_RATE_LIMIT = 1.0  # Seconds between API calls
 MAX_API_RETRIES = 3
 GHOST_THRESHOLD_DAYS = 14  # Use Ghost automatically if > 14 days requested
 
+# Standard headers required for NBA.com (Copied from utils/nba_api_client.py)
+HEADERS = {
+    'Host': 'stats.nba.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Referer': 'https://www.nba.com/',
+    'Origin': 'https://www.nba.com',
+    'x-nba-stats-origin': 'stats',
+    'x-nba-stats-token': 'true'
+}
+
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -56,7 +66,9 @@ def sync_via_api(target_date: datetime) -> int:
             measure_type_detailed_defense='Advanced',
             group_quantity=5,
             date_from_nullable=nba_date_str,
-            date_to_nullable=nba_date_str
+            date_to_nullable=nba_date_str,
+            headers=HEADERS,
+            timeout=60
         )
         
         # Rate limit
