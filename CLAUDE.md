@@ -1391,3 +1391,20 @@ PBP Stats API capability verification complete (Jan 14). The following data laye
 3.  **Lineup Analysis:** Use `get_game_stats(Type="Lineup")` to fade/target specific bench units.
 4.  **Shot Distance:** Use shot location data to refine "Rim Runner" vs "Pop Big" archetypes.
 
+
+---
+
+## INFRASTRUCTURE & AUTOMATION (Self-Hosted)
+
+**Rationale:**
+Due to strict WAF blocking by `stats.nba.com` and other data providers on Cloud IPs (GitHub/AWS), we utilize a **Self-Hosted Runner** on a local machine for data ingestion.
+
+**Architecture:**
+- **Runner:** Local macOS (Intel x64)
+- **Workflows:** Configured with `runs-on: self-hosted`
+- **Environment:** Persists state locally; uses `IS_SELF_HOSTED: 'true'` to unlock blocked scripts.
+
+**Maintenance:**
+- **Setup:** Run `scripts/setup_runner.sh` to install deps.
+- **Service:** Keep the runner active via `./run.sh` or service mode.
+- **Failover:** If runner is offline, workflows queue or fail. Monitor via Telegram or GitHub Actions UI.

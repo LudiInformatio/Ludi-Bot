@@ -156,7 +156,8 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
     is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true' or os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS')
     
     # [NEW] CI Graceful Skip
-    if is_ci:
+    # Skip only if NOT self-hosted (Tier 1 API is blocked on Cloud IPs)
+    if is_ci and not os.environ.get('IS_SELF_HOSTED'):
         print("\n" + "="*60)
         print("⚠️  CI ENVIRONMENT DETECTED")
         print("="*60)

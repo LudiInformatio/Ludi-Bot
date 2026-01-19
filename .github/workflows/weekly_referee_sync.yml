@@ -10,7 +10,10 @@ on:
 
 jobs:
   sync-referee-intelligence:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    env:
+      IS_SELF_HOSTED: 'true'
+      PYTHONPATH: ${{ github.workspace }}
     permissions:
       contents: write  # Required for git push
 
