@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""
+LUDI INFORMATIO | HYBRID WOWY SYNC (TIER 1 + TIER 2)
+===================================================
+Orchestrator for WOWY lineup data ingestion.
+Strategy:
+1. Tier 1 (API): standard nba_api (CI-safe, fast, rate-limited)
+2. Tier 2 (Ghost): Browser scraping (Local-only, bypasses WAF for diverse datasets)
+
+Usage:
+    python scripts/sync_wowy_hybrid.py --days 7  (Tries API -> Fallback to Ghost if local)
+    python scripts/sync_wowy_hybrid.py --days 60 --ghost (Forces Ghost Protocol)
+"""
+
+import sys
+import os
+import argparse
+import time
+import sqlite3
+import pandas as pd
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database import DB_PATH
+from nba_api.stats.endpoints import leaguedashlineups
+from scripts.sync_wowy_backfill import run_wowy_backfill as run_ghost_protocol
+
+# Configuration
+API_RATE_LIMIT = 1.0  # Seconds between API calls
+MAX_API_RETRIES = 3
+GHOST_THRESHOLD_DAYS = 14  # Use Ghost automatically if > 14 days requested
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def sync_via_api(target_date: datetime) -> int:
+    """
+    Tier 1: Fetch single day lineup data via nba_api.
+    Returns: Number of records processed.
+    """
+    nba_date_str = target_date.strftime("%m/%d/%Y")
+    db_date_str = target_date.strftime("%Y-%m-%d")
+    
+    print(f"   📡 API Request for {nba_date_str}...")
+    
+    try:
+        # Fetch Advanced Stats (Ratings, Pace, etc)
+        lineups = leaguedashlineups.LeagueDashLineups(
+            season='2025-26',
+            season_type_all_star='Regular Season',
+            measure_type_detailed_defense='Advanced',
+            group_quantity=5,
+            date_from_nullable=nba_date_str,
+            date_to_nullable=nba_date_str
+        )
+        
+        # Rate limit
+        time.sleep(API_RATE_LIMIT)
+        
+        df = lineups.get_data_frames()[0]
+        
+        if df.empty:
+            print(f"      ⚠️  No data found for {db_date_str}")
+            return 0
+            
+        # Process and Save
+        return save_api_data_to_db(df, db_date_str)
+        
+    except Exception as e:
+        print(f"      ❌ API Error: {e}")
+        raise e
+
+def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
+    """Maps API dataframe columns to SQLite schema and inserts/upserts."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    count = 0
+    
+    # Ensure columns exist in DataFrame (sometimes missing if no data)
+    required_cols = ['GROUP_NAME', 'TEAM_ABBREVIATION', 'GP', 'MIN', 
+                     'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'PACE', 
+                     'TS_PCT', 'EFG_PCT']
+                     
+    if not all(col in df.columns for col in required_cols):
+        print("      ⚠️  DataFrame missing required columns")
+        return 0
+
+    for _, row in df.iterrows():
+        try:
+            # Map API -> DB
+            vals = {
+                'game_date': game_date,
+                'lineup_players': row['GROUP_NAME'],
+                'team_id': str(row.get('TEAM_ID', '')),
+                'team_abbreviation': row['TEAM_ABBREVIATION'],
+                'games_played': int(row['GP']),
+                'minutes': float(row['MIN']),
+                'off_rating': float(row['OFF_RATING']),
+                'def_rating': float(row['DEF_RATING']),
+                'net_rating': float(row['NET_RATING']),
+                'pace': float(row['PACE']),
+                'ts_pct': float(row['TS_PCT']),
+                'efg_pct': float(row['EFG_PCT']),
+                'plus_minus': 0.0, # Will be calculated
+                'possessions': 0 # Will be calculated
+            }
+            
+            # Calculate possessions immediately
+            if vals['pace'] > 0 and vals['minutes'] > 0:
+                vals['possessions'] = int(round(vals['pace'] * vals['minutes'] / 48.0))
+                # Derive Plus/Minus from Net Rating columns
+                # NetRtg = (Pts - OppPts) / Poss * 100  ->  PlusMinus = NetRtg * Poss / 100
+                vals['plus_minus'] = round(vals['net_rating'] * vals['possessions'] / 100.0, 1)
+
+            # UPSERT Logic
+            columns = ', '.join(vals.keys())
+            placeholders = ', '.join(['?'] * len(vals))
+            sql = f'''
+                INSERT OR IGNORE INTO team_lineups ({columns})
+                VALUES ({placeholders})
+            '''
+            c.execute(sql, list(vals.values()))
+            count += 1
+            
+        except Exception as e:
+            continue
+            
+    conn.commit()
+    conn.close()
+    return count
+
+def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool = False):
+    print("\n" + "="*60)
+    print("🔁 WOWY HYBRID SYNC: TIER 1 (API) + TIER 2 (GHOST)")
+    print(f"📅 Range: {start_date.strftime('%Y-%m-%d')} -> {end_date.strftime('%Y-%m-%d')}")
+    print("="*60)
+
+    # Environment Checks
+    is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
+    num_days = (end_date - start_date).days + 1
+    
+    # Strategy Selection
+    use_ghost = force_ghost
+    
+    if not use_ghost:
+        if num_days > GHOST_THRESHOLD_DAYS and not is_ci:
+            print(f"ℹ️  Large date range ({num_days} days) detected. Switching to Ghost Protocol (Local Optimized).")
+            use_ghost = True
+        elif is_ci:
+            print("ℹ️  CI Environment detected. Forcing Tier 1 (API Only).")
+            use_ghost = False
+            
+    if use_ghost:
+        if is_ci:
+            print("❌ Cannot run Ghost Protocol in CI (Requires visible browser). Skipping.")
+            return
+        print("👻 Engaging Ghost Protocol (Browser Mode)...")
+        run_ghost_protocol(start_date, end_date, headless=False)
+        return
+
+    # TIER 1: API EXECUTION
+    print("🚀 Engaging Tier 1: nba_api (Headless/Fast)...")
+    
+    current_date = start_date
+    api_failures = 0
+    total_records = 0
+    
+    while current_date <= end_date:
+        date_str = current_date.strftime("%Y-%m-%d")
+        print(f"\n[{date_str}] Processing...")
+        
+        success = False
+        for attempt in range(MAX_API_RETRIES):
+            try:
+                count = sync_via_api(current_date)
+                print(f"   ✓ Synced {count} lineup records")
+                total_records += count
+                success = True
+                break
+            except Exception as e:
+                print(f"      ⚠️  Attempt {attempt+1}/{MAX_API_RETRIES} failed: {e}")
+                time.sleep(2 * (attempt + 1)) # Backoff
+        
+        if not success:
+            print(f"   ❌ Failed to sync {date_str} via API.")
+            api_failures += 1
+            
+            # Smart Fallback Logic
+            if not is_ci and api_failures >= 2:
+                print("\n⚠️  Too many API failures. NBA WAF might be blocking.")
+                print("   👉 Switching to Tier 2: Ghost Protocol for remaining dates...")
+                run_ghost_protocol(current_date, end_date, headless=False)
+                return
+
+        current_date += timedelta(days=1)
+
+    print("\n" + "="*60)
+    print("✅ Hybrid Sync Complete")
+    print(f"   Total Records (Tier 1): {total_records}")
+    print("="*60)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--days", type=int, default=7, help="Days to look back")
+    parser.add_argument("--ghost", action="store_true", help="Force Ghost Protocol (Browser Mode)")
+    parser.add_argument("--start-date", help="YYYY-MM-DD")
+    parser.add_argument("--end-date", help="YYYY-MM-DD")
+    
+    args = parser.parse_args()
+    
+    end = datetime.now()
+    if args.end_date:
+        end = datetime.strptime(args.end_date, "%Y-%m-%d")
+        
+    start = end - timedelta(days=args.days)
+    if args.start_date:
+        start = datetime.strptime(args.start_date, "%Y-%m-%d")
+        
+    run_hybrid_sync(start, end, force_ghost=args.ghost)
