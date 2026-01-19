@@ -2,9 +2,8 @@ name: Daily Data Sync
 
 on:
   schedule:
-    # 3am EST = 8am UTC (Standard Time) - Fast Sync
     - cron: '0 8 * * *'
-  workflow_dispatch:  # Allow manual trigger for testing
+  workflow_dispatch:
 
 jobs:
   sync-data:
@@ -13,91 +12,52 @@ jobs:
       IS_SELF_HOSTED: 'true'
       PYTHONPATH: ${{ github.workspace }}
     permissions:
-      contents: write  # Required for git push
-    
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Need full history for git operations
           fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
 
       - name: Run Module H (Fetch recent games)
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
-          # These are optional but prevent import errors in config.py
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          export PYTHONPATH=$PWD
-          python module_h_historian.py
+          python3 module_h_historian.py
 
       - name: Migrate JSON to SQLite
         run: |
-          export PYTHONPATH=$PWD
-          python migrate_json_to_sqlite.py
+          python3 migrate_json_to_sqlite.py
 
-      - name: Sync PBP Stats Season Totals (Shot Quality)
+      - name: Sync PBP Stats Season Totals
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          export PYTHONPATH=$PWD
-          python scripts/sync_pbp_totals.py
+          python3 scripts/sync_pbp_totals.py
 
       - name: Deduplicate database
         run: |
-          python -c "
+          python3 -c "
           import sqlite3
           conn = sqlite3.connect('ludi.db')
           c = conn.cursor()
-          
-          # Deduplicate player_game_logs
-          c.execute('''
-              DELETE FROM player_game_logs 
-              WHERE rowid NOT IN (
-                  SELECT MIN(rowid) 
-                  FROM player_game_logs 
-                  GROUP BY player_id, game_date
-              )
-          ''')
+          c.execute('DELETE FROM player_game_logs WHERE rowid NOT IN (SELECT MIN(rowid) FROM player_game_logs GROUP BY player_id, game_date)')
           deleted = c.rowcount
           print(f'Deleted {deleted} duplicate game logs')
-          
-          # Deduplicate games
-          c.execute('''
-              DELETE FROM games 
-              WHERE rowid NOT IN (
-                  SELECT MIN(rowid) 
-                  FROM games 
-                  GROUP BY game_id
-              )
-          ''')
-          
+          c.execute('DELETE FROM games WHERE rowid NOT IN (SELECT MIN(rowid) FROM games GROUP BY game_id)')
           conn.commit()
-          
-          # Report final state
           c.execute('SELECT COUNT(*), MAX(game_date) FROM player_game_logs')
           logs = c.fetchone()
           print(f'Database: {logs[0]} records through {logs[1]}')
@@ -111,8 +71,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          export PYTHONPATH=$PWD
-          python scripts/learn_daily_trends.py
+          python3 scripts/learn_daily_trends.py
 
       - name: Analyze Star Bias
         env:
@@ -121,20 +80,16 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          export PYTHONPATH=$PWD
-          python scripts/analyze_star_bias.py
+          python3 scripts/analyze_star_bias.py
 
       - name: Commit and push if changes
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
           git add ludi.db ludi_history_db.json logs/
-          
-          # Only commit if there are changes
           if git diff --staged --quiet; then
-            echo "No changes to commit - database already up to date"
+            echo "No changes to commit"
           else
             git commit -m "chore: data sync $(date +'%Y-%m-%d %H:%M')"
             git push
-            echo "✅ Database updated and pushed!"
           fi

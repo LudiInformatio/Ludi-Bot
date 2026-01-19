@@ -1,0 +1,45 @@
+name: Daily WOWY Sync
+
+on:
+  schedule:
+    # Daily at 14:00 UTC (9:00 AM EST)
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wowy-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-wowy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run WOWY sync (yesterday's games)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+        run: python scripts/sync_wowy_data.py --days 1
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ludi-db-post-wowy-sync
+          path: ludi.db
+          retention-days: 7
