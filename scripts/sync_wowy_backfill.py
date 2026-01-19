@@ -324,7 +324,7 @@ def process_item(item_key, data, date_str):
 # MAIN GHOST PROTOCOL LOOP
 # ============================================================
 
-def run_wowy_backfill(start_date, end_date):
+def run_wowy_backfill(start_date, end_date, headless=False):
     print("\n" + "="*60)
     print("👻 WOWY GHOST PROTOCOL BACKFILL")
     print(f"📅 Range: {format_date_db(start_date)} -> {format_date_db(end_date)}")
@@ -340,7 +340,7 @@ def run_wowy_backfill(start_date, end_date):
         # BROWSER CONFIGURATION (The "Ghost" Setup)
         # ---------------------------------------------------------
         browser = p.chromium.launch(
-            headless=False,  # REQUIRED - visible browser
+            headless=headless,  # False for local (Ghost Protocol), True for CI
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',
@@ -413,6 +413,7 @@ if __name__ == "__main__":
     parser.add_argument("--end-date", help="YYYY-MM-DD")
     parser.add_argument("--date", help="Single date YYYY-MM-DD")
     parser.add_argument("--days", type=int, default=60, help="Number of days back to sync (default 60)")
+    parser.add_argument("--headless", action="store_true", help="Run browser in headless mode (for CI)")
     args = parser.parse_args()
 
     end = datetime.now()
@@ -427,4 +428,4 @@ if __name__ == "__main__":
         start = datetime.strptime(args.date, "%Y-%m-%d")
         end = start
 
-    run_wowy_backfill(start, end)
+    run_wowy_backfill(start, end, headless=args.headless)

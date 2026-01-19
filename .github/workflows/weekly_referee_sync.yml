@@ -55,7 +55,7 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python scripts/sync_wowy_backfill.py --days 7
+          python scripts/sync_wowy_backfill.py --days 7 --headless
           echo "✅ WOWY lineup data refreshed (last 7 days)"
 
       - name: Generate Weekly Zebra Report
