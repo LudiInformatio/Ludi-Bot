@@ -153,19 +153,31 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
     print("="*60)
 
     # Environment Checks
-    is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
+    is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true' or os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS')
+    
+    # [NEW] CI Graceful Skip
+    if is_ci:
+        print("\n" + "="*60)
+        print("⚠️  CI ENVIRONMENT DETECTED")
+        print("="*60)
+        print("   The 'LeagueDashLineups' endpoint blocks Cloud/CI IP addresses.")
+        print("   Tier 1 (API) cannot run here.")
+        print("   ")
+        print("   ✅ SKIPPING WOWY SYNC (Graceful Exit)")
+        print("   👉 Please run this script LOCALLY to update lineup data:")
+        print("      python scripts/sync_wowy_hybrid.py --days 7")
+        print("="*60 + "\n")
+        return
+
     num_days = (end_date - start_date).days + 1
     
     # Strategy Selection
     use_ghost = force_ghost
     
     if not use_ghost:
-        if num_days > GHOST_THRESHOLD_DAYS and not is_ci:
+        if num_days > GHOST_THRESHOLD_DAYS:
             print(f"ℹ️  Large date range ({num_days} days) detected. Switching to Ghost Protocol (Local Optimized).")
             use_ghost = True
-        elif is_ci:
-            print("ℹ️  CI Environment detected. Forcing Tier 1 (API Only).")
-            use_ghost = False
             
     if use_ghost:
         if is_ci:
