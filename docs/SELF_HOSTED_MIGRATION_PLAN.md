@@ -23,7 +23,10 @@ We will modify the following workflows to use `runs-on: self-hosted`:
 ## 🛠️ Implementation Guide
 
 ### Phase 1: Local Runner Setup (User Action)
-1. **Download & Configure:** Follow GitHub instructions to set up the runner on your Mac (M-series preferred).
+1. **Download & Configure:** 
+   - Go to Repo Settings -> Actions -> Runners -> New self-hosted runner.
+   - Select **macOS**.
+   - **Important:** Select Architecture **x64** (since you are on Intel Mac).
 2. **Environment Prep:** Run the helper script `scripts/setup_runner.sh` to install Python, Playwright, and dependencies.
 3. **Run Service:** Execute `./run.sh` (or install as service).
 
