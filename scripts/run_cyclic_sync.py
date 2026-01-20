@@ -22,14 +22,14 @@ RUN_DURATION = 15 * 60  # 15 minutes (seconds)
 PAUSE_DURATION = 2 * 60  # 2 minutes (seconds)
 WORKERS = [
     {
-        "cmd": ["venv/bin/python", "scripts/sync_tracking_parallel.py", 
+        "cmd": ["python3", "scripts/sync_tracking_parallel.py", 
                 "--chunk_index", "0", "--total_chunks", "2", 
                 "--season", "2025-26", "--start-date", "2025-11-14", "--end-date", "2026-01-14",
                 "--delay", "3.0"],
         "log": "logs/worker_0.log"
     },
     {
-        "cmd": ["venv/bin/python", "scripts/sync_tracking_parallel.py", 
+        "cmd": ["python3", "scripts/sync_tracking_parallel.py", 
                 "--chunk_index", "1", "--total_chunks", "2", 
                 "--season", "2025-26", "--start-date", "2025-11-14", "--end-date", "2026-01-14",
                 "--delay", "6.0"],
