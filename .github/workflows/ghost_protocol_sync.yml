@@ -18,25 +18,39 @@ concurrency:
 jobs:
   sync-tracking:
     runs-on: self-hosted
-    container:
-      image: ludi-core:latest
-      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
     timeout-minutes: 360
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Python setup and dependency installation removed - handled by ludi-core
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium
 
       - name: Run Ghost Protocol sync (last 7 days)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: |
-          git config --global --add safe.directory /app
-          # Ensure playwright browsers path is set correctly if not inherited
-          export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+          export PYTHONPATH=$PWD
           python scripts/sync_browser_backfill.py --days 7 --headless
 
       - name: Upload database artifact

@@ -11,15 +11,28 @@ on:
 jobs:
   debrief:
     runs-on: self-hosted
-    container:
-      image: ludi-core:latest
-      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
     
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Python setup and dependency installation removed - handled by ludi-core
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run Nightly Debrief
         env:
@@ -31,5 +44,5 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          export PYTHONPATH=/app
+          export PYTHONPATH=$PWD
           python -m main --mode pm_debrief

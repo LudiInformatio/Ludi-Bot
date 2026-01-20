@@ -8,12 +8,9 @@ on:
 jobs:
   sync-referee-intelligence:
     runs-on: self-hosted
-    container:
-      image: ludi-core:latest
-      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
     env:
       IS_SELF_HOSTED: 'true'
-      PYTHONPATH: /app
+      PYTHONPATH: ${{ github.workspace }}
     permissions:
       contents: write
 
@@ -23,7 +20,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Dependency installation (including Playwright) removed - handled by ludi-core
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium
 
       - name: Scrape Covers + OddsShark
         env:
@@ -43,7 +59,6 @@ jobs:
 
       - name: Commit and push if changes
         run: |
-          git config --global --add safe.directory /app
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
           git add ludi.db logs/

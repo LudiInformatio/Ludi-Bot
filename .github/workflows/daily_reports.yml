@@ -21,13 +21,6 @@ on:
 jobs:
   work-notes:
     runs-on: self-hosted
-    container:
-      image: ludi-core:latest
-      # Map the host's workspace to /app inside the container
-      # Using --user to match the container user (1001) is handled by the Dockerfile
-      # but we need to ensure the volume is writable. 
-      # Since we are on self-hosted, we bind mount the current directory.
-      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
     
     # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
     if: github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
@@ -38,7 +31,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Note: Python setup and pip install are removed because ludi-core has them pre-installed.
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Settle Pending Bets
         env:
@@ -49,7 +58,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          export PYTHONPATH=/app
+          export PYTHONPATH=$PWD
           python settle_bets.py
 
       - name: Send PM Bot Morning Brief (Work Notes)
@@ -62,13 +71,11 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          export PYTHONPATH=/app
+          export PYTHONPATH=$PWD
           python -m utils.pm_bot --mode morning
 
       - name: Commit and push if changes
-        # Git config needs to be set because we are in a container
         run: |
-          git config --global --add safe.directory /app
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
           
@@ -83,9 +90,6 @@ jobs:
 
   bet-summary:
     runs-on: self-hosted
-    container:
-      image: ludi-core:latest
-      options: --volume "/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot:/app"
 
     # Run at 6am EST (11am UTC) or when triggered manually with bet_summary/both
     if: github.event.schedule == '0 11 * * *' || github.event.inputs.report_type == 'bet_summary' || github.event.inputs.report_type == 'both'
@@ -96,6 +100,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Send Settlement Summary to Telegram
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -105,5 +127,5 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          export PYTHONPATH=/app
+          export PYTHONPATH=$PWD
           python scripts/send_settlement_summary.py
