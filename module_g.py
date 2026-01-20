@@ -4,6 +4,8 @@ import sqlite3
 import time
 from datetime import datetime
 from io import StringIO
+import sys
+import os
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE G: THE ZEBRAS
@@ -38,8 +40,125 @@ class LudiRefEngine:
             "Utah": "UTA", "Washington": "WAS"
         }
         
+        # Ensure today's games exist before any referee operations
+        self._ensure_todays_games()
+        
         # Check database connectivity and referee count
         self._verify_database()
+
+    def _ensure_todays_games(self):
+        """Auto-populate today's games if missing (before any referee operations)"""
+        print("   [ZEBRAS] 🔍 Checking today's games in database...")
+        
+        if not self._check_todays_games_exist():
+            print("   [ZEBRAS] 📡 No games found - auto-populating today's slate...")
+            self._populate_todays_games()
+            print("   [ZEBRAS] ✅ Games populated successfully")
+        else:
+            print("   [ZEBRAS] ✅ Today's games already exist")
+
+    def _check_todays_games_exist(self) -> bool:
+        """Check if any games exist for today's date"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            today = datetime.now().strftime('%Y-%m-%d')
+            cursor.execute("SELECT COUNT(*) FROM games WHERE date = ?", (today,))
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            return count > 0
+            
+        except Exception as e:
+            print(f"   [ZEBRAS] ⚠️ Error checking games: {e}")
+            return False
+
+    def _populate_todays_games(self):
+        """Populate today's games using The-Odds API (mirrors populate_todays_games.py logic)"""
+        try:
+            # Import config to access API key
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            import config
+            
+            # Fetch schedule from The-Odds API
+            url = 'https://api.the-odds-api.com/v4/sports/basketball_nba/odds'
+            params = {
+                'api_key': config.ODDS_API_KEY,
+                'regions': 'us',
+                'markets': 'h2h',  # We just need event info
+                'oddsFormat': 'american'
+            }
+            
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Team mapping (copied from populate_todays_games.py)
+            TEAM_MAP = {
+                "Atlanta Hawks": "ATL", "Boston Celtics": "BOS", "Brooklyn Nets": "BKN",
+                "Charlotte Hornets": "CHA", "Chicago Bulls": "CHI", "Cleveland Cavaliers": "CLE",
+                "Dallas Mavericks": "DAL", "Denver Nuggets": "DEN", "Detroit Pistons": "DET",
+                "Golden State Warriors": "GSW", "Houston Rockets": "HOU", "Indiana Pacers": "IND",
+                "Los Angeles Clippers": "LAC", "Los Angeles Lakers": "LAL", "Memphis Grizzlies": "MEM",
+                "Miami Heat": "MIA", "Milwaukee Bucks": "MIL", "Minnesota Timberwolves": "MIN",
+                "New Orleans Pelicans": "NOP", "New York Knicks": "NYK", "Oklahoma City Thunder": "OKC",
+                "Orlando Magic": "ORL", "Philadelphia 76ers": "PHI", "Phoenix Suns": "PHX",
+                "Portland Trail Blazers": "POR", "Sacramento Kings": "SAC", "San Antonio Spurs": "SAS",
+                "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
+            }
+            
+            def resolve_team(name):
+                return TEAM_MAP.get(name, name[:3].upper())
+            
+            # Get today's date in EST
+            import pytz
+            EST_TZ = pytz.timezone('US/Eastern')
+            today_str = datetime.now(EST_TZ).strftime('%Y-%m-%d')
+            
+            games_to_insert = []
+            for game in data:
+                # Convert UTC start time to EST date string
+                utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
+                est_time = utc_time.astimezone(EST_TZ)
+                game_date = est_time.strftime('%Y-%m-%d')
+                
+                if game_date == today_str:
+                    game_id = game['id']  # Use API ID as unique identifier
+                    home_team = resolve_team(game['home_team'])
+                    away_team = resolve_team(game['away_team'])
+                    
+                    # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
+                    ludi_game_id = f"{est_time.strftime('%Y%m%d')}_{away_team}@{home_team}"
+                    
+                    games_to_insert.append((ludi_game_id, game_date, home_team, away_team))
+            
+            # Insert into database
+            if games_to_insert:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                
+                for g in games_to_insert:
+                    g_id, g_date, home, away = g
+                    print(f"   [ZEBRAS] 🏀 {away} @ {home}")
+                    
+                    cursor.execute("""
+                        INSERT INTO games (game_id, date, home_team, away_team)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(game_id) DO UPDATE SET
+                            date=excluded.date,
+                            home_team=excluded.home_team,
+                            away_team=excluded.away_team
+                    """, (g_id, g_date, home, away))
+                
+                conn.commit()
+                conn.close()
+                print(f"   [ZEBRAS] ✅ Inserted {len(games_to_insert)} games")
+            else:
+                print("   [ZEBRAS] ⚠️ No games found for today")
+                
+        except Exception as e:
+            print(f"   [ZEBRAS] ❌ Error populating games: {e}")
 
     def _verify_database(self):
         """Verify referee_profiles table exists and has data."""

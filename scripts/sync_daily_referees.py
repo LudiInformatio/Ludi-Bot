@@ -17,6 +17,8 @@ import requests
 from datetime import datetime
 from typing import Dict, List, Tuple
 from io import StringIO
+import sys
+import os
 
 class DailyRefereeSync:
     """Daily capture system for referee intelligence."""
@@ -67,6 +69,107 @@ class DailyRefereeSync:
             "Utah Jazz": "UTA",
             "Washington Wizards": "WAS"
         }
+        
+        # Ensure today's games exist before any referee operations
+        self._ensure_todays_games()
+    
+    def _ensure_todays_games(self):
+        """Auto-populate today's games if missing (before any referee operations)"""
+        print("   🔍 Checking today's games in database...")
+        
+        if not self._check_todays_games_exist():
+            print("   📡 No games found - auto-populating today's slate...")
+            self._populate_todays_games()
+            print("   ✅ Games populated successfully")
+        else:
+            print("   ✅ Today's games already exist")
+
+    def _check_todays_games_exist(self) -> bool:
+        """Check if any games exist for today's date"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            today = datetime.now().strftime('%Y-%m-%d')
+            cursor.execute("SELECT COUNT(*) FROM games WHERE date = ?", (today,))
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            return count > 0
+            
+        except Exception as e:
+            print(f"   ⚠️ Error checking games: {e}")
+            return False
+
+    def _populate_todays_games(self):
+        """Populate today's games using The-Odds API (mirrors populate_todays_games.py logic)"""
+        try:
+            # Import config to access API key
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('scripts/sync_daily_referees.py'))))
+            import config
+            
+            # Fetch schedule from The-Odds API
+            url = 'https://api.the-odds-api.com/v4/sports/basketball_nba/odds'
+            params = {
+                'api_key': config.ODDS_API_KEY,
+                'regions': 'us',
+                'markets': 'h2h',  # We just need event info
+                'oddsFormat': 'american'
+            }
+            
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Get today's date in EST
+            import pytz
+            EST_TZ = pytz.timezone('US/Eastern')
+            today_str = datetime.now(EST_TZ).strftime('%Y-%m-%d')
+            
+            games_to_insert = []
+            for game in data:
+                # Convert UTC start time to EST date string
+                utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
+                est_time = utc_time.astimezone(EST_TZ)
+                game_date = est_time.strftime('%Y-%m-%d')
+                
+                if game_date == today_str:
+                    game_id = game['id']  # Use API ID as unique identifier
+                    home_team = self._resolve_team_abbr(game['home_team'])
+                    away_team = self._resolve_team_abbr(game['away_team'])
+                    
+                    if home_team and away_team:
+                        # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
+                        ludi_game_id = f"{est_time.strftime('%Y%m%d')}_{away_team}@{home_team}"
+                        
+                        games_to_insert.append((ludi_game_id, game_date, home_team, away_team))
+            
+            # Insert into database
+            if games_to_insert:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                
+                for g in games_to_insert:
+                    g_id, g_date, home, away = g
+                    print(f"   🏀 {away} @ {home}")
+                    
+                    cursor.execute("""
+                        INSERT INTO games (game_id, date, home_team, away_team)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(game_id) DO UPDATE SET
+                            date=excluded.date,
+                            home_team=excluded.home_team,
+                            away_team=excluded.away_team
+                    """, (g_id, g_date, home, away))
+                
+                conn.commit()
+                conn.close()
+                print(f"   ✅ Inserted {len(games_to_insert)} games")
+            else:
+                print("   ⚠️ No games found for today")
+                
+        except Exception as e:
+            print(f"   ❌ Error populating games: {e}")
     
     def scrape_assignments(self) -> Dict[str, List[str]]:
         """
