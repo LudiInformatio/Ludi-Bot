@@ -20720,5 +20720,59 @@
       "requests_used": "13187",
       "request_cost": "20"
     }
+  },
+  {
+    "timestamp": "2026-01-20T12:21:37.679165",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "927",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T12:44:14.497802",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "926",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T12:44:28.581536",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "925",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T12:46:11.667331",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "924",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T12:46:58.690209",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "923",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T12:48:43.161817",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "922",
+      "requests_limit": "1000"
+    }
   }
 ]

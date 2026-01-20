@@ -16,3 +16,5 @@ Pillow==12.1.0
 pilmoji==2.0.3
 emoji==2.2.0
 playwright
+feedparser>=6.0.0
+pytz>=2024.1

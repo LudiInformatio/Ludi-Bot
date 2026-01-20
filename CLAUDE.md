@@ -693,7 +693,7 @@ A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report +
 | A: Gatekeeper | `module_a.py` | `Gatekeeper` | The-Odds-API (PAID) |
 | B: Engine | `module_b.py` | `print_sharp_box_score` (function) | None (display layer) |
 | C: Oracle | `module_c.py` | `LudiOracle` | None (pure math) |
-| D: Yak | `module_d.py` | `LudiYak` | Tank01 + DuckDuckGo |
+| D: Yak | `module_d.py` | `LudiYak` | Tank01 + RotoWire (RSS) + DuckDuckGo |
 | E: Calibrator | `module_e.py` | `LudiCalibrator` | None (matchup logic) |
 | F: Alchemist | `module_f.py` | `LudiReporter` | Devigging (local) |
 | G: Zebras | `module_g.py` | `LudiRefEngine` | NBA.com (scraping) |
@@ -852,7 +852,7 @@ python utils/pm_bot.py
 python -c "from module_a import Gatekeeper; gk = Gatekeeper(); print(gk.fetch_live_slate())"
 
 # Test Module D (Yak - injury intelligence)
-python -c "from module_d import LudiYak; yak = LudiYak(); print(yak.get_injuries())"
+python -c "from module_d import LudiYak; print(LudiYak().get_injuries())"
 
 # Test Module F (Alchemist - edge calculation)
 python module_f.py  # If it has a __main__ block
@@ -1024,6 +1024,10 @@ if spread > 7.0:
 
 **Implementation**:
 - Caches injury data for 15 minutes (`yak_cache.json`)
+- **[NEW] RotoWire RSS Integration:**
+  - 10-minute refresh during game time (5 PM - 12 AM EST)
+  - 20-minute refresh during day (11 AM - 5 PM EST)
+  - Configurable keyword taxonomy in `config/yak_keywords.json`
 - Refreshes at 14:59 mark before games
 - Nuance detection scans news for "late scratch", "minutes limit" keywords
 
