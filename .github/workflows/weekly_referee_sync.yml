@@ -43,14 +43,14 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_external_intelligence.py
+          caffeinate -i python3 scripts/sync_external_intelligence.py
 
       - name: Sync WOWY Lineup Data
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_wowy_hybrid.py --days 7
+          caffeinate -i python3 scripts/sync_wowy_hybrid.py --days 7
 
       - name: Commit and push if changes
         run: |

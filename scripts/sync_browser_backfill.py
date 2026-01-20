@@ -620,8 +620,12 @@ def run_ghost_protocol(start_date, end_date, headless=False):
 
     with sync_playwright() as p:
         # Browser Launch Args for Stealth
+        # Force visible browser on self-hosted to bypass WAF
+        is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'
+        headless_mode = False if is_self_hosted else headless
+
         browser = p.chromium.launch(
-            headless=headless,
+            headless=headless_mode,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',

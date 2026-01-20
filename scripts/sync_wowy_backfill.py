@@ -339,8 +339,12 @@ def run_wowy_backfill(start_date, end_date, headless=False):
         # ---------------------------------------------------------
         # BROWSER CONFIGURATION (The "Ghost" Setup)
         # ---------------------------------------------------------
+        # Force visible browser on self-hosted to bypass WAF
+        is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'
+        headless_mode = False if is_self_hosted else headless
+        
         browser = p.chromium.launch(
-            headless=headless,  # False for local (Ghost Protocol), True for CI
+            headless=headless_mode,  # False for local/self-hosted (Ghost Protocol), True for Cloud CI
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',
