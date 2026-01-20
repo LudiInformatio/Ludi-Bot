@@ -1,0 +1,108 @@
+{
+    "version": "1.2",
+    "updated": "2026-01-19",
+    "description": "REFINED thresholds with mutual exclusivity for big man archetypes. Added catch_shoot volume differentiators.",
+    "calibration_source": "Week 1 Analysis: Differentiated P&R_ROLL_MAN from PUTBACK/POST_UP using catch_shoot volume",
+    "playtypes": {
+        "ISO_SCORER": {
+            "description": "Elite isolation scorer who creates own shots off the dribble",
+            "criteria": {
+                "drives_per_game": 6.0,
+                "pull_up_fga_per_game": 5.0,
+                "pull_up_ratio": 1.5
+            },
+            "rule": "2 of 3: drives > 6, pull_up > 5, pull_up > catch_shoot * 1.5",
+            "expected_coverage": "10-18%"
+        },
+        "P&R_HANDLER": {
+            "description": "Pick & roll ball handler - primary creator who drives and dishes",
+            "criteria": {
+                "drives_per_game": 5.0,
+                "drives_pass_pct": 35.0,
+                "pull_up_fga_per_game": 3.0
+            },
+            "rule": "2 of 3: drives > 5, pass% > 35, pull_up > 3",
+            "expected_coverage": "10-18%"
+        },
+        "P&R_ROLL_MAN": {
+            "description": "Pick & roll finisher - catches lobs/passes, decent catch_shoot volume",
+            "criteria": {
+                "rim_freq": 0.40,
+                "catch_shoot_fga_min": 1.5,
+                "drives_per_game_max": 2.0,
+                "pull_up_fga_max": 1.5
+            },
+            "rule": "3 of 4: rim > 40%, catch_shoot >= 1.5, drives < 2, pull_up < 1.5",
+            "expected_coverage": "10-18%",
+            "differentiator": "Has SOME catch-shoot volume (pop/short roll)"
+        },
+        "SPOT_UP": {
+            "description": "Catch & shoot specialist - high volume floor spacer",
+            "criteria": {
+                "catch_shoot_fga_per_game": 4.0,
+                "catch_shoot_pct": 0.38,
+                "catch_shoot_3pa_per_game": 3.5,
+                "cs_ratio": 1.5
+            },
+            "rule": "3 of 4: cs_fga > 4, cs% > 38%, cs_3pa > 3.5, cs > pull_up * 1.5",
+            "expected_coverage": "15-25%"
+        },
+        "OFF_BALL_CUTTER": {
+            "description": "Pure cutter - scores at rim by cutting, minimal shooting",
+            "criteria": {
+                "rim_freq": 0.45,
+                "catch_shoot_fga_max": 1.5,
+                "drives_per_game_max": 1.5,
+                "pull_up_fga_max": 0.5
+            },
+            "rule": "3 of 4: rim > 45%, catch_shoot < 1.5, drives < 1.5, pull_up < 0.5",
+            "expected_coverage": "8-15%",
+            "differentiator": "LOW catch-shoot (cuts, not pops)"
+        },
+        "TRANSITION": {
+            "description": "Fast break threat - high motor player who runs the floor",
+            "criteria": {
+                "avg_speed": 4.8,
+                "distance_per_game": 1.1,
+                "drives_per_game": 4.0
+            },
+            "rule": "2 of 3: speed > 4.8, distance > 1.1, drives > 4",
+            "expected_coverage": "10-20%"
+        },
+        "PUTBACK": {
+            "description": "Offensive rebound finisher - interior specialist",
+            "criteria": {
+                "rim_freq": 0.55,
+                "catch_shoot_fga_max": 1.0,
+                "drives_per_game_max": 0.8,
+                "pull_up_fga_max": 0.3
+            },
+            "rule": "3 of 4: rim > 55%, catch_shoot < 1, drives < 0.8, pull_up < 0.3",
+            "expected_coverage": "5-10%",
+            "differentiator": "VERY high rim, VERY low everything else"
+        },
+        "POST_UP": {
+            "description": "Back-to-basket scorer - slow, deliberate post player",
+            "criteria": {
+                "rim_freq": 0.40,
+                "avg_speed_max": 4.2,
+                "drives_per_game_max": 1.5,
+                "catch_shoot_fga_max": 2.5
+            },
+            "rule": "3 of 4: rim > 40%, speed < 4.2, drives < 1.5, catch_shoot < 2.5",
+            "expected_coverage": "8-14%",
+            "differentiator": "SLOW speed is the key identifier"
+        }
+    },
+    "mutual_exclusivity_logic": {
+        "P&R_ROLL_MAN_vs_OFF_BALL_CUTTER": "P&R_ROLL_MAN has catch_shoot >= 1.5 (pops), OFF_BALL_CUTTER has < 1.5 (cuts only)",
+        "P&R_ROLL_MAN_vs_PUTBACK": "P&R_ROLL_MAN has drives < 2.0, PUTBACK much stricter at < 0.8",
+        "POST_UP_vs_others": "POST_UP requires speed < 4.2, others don't have max speed requirement",
+        "PUTBACK_vs_others": "PUTBACK requires rim_freq > 0.55 and very low everything else"
+    },
+    "validation": {
+        "v1_0_issue": "Tag pollution - 69% P&R_ROLL_MAN, 66% OFF_BALL_CUTTER",
+        "v1_1_issue": "Still 41% P&R_ROLL_MAN - bigs getting multiple tags",
+        "v1_2_solution": "Use catch_shoot volume to differentiate roll_man vs cutter, stricter PUTBACK"
+    }
+}

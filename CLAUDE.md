@@ -95,10 +95,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 19, 2026 @ 01:00 PM EST
-- **Phase**: Data Pipeline Upgrade - The "Twin Engine" Era
-- **Active Task**: Blending NBA Tracking (Physical) with PBP Stats (Quality)
-- **Last Updated**: Jan 19, 2026 - PBP Stats Integration + Ghost Protocol V2.1
+- **Date**: Jan 19, 2026 @ 08:40 PM EST
+- **Phase**: ✅ Week 1 Complete - Archetype System Upgrade (Data Collection & Thresholds)
+- **Active Task**: Week 1 completed with hybrid position filtering + priority scoring
+- **Next Phase**: Week 2 - Implementation in Module E (secondary playtypes integration)
+
+### Week 1 Archetype Upgrade Summary (Jan 19, 2026)
+- ✅ Data validation complete (93% tracking coverage, 4,842 player-games)
+- ✅ 8 secondary playtypes calibrated: ISO_SCORER, P&R_HANDLER, P&R_ROLL_MAN, SPOT_UP, OFF_BALL_CUTTER, TRANSITION, PUTBACK, POST_UP
+- ✅ Hybrid approach implemented: Position-based filtering + priority scoring
+- ✅ Tag pollution eliminated (max 2 tags per player, down from 4)
+- ✅ Production-ready validator: `scripts/test_playtype_thresholds_hybrid.py`
+- 📊 Results documented in: `docs/WEEK1_HYBRID_FINAL_REPORT.md`
+
+**Architecture:** Secondary playtypes enhance existing primary archetypes (HELIOCENTRIC, HUB_BIG, ELITE_SCORER, etc.) for granular matchup analysis.
+- **Last Updated**: Jan 19, 2026 - Archetype Synergy Upgrade Plan Created
+- **Plan Document**: `ARCHETYPE_SYNERGY_UPGRADE_PLAN.md`
+
+---
+
+## 🎯 Jan 19, 2026 (Evening): Archetype Synergy Upgrade Plan
+
+**Strategic Objective:** Upgrade Module E (Calibrator) with NBA Synergy-aligned playtype classifications using 60-day backfilled tracking data.
+
+### Key Upgrades Planned
+1. **Secondary Playtypes** (8 types) - ISO_SCORER, P&R_HANDLER, P&R_ROLL_MAN, SPOT_UP, OFF_BALL_CUTTER, TRANSITION, PUTBACK, POST_UP
+2. **Team Offensive Types** (6 types) - Automated weekly classification mirroring defensive types
+3. **Matchup Matrix Expansion** - 14+ new research-backed modifiers
+4. **B2B Fatigue Integration** - Guards -6% on road back-to-backs (García et al. 2020)
+5. **Blowout Tax Validation** - Backtest current smart blowout tax accuracy
+
+### Implementation Strategy
+**Strict Thresholds:** Players must meet **2 of 3 criteria** for each secondary playtype (prevents tag pollution)
+
+**Data Sources:**
+- `player_game_tracking` - drives, catch_shoot, pull_up, speed, distance
+- `player_game_advanced` - off_rating, def_rating, ts_pct
+- `player_shot_quality` - rim_freq, corner_3_freq, shot quality
+- `team_lineups` - WOWY data for usage vacuum validation
+- Tank01 API - Season team stats for offensive classification
+
+**Backtest Framework:**
+- **Window:** Dec 20, 2025 - Jan 16, 2026 (28 days)
+- **Baseline:** Pre-Jan 17 Module A + Current Module E
+- **New System:** Post-Jan 17 Module A + Synergy archetypes + new matchups
+- **Target:** +3% ROI improvement, +2% hit rate (Moderate tier)
+- **Validation:** 3-fold cross-validation, tag performance analysis
+
+**Research Foundation:**
+- Synergy Basketball API playtype categories (Sportradar)
+- Fourth quarter fatigue patterns (Wang et al. 2024 - 19% of games decided in Q4)
+- B2B performance decline (García et al. 2020 - -1.27 effect size)
+- Advanced metrics (NBAstuffer, SportsGeek - eFG%, TOV%, STL% most predictive)
+
+**Status:** Plan document created, ready for Week 1 (Data Collection & Thresholds) implementation.
+
+**Plan Location:** `/ARCHETYPE_SYNERGY_UPGRADE_PLAN.md` (767 lines)
 
 ---
 
