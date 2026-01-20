@@ -50,7 +50,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit - database already up to date"
           else
-            REFEREE_COUNT=$(python -c "import sqlite3; conn = sqlite3.connect('ludi.db'); cursor = conn.cursor(); cursor.execute(\"SELECT COUNT(*) FROM games WHERE date = date('now') AND referee_crew IS NOT NULL\"); print(cursor.fetchone()[0]); conn.close()")
+            REFEREE_COUNT=$(python3 -c "import sqlite3; conn = sqlite3.connect('ludi.db'); cursor = conn.cursor(); cursor.execute(\"SELECT COUNT(*) FROM games WHERE date = date('now') AND referee_crew IS NOT NULL\"); print(cursor.fetchone()[0]); conn.close()")
             git commit -m "chore: referee sync - ${REFEREE_COUNT} games updated $(date +'%Y-%m-%d %H:%M')"
             git push
             echo "✅ Referee assignments synced and pushed!"
