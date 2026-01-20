@@ -40,7 +40,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/run_daily_cycle.py
+          python3 scripts/run_cyclic_sync.py
 
       - name: Commit and push if changes
         run: |
