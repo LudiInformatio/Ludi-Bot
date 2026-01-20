@@ -1024,12 +1024,14 @@ if spread > 7.0:
 
 **Implementation**:
 - Caches injury data for 15 minutes (`yak_cache.json`)
-- **[NEW] RotoWire RSS Integration:**
-  - 10-minute refresh during game time (5 PM - 12 AM EST)
-  - 20-minute refresh during day (11 AM - 5 PM EST)
-  - Configurable keyword taxonomy in `config/yak_keywords.json`
-- Refreshes at 14:59 mark before games
-- Nuance detection scans news for "late scratch", "minutes limit" keywords
+- **[NEW] RotoWire RSS Integration (v4.0):**
+  - **Source:** `rss/news.php?sport=NBA` (Free Feed)
+  - **Dynamic Refresh**: 
+     - 10-minute refresh during game time (5 PM - 12 AM EST)
+     - 20-minute refresh during day (11 AM - 5 PM EST)
+  - **Taxonomy**: Configurable in `config/yak_keywords.json` classified into INJURY_OUT, GTD, etc.
+- **Tank01 Official Layer:** Hard status check
+- **DuckDuckGo Layer:** Fallback for deep text analysis
 
 #### 5. Archetype Matchup Matrix (Module E)
 **Concept**: Player style vs defensive scheme creates exploitable edges.

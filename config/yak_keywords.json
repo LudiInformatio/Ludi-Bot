@@ -1,0 +1,131 @@
+{
+    "version": "1.0",
+    "categories": {
+        "INJURY_OUT": {
+            "keywords": [
+                "ruled out",
+                "out for season",
+                "won't play",
+                "surgery",
+                "season-ending",
+                "acl tear",
+                "mcl",
+                "achilles",
+                "fracture",
+                "out indefinitely",
+                "sidelined",
+                "torn",
+                "rupture",
+                "won't return",
+                "out for the remainder"
+            ],
+            "confidence": 1.0,
+            "status": "OUT"
+        },
+        "INJURY_DOUBTFUL": {
+            "keywords": [
+                "doubtful",
+                "unlikely to play",
+                "not expected to played"
+            ],
+            "confidence": 0.9,
+            "status": "DOUBTFUL"
+        },
+        "INJURY_QUESTIONABLE": {
+            "keywords": [
+                "questionable",
+                "game-time decision",
+                "gtd",
+                "mri",
+                "evaluation",
+                "day-to-day",
+                "listed as",
+                "undergoing",
+                "apparent injury"
+            ],
+            "confidence": 0.8,
+            "status": "GTD"
+        },
+        "INJURY_RETURNING": {
+            "keywords": [
+                "cleared to play",
+                "available",
+                "will play",
+                "activated",
+                "returns to lineup",
+                "back in action",
+                "upgraded",
+                "probable"
+            ],
+            "confidence": 0.9,
+            "status": "ACTIVE"
+        },
+        "MINUTES_LIMIT": {
+            "keywords": [
+                "minutes restriction",
+                "limited minutes",
+                "pitch count",
+                "on a minutes limit",
+                "eased back",
+                "ramp up",
+                "minute limit"
+            ],
+            "confidence": 0.8,
+            "status": "MINUTES_LIMIT"
+        },
+        "ROLE_CHANGE": {
+            "keywords": [
+                "will start",
+                "starting lineup",
+                "first-team",
+                "replacing",
+                "elevated to starter",
+                "moved to bench"
+            ],
+            "confidence": 0.85,
+            "status": "ROLE_CHANGE"
+        },
+        "COACH_QUOTE": {
+            "keywords": [
+                "coach says",
+                "per coach",
+                "according to coach",
+                "expects him to",
+                "plans to"
+            ],
+            "confidence": 0.9,
+            "trigger": "VERIFY"
+        },
+        "LOAD_MANAGEMENT": {
+            "keywords": [
+                "rest",
+                "load management",
+                "maintenance",
+                "sitting out",
+                "veteran rest",
+                "scheduled off"
+            ],
+            "confidence": 1.0,
+            "status": "OUT"
+        },
+        "PERFORMANCE": {
+            "keywords": [
+                "pours in",
+                "scores",
+                "finishes with",
+                "records",
+                "posts",
+                "tallies",
+                "notches",
+                "points",
+                "rebounds",
+                "assists",
+                "double-double",
+                "triple-double"
+            ],
+            "confidence": 0.0,
+            "status": null,
+            "filter": "SKIP"
+        }
+    }
+}
