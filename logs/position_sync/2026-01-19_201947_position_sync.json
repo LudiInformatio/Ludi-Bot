@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-01-19_201947",
+  "stats": {
+    "total_players": 421,
+    "positions_updated": 371,
+    "positions_unchanged": 50,
+    "positions_missing": 0,
+    "by_position": {
+      "F": 149,
+      "C": 49,
+      "G": 173
+    }
+  }
+}

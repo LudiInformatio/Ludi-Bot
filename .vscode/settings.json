@@ -8,6 +8,8 @@
     },
     "chat.tools.terminal.autoApprove": {
         "code": true,
-        "/Applications/Visual\\": true
+        "/Applications/Visual\\": true,
+        "true": true,
+        "cp": true
     }
 }

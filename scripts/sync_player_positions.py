@@ -21,20 +21,17 @@ import os
 import sys
 import json
 import requests
-import sqlite3
 from datetime import datetime
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-try:
-    from config import TANK01_KEY
-except ImportError:
-    print("⚠️  Warning: Could not import TANK01_KEY from config. Using environment variable.")
-    TANK01_KEY = os.getenv('TANK01_KEY')
+from database import LudiHistorian
+from config import TANK01_KEY
 
 class PositionSyncer:
     def __init__(self):
+        self.historian = LudiHistorian()
         self.api_key = TANK01_KEY
         self.base_url = "https://tank01-fantasy-stats.p.rapidapi.com"
         self.headers = {
@@ -162,6 +159,8 @@ class PositionSyncer:
         Returns:
             True if updated, False if unchanged
         """
+        import sqlite3
+        
         conn = sqlite3.connect('ludi.db')
         c = conn.cursor()
         
