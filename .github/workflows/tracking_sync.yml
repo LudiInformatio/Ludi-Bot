@@ -33,19 +33,18 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
-      - name: Sync NBA API Tracking Data
+      - name: Install Playwright browsers
+        run: python3 -m playwright install chromium
+
+      - name: Sync NBA Tracking Data (Ghost Protocol)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/run_cyclic_sync.py
-
-      - name: Commit and push if changes
-        run: |
-          git config user.name "Ludi Bot"
-          git config user.email "noreply@ludibot.com"
+          export PYTHONPATH=$PWD
+          python3 scripts/sync_browser_backfill.py --days 1 --headless
           git add ludi.db
           if git diff --staged --quiet; then
             echo "No changes to commit"
