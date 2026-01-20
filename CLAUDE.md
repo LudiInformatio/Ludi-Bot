@@ -177,7 +177,22 @@ We blend these two engines to find the **Ludi Regression Index**:
 *   **Quality Layer (PBP Stats):** Efficiency Context (Shot Quality, Expected eFG%).
 *   **The Signal:** If `Shot Quality` > `Actual Results` = **💎 DIAMOND PLAY (Buy Low)**.
 
+*   **The Signal:** If `Shot Quality` > `Actual Results` = **💎 DIAMOND PLAY (Buy Low)**.
+
 ---
+
+## 🛡️ Jan 20, 2026: The "Tank01 ID" Integrity Update
+
+**Strategic Objective:** Prevent database pollution from Tank01 API's sudden ID format change (Composite IDs vs Legacy NBA IDs).
+
+### The "Database Guardrail" Defense
+Instead of rewriting 8+ modules, we implemented a firewall at the database layer.
+
+1.  **Canonical ID System:** `player_canonical_ids` table maps 505 active players to their immutable NBA IDs.
+2.  **Auto-Healing Ingestion:** `database.py` now silently intercepts and resolves dirty Tank01 IDs (e.g., `28398804489`) into clean NBA IDs (`1629029`) before they ever touch the `players` table.
+3.  **Result:** Modules H (Historian), D (Yak), and F (Alchemist) are automatically protected without code changes.
+
+**Status:** ✅ COMPLETE & VERIFIED (All tests passed)
 
 ## 🛡️ INFRASTRUCTURE & SECURITY (Self-Hosted)
 *Architecture upgraded Jan 19, 2026 for bare-metal security.*

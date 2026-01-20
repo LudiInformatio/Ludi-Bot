@@ -2,6 +2,7 @@ import pandas as pd
 import sqlite3
 import json
 from pathlib import Path
+from utils.player_id_resolver import PlayerIDResolver
 
 # ==========================================
 # LUDI INFORMATIO | MODULE E: THE CALIBRATOR
@@ -14,6 +15,8 @@ class LudiCalibrator:
         print(f"LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE")
         print(f"   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE")
         print(f"{'='*40}")
+        
+        self.id_resolver = PlayerIDResolver()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -222,36 +225,24 @@ class LudiCalibrator:
         
         return primary, secondary
     
-    def _get_tracking_stats(self, player_name: str, days: int = 60) -> dict:
+    def _get_tracking_stats(self, player_name_or_id: str, days: int = 60) -> dict:
         """
         Get tracking stats for a player from database.
-        Uses player_id joins to handle accented names (Jokić, Dončić).
+        Uses PlayerIDResolver to handle accents and ID changes.
         Returns empty dict if not found.
         """
         try:
+            # Step 1: Resolve to canonical NBA ID
+            try:
+                canonical_id = self.id_resolver.resolve_to_canonical_id(player_name_or_id)
+            except ValueError:
+                # Player not found in canonical system
+                return {}
+
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Step 1: Get player_id from players table
-            # Note: Some players have duplicate entries - this gets the first match
-            # TODO: Clean up duplicate player_id entries in database
-            cursor.execute('''
-                SELECT player_id, position 
-                FROM players 
-                WHERE name = ? 
-                ORDER BY updated_at DESC 
-                LIMIT 1
-            ''', (player_name,))
-            player_row = cursor.fetchone()
-            
-            if not player_row or not player_row[0]:
-                conn.close()
-                return {}
-            
-            player_id = player_row[0]
-            position = player_row[1] if player_row[1] and player_row[1] != 'UNK' else None
-            
-            # Step 2: Query tracking data by nba_player_id (eliminates accent issues)
+            # Step 2: Query tracking data by nba_player_id
             tracking_query = """
             SELECT 
                 AVG(drives_fga) as avg_drives,
@@ -267,7 +258,7 @@ class LudiCalibrator:
             FROM player_game_tracking
             WHERE nba_player_id = ? AND game_date >= date('now', ?)
             """
-            cursor.execute(tracking_query, (player_id, f'-{days} days'))
+            cursor.execute(tracking_query, (canonical_id, f'-{days} days'))
             row = cursor.fetchone()
             
             if not row or row[9] < 3:  # Need at least 3 games
@@ -287,27 +278,32 @@ class LudiCalibrator:
                 'tracking_games': row[9]
             }
             
-            # Step 3: Get shot quality (rim_freq) - also by player_id for consistency
+            # Step 3: Get shot quality (rim_freq)
+            # Query by canonical_id (stored as player_id in this table for now, or ensure mapping)
+            # The original code queried by player_id from players table. 
+            # Now we use canonical_id which maps to NBA ID.
             shot_query = """
             SELECT at_rim_freq, corner_3_freq 
             FROM player_shot_quality 
             WHERE player_id = ? AND season = '2025-26'
             """
-            cursor.execute(shot_query, (player_id,))
+            cursor.execute(shot_query, (canonical_id,))
             shot_row = cursor.fetchone()
             
             if shot_row:
                 tracking_stats['rim_freq'] = shot_row[0] or 0
                 tracking_stats['corner_3_freq'] = shot_row[1] or 0
             
-            # Add position if found (UNK positions will get all playtypes)
-            if position:
-                tracking_stats['position'] = position
+            # Step 4: Get Position (from canonical table)
+            player_info = self.id_resolver.get_player_info(canonical_id)
+            if player_info.get('position'):
+                tracking_stats['position'] = player_info['position']
             
             conn.close()
             return tracking_stats
             
         except Exception as e:
+            # print(f"DEBUG: Error in _get_tracking_stats: {e}")
             return {}
 
 

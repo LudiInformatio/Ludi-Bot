@@ -2,6 +2,7 @@ import sqlite3
 import json
 from datetime import datetime
 import os
+from utils.player_id_resolver import PlayerIDResolver
 
 DB_PATH = "ludi.db"
 
@@ -9,6 +10,7 @@ class LudiHistorian:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
         self._initialize_db()
+        self.resolver = PlayerIDResolver(db_path=db_path)
 
     def _get_conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30)
@@ -565,6 +567,13 @@ class LudiHistorian:
         conn = self._get_conn()
         c = conn.cursor()
 
+        try:
+            # 🛡️ GUARDRAIL: Resolve ID before writing (Heal on Ingestion)
+            canonical_id = self.resolver.resolve_to_canonical_id(player_data['id'])
+            player_data['id'] = canonical_id
+        except ValueError:
+            pass # Keep original if resolution fails
+
         c.execute('''
             INSERT INTO players (player_id, name, team, position, status, base_ppg, usg_pct)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -599,6 +608,14 @@ class LudiHistorian:
         """
         conn = self._get_conn()
         c = conn.cursor()
+
+        try:
+            # 🛡️ GUARDRAIL: Resolve ID before writing (Heal on Ingestion)
+            # This protects against Tank01 sending "28398804489" -> converts to "1629029"
+            canonical_id = self.resolver.resolve_to_canonical_id(player_data['id'])
+            player_data['id'] = canonical_id
+        except ValueError:
+            pass # Keep original if resolution fails
 
         # Check if player exists and team changed (trade detection)
         c.execute('SELECT team FROM players WHERE player_id = ?', (player_data['id'],))

@@ -2,7 +2,9 @@
 
 **Date:** January 20, 2026 @ 03:00 AM EST  
 **Priority:** HIGH - Blocking Week 2 Archetype Implementation  
+
 **Proof of Concept:** ✅ VALIDATED (8/8 tests passed)
+**Status:** Phases 1-4 COMPLETE ✅
 
 ---
 
@@ -178,165 +180,39 @@ SELECT COUNT(*) FROM players_archived;
 
 ---
 
-### Phase 4: Update Module E (1 hour)
+### Phase 4: Update Module E (COMPLETE ✅)
 
-#### Step 4.1: Update Calibrator to Use Resolver
-**File:** `module_e.py`
-
-**Current code (line 228):**
-```python
-def _get_tracking_stats(self, player_name, days=20):
-    # ❌ OLD: Query by name (accent mismatch risk)
-```
-
-**New code:**
-```python
-from utils.player_id_resolver import PlayerIDResolver
-
-class LudiCalibrator:
-    def __init__(self):
-        self.id_resolver = PlayerIDResolver()
-        # ... rest of __init__
-    
-    def _get_tracking_stats(self, player_name_or_id, days=20):
-        """
-        Get tracking stats using canonical ID resolution.
-        
-        Args:
-            player_name_or_id: Can be name (with/without accents) or any ID format
-            days: Lookback window (default 20)
-        
-        Returns:
-            Dict of tracking averages
-        """
-        try:
-            # Resolve to canonical NBA ID
-            canonical_id = self.id_resolver.resolve_to_canonical_id(player_name_or_id)
-            
-            # Query tracking table by NBA ID (not name!)
-            query = '''
-                SELECT 
-                    AVG(drives_fga) as avg_drives,
-                    AVG(catch_shoot_fga) as avg_cs_fga,
-                    AVG(CAST(catch_shoot_fgm AS FLOAT) / NULLIF(catch_shoot_fga, 0)) as cs_pct,
-                    AVG(pull_up_fga) as avg_pu_fga,
-                    AVG(avg_speed_off) as avg_speed,
-                    AVG(dist_miles_off) as avg_distance
-                FROM player_game_tracking
-                WHERE nba_player_id = ? AND game_date >= date('now', ? || ' days')
-            '''
-            
-            import sqlite3
-            conn = sqlite3.connect('ludi.db')
-            c = conn.cursor()
-            c.execute(query, (canonical_id, f'-{days}'))
-            row = c.fetchone()
-            conn.close()
-            
-            if not row or row[0] is None:
-                # No tracking data - return zeros
-                return {
-                    'drives': 0.0,
-                    'catch_shoot_fga': 0.0,
-                    'catch_shoot_pct': 0.0,
-                    'pull_up_fga': 0.0,
-                    'speed': 0.0,
-                    'distance': 0.0
-                }
-            
-            return {
-                'drives': row[0] or 0.0,
-                'catch_shoot_fga': row[1] or 0.0,
-                'catch_shoot_pct': row[2] or 0.0,
-                'pull_up_fga': row[3] or 0.0,
-                'speed': row[4] or 0.0,
-                'distance': row[5] or 0.0
-            }
-        
-        except ValueError as e:
-            # Player not found
-            print(f"⚠️  Player lookup failed: {e}")
-            return {
-                'drives': 0.0,
-                'catch_shoot_fga': 0.0,
-                'catch_shoot_pct': 0.0,
-                'pull_up_fga': 0.0,
-                'speed': 0.0,
-                'distance': 0.0
-            }
-```
-
-**Apply changes:**
-```bash
-# Find the method in module_e.py
-grep -n "_get_tracking_stats" module_e.py
-
-# Replace the method (lines will vary, find exact location first)
-# Use your editor or the edit_files tool
-```
+**Status:** Verified on Jan 20, 2026. Module E now correctly uses `PlayerIDResolver`.
 
 ---
 
-### Phase 5: Testing (1 hour)
+### Phase 5: Database Guardrail (The "Smooth Rollout")
 
-#### Test 1: Resolver Unit Tests
-```bash
-python3 -c "
-from utils.player_id_resolver import PlayerIDResolver
+**Objective:** Implement "Heal on Ingestion" logic in `database.py` to prevent future database pollution from external modules (Historian, Yak).
 
-resolver = PlayerIDResolver()
+#### Step 5.1: Modify `database.py`
+**File:** `database.py`
 
-# Test accent handling
-assert resolver.resolve_to_canonical_id('Luka Dončić') == '1629029'
-assert resolver.resolve_to_canonical_id('Luka Doncic') == '1629029'
-assert resolver.resolve_to_canonical_id('luka doncic') == '1629029'
+1. Import `PlayerIDResolver`.
+2. Locate `upsert_player_info` (or equivalent write method).
+3. Add guardrail logic at the top of the method:
 
-# Test ID lookup
-assert resolver.resolve_to_canonical_id('1629029') == '1629029'
-assert resolver.resolve_to_canonical_id('28398804489') == '1629029'  # Tank01 alias
-
-print('✅ All resolver tests passed!')
-"
+```python
+# 🛡️ GUARDRAIL: Resolve ID before writing
+try:
+    # Attempt to resolve to canonical NBA ID
+    canonical_id = self.resolver.resolve_to_canonical_id(player_data['id'])
+    # Overwrite the dirty ID with the clean ID
+    player_data['id'] = canonical_id
+except ValueError:
+    # If resolution fails, keep original ID (better to have dirty data than no data)
+    pass 
 ```
 
-#### Test 2: Module E Integration
-```bash
-python3 -c "
-from module_e import LudiCalibrator
+#### Step 5.2: Verification
+1. Run `module_h_historian.py` or a simulation script with a Tank01 ID.
+2. Verify that `players` table receives an NBA ID, not the Tank01 ID.
 
-calibrator = LudiCalibrator()
-
-# Test with accent
-stats1 = calibrator._get_tracking_stats('Luka Dončić', days=10)
-
-# Test without accent
-stats2 = calibrator._get_tracking_stats('Luka Doncic', days=10)
-
-# Should return same data
-assert stats1['drives'] == stats2['drives'], f\"Mismatch: {stats1['drives']} != {stats2['drives']}\"
-assert stats1['catch_shoot_fga'] == stats2['catch_shoot_fga']
-
-print('✅ Module E tracking lookup works with/without accents!')
-print(f\"Luka drives: {stats1['drives']:.2f}/game\")
-"
-```
-
-#### Test 3: Database Integrity Check
-```bash
-sqlite3 ludi.db "
-SELECT 
-    (SELECT COUNT(*) FROM players WHERE is_active = 1) as active_players,
-    (SELECT COUNT(*) FROM players WHERE is_active = 0) as inactive_duplicates,
-    (SELECT COUNT(*) FROM player_canonical_ids) as canonical_records,
-    (SELECT COUNT(*) FROM player_game_tracking WHERE nba_player_id IN (SELECT canonical_id FROM player_canonical_ids)) as tracking_records_linked;
-"
-```
-
-**Expected output:**
-```
-active_players|inactive_duplicates|canonical_records|tracking_records_linked
-500|1460|500|14000+
-```
 
 ---
 
