@@ -54,7 +54,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python settle_bets.py
+          python3 settle_bets.py
 
       - name: Send PM Bot Morning Brief (Work Notes)
         env:
@@ -67,7 +67,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python -m utils.pm_bot --mode morning
+          python3 -m utils.pm_bot --mode morning
 
       - name: Commit and push if changes
         run: |
@@ -118,4 +118,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python scripts/send_settlement_summary.py
+          python3 scripts/send_settlement_summary.py

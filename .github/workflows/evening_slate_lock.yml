@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify image pipeline dependencies
         run: |
-          python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
+          python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
 
       - name: Install fonts for visual card generation
         run: |
@@ -52,4 +52,4 @@ jobs:
         run: |
           # Run Visual Engine in Evening Mode (Final Lines/Injuries)
           export PYTHONPATH=$PWD
-          python -m morning_brief --mode evening
+          python3 -m morning_brief --mode evening

@@ -40,4 +40,4 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python -m main --mode pm_debrief
+          python3 -m main --mode pm_debrief

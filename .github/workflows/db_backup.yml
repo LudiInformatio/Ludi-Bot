@@ -64,7 +64,7 @@ jobs:
         env:
           BACKUP_TS: ${{ steps.ts.outputs.ts }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import os
           import sqlite3
           import sys

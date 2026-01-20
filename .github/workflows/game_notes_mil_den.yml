@@ -34,7 +34,7 @@ jobs:
 
       - name: Verify image pipeline dependencies
         run: |
-          python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
+          python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
 
       - name: Run Game Notes Script
         env:
@@ -47,4 +47,4 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python -m send_single_game_notes
+          python3 -m send_single_game_notes
