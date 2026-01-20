@@ -208,9 +208,14 @@ def run_sync(dry_run: bool = False):
     covers_data = []
     oddsshark_data = []
     
+    # Determine headless mode based on environment
+    is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'
+    # Force visible browser on self-hosted to bypass WAF, otherwise use headless (CI)
+    headless_mode = False if is_self_hosted else True
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True,
+            headless=headless_mode,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',

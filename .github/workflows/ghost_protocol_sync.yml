@@ -46,7 +46,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/sync_browser_backfill.py --days 7 --headless
+          python3 scripts/sync_browser_backfill.py --days 7
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v3

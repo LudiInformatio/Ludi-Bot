@@ -44,7 +44,7 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/sync_browser_backfill.py --days 1 --headless
+          python3 scripts/sync_browser_backfill.py --days 1
           git add ludi.db
           if git diff --staged --quiet; then
             echo "No changes to commit"
