@@ -51,8 +51,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python3 -m pip3 install --upgrade pip
+          pip3 install -r requirements.txt
         if: steps.db.outputs.present == 'true'
 
       - name: Set timestamp
