@@ -20774,5 +20774,122 @@
       "requests_remaining": "922",
       "requests_limit": "1000"
     }
+  },
+  {
+    "timestamp": "2026-01-20T13:35:46.751862",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "921",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:39:20.160164",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "920",
+      "requests_limit": "1000"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:29.841793",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "6621",
+      "requests_used": "13379",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:36.408698",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "6615",
+      "requests_used": "13385",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:37.153446",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6579",
+      "requests_used": "13421",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:37.800547",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6543",
+      "requests_used": "13457",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:38.452906",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6507",
+      "requests_used": "13493",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:39.069133",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6471",
+      "requests_used": "13529",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:39.711537",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6435",
+      "requests_used": "13565",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:40.349738",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6399",
+      "requests_used": "13601",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:41.327235",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "6363",
+      "requests_used": "13637",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-20T13:55:42.839151",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "919",
+      "requests_limit": "1000"
+    }
   }
 ]

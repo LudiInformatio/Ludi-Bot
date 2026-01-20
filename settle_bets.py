@@ -2,6 +2,7 @@ import sqlite3
 import datetime
 from utils.bet_logger import get_bet_logger
 from utils.telegram_notifier import send_message
+from utils.player_id_resolver import PlayerIDResolver
 
 # =========================================================
 # LUDI LENS v2.0 | THE SETTLEMENT LEDGER
@@ -15,6 +16,7 @@ class BetSettler:
         self.db_path = db_path
         self.logger = get_bet_logger(db_path=db_path)
         self.conn = sqlite3.connect(db_path)
+        self.resolver = PlayerIDResolver(db_path=db_path)
 
     def run_settlement(self, target_date=None):
         """
@@ -123,26 +125,63 @@ class BetSettler:
             return None
             
         c = self.conn.cursor()
-        
-        # Handle derived stats if not in DB directly (PRA, etc.)
-        if stat_cat in ['PRA', 'PR', 'PA']:
-            c.execute('''
-                SELECT pts, reb, ast FROM player_game_logs 
-                WHERE player_name = ? AND game_date = ?
-            ''', (player_name, game_date))
-            row = c.fetchone()
-            if not row: return None
-            pts, reb, ast = row
-            if stat_cat == 'PRA': return pts + reb + ast
-            if stat_cat == 'PR': return pts + reb
-            if stat_cat == 'PA': return pts + ast
-        else:
-            # Standard Stats
-            query = f"SELECT {db_col} FROM player_game_logs WHERE player_name = ? AND game_date = ?"
-            c.execute(query, (player_name, game_date))
-            row = c.fetchone()
-            if not row: return None
-            return row[0]
+
+        # ---------------------------------------------------------
+        # 🛡️ ROBUST LOOKUP: Resolve Name -> Canonical ID
+        # ---------------------------------------------------------
+        canonical_id = None
+        try:
+            canonical_id = self.resolver.resolve_to_canonical_id(player_name)
+        except ValueError:
+            pass # Name not found in canonical map, will fallback to string match
+
+        def fetch_stats_by_id(pid):
+            if stat_cat in ['PRA', 'PR', 'PA']:
+                c.execute('''
+                    SELECT pts, reb, ast FROM player_game_logs 
+                    WHERE player_id = ? AND game_date = ?
+                ''', (pid, game_date))
+                row = c.fetchone()
+                if not row: return None
+                p, r, a = row
+                if stat_cat == 'PRA': return p + r + a
+                if stat_cat == 'PR': return p + r
+                if stat_cat == 'PA': return p + a
+            else:
+                c.execute(f"SELECT {db_col} FROM player_game_logs WHERE player_id = ? AND game_date = ?", (pid, game_date))
+                row = c.fetchone()
+                return row[0] if row else None
+
+        def fetch_stats_by_name(pname):
+            if stat_cat in ['PRA', 'PR', 'PA']:
+                c.execute('''
+                    SELECT pts, reb, ast FROM player_game_logs 
+                    WHERE player_name = ? AND game_date = ?
+                ''', (pname, game_date))
+                row = c.fetchone()
+                if not row: return None
+                p, r, a = row
+                if stat_cat == 'PRA': return p + r + a
+                if stat_cat == 'PR': return p + r
+                if stat_cat == 'PA': return p + a
+            else:
+                c.execute(f"SELECT {db_col} FROM player_game_logs WHERE player_name = ? AND game_date = ?", (pname, game_date))
+                row = c.fetchone()
+                return row[0] if row else None
+
+        # Strategy 1: Canonical ID Match (Highest Fidelity)
+        if canonical_id:
+            val = fetch_stats_by_id(canonical_id)
+            if val is not None:
+                return val
+            # If ID found but no logs, it might be a data gap, but we double check name just in case
+
+        # Strategy 2: Strict Name Match (Legacy Fallback)
+        val = fetch_stats_by_name(player_name)
+        if val is not None:
+            return val
+            
+        return None
 
     def _grade_bet(self, side, line, actual, units, odds_over, odds_under):
         """

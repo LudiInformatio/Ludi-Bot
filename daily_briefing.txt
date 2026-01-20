@@ -1,130 +1,102 @@
 
-📰 LUDI ELITE BRIEFING (Jan 15, 2026)
+📰 LUDI ELITE BRIEFING (Jan 20, 2026)
 ================================
 💎 TOP TARGETS BY GAME
 
-🏀 Atlanta Hawks @ Portland Trail Blazers
-   💎 Dyson Daniels | OVER 0.5 3PM
-      Proj: 0.6 | EV: +166.3% | 1.5u
-      🏷️  FACILITATOR | vs_HACKERS | CORRELATED_SGP
-      📝 [JUMBO_CREATOR] / FACILITATOR | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Jerami Grant | OVER 2.5 AST
-      Proj: 4.9 | EV: +115.7% | 1.5u
-      🏷️  STRETCH_BIG | vs_FUNNEL | CORRELATED_SGP
-      📝 [HUB_BIG] [🔥 CORRELATED SGP]
-   💎 Jerami Grant | OVER 3.5 REB
-      Proj: 8.9 | EV: +110.5% | 1.5u
+🏀 Los Angeles Clippers @ Chicago Bulls
+   💎 Tre Jones | OVER 2.5 REB
+      Proj: 5.1 | EV: +136.5% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+      📝 [GENERALIST] | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Tre Jones | OVER 0.5 3PM
+      Proj: 1.4 | EV: +130.6% | 1.5u
+      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
+      📝 [GENERALIST] | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Brook Lopez | OVER 1.5 3PM
+      Proj: 4.3 | EV: +121.3% | 1.5u
       🏷️  STRETCH_BIG | vs_FUNNEL
-      📝 [HUB_BIG] [🔥 CORRELATED SGP]
+      📝 [ELITE_SCORER] / HUB_BIG +P&R_ROLL_MAN+SPOT_UP | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
 
-🏀 Boston Celtics @ Miami Heat
-   💎 Tyler Herro | UNDER 4.5 AST
-      Proj: 3.3 | EV: +89.4% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Kel'el Ware | OVER 7.5 REB
-      Proj: 12.98 | EV: +70.5% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Kel'el Ware | OVER 7.5 PTS
-      Proj: 12.9 | EV: +60.1% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
+🏀 Los Angeles Lakers @ Denver Nuggets
+   💎 Jake LaRavia | OVER 1.5 3PM
+      Proj: 3.4 | EV: +104.5% | 1.5u
+      🏷️  STRETCH_BIG | vs_NEUTRAL | CORRELATED_SGP
+      📝 [HUB_BIG] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Marcus Smart | OVER 9.5 PTS
+      Proj: 23.6 | EV: +101.0% | 1.5u
+      🏷️  STRETCH_BIG | vs_NEUTRAL
+      📝 [HUB_BIG] / JUMBO_CREATOR +P&R_ROLL_MAN+SPOT_UP | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Spencer Jones | OVER 6.5 PTS
+      Proj: 20.6 | EV: +99.6% | 1.5u
+      🏷️  STRETCH_BIG | vs_NEUTRAL
+      📝 [STRETCH_BIG] +P&R_ROLL_MAN | LAL Paint Pack Edge | ⚠️ VERIFY LINE
 
-🏀 Charlotte Hornets @ Los Angeles Lakers
-   💎 Moussa Diabate | OVER 1.5 AST
-      Proj: 2.4 | EV: +99.3% | 1.5u
-      🏷️  RIM_RUNNER | vs_NEUTRAL | CORRELATED_SGP
-      📝 [RIM_RUNNER] [🔥 CORRELATED SGP]
-   💎 Deandre Ayton | UNDER 13.5 PTS
-      Proj: 7.7 | EV: +97.0% | 1.5u
-      🏷️  GENERALIST | vs_HACKERS
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 LeBron James | UNDER 5.5 REB
-      Proj: 3.8 | EV: +91.1% | 1.5u
-      🏷️  GENERALIST | vs_HACKERS
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-
-🏀 Memphis Grizzlies @ Orlando Magic
-   💎 Noah Penda | OVER 0.5 3PM
-      Proj: 1.1 | EV: +94.8% | 1.5u
-      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Noah Penda | OVER 4.5 PTS
-      Proj: 10.3 | EV: +78.9% | 1.5u
-      🏷️  GENERALIST | vs_NEUTRAL
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Noah Penda | OVER 3.5 REB
-      Proj: 7.7 | EV: +62.7% | 1.5u
-      🏷️  GENERALIST | vs_NEUTRAL
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-
-🏀 Milwaukee Bucks @ San Antonio Spurs
-   💎 Julian Champagnie | UNDER 1.5 AST
-      Proj: 0.89 | EV: +94.2% | 1.5u
-      🏷️  GENERALIST | vs_NEUTRAL | CORRELATED_SGP
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Stephon Castle | UNDER 5.5 REB
-      Proj: 2.58 | EV: +76.6% | 1.5u
-      🏷️  GENERALIST | vs_NEUTRAL
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Myles Turner | OVER 1.5 AST
-      Proj: 1.69 | EV: +70.5% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK | CORRELATED_SGP
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-
-🏀 New York Knicks @ Golden State Warriors
-   💎 Will Richard | OVER 3.5 PTS
-      Proj: 7.2 | EV: +90.3% | 1.5u
-      🏷️  GENERALIST | vs_PERIMETER
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Will Richard | OVER 0.5 AST
-      Proj: 1.5 | EV: +89.0% | 1.5u
-      🏷️  GENERALIST | vs_PERIMETER
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Will Richard | OVER 0.5 3PM
-      Proj: 1.3 | EV: +80.2% | 1.5u
-      🏷️  GENERALIST | vs_PERIMETER | CORRELATED_SGP
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-
-🏀 Oklahoma City Thunder @ Houston Rockets
-   💎 Steven Adams | OVER 1.5 AST
-      Proj: 2.3 | EV: +87.5% | 1.5u
-      🏷️  RIM_RUNNER | vs_PAINT_PACK | CORRELATED_SGP
-      📝 [RIM_RUNNER] [🔥 CORRELATED SGP]
-   💎 Cason Wallace | OVER 1.5 AST
-      Proj: 2.1 | EV: +70.3% | 1.5u
+🏀 Miami Heat @ Sacramento Kings
+   💎 Maxime Raynaud | OVER 0.5 3PM
+      Proj: 0.52 | EV: +149.6% | 1.5u
+      🏷️  RIM_RUNNER | vs_BLITZ | CORRELATED_SGP
+      📝 [RIM_RUNNER] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Maxime Raynaud | OVER 6.5 REB
+      Proj: 19.47 | EV: +121.1% | 1.5u
+      🏷️  RIM_RUNNER | vs_BLITZ
+      📝 [RIM_RUNNER] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 DeMar DeRozan | OVER 3.5 REB
+      Proj: 9.41 | EV: +110.8% | 1.5u
       🏷️  GENERALIST | vs_BLITZ | CORRELATED_SGP
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Cason Wallace | OVER 6.5 PTS
-      Proj: 8.0 | EV: +55.7% | 1.5u
-      🏷️  GENERALIST | vs_BLITZ
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
+      📝 [JUMBO_CREATOR] +ISO_SCORER+P&R_HANDLER | Hustle Guard | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
 
-🏀 Phoenix Suns @ Detroit Pistons
-   💎 Mark Williams | UNDER 11.5 PTS
-      Proj: 8.04 | EV: +93.7% | 1.5u
+🏀 Minnesota Timberwolves @ Utah Jazz
+   💎 Jaden McDaniels | OVER 3.5 AST
+      Proj: 5.75 | EV: +104.0% | 1.5u
+      🏷️  STRETCH_BIG | vs_FUNNEL
+      📝 [HUB_BIG] | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Anthony Edwards | OVER 4.5 AST
+      Proj: 8.7 | EV: +103.1% | 1.5u
+      🏷️  STRETCH_BIG | vs_FUNNEL
+      📝 [ELITE_SCORER] / HUB_BIG +ISO_SCORER+P&R_HANDLER | PnR Handler vs Funnel | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Jusuf Nurkic | OVER 12.5 PTS
+      Proj: 29.48 | EV: +101.8% | 1.5u
       🏷️  GENERALIST | vs_PAINT_PACK
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Oso Ighodaro | UNDER 5.5 PTS
-      Proj: 3.77 | EV: +76.0% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Dillon Brooks | UNDER 2.5 AST
-      Proj: 1.39 | EV: +64.7% | 1.5u
-      🏷️  GENERALIST | vs_PAINT_PACK | CORRELATED_SGP
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
+      📝 [HUB_BIG] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
 
-🏀 Utah Jazz @ Dallas Mavericks
-   💎 P.J. Washington | UNDER 17.5 PTS
-      Proj: 10.6 | EV: +95.7% | 1.5u
-      🏷️  GENERALIST | vs_FUNNEL
-      📝 [GENERALIST] | Hustle Guard [🔥 CORRELATED SGP]
-   💎 Naji Marshall | UNDER 19.5 PTS
-      Proj: 13.1 | EV: +85.8% | 1.5u
-      🏷️  GENERALIST | vs_FUNNEL
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
-   💎 Keyonte George | UNDER 26.5 PTS
-      Proj: 18.9 | EV: +72.5% | 1.5u
-      🏷️  GENERALIST | vs_PERIMETER
-      📝 [GENERALIST] [🔥 CORRELATED SGP]
+🏀 Phoenix Suns @ Philadelphia 76ers
+   💎 VJ Edgecombe | OVER 2.5 3PM
+      Proj: 4.8 | EV: +134.9% | 1.5u
+      🏷️  STRETCH_BIG | vs_BLITZ | CORRELATED_SGP
+      📝 [ELITE_SCORER] / HUB_BIG +TRANSITION | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Collin Gillespie | OVER 2.5 3PM
+      Proj: 5.8 | EV: +122.0% | 1.5u
+      🏷️  STRETCH_BIG | vs_NEUTRAL | CORRELATED_SGP
+      📝 [ELITE_SCORER] / JUMBO_CREATOR +ISO_SCORER+P&R_HANDLER | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Dillon Brooks | OVER 2.5 3PM
+      Proj: 4.2 | EV: +111.9% | 1.5u
+      🏷️  SNIPER | vs_NEUTRAL | CORRELATED_SGP
+      📝 [ELITE_SCORER] / SNIPER +ISO_SCORER+P&R_HANDLER | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+
+🏀 San Antonio Spurs @ Houston Rockets
+   💎 Stephon Castle | OVER 1.5 3PM
+      Proj: 3.0 | EV: +163.1% | 1.5u
+      🏷️  GENERALIST | vs_BLITZ | CORRELATED_SGP
+      📝 [ELITE_SCORER] +P&R_HANDLER+TRANSITION | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Keldon Johnson | OVER 1.5 3PM
+      Proj: 2.4 | EV: +124.6% | 1.5u
+      🏷️  STRETCH_BIG | vs_BLITZ | CORRELATED_SGP
+      📝 [STRETCH_BIG] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Reed Sheppard | OVER 2.5 3PM
+      Proj: 4.94 | EV: +122.6% | 1.5u
+      🏷️  GENERALIST | vs_PAINT_PACK
+      📝 [ELITE_SCORER] +SPOT_UP+P&R_HANDLER | Spot-Up vs Pack | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+
+🏀 Toronto Raptors @ Golden State Warriors
+   💎 Will Richard | OVER 1.5 3PM
+      Proj: 2.3 | EV: +108.7% | 1.5u
+      🏷️  GENERALIST | vs_BLITZ | CORRELATED_SGP
+      📝 [GENERALIST] +P&R_ROLL_MAN | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Immanuel Quickley | OVER 16.5 PTS
+      Proj: 50.11 | EV: +103.8% | 1.5u
+      🏷️  STRETCH_BIG | vs_PERIMETER
+      📝 [ELITE_SCORER] / JUMBO_CREATOR +TRANSITION+P&R_HANDLER | ISO Mismatch | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Immanuel Quickley | OVER 2.5 3PM
+      Proj: 5.94 | EV: +103.2% | 1.5u
+      🏷️  STRETCH_BIG | vs_PERIMETER | CORRELATED_SGP
+      📝 [ELITE_SCORER] / JUMBO_CREATOR +TRANSITION+P&R_HANDLER | ISO Mismatch | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
