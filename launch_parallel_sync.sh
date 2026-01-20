@@ -3,7 +3,7 @@
 # Launches 4 workers, each processing different player chunks
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PYTHON="${SCRIPT_DIR}/.venv/bin/python"
+PYTHON="python3"
 SYNC_SCRIPT="${SCRIPT_DIR}/scripts/sync_tracking_parallel.py"
 LOG_DIR="${SCRIPT_DIR}/logs"
 PID_FILE="${LOG_DIR}/parallel_sync_pids.txt"

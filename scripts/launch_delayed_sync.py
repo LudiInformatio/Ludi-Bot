@@ -26,7 +26,7 @@ def schedule_workers():
     
     # Worker 1: Chunk 0/2, 20s delay
     cmd1 = [
-        "./.venv/bin/python", "scripts/sync_tracking_parallel.py",
+        "python3", "scripts/sync_tracking_parallel.py",
         "--chunk_index", "0",
         "--total_chunks", "2",
         "--season", "2025-26",
@@ -37,7 +37,7 @@ def schedule_workers():
     
     # Worker 2: Chunk 1/2, 240s delay (4 mins)
     cmd2 = [
-        "./.venv/bin/python", "scripts/sync_tracking_parallel.py",
+        "python3", "scripts/sync_tracking_parallel.py",
         "--chunk_index", "1",
         "--total_chunks", "2",
         "--season", "2025-26",

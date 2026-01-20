@@ -4,7 +4,7 @@
 
 # Defined paths
 PROJECT_ROOT="/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot"
-VENV_PYTHON="$PROJECT_ROOT/.venv/bin/python"
+VENV_PYTHON="python3"
 LOG_FILE="$PROJECT_ROOT/logs/ludi_cron.log"
 
 # Ensure log directory exists
