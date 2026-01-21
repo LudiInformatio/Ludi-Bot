@@ -11,7 +11,7 @@ if __name__ == "__main__":
                     "name": "Cade Cunningham", "team": "DET",
                     "proj_min": 36, "proj_pts": 28.2, "proj_ast": 10.1,
                     "sportsbook_props": {"pts": 26.5, "ast": 9.5},
-                    "notes": "[BALL_HOG] vs MIA Blitz. Detroit #2 Def Advantage."
+                    "notes": "[HELIOCENTRIC] vs MIA Blitz. Detroit #2 Def Advantage."
                 },
                 {
                     "name": "Jalen Duren", "team": "DET",

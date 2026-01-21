@@ -23,9 +23,9 @@ def classify_archetype(pts, reb, ast, tpm, stl, blk, usg):
     
     # === TIER 1: HIGH-USAGE SPECIALISTS ===
     
-    # 1. BALL_HOG: High usage + high assists (primary ball-handlers)
+    # 1. HELIOCENTRIC: High usage + high assists (primary ball-handlers)
     if usg > 0.30 and ast > 6.0:
-        return "BALL_HOG"
+        return "HELIOCENTRIC"
     
     # 2. SLASHER: High scoring + high usage + low 3PM (interior scorers)
     if pts > 22.0 and usg > 0.30 and tpm < 2.0:

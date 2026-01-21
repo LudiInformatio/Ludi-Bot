@@ -20891,5 +20891,14 @@
       "requests_remaining": "919",
       "requests_limit": "1000"
     }
+  },
+  {
+    "timestamp": "2026-01-20T19:24:56.999250",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "998",
+      "requests_limit": "1000"
+    }
   }
 ]

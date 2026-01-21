@@ -66,7 +66,7 @@ class TagClassifier:
         # CRITICAL: Must match Module E _assign_archetype() priority order
         self.ARCHETYPE_RULES = {
             # Tier 1: High-usage specialists
-            'BALL_HOG': lambda p: p.get('base_usg', 0) > 0.30 and p.get('base_ast', 0) > 6.0,
+            'HELIOCENTRIC': lambda p: p.get('base_usg', 0) > 0.30 and p.get('base_ast', 0) > 6.0,
             'SLASHER': lambda p: (p.get('base_pts', 0) > 22.0 and
                                   p.get('base_usg', 0) > 0.30 and
                                   p.get('base_3pm', 0) < 2.0),

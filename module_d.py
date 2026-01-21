@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import sqlite3
 import time
 from datetime import datetime, timedelta
 from duckduckgo_search import DDGS
@@ -190,9 +191,10 @@ class LudiYak:
             new_cache = []
             
             for entry in feed.entries:
-                # Parse "Player Name: Headline" format
-                title_parts = entry.title.split(': ', 1)
-                player_name = title_parts[0] if len(title_parts) > 1 else entry.title
+                # Parse "Player Name: Headline" format (handle both string and dict)
+                entry_title = entry.title if isinstance(entry.title, str) else str(entry.title)
+                title_parts = entry_title.split(': ', 1)
+                player_name = title_parts[0] if len(title_parts) > 1 else entry_title
                 headline = title_parts[1] if len(title_parts) > 1 else ""
                 
                 new_cache.append({
@@ -265,7 +267,111 @@ class LudiYak:
                 aggregated_items.extend(res["items"])
         
         return {"items": aggregated_items}
+    
+    def get_team_schedule_context(self, team_name, target_date=None):
+        """
+        [WEEK 3] Get schedule context for B2B fatigue logic.
+        
+        Returns schedule metadata for B2B analysis:
+        - is_back_to_back: bool (if team played yesterday)
+        - rest_days: int (days since last game)  
+        - is_road: bool (if game is away)
+        - next_game_tomorrow: bool (if game tomorrow)
+        - games_in_last_5_days: int (fatigue tracking)
+        - games_in_next_5_days: int (load management)
+        """
+        if not target_date:
+            target_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Use simple separate connection to avoid threading issues if shared
+        db_path = self.cache_file.replace('yak_cache.json', 'ludi.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Get team's recent and near-future schedule context (wide window)
+            # Fetching last 10 days and next 10 days roughly
+            target_dt = datetime.strptime(target_date, '%Y-%m-%d')
+            start_window = (target_dt - timedelta(days=7)).strftime('%Y-%m-%d')
+            end_window = (target_dt + timedelta(days=7)).strftime('%Y-%m-%d')
+            
+            cursor.execute("""
+                SELECT date, home_team, away_team
+                FROM games 
+                WHERE (home_team = ? OR away_team = ?)
+                AND date BETWEEN ? AND ?
+                ORDER BY date DESC
+            """, (team_name, team_name, start_window, end_window))
+            
+            games_window = cursor.fetchall()
+            
+            # --- 1. B2B & Rest Analysis ---
+            # Look strictly at days BEFORE target_date
+            past_games = [g for g in games_window if g[0] < target_date]
+            future_games = [g for g in games_window if g[0] > target_date]
+            target_game_exists = any(g[0] == target_date for g in games_window)
 
+            # Target game info (if known)
+            is_road = False
+            for g in games_window:
+                if g[0] == target_date:
+                    is_road = (g[2] == team_name) # Away team is index 2
+                    break
+            
+            # Is Back-to-Back? (Played Yesterday)
+            yesterday_str = (target_dt - timedelta(days=1)).strftime('%Y-%m-%d')
+            is_back_to_back = any(g[0] == yesterday_str for g in past_games)
+            
+            # Rest Days
+            rest_days = 999
+            if past_games:
+                # past_games is sorted DESC, so index 0 is most recent
+                last_played = datetime.strptime(past_games[0][0], '%Y-%m-%d')
+                rest_days = (target_dt - last_played).days
+            
+            # Next Game Tomorrow?
+            tomorrow_str = (target_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            next_game_tomorrow = any(g[0] == tomorrow_str for g in future_games)
+            
+            # --- 2. Density Analysis (Hashtag Matrix Style) ---
+            # Games in Last 5 Days: Strict window [Target-5, Target-1]
+            # If target is today (Day 0), we look at Day -5 to -1.
+            # 4-in-5 means: Played -4, -3, -2, -1 (4 games) + Today = 5 in 5.
+            # Usually strict metric is "Games played in last X days INCLUDING today".
+            # WEEK 3 SPEC: "Calculation of `games_in_last_5_days`"
+            # We will return the count EXCLUDING today to allow flexible aggregation.
+            
+            window_start_last = (target_dt - timedelta(days=5)).strftime('%Y-%m-%d')
+            window_end_last = (target_dt - timedelta(days=1)).strftime('%Y-%m-%d')
+            games_in_last_5_days = sum(1 for g in games_window if window_start_last <= g[0] <= window_end_last)
+            
+            # Forward Density: [Target+1, Target+5]
+            window_start_next = (target_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            window_end_next = (target_dt + timedelta(days=5)).strftime('%Y-%m-%d')
+            games_in_next_5_days = sum(1 for g in games_window if window_start_next <= g[0] <= window_end_next)
+            
+            return {
+                "is_back_to_back": is_back_to_back,
+                "rest_days": rest_days,
+                "is_road": is_road,
+                "next_game_tomorrow": next_game_tomorrow,
+                "games_in_last_5_days": games_in_last_5_days, # Trailing 5 (excluding target)
+                "games_in_next_5_days": games_in_next_5_days
+            }
+
+        except Exception as e:
+            print(f"   [YAK] ⚠️ Schedule Context Error: {e}")
+            return {
+                "is_back_to_back": False,
+                "rest_days": 999,
+                "is_road": False,
+                "next_game_tomorrow": False,
+                "games_in_last_5_days": 0,
+                "games_in_next_5_days": 0
+            }
+        finally:
+            conn.close()
+    
     def get_player_status(self, player_name, team_name="NBA"):
         clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()
         self.refresh_official_injuries()
@@ -279,7 +385,7 @@ class LudiYak:
                 return {"status": "OUT", "note": f"[OFFICIAL] {status_tag}", "confidence": 1.0}
             if "available" in tag_lower:
                 return {"status": "ACTIVE", "note": f"[OFFICIAL] AVAILABLE", "confidence": 1.0}
-
+        
         # --- LAYER 1.5: ROTOWIRE INTEL (Breaking News) ---
         roto_intel = self.get_rotowire_intel(player_name)
         if roto_intel:
@@ -289,11 +395,11 @@ class LudiYak:
             # If RotoWire confirms active, trust it
             if roto_intel['status'] == 'ACTIVE':
                  return roto_intel
-
+        
         # --- LAYER 1 CONTINUED: OFFICIAL GTD/PROBABLE ---
         if status_tag:
             tag_lower = status_tag.lower()
-
+            
             if "doubtful" in tag_lower:
                 return {"status": "DOUBTFUL", "note": f"[OFFICIAL] {status_tag}", "confidence": 0.9}
             if "probable" in tag_lower:
@@ -301,8 +407,29 @@ class LudiYak:
                 return self._nuance_check(player_name, team_name, "PROBABLE", status_tag)
             if any(x in tag_lower for x in ["questionable", "gtd"]):
                 return self._nuance_check(player_name, team_name, "GTD", status_tag)
-
-        return {"status": "ACTIVE", "note": "Clear", "confidence": 1.0}
+        
+        # --- [WEEK 3] ADD SCHEDULE CONTEXT FOR B2B LOGIC ---
+        # Get schedule context if team_name is provided
+        schedule_context = {}
+        if team_name and team_name != "NBA":
+            schedule_context = self.get_team_schedule_context(team_name)
+        
+        # Merge schedule context into base status
+        base_status = {"status": "ACTIVE", "note": "Clear", "confidence": 1.0}
+        
+        if status_tag:
+            tag_lower = status_tag.lower()
+            if "doubtful" in tag_lower:
+                base_status = {"status": "DOUBTFUL", "note": f"[OFFICIAL] {status_tag}", "confidence": 0.9}
+            elif "probable" in tag_lower:
+                base_status = self._nuance_check(player_name, team_name, "PROBABLE", status_tag)
+            elif any(x in tag_lower for x in ["questionable", "gtd"]):
+                base_status = self._nuance_check(player_name, team_name, "GTD", status_tag)
+        
+        # Combine status with schedule context
+        final_status = {**base_status, **schedule_context}
+        
+        return final_status
 
     def _nuance_check(self, player_name, team_name, primary_status, official_tag):
         """Internal helper to scan for 'Limits' or 'Scratch' news using Enhanced Yak logic."""

@@ -41,7 +41,43 @@ class LudiCalibrator:
             "domantassabonis": "HUB_BIG",
             "draymondgreen": "HUB_BIG"
         }
-        
+
+        # === POSITION-ARCHETYPE AFFINITY MATRIX (Week 2 Enhancement) ===
+        # Position refines archetype selection when multiple stat matches exist
+        # Higher score = stronger affinity for that position
+        self.POSITION_ARCHETYPE_AFFINITY = {
+            # Centers: Prioritize big archetypes over guard archetypes
+            'C': {
+                'HUB_BIG': 1.0,        # Strongest affinity (Jokic, Sabonis)
+                'STRETCH_BIG': 0.9,    # High affinity (KAT, Porzingis)
+                'RIM_RUNNER': 0.8,     # Natural fit (Capela, Gobert)
+                'HELIOCENTRIC': 0.3,   # Low affinity (rare center ballhandlers)
+                'JUMBO_CREATOR': 0.2,  # Very rare (penalize)
+            },
+
+            # Forwards: Balanced, slight preference for versatile archetypes
+            'F': {
+                'JUMBO_CREATOR': 1.0,  # LeBron, Giannis (when passing)
+                'SLASHER': 0.9,        # Giannis, Zion
+                'ELITE_SCORER': 0.9,   # Tatum, Durant
+                'STRETCH_BIG': 0.7,    # Forwards who play big
+                'TWO_WAY_WING': 0.8,   # Kawhi, Butler
+            },
+
+            # Guards: Prioritize ball-handler archetypes
+            'G': {
+                'HELIOCENTRIC': 1.0,   # Luka, Trae (guard engines)
+                'JUMBO_CREATOR': 0.9,  # LeBron-like guards (tall creators)
+                'FACILITATOR': 0.9,    # CP3, Rondo
+                'SNIPER': 0.8,         # Curry, Dame (shooters)
+                'ELITE_SCORER': 0.8,   # Scoring guards
+                'HUB_BIG': 0.1,        # Very rare (penalize heavily)
+            },
+
+            # Unknown: No preference (existing logic)
+            'UNK': {}  # Empty dict = no affinity bonuses
+        }
+
         # === SECONDARY PLAYTYPE SYSTEM (Week 2 Integration) ===
         # Position-based filtering: Guards create, wings cut/shoot, bigs finish
         self.POSITION_ELIGIBILITY = {
@@ -197,27 +233,105 @@ class LudiCalibrator:
             return final_score
         return 0.0
     
+    # === SYNERGY DATA MAPPING ===
+    SYNERGY_TO_TAG = {
+        'ISO': 'ISO_SCORER',
+        'TRANSITION': 'TRANSITION',
+        'PR_BALL_HANDLER': 'P&R_HANDLER',
+        'PR_ROLL_MAN': 'P&R_ROLL_MAN',
+        'POST_UP': 'POST_UP',
+        'SPOT_UP': 'SPOT_UP',
+        'CUT': 'OFF_BALL_CUTTER',
+        'PUTBACK': 'PUTBACK'
+    }
+    
+    def _get_synergy_playtypes(self, player_name: str, min_freq: float = 5.0) -> list:
+        """
+        Get official Synergy playtypes from database.
+        Returns list of (playtype_tag, freq_pct, ppp) sorted by frequency.
+        
+        Args:
+            player_name: Player name to lookup
+            min_freq: Minimum frequency % to qualify (default 5%)
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT playtype, freq_pct, ppp, percentile
+                FROM player_synergy_playtypes
+                WHERE player_name = ? 
+                AND season = '2025-26'
+                AND freq_pct >= ?
+                ORDER BY freq_pct DESC
+                LIMIT 4
+            """, (player_name, min_freq))
+            
+            results = cursor.fetchall()
+            conn.close()
+            
+            # Convert Synergy tags to our format
+            playtypes = []
+            for row in results:
+                synergy_tag, freq, ppp, percentile = row
+                our_tag = self.SYNERGY_TO_TAG.get(synergy_tag)
+                if our_tag:
+                    playtypes.append((our_tag, freq, ppp, percentile))
+            
+            return playtypes
+            
+        except Exception as e:
+            # print(f"⚠️ Synergy lookup error: {e}")
+            return []
+    
     def _select_top_playtypes(self, player_data: dict) -> tuple:
         """
-        Select top 1-2 secondary playtypes for a player.
-        Uses position filtering + priority scoring (Week 1 validated).
+        HYBRID APPROACH: Select top 1-2 secondary playtypes for a player.
+        
+        Priority:
+        1. Synergy ground truth (if available, >=5% freq)
+        2. Fall back to tracking-based estimation
+        3. Apply position filtering to both
         
         Returns:
             (primary_playtype, secondary_playtype) - secondary may be None
         """
         position = player_data.get('position', 'UNK')
+        player_name = player_data.get('name', player_data.get('player_name', ''))
         
-        # Step 1: Get eligible playtypes for this position
+        # Step 1: Try Synergy ground truth first
+        synergy_data = self._get_synergy_playtypes(player_name)
+        
+        if synergy_data:
+            # Use Synergy data - filter by position eligibility
+            eligible = self._get_eligible_playtypes(position)
+            
+            valid_tags = []
+            for tag, freq, ppp, percentile in synergy_data:
+                # Skip if position doesn't allow this playtype
+                if tag not in eligible:
+                    continue
+                valid_tags.append(tag)
+                if len(valid_tags) >= 2:
+                    break
+            
+            if valid_tags:
+                primary = valid_tags[0]
+                secondary = valid_tags[1] if len(valid_tags) > 1 else None
+                return primary, secondary
+        
+        # Step 2: Fall back to tracking-based estimation (Week 1 logic)
         eligible = self._get_eligible_playtypes(position)
         
-        # Step 2: Calculate match scores for eligible playtypes
+        # Calculate match scores for eligible playtypes
         scores = {}
         for pt in eligible:
             score = self._calculate_playtype_score(player_data, pt)
             if score > 0:
                 scores[pt] = score
         
-        # Step 3: Select top 1-2 tags based on thresholds
+        # Select top 1-2 tags based on thresholds
         sorted_tags = sorted(scores.items(), key=lambda x: -x[1])
         
         primary = sorted_tags[0][0] if len(sorted_tags) > 0 and sorted_tags[0][1] >= self.PRIMARY_THRESHOLD else None
@@ -232,19 +346,21 @@ class LudiCalibrator:
         Returns empty dict if not found.
         """
         try:
-            # Step 1: Resolve to canonical NBA ID
+            # Step 1: Resolve to canonical NBA ID and get player info
             try:
                 canonical_id = self.id_resolver.resolve_to_canonical_id(player_name_or_id)
+                player_info = self.id_resolver.get_player_info(canonical_id)
+                canonical_name = player_info.get('full_name', player_name_or_id)
             except ValueError:
                 # Player not found in canonical system
                 return {}
 
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
-            # Step 2: Query tracking data by nba_player_id
+
+            # Step 2: Query tracking data by player_name (not nba_player_id - that contains slugs)
             tracking_query = """
-            SELECT 
+            SELECT
                 AVG(drives_fga) as avg_drives,
                 AVG(drives_pass_pct) as avg_drives_pass_pct,
                 AVG(catch_shoot_fga) as avg_cs_fga,
@@ -256,9 +372,9 @@ class LudiCalibrator:
                 AVG(dist_miles_off) as avg_distance,
                 COUNT(*) as games
             FROM player_game_tracking
-            WHERE nba_player_id = ? AND game_date >= date('now', ?)
+            WHERE player_name = ? AND game_date >= date('now', ?)
             """
-            cursor.execute(tracking_query, (canonical_id, f'-{days} days'))
+            cursor.execute(tracking_query, (canonical_name, f'-{days} days'))
             row = cursor.fetchone()
             
             if not row or row[9] < 3:  # Need at least 3 games
@@ -294,8 +410,7 @@ class LudiCalibrator:
                 tracking_stats['rim_freq'] = shot_row[0] or 0
                 tracking_stats['corner_3_freq'] = shot_row[1] or 0
             
-            # Step 4: Get Position (from canonical table)
-            player_info = self.id_resolver.get_player_info(canonical_id)
+            # Step 4: Get Position (from canonical table - already fetched earlier)
             if player_info.get('position'):
                 tracking_stats['position'] = player_info['position']
             
@@ -309,9 +424,21 @@ class LudiCalibrator:
 
     def calibrate_player(self, player_packet, yak_report):
         calibrated = player_packet.copy()
-        if 'notes' not in calibrated: calibrated['notes'] = "" 
-        
-        # 1. ASSIGN PRIMARY ARCHETYPE
+        if 'notes' not in calibrated: calibrated['notes'] = ""
+
+        # 0. FETCH POSITION DATA (Week 2 Enhancement - needed for archetype assignment)
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+
+        # Try to get position from PlayerIDResolver
+        try:
+            player_info = self.id_resolver.get_player_info(player_name)
+            if player_info and player_info.get('position') and player_info['position'] != 'UNK':
+                calibrated['position'] = player_info['position']
+        except (ValueError, Exception):
+            # Player not found or error - will use 'UNK' position
+            pass
+
+        # 1. ASSIGN PRIMARY ARCHETYPE (now has position field)
         archetype, secondary_arch = self._assign_archetype(calibrated)
         
         if archetype:
@@ -327,7 +454,7 @@ class LudiCalibrator:
         
         if tracking_data:
             # Merge position into calibrated if found
-            if 'position' in tracking_data:
+            if 'position' in tracking_data and tracking_data['position'] != 'UNK':
                 calibrated['position'] = tracking_data['position']
             
             # Select top 1-2 secondary playtypes
@@ -352,6 +479,45 @@ class LudiCalibrator:
         elif status == "MINUTES_LIMIT":
             self._apply_factor(calibrated, self.ADJUSTMENT_RULES["MINUTES_LIMIT"])
             calibrated['notes'] += f" | 15-min Update: Limit Applied"
+
+        # 3.5 SCHEDULE FATIGUE (Week 3 Integration)
+        is_b2b = yak_report.get('is_back_to_back', False)
+        is_road = yak_report.get('is_road', False)
+        next_game_tomorrow = yak_report.get('next_game_tomorrow', False)
+        density_5day = yak_report.get('games_in_last_5_days', 0)
+        
+        # B2B Penalties (Back End)
+        if is_b2b:
+            b2b_factor = 0.97 # Base Home B2B (-3%)
+            note = " | Home B2B"
+            
+            if is_road:
+                b2b_factor = 0.94 # Road B2B (-6%)
+                note = " | Road B2B (Fatigue)"
+                
+            # Guard Tax (High active output requires legs)
+            pos = calibrated.get('position', 'UNK')
+            # print(f"DEBUG: Checking Guard Tax for {calibrated.get('name')} | Pos: {pos}")
+            if any(x in pos for x in ['G', 'PG', 'SG']):
+                b2b_factor *= 0.96 # Additional -4%
+                note += " + Guard Tax"
+                
+            self._apply_factor(calibrated, b2b_factor)
+            calibrated['notes'] += note
+
+        # Schedule Density (4-in-5 Nights)
+        # If played 3 games in last 4 days (density=3) + Today = 4 games in 5 nights
+        if density_5day >= 3:
+            self._apply_factor(calibrated, 0.98)
+            calibrated['notes'] += " | 4-in-5 Density Tax"
+            
+        # Front-End Load Management (Star Players)
+        # If playing today AND game tomorrow (Front End of B2B)
+        is_star = calibrated.get('base_pts', 0) > 22.0 or calibrated.get('base_usg', 0) > 0.28
+        if next_game_tomorrow and is_star:
+            # Stars often play slightly less or conserve energy on front end
+            self._boost_stat(calibrated, 'proj_min', 0.96) # -4% minutes (~1.5 min)
+            calibrated['notes'] += " | B2B Front-End (Load Mgmt)"
 
         # 4. GAME SCRIPT
         odds = calibrated.get('odds', {})
@@ -403,35 +569,110 @@ class LudiCalibrator:
             self._boost_stat(calibrated, 'proj_reb', 1.10)
             calibrated['notes'] += " | Size Mismatch (Guard)"
 
-        # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 Integration)
+        # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 - 14 Total Modifiers)
+        # Research-validated matchups from NBA.com, Basketball Index, FanSided
         sec_playtypes = calibrated.get('secondary_playtypes', [])
-        
+
         for sec_pt in sec_playtypes:
-            if sec_pt == 'SPOT_UP' and def_style == 'PAINT_PACK':
-                self._boost_stat(calibrated, 'proj_3pm', 1.15)
-                calibrated['notes'] += " | Spot-Up vs Pack"
-            elif sec_pt == 'OFF_BALL_CUTTER' and def_style == 'BLITZ':
-                self._boost_stat(calibrated, 'proj_pts', 1.12)
-                calibrated['notes'] += " | Cutter vs Blitz"
-            elif sec_pt == 'ISO_SCORER' and def_style == 'PERIMETER':
-                self._boost_stat(calibrated, 'proj_pts', 1.10)
-                calibrated['notes'] += " | ISO vs Perimeter"
-            elif sec_pt == 'P&R_HANDLER' and def_style == 'FUNNEL':
-                self._boost_stat(calibrated, 'proj_ast', 1.12)
-                calibrated['notes'] += " | PnR Handler vs Funnel"
-            elif sec_pt == 'P&R_ROLL_MAN' and def_style == 'PERIMETER':
-                self._boost_stat(calibrated, 'proj_reb', 1.15)
-                self._boost_stat(calibrated, 'proj_pts', 1.10)
-                calibrated['notes'] += " | Roll Man vs Small Ball"
-            elif sec_pt == 'TRANSITION' and def_style == 'HACKERS':
-                self._boost_stat(calibrated, 'proj_pts', 1.08)
-                calibrated['notes'] += " | Fast Break Edge"
-            elif sec_pt == 'PUTBACK' and def_style == 'PERIMETER':
-                self._boost_stat(calibrated, 'proj_oreb', 1.25)
-                calibrated['notes'] += " | Putback vs Small"
-            elif sec_pt == 'POST_UP' and def_style == 'PERIMETER':
-                self._boost_stat(calibrated, 'proj_pts', 1.15)
-                calibrated['notes'] += " | Post vs Small Ball"
+            # === ISO_SCORER MATCHUPS (3 total) ===
+            if sec_pt == 'ISO_SCORER':
+                if def_style == 'BLITZ':
+                    # Blitz defense disrupts isolation (research: +15% TOV rate)
+                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    self._boost_stat(calibrated, 'proj_tov', 1.12)
+                    calibrated['notes'] += " | ISO Tax vs Blitz"
+                elif def_style == 'PERIMETER':
+                    # ISO mismatch vs perimeter switching
+                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    calibrated['notes'] += " | ISO vs Perimeter"
+
+            # === P&R_HANDLER MATCHUPS (3 total) ===
+            elif sec_pt == 'P&R_HANDLER':
+                if def_style == 'PAINT_PACK':
+                    # Drop coverage gives P&R handlers easy assists
+                    self._boost_stat(calibrated, 'proj_ast', 1.08)
+                    calibrated['notes'] += " | P&R Drop Edge"
+                elif def_style == 'BLITZ':
+                    # Blitz forces tough passes, more turnovers
+                    self._boost_stat(calibrated, 'proj_ast', 0.90)
+                    self._boost_stat(calibrated, 'proj_tov', 1.15)
+                    calibrated['notes'] += " | P&R Blitz Tax"
+                elif def_style == 'FUNNEL':
+                    # Funnel defense creates passing lanes
+                    self._boost_stat(calibrated, 'proj_ast', 1.12)
+                    calibrated['notes'] += " | PnR Handler vs Funnel"
+
+            # === SPOT_UP MATCHUPS (2 total - HIGHEST ROI) ===
+            elif sec_pt == 'SPOT_UP':
+                if def_style == 'PAINT_PACK':
+                    # Paint-pack leaves shooters open (strongest edge)
+                    self._boost_stat(calibrated, 'proj_3pm', 1.15)
+                    calibrated['notes'] += " | Spot-Up vs Pack"
+                elif def_style == 'PERIMETER':
+                    # Perimeter switching closes out shooters
+                    self._boost_stat(calibrated, 'proj_3pm', 0.95)
+                    calibrated['notes'] += " | Spot-Up Tax"
+
+            # === TRANSITION MATCHUPS (3 total) ===
+            elif sec_pt == 'TRANSITION':
+                if def_style == 'FUNNEL':
+                    # Funnel defense vulnerable in transition
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    calibrated['notes'] += " | Transition Chaos"
+                elif def_style == 'PAINT_PACK':
+                    # Set defense slows transition
+                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    calibrated['notes'] += " | Transition Tax"
+                elif def_style == 'HACKERS':
+                    # Hackers create fast break opportunities
+                    self._boost_stat(calibrated, 'proj_pts', 1.08)
+                    calibrated['notes'] += " | Fast Break Edge"
+
+            # === P&R_ROLL_MAN MATCHUPS (3 total) ===
+            elif sec_pt == 'P&R_ROLL_MAN':
+                if def_style == 'PAINT_PACK':
+                    # Drop coverage = easy dunks for roll man
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
+                    calibrated['notes'] += " | Roll Man vs Drop"
+                elif def_style == 'BLITZ':
+                    # Blitz limits roll opportunities
+                    self._boost_stat(calibrated, 'proj_pts', 0.88)
+                    calibrated['notes'] += " | Roll Man Tax"
+                elif def_style == 'PERIMETER':
+                    # Small ball = boards + mismatches
+                    self._boost_stat(calibrated, 'proj_reb', 1.15)
+                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    calibrated['notes'] += " | Roll Man vs Small Ball"
+
+            # === OFF_BALL_CUTTER MATCHUPS (3 total) ===
+            elif sec_pt == 'OFF_BALL_CUTTER':
+                if def_style == 'PERIMETER':
+                    # Small ball vulnerable to cutters
+                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    calibrated['notes'] += " | Cutter vs Small Ball"
+                elif def_style == 'PAINT_PACK':
+                    # Rim protection reduces cutter efficiency
+                    self._boost_stat(calibrated, 'proj_fg_pct', 0.90)
+                    calibrated['notes'] += " | Cutter Tax"
+                elif def_style == 'BLITZ':
+                    # Blitz creates cutting lanes
+                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    calibrated['notes'] += " | Cutter vs Blitz"
+
+            # === PUTBACK MATCHUP (1 total) ===
+            elif sec_pt == 'PUTBACK':
+                if def_style == 'PERIMETER':
+                    # Small ball = offensive glass dominance
+                    self._boost_stat(calibrated, 'proj_oreb', 1.25)
+                    calibrated['notes'] += " | Putback vs Small"
+
+            # === POST_UP MATCHUP (1 total) ===
+            elif sec_pt == 'POST_UP':
+                if def_style == 'PERIMETER':
+                    # Post mismatch vs small ball
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    calibrated['notes'] += " | Post vs Small Ball"
 
         # 7. PBP SHOT QUALITY
         # Using 2025-26 Season Data from scripts/sync_pbp_totals.py
@@ -479,6 +720,19 @@ class LudiCalibrator:
         clean_name = raw_name.lower().replace(' ', '').replace('.', '').replace("'", "").replace('-', '')
         if clean_name in self.MANUAL_OVERRIDES:
             return self.MANUAL_OVERRIDES[clean_name], None
+
+        # Extract Position (NEW - Week 2 Enhancement)
+        position = p.get('position', 'UNK')
+
+        # Normalize multi-position to primary (G-F → G, F-C → F)
+        if position in ('G-F', 'SG', 'PG'):
+            position = 'G'
+        elif position in ('F-C', 'SF', 'PF'):
+            position = 'F'
+        elif position in ('C',):
+            position = 'C'
+        else:
+            position = 'UNK'  # Missing data or unrecognized
 
         # Extract Stats
         pts = float(p.get('base_pts', 0) or 0)
@@ -551,9 +805,25 @@ class LudiCalibrator:
         # === SELECTION ===
         if not matches:
             return "GENERALIST", None
-        
-        # Priority: Heliocentric > Hub/Jumbo > Elite Scorer > Specialists
-        return matches[0], (matches[1] if len(matches) > 1 else None)
+
+        # Apply position-based priority if multiple matches (Week 2 Enhancement)
+        if len(matches) > 1 and position in self.POSITION_ARCHETYPE_AFFINITY:
+            affinity_scores = []
+            for archetype in matches:
+                # Get affinity score, default to 0.5 if archetype not in position's affinity map
+                affinity = self.POSITION_ARCHETYPE_AFFINITY[position].get(archetype, 0.5)
+                affinity_scores.append((archetype, affinity))
+
+            # Sort by affinity (highest first)
+            affinity_scores.sort(key=lambda x: x[1], reverse=True)
+
+            primary = affinity_scores[0][0]
+            secondary = affinity_scores[1][0] if len(affinity_scores) > 1 else None
+
+            return primary, secondary
+        else:
+            # No position data or single match - use existing priority
+            return matches[0], (matches[1] if len(matches) > 1 else None)
 
     def _boost_stat(self, d, key, factor):
         if key in d: d[key] = round(d[key] * factor, 2)

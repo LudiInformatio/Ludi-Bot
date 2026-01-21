@@ -100,6 +100,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Active Task**: Week 1 completed with hybrid position filtering + priority scoring
 - **Next Phase**: Week 2 - Implementation in Module E (secondary playtypes integration)
 
+## Week 3 Completion (Jan 21, 2026)
+- ✅ **Code Cleanup:** BALL_HOG → HELIOCENTRIC (4 files + Database updated)
+- ✅ **Backtest Validated:** Dec 20-Jan 16 (28 days, 4,749 player-games)
+- ✅ **RMSE (PTS):** 6.68 (Baseline established)
+- ⚠️ **B2B Fatigue Finding:** B2B players *outperformed* rested players (+2.7% PTS) in this window. The implemented B2B Tax (-3%/-6%) resulted in under-projection (-3.36 mean error).
+- **Recommendation:** Monitor B2B Tax closely; consider reducing modifiers if trend continues.
+- ✅ **Team Classifiers:** 
+  - Offensive: 83% NEUTRAL (Due to missing `pace` data in `games` table).
+  - Defensive: 47% SWITCH_HEAVY, 53% NEUTRAL (Valid distribution based on tracking data).
+- 🎯 **Status:** PRODUCTION READY (with monitoring)
+
+## Synergy Playtype & Future Data Integration (Jan 20-21, 2026)
+- ✅ **Database Tables (5 new):** `player_synergy_playtypes`, `player_drives`, `player_touches`, `player_speed`, `player_defense`
+- ✅ **Ghost Protocol Scraper:** `scripts/sync_synergy_playtypes.py` (bypasses NBA.com WAF)
+- ✅ **Backfill Complete (2025-26 Season) - 3,931 total records:**
+  - **Synergy Playtypes:** 1,887 records (376 unique players, 8 playtypes)
+  - **Drives:** 512 players (Nembhard 13.7/game leads)
+  - **Touches:** 512 players (time of possession, usage quality)
+  - **Speed:** 512 players (Blake Wesley 4.91 mph avg)
+  - **Defense:** 508 players (Wembanyama -10.3% diff%)
+- ✅ **Workflow Updated:** `ghost_protocol_sync.yml` runs full sync Wed/Sun
+- ✅ **Module E Hybrid Approach:** Synergy data first → tracking fallback
+- ✅ **Pagination Fix (Jan 21):** Fixed dropdown selection to capture ALL players (was 50 → now 500+)
+- 📊 **Key Fields:** Freq%, PPP, Diff% (Defense), Avg Speed, Time of Poss
+
+**How Sharps Use This Data:**
+- **Defensive Impact:** `player_defense.diff_pct` for true rim protection
+- **Fatigue Monitoring:** `player_speed.avg_speed` drops in B2B games
+- **Usage Quality:** `player_touches.avg_sec_per_touch` vs `time_of_poss`
+- **Playtype Efficiency:** Compare PPP vs opponent defensive profile
+
+---
+
 ### Week 1 Archetype Upgrade Summary (Jan 19, 2026)
 - ✅ Data validation complete (93% tracking coverage, 4,842 player-games)
 - ✅ 8 secondary playtypes calibrated: ISO_SCORER, P&R_HANDLER, P&R_ROLL_MAN, SPOT_UP, OFF_BALL_CUTTER, TRANSITION, PUTBACK, POST_UP
@@ -111,6 +144,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Architecture:** Secondary playtypes enhance existing primary archetypes (HELIOCENTRIC, HUB_BIG, ELITE_SCORER, etc.) for granular matchup analysis.
 - **Last Updated**: Jan 19, 2026 - Archetype Synergy Upgrade Plan Created
 - **Plan Document**: `ARCHETYPE_SYNERGY_UPGRADE_PLAN.md`
+- **Future Data Sources**: [/Users/flyprice/.gemini/antigravity/brain/80fa3ce3-8bad-4cc0-ac22-6b6d8f1790f5/FUTURE_DATA_SOURCES.md](file:///Users/flyprice/.gemini/antigravity/brain/80fa3ce3-8bad-4cc0-ac22-6b6d8f1790f5/FUTURE_DATA_SOURCES.md)
 
 ---
 
@@ -647,7 +681,7 @@ A (Odds) → D (Injuries) → C (Simulation) → E (Calibration) → F (Report +
 - **4 Tag Categories:** Archetype (6), Scenario (4), Matchup (5+), Market (extensible)
 - **Module F Integration:** v4.6 with tag assignment in bet logging pipeline
 - **Storage Format:** JSON arrays in SQLite (`["STRETCH_BIG", "BENEFICIARY", "vs_PAINT_PACK"]`)
-- **Archetype System:** STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, BALL_HOG, GENERALIST
+- **Archetype System:** STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, HELIOCENTRIC, GENERALIST
 - **Scenario Tags:** BENEFICIARY, USAGE_VACUUM, MINUTES_LIMIT, HOT_STREAK
 - **Matchup Tags:** vs_PAINT_PACK, vs_BLITZ, vs_PERIMETER, vs_FUNNEL, vs_HACKERS, vs_NEUTRAL
 - **Market Tags:** CORRELATED_SGP (framework for CONTRARIAN, STEAM_MOVE, CLOSING_VALUE)
@@ -1079,7 +1113,7 @@ if spread > 7.0:
 **Tag Categories:**
 
 1. **ARCHETYPE TAGS** (1 per player):
-   - STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, BALL_HOG, GENERALIST
+   - STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, HELIOCENTRIC, GENERALIST
    - Reuses Module E's `_assign_archetype()` logic (validated thresholds)
 
 2. **SCENARIO TAGS** (0-4 per player):
