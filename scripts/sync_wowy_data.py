@@ -17,6 +17,7 @@ import os
 import argparse
 import sqlite3
 from datetime import datetime, timedelta
+from utils.player_id_resolver import normalize_player_name
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -271,7 +272,8 @@ def sync_wowy_for_game(game_id, nba_id, game_date):
             for player_id, stats in wowy_stats.items():
                 c.execute("SELECT name FROM players WHERE player_id = ?", (player_id,))
                 player_row = c.fetchone()
-                player_name = player_row[0] if player_row else "Unknown"
+                raw_player_name = player_row[0] if player_row else "Unknown"
+                player_name = normalize_player_name(raw_player_name)
                 
                 # Insert or replace
                 c.execute('''

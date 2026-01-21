@@ -10,11 +10,30 @@ from utils.player_id_resolver import PlayerIDResolver
 # ==========================================
 
 class LudiCalibrator:
-    def __init__(self):
+    def __init__(self, db_path='ludi.db', debug_log=False):
         print(f"\n{'='*40}")
         print(f"LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE")
         print(f"   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE")
+        if debug_log:
+            print(f"   >>> DEBUG LOGGING ENABLED")
         print(f"{'='*40}")
+        
+        self.db_path = db_path
+        self.debug_log = debug_log
+        
+        # Initialize debug logger if enabled
+        if debug_log:
+            import logging
+            import os
+            os.makedirs('logs', exist_ok=True)
+            logging.basicConfig(
+                filename='logs/calibration_debug.log',
+                level=logging.DEBUG,
+                format='%(asctime)s | %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            self.logger = logging.getLogger('module_e')
+            self.logger.debug("=== Module E Debug Logging Initialized ===")
         
         self.id_resolver = PlayerIDResolver()
         
@@ -725,11 +744,57 @@ class LudiCalibrator:
             if archetype == "SLASHER":
                 calibrated['notes'] += " | Confirmed Rim Pressure"
 
-        # C) Corner Specialist Logic
-        # Corner 3s are the counter to 'PAINT_PACK' defenses
+# C) Corner Specialist Logic
+        # Corner 3s are are counter to 'PAINT_PACK' defenses
         if corner_freq > 0.20 and def_style == "PAINT_PACK":
             self._boost_stat(calibrated, 'proj_3pm', 1.12)
             calibrated['notes'] += " | Corner Specialist vs Pack"
+
+        # === NEW: FT% SHOOTING TOUCH INDICATOR ===
+        # Research: Free throw ability indicates shooting touch (ShotQualityBets)
+        # Elite FT shooters (>85%) rarely regress as jump shooters
+        ft_pct = calibrated.get('base_ft_pct', 0)
+
+        if ft_pct > 0.85:
+            # Elite FT shooter = elite shooting touch → boost 3PM
+            self._boost_stat(calibrated, 'proj_3pm', 1.05)
+            calibrated['notes'] += " | Elite Touch"
+            self._log_adjustment(player_name, 'FT_TOUCH', 1.05, 
+                f"Elite FT: {ft_pct:.1%}")
+        elif ft_pct < 0.65 and ft_pct > 0:
+            # Poor FT% = poor touch → regress 3PT expectations
+            self._boost_stat(calibrated, 'proj_3pm', 0.95)
+            calibrated['notes'] += " | Poor Touch"
+            self._log_adjustment(player_name, 'FT_TOUCH', 0.95, 
+                f"Poor FT: {ft_pct:.1%}")
+        # === END FT% SHOOTING TOUCH ===
+
+        # === NEW: SHOT CREATION SPLIT ===
+        # Research: Off-dribble 3s made ~4% less often than catch-and-shoot (ShotQualityBets)
+        # Use tracking data to adjust expectations based on shot creation type
+        tracking_data = self._get_tracking_stats(player_name)
+
+        if tracking_data:
+            cs_fga = tracking_data.get('avg_cs_fga', 0)
+            pu_fga = tracking_data.get('avg_pu_fga', 0)
+            
+            if cs_fga > 0 and pu_fga > 0:
+                total_3s = cs_fga + pu_fga
+                shot_creation_ratio = pu_fga / total_3s
+                
+                if shot_creation_ratio > 0.65:
+                    # Pull-up dominant = off-dribble shooter (harder shots)
+                    self._boost_stat(calibrated, 'proj_3pm', 0.97)
+                    calibrated['notes'] += " | Off-Dribble 3s"
+                    self._log_adjustment(player_name, 'SHOT_CREATION', 0.97, 
+                        f"Pull-up: {shot_creation_ratio:.0%} of 3s")
+                elif shot_creation_ratio < 0.25:
+                    # Catch-and-shoot dominant = easier shots
+                    self._boost_stat(calibrated, 'proj_3pm', 1.03)
+                    calibrated['notes'] += " | Spot-Up 3s"
+                    self._log_adjustment(player_name, 'SHOT_CREATION', 1.03, 
+                        f"Catch-shoot: {1-shot_creation_ratio:.0%} of 3s")
+        # === END SHOT CREATION SPLIT ===
 
         # === 8. NUANCE CHECKS ===
         # Westbrook/Giddey Rule: Guards who crash boards
@@ -851,6 +916,37 @@ class LudiCalibrator:
             # No position data or single match - use existing priority
             return matches[0], (matches[1] if len(matches) > 1 else None)
 
+    def _log_adjustment(self, player_name: str, function: str, 
+                        modifier: float, reason: str) -> None:
+        """
+        Log calibration adjustment if debug mode enabled.
+        
+        Args:
+            player_name: Player being calibrated
+            function: Name of the calibration function
+            modifier: Adjustment factor applied (e.g., 1.07 for +7%)
+            reason: Human-readable explanation
+        """
+        if self.debug_log and hasattr(self, 'logger'):
+            self.logger.debug(
+                f"ADJUST | {player_name} | {function} | "
+                f"Modifier: {modifier:.3f} | {reason}"
+            )
+
+    def _log_skip(self, player_name: str, function: str, reason: str) -> None:
+        """
+        Log when a calibration adjustment is skipped.
+        
+        Args:
+            player_name: Player being calibrated
+            function: Name of the calibration function
+            reason: Why adjustment was skipped
+        """
+        if self.debug_log and hasattr(self, 'logger'):
+            self.logger.debug(
+                f"SKIP | {player_name} | {function} | {reason}"
+            )
+
     # === SYNERGY EFFICIENCY CALIBRATIONS (Phase 1 - Jan 21, 2026) ===
 
     def _apply_synergy_ppp_efficiency(self, calibrated: dict, opponent_abbr: str) -> None:
@@ -859,6 +955,10 @@ class LudiCalibrator:
 
         Uses weighted PPP across player's primary playtypes to calibrate points projection.
         High-efficiency players (PPP > 1.10) get boost, low-efficiency get penalty.
+        
+        Volume Floor: Only applies PPP boost if player meets minimum scoring volume
+        (10 FGA/game OR 12 PPG over last 60 days) to prevent over-projection
+        of low-volume, high-efficiency role players.
 
         Args:
             calibrated: Player packet with projections
@@ -869,6 +969,31 @@ class LudiCalibrator:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
+
+            # === NEW: VOLUME FLOOR CHECK ===
+            # Step 1: Query player's scoring volume (last 60 days)
+            volume_query = """
+                SELECT AVG(pts) as avg_pts, AVG(fga) as avg_fga
+                FROM player_game_logs
+                WHERE player_name = ? 
+                AND game_date >= date('now', '-60 days')
+                HAVING COUNT(*) >= 5
+            """
+            cursor.execute(volume_query, (player_name,))
+            volume_row = cursor.fetchone()
+
+            # Step 2: Apply volume floor
+            MIN_FGA = 10.0
+            MIN_PTS = 12.0
+
+            if not volume_row or (volume_row[0] < MIN_PTS and volume_row[1] < MIN_FGA):
+                # Player doesn't meet volume threshold - skip PPP boost
+                conn.close()
+                self._log_skip(player_name, 'PPP_EFFICIENCY', 
+                    f"Volume floor: {volume_row[0] if volume_row else 0:.1f} PPG, "
+                    f"{volume_row[1] if volume_row else 0:.1f} FGA")
+                return
+            # === END VOLUME FLOOR CHECK ===
 
             # Get player's primary playtypes (freq >= 5%)
             cursor.execute("""
@@ -883,6 +1008,7 @@ class LudiCalibrator:
             conn.close()
 
             if not rows:
+                self._log_skip(player_name, 'PPP_EFFICIENCY', 'No Synergy playtype data')
                 return  # No data, no adjustment
 
             # Calculate weighted PPP
@@ -893,11 +1019,15 @@ class LudiCalibrator:
             LEAGUE_AVG_PPP = 1.05
             efficiency_ratio = weighted_ppp / LEAGUE_AVG_PPP
 
-            # Cap at ±15% adjustment (avoid over-calibration)
-            modifier = max(0.85, min(1.15, efficiency_ratio))
+            # Cap at ±12% adjustment (avoid over-calibration)
+            modifier = max(0.88, min(1.12, efficiency_ratio))
 
             # Apply to points projection
             self._boost_stat(calibrated, 'proj_pts', modifier)
+            
+            # Log adjustment
+            self._log_adjustment(player_name, 'PPP_EFFICIENCY', modifier,
+                f"Weighted PPP: {weighted_ppp:.3f}")
 
             # Add note if significant adjustment (>5%)
             if abs(modifier - 1.0) > 0.05:
@@ -907,6 +1037,8 @@ class LudiCalibrator:
 
         except Exception as e:
             # Silently fail - don't break pipeline if Synergy data unavailable
+            if self.debug_log and hasattr(self, 'logger'):
+                self.logger.debug(f"ERROR | {player_name} | PPP_EFFICIENCY | {str(e)}")
             pass
 
     def _apply_defensive_diff_adjustment(self, calibrated: dict, opponent_abbr: str) -> None:
@@ -928,6 +1060,8 @@ class LudiCalibrator:
         has_rim_playtype = any(pt in RIM_BASED for pt in sec_playtypes)
 
         if not has_rim_playtype:
+            self._log_skip(player_name, 'DEFENSIVE_DIFF', 
+                f"No rim playtype (has: {sec_playtypes})")
             return  # Not a rim scorer, skip adjustment
 
         try:
@@ -947,6 +1081,8 @@ class LudiCalibrator:
             conn.close()
 
             if not row:
+                self._log_skip(player_name, 'DEFENSIVE_DIFF', 
+                    f"No defensive data for {opponent_abbr}")
                 return  # No defensive data for opponent
 
             rim_protector_name, diff_pct = row
@@ -963,6 +1099,10 @@ class LudiCalibrator:
 
             # Apply to points projection
             self._boost_stat(calibrated, 'proj_pts', modifier)
+            
+            # Log adjustment
+            self._log_adjustment(player_name, 'DEFENSIVE_DIFF', modifier,
+                f"vs {rim_protector_name}: {diff_pct:.1f}% diff")
 
             # Add note if significant (>3% adjustment)
             if abs(modifier - 1.0) > 0.03:
@@ -974,6 +1114,8 @@ class LudiCalibrator:
 
         except Exception as e:
             # Silently fail
+            if self.debug_log and hasattr(self, 'logger'):
+                self.logger.debug(f"ERROR | {player_name} | DEFENSIVE_DIFF | {str(e)}")
             pass
 
     def _apply_drives_assist_profile(self, calibrated: dict) -> None:
@@ -1007,6 +1149,8 @@ class LudiCalibrator:
             conn.close()
 
             if not row or row[0] < 5:  # Need at least 5 games for reliable sample
+                self._log_skip(player_name, 'DRIVES_AST', 
+                    f"Insufficient data ({row[0] if row else 0} games)")
                 return  # No drives data or insufficient sample
 
             games, drives, pass_pct = row
@@ -1014,21 +1158,32 @@ class LudiCalibrator:
             # High volume + high pass% = elite playmaker
             if drives >= 8 and pass_pct >= 40:
                 modifier = 1.10  # +10% assist boost
-                calibrated['notes'] += " | Elite Playmaker"
+                tag = "Elite Playmaker"
+                calibrated['notes'] += f" | {tag}"
             elif drives >= 6 and pass_pct >= 35:
                 modifier = 1.05  # +5% assist boost
-                calibrated['notes'] += " | High Pass Rate"
+                tag = "High Pass Rate"
+                calibrated['notes'] += f" | {tag}"
             elif pass_pct < 25:
                 modifier = 0.95  # -5% penalty (score-first)
-                calibrated['notes'] += " | Score-First Driver"
+                tag = "Score-First Driver"
+                calibrated['notes'] += f" | {tag}"
             else:
+                self._log_skip(player_name, 'DRIVES_AST', 
+                    f"Neutral profile ({drives:.1f} drives, {pass_pct:.1f}% pass)")
                 return  # Neutral profile, no adjustment
 
             # Apply to assist projection
             self._boost_stat(calibrated, 'proj_ast', modifier)
+            
+            # Log adjustment
+            self._log_adjustment(player_name, 'DRIVES_AST', modifier,
+                f"{tag}: {drives:.1f} drives, {pass_pct:.1f}% pass")
 
         except Exception as e:
             # Silently fail
+            if self.debug_log and hasattr(self, 'logger'):
+                self.logger.debug(f"ERROR | {player_name} | DRIVES_AST | {str(e)}")
             pass
 
     def _boost_stat(self, d, key, factor):

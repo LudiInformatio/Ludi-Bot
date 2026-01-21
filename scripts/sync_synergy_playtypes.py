@@ -15,8 +15,14 @@ import sqlite3
 import argparse
 import time
 import re
+import sys
+import os
 from datetime import datetime
 from playwright.async_api import async_playwright
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.player_id_resolver import normalize_player_name
 
 # Playtype configurations
 PLAYTYPES = {
@@ -117,8 +123,11 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                 # Parsing logic based on tag type
                 if config['tag'] == 'DRIVES':
                     # PLAYER, TEAM, GP, W, L, MIN, DRIVES, FGM, FGA, FG%, FTM, FTA, FT%, PTS, PTS%, PASS, PASS%, AST, AST%, TO, TOV%, PF, PF%
+                    # Before inserting, normalize the name
+                    raw_player_name = ct[0]
+                    player_name = normalize_player_name(raw_player_name)
                     player = {
-                        'player_name': ct[0], 'team_abbr': ct[1], 'season': season,
+                        'player_name': player_name, 'team_abbr': ct[1], 'season': season,
                         'gp': parse_int(ct[2]), 'min_per_game': parse_float(ct[5]),
                         'drives_per_game': parse_float(ct[6]), 'fgm_per_game': parse_float(ct[7]),
                         'fga_per_game': parse_float(ct[8]), 'fg_pct': parse_float(ct[9]),
@@ -131,8 +140,11 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                     
                 elif config['tag'] == 'TOUCHES':
                     # PLAYER, TEAM, GP, W, L, MIN, PTS, TOUCHES, FRONT CT, TIME POSS, SEC/TOUCH, DRIB/TOUCH, PTS/TOUCH, ELBOW, POST, PAINT, PTS/ELBOW, PTS/POST, PTS/PAINT
+                    # Before inserting, normalize the name
+                    raw_player_name = ct[0]
+                    player_name = normalize_player_name(raw_player_name)
                     player = {
-                        'player_name': ct[0], 'team_abbr': ct[1], 'season': season,
+                        'player_name': player_name, 'team_abbr': ct[1], 'season': season,
                         'gp': parse_int(ct[2]), 'min_per_game': parse_float(ct[5]),
                         'pts_per_game': parse_float(ct[6]), 'touches_per_game': parse_float(ct[7]),
                         'front_ct_touches_per_game': parse_float(ct[8]), 'time_of_poss_per_game': parse_float(ct[9]),
@@ -145,8 +157,11 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                     
                 elif config['tag'] == 'SPEED':
                     # PLAYER, TEAM, GP, W, L, MIN, DIST FT, DIST MI, DIST OFF, DIST DEF, AVG SPD, AVG OFF, AVG DEF
+                    # Before inserting, normalize the name
+                    raw_player_name = ct[0]
+                    player_name = normalize_player_name(raw_player_name)
                     player = {
-                        'player_name': ct[0], 'team_abbr': ct[1], 'season': season,
+                        'player_name': player_name, 'team_abbr': ct[1], 'season': season,
                         'gp': parse_int(ct[2]), 'min_per_game': parse_float(ct[5]),
                         'dist_feet_per_game': parse_float(ct[6]), 'dist_miles_per_game': parse_float(ct[7]),
                         'dist_miles_off': parse_float(ct[8]), 'dist_miles_def': parse_float(ct[9]),
@@ -156,8 +171,11 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                     
                 elif config['tag'] == 'DEFENSE':
                     # PLAYER, TEAM, AGE, POS, GP, G, FREQ%, DFGM, DFGA, DFG%, FG%, DIFF%
+                    # Before inserting, normalize the name
+                    raw_player_name = ct[0]
+                    player_name = normalize_player_name(raw_player_name)
                     player = {
-                        'player_name': ct[0], 'team_abbr': ct[1], 'season': season,
+                        'player_name': player_name, 'team_abbr': ct[1], 'season': season,
                         'age': parse_int(ct[2]), 'position': ct[3],
                         'gp': parse_int(ct[4]), 'freq_pct': parse_float(ct[6]),
                         'dfgm': parse_float(ct[7]), 'dfga': parse_float(ct[8]),
@@ -168,8 +186,11 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                 else:
                     # Original Synergy Logic
                     # PLAYER | TEAM | GP | POSS | FREQ% | PPP | PTS | ...
+                    # Before inserting, normalize the name
+                    raw_player_name = ct[0]
+                    player_name = normalize_player_name(raw_player_name)
                     player = {
-                        'player_name': ct[0],
+                        'player_name': player_name,
                         'team_abbr': ct[1] if len(ct) > 1 else None,
                         'games_played': parse_int(ct[2]),
                         'poss_per_game': parse_float(ct[3]),

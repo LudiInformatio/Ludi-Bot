@@ -17,6 +17,7 @@ import argparse
 import time
 import logging
 from datetime import datetime
+from utils.player_id_resolver import normalize_player_name
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -78,7 +79,12 @@ def get_all_players(start_date, end_date):
         ORDER BY player_name
     ''', (start_date, end_date))
     
-    players = [{'name': row[0], 'team': row[1], 'games': row[2]} for row in c.fetchall()]
+    # Normalize player names from database
+    players = []
+    for row in c.fetchall():
+        raw_name = row[0]
+        normalized_name = normalize_player_name(raw_name)
+        players.append({'name': normalized_name, 'team': row[1], 'games': row[2]})
     conn.close()
     return players
 

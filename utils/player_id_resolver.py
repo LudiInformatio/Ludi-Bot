@@ -223,6 +223,34 @@ def get_resolver() -> PlayerIDResolver:
     return _resolver_instance
 
 
+def normalize_player_name(name: str, db_path: str = 'ludi.db') -> str:
+    """
+    Quick utility to normalize a player name using PlayerIDResolver.
+    Use this in sync scripts for consistent name formatting.
+    
+    Args:
+        name: Raw player name from API/scraper
+        db_path: Path to database
+        
+    Returns:
+        Canonical player name
+    """
+    if not name:
+        return name
+        
+    resolver = get_resolver()
+    # Try to find canonical name
+    try:
+        result = resolver.get_player_info(name)
+        if result and result.get('full_name'):
+            return result['full_name']
+    except (ValueError, KeyError):
+        # Player not found in canonical IDs, use basic accent normalization only
+        return resolver.normalize_name(name)
+    
+    return name  # Fallback to original if no match
+
+
 if __name__ == '__main__':
     # Quick test
     resolver = PlayerIDResolver()
