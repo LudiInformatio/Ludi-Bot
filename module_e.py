@@ -422,9 +422,28 @@ class LudiCalibrator:
             return {}
 
 
-    def calibrate_player(self, player_packet, yak_report):
+    def calibrate_player(self, player_packet, yak_report, use_synergy=True):
         calibrated = player_packet.copy()
         if 'notes' not in calibrated: calibrated['notes'] = ""
+
+        # INITIALIZE PROJECTION KEYS from BASE KEYS if missing
+        # This ensures subsequent _boost_stat calls work correctly
+        mappings = {
+            'base_pts': 'proj_pts',
+            'base_ast': 'proj_ast',
+            'base_reb': 'proj_reb',
+            'base_fga': 'proj_fga',
+            'base_fg3a': 'proj_3pa',
+            'base_fta': 'proj_fta',
+            'base_3pm': 'proj_3pm',
+            'base_min': 'proj_min',
+            'base_stl': 'proj_stl',
+            'base_blk': 'proj_blk',
+            'base_tov': 'proj_tov'
+        }
+        for base_k, proj_k in mappings.items():
+            if base_k in calibrated and proj_k not in calibrated:
+                calibrated[proj_k] = calibrated[base_k]
 
         # 0. FETCH POSITION DATA (Week 2 Enhancement - needed for archetype assignment)
         player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
@@ -674,6 +693,13 @@ class LudiCalibrator:
                     self._boost_stat(calibrated, 'proj_pts', 1.15)
                     calibrated['notes'] += " | Post vs Small Ball"
 
+        # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
+        if use_synergy:
+            # Apply PPP-based efficiency adjustments, defensive matchup adjustments, and assist profile mods
+            self._apply_synergy_ppp_efficiency(calibrated, opponent)
+            self._apply_defensive_diff_adjustment(calibrated, opponent)
+            self._apply_drives_assist_profile(calibrated)
+
         # 7. PBP SHOT QUALITY
         # Using 2025-26 Season Data from scripts/sync_pbp_totals.py
         pbp_sq = calibrated.get('pbp_shot_quality', 0.53)
@@ -824,6 +850,186 @@ class LudiCalibrator:
         else:
             # No position data or single match - use existing priority
             return matches[0], (matches[1] if len(matches) > 1 else None)
+
+    # === SYNERGY EFFICIENCY CALIBRATIONS (Phase 1 - Jan 21, 2026) ===
+
+    def _apply_synergy_ppp_efficiency(self, calibrated: dict, opponent_abbr: str) -> None:
+        """
+        Apply Synergy PPP (Points Per Possession) efficiency modifier.
+
+        Uses weighted PPP across player's primary playtypes to calibrate points projection.
+        High-efficiency players (PPP > 1.10) get boost, low-efficiency get penalty.
+
+        Args:
+            calibrated: Player packet with projections
+            opponent_abbr: Opponent team abbreviation (not used yet, for future matchup logic)
+        """
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get player's primary playtypes (freq >= 5%)
+            cursor.execute("""
+                SELECT playtype, freq_pct, ppp
+                FROM player_synergy_playtypes
+                WHERE player_name = ? AND season = '2025-26' AND freq_pct >= 5.0
+                ORDER BY freq_pct DESC
+                LIMIT 4
+            """, (player_name,))
+
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows:
+                return  # No data, no adjustment
+
+            # Calculate weighted PPP
+            total_freq = sum(r[1] for r in rows)
+            weighted_ppp = sum(r[1] * r[2] for r in rows) / total_freq
+
+            # Compare to league average (1.05 PPP = average NBA efficiency)
+            LEAGUE_AVG_PPP = 1.05
+            efficiency_ratio = weighted_ppp / LEAGUE_AVG_PPP
+
+            # Cap at ±15% adjustment (avoid over-calibration)
+            modifier = max(0.85, min(1.15, efficiency_ratio))
+
+            # Apply to points projection
+            self._boost_stat(calibrated, 'proj_pts', modifier)
+
+            # Add note if significant adjustment (>5%)
+            if abs(modifier - 1.0) > 0.05:
+                direction = "Efficient" if modifier > 1.0 else "Inefficient"
+                pct_change = int((modifier - 1.0) * 100)
+                calibrated['notes'] += f" | {direction} ({pct_change:+d}% PPP)"
+
+        except Exception as e:
+            # Silently fail - don't break pipeline if Synergy data unavailable
+            pass
+
+    def _apply_defensive_diff_adjustment(self, calibrated: dict, opponent_abbr: str) -> None:
+        """
+        Apply opponent defensive adjustment using diff_pct (FG% allowed vs expected).
+
+        Focuses on rim protection for rim-based playtypes (roll men, cutters, putbacks).
+        Elite rim protectors (diff% < -5) penalize interior scoring.
+
+        Args:
+            calibrated: Player packet with projections
+            opponent_abbr: Opponent team abbreviation
+        """
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+        sec_playtypes = calibrated.get('secondary_playtypes', [])
+
+        # Only apply to rim-based playtypes
+        RIM_BASED = ['P&R_ROLL_MAN', 'OFF_BALL_CUTTER', 'PUTBACK', 'POST_UP']
+        has_rim_playtype = any(pt in RIM_BASED for pt in sec_playtypes)
+
+        if not has_rim_playtype:
+            return  # Not a rim scorer, skip adjustment
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get opponent's best rim protector (lowest diff_pct = most impact)
+            cursor.execute("""
+                SELECT player_name, diff_pct
+                FROM player_defense
+                WHERE team_abbr = ? AND diff_pct IS NOT NULL
+                ORDER BY diff_pct ASC
+                LIMIT 1
+            """, (opponent_abbr,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if not row:
+                return  # No defensive data for opponent
+
+            rim_protector_name, diff_pct = row
+
+            # Elite rim protection = negative diff% (opponents shoot WORSE than expected)
+            # diff_pct of -10% → opponents shoot 10% worse → penalty for our player
+            # diff_pct of +5% → weak rim D → boost for our player
+
+            # Convert diff_pct to modifier: -10% diff → 0.90 modifier (10% penalty)
+            modifier = 1.0 + (diff_pct / 100)
+
+            # Cap adjustment at ±12%
+            modifier = max(0.88, min(1.12, modifier))
+
+            # Apply to points projection
+            self._boost_stat(calibrated, 'proj_pts', modifier)
+
+            # Add note if significant (>3% adjustment)
+            if abs(modifier - 1.0) > 0.03:
+                pct_change = int((modifier - 1.0) * 100)
+                if diff_pct < -5:
+                    calibrated['notes'] += f" | Elite Rim D ({rim_protector_name[:10]}, {pct_change:+d}%)"
+                elif diff_pct > 3:
+                    calibrated['notes'] += f" | Weak Rim D ({pct_change:+d}%)"
+
+        except Exception as e:
+            # Silently fail
+            pass
+
+    def _apply_drives_assist_profile(self, calibrated: dict) -> None:
+        """
+        Apply assist profile modifier based on drives pass%.
+
+        High pass% (>40%) = true playmaker → boost assists
+        Low pass% (<25%) = score-first driver → slight assist penalty
+
+        Args:
+            calibrated: Player packet with projections
+        """
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Aggregate drives data from game logs (season avg)
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as games,
+                    AVG(drives_fga + drives_fgm) as avg_drives,
+                    AVG(drives_pass_pct) as avg_pass_pct
+                FROM player_game_tracking
+                WHERE player_name = ? AND (drives_fga > 0 OR drives_fgm > 0)
+                GROUP BY player_name
+            """, (player_name,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if not row or row[0] < 5:  # Need at least 5 games for reliable sample
+                return  # No drives data or insufficient sample
+
+            games, drives, pass_pct = row
+
+            # High volume + high pass% = elite playmaker
+            if drives >= 8 and pass_pct >= 40:
+                modifier = 1.10  # +10% assist boost
+                calibrated['notes'] += " | Elite Playmaker"
+            elif drives >= 6 and pass_pct >= 35:
+                modifier = 1.05  # +5% assist boost
+                calibrated['notes'] += " | High Pass Rate"
+            elif pass_pct < 25:
+                modifier = 0.95  # -5% penalty (score-first)
+                calibrated['notes'] += " | Score-First Driver"
+            else:
+                return  # Neutral profile, no adjustment
+
+            # Apply to assist projection
+            self._boost_stat(calibrated, 'proj_ast', modifier)
+
+        except Exception as e:
+            # Silently fail
+            pass
 
     def _boost_stat(self, d, key, factor):
         if key in d: d[key] = round(d[key] * factor, 2)
