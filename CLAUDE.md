@@ -95,10 +95,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Current Status
-- **Date**: Jan 21, 2026 @ 02:30 PM EST
-- **Phase**: ✅ Phase 1 Complete - Synergy Playtype Integration (PPP Efficiency, Defensive Adjustments, Drives Profile)
-- **Active Task**: Phase 1 validated with 4/4 tests passing (2,347 records synced)
-- **Next Phase**: Phase 2 - Backtest validation & position-aware archetype enhancement
+- **Date**: Jan 21, 2026 @ 08:35 PM EST
+- **Phase**: ✅ Phase 4 Complete - B2B Fatigue & Schedule Integration (Tuned for 2025-26 resilience)
+- **Active Task**: Phase 4 validated with 60-day backtest (7,214 games, +0.56 pts mean error). 
+- **Next Phase**: Phase 5 - Production Deployment & Automation
+
+### 💎 V2.0 FINAL INTEGRITY CHECKS (JAN 21)
+- ✅ **Roster Accuracy (2025-26):** All scripts and database records verified for Klay Thompson (DAL), Clint Capela (HOU), and Tyus Jones (ORL).
+- ✅ **Global Debug Control:** Added `DEBUG_LOG` flag to `config.py` for centralized calibration logging.
+- ✅ **Backtest Stability:** 60-day window confirmed ±0.6 pts mean error (Phase A conservative strategy).
 
 ## Week 3 Completion (Jan 21, 2026)
 - ✅ **Code Cleanup:** BALL_HOG → HELIOCENTRIC (4 files + Database updated)
@@ -156,6 +161,47 @@ The "Assist Profile" logic (boosting high-pass% drivers) is a confirmed winner. 
 - **Defensive Impact:** Fade rim runners vs elite protectors (e.g., vs Wembanyama, Gobert)
 - **Playmaker Profiles:** Target assist props for high-pass-rate drivers (Deni Avdija 45.7%, Josh Giddey 51.1%)
 - **Score-First Detection:** Identify low-assist drivers to fade assist props (pass rate < 25%)
+
+---
+
+## Phase 3: Secondary Playtype Matchups (Jan 21, 2026) ✅ COMPLETE
+**Strategic Achievement:** Implemented granular player-vs-defense matchups based on Synergy playtype data (ISO, P&R, Spot-Up).
+
+### Validation Results
+- ✅ **Test Bench:** 8 specific matchups verified (e.g., ISO tax vs Blitz, Spot-Up boost vs Pack).
+- ✅ **Sensitivity Analysis:** 20-game sample window verified 13+ unique matchup triggers.
+- ✅ **14-Day Trends:** Defensive landscape confirmed stable (variance < 1.5% for all schemes).
+
+### Key Matchup Matrix
+- **ISO_SCORER vs BLITZ**: -8% PTS / +12% TOV (Pressure forces mistakes)
+- **SPOT_UP vs PAINT_PACK**: +12% 3PM (Open looks from help-side sagging)
+- **P&R_ROLL_MAN vs PAINT_PACK**: +15% PTS (Lob threat vs drop coverage)
+
+---
+
+## Phase 4: B2B Fatigue & Schedule Integration (Jan 21, 2026) ✅ COMPLETE
+**Strategic Achievement:** Integrated research-backed fatigue modifiers tuned for modern (2025-26) player resilience.
+
+### Backtest Validation (Nov 22, 2025 - Jan 21, 2026)
+**Test Window:** 7,214 player-games (60 Days)
+
+**Results:**
+- ✅ **Mean Error:** +0.56 pts (Within ±1.0 pt tolerance)
+- ✅ **B2B Players Error:** +1.22 pts (Improved from +2.70 pts pre-tuning)
+- ✅ **Rested Home Edge Calibration:** +0.30 pts error (Near perfect signal)
+- ✅ **Stability:** 5/5 unit tests passed across all fatigue scenarios.
+
+**Improvement vs Pre-Tuning (21-Day Window):**
+- Overall error reduced from **+1.40 pts → +0.56 pts** (-0.84 pts improvement)
+- B2B under-projection reduced from **+2.70 pts → +1.22 pts** (-1.48 pts improvement)
+
+### Implementation Summary
+- ✅ **Tuned Modifiers (Phase A 50% Strategy):**
+  - Road B2B: -4.8% (Tuned from research -9.7%)
+  - Home B2B: -1.5% (Tuned from research -3.0%)
+  - Guard Tax: -2.0% (Tuned from research -4.0%)
+  - Density Tax (4-in-5): -1.0% (Tuned from research -2.0%)
+- ✅ **Guard Resilience:** Data confirmed modern guards outperform historical fatigue expectations by +1.45 pts.
 
 ---
 

@@ -1,0 +1,109 @@
+name: Daily Production Pipeline
+
+on:
+  schedule:
+    # Daily at 11:00 AM EST (15:00 UTC)
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Run in test mode (limits to 1 game)'
+        required: false
+        default: 'false'
+        type: string
+
+jobs:
+  run-production-pipeline:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python Environment
+        run: |
+          if [ ! -d ".venv" ]; then
+            python3.11 -m venv .venv
+          fi
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Verify Environment
+        run: |
+          source .venv/bin/activate
+          python -c "import config; print('✅ Environment validated')"
+          
+      - name: Create Production Logs Directory
+        run: |
+          mkdir -p logs/production
+          mkdir -p assets/generated
+          
+      - name: Run Daily Simulation Pipeline
+        run: |
+          source .venv/bin/activate
+          
+          # Set production flag
+          export IS_PRODUCTION=true
+          export DEBUG_LOG=false
+          
+          # Determine test mode
+          if [ "${{ github.event.inputs.test_mode }}" = "true" ]; then
+            TEST_FLAG="--limit-games 1"
+            echo "🧪 Running in TEST MODE (1 game only)"
+          else
+            TEST_FLAG=""
+            echo "🚀 Running FULL PRODUCTION pipeline"
+          fi
+          
+          # Run main pipeline
+          echo "⏰ Starting pipeline at $(date)"
+          python main.py $TEST_FLAG --production-mode 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
+          
+          # Check if pipeline completed successfully
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            echo "✅ Pipeline completed successfully"
+          else
+            echo "❌ Pipeline failed with exit code ${PIPESTATUS[0]}"
+            exit 1
+          fi
+          
+      - name: Run System Health Monitor
+        run: |
+          source .venv/bin/activate
+          python scripts/monitor_system_health.py --production-mode
+          
+      - name: Archive Production Logs
+        run: |
+          # Compress today's logs
+          cd logs/production
+          if [ -f "pipeline_$(date +%Y%m%d).log" ]; then
+            gzip "pipeline_$(date +%Y%m%d).log" || true
+          fi
+          
+          # Clean up old artifacts (keep 30 days)
+          find . -name "*.log.gz" -mtime +30 -delete || true
+          find ../assets/generated -name "*.png" -mtime +7 -delete || true
+          
+      - name: Send Production Summary
+        if: always()
+        run: |
+          source .venv/bin/activate
+          
+          # Extract key metrics from today's log
+          LOG_FILE="logs/production/pipeline_$(date +%Y%m%d).log"
+          if [ -f "$LOG_FILE" ]; then
+            # Count games processed
+            GAMES_PROCESSED=$(grep -c "🏀 GAME" "$LOG_FILE" || echo "0")
+            
+            # Count bets generated
+            BETS_GENERATED=$(grep -c "💎 DIAMOND\|🔷 BLUE CHIP\|💙 CORE ASSET\|🎯 THE STEAL" "$LOG_FILE" || echo "0")
+            
+            # Check for errors
+            ERRORS=$(grep -c "❌\|🚨\|ERROR" "$LOG_FILE" || echo "0")
+            
+          # Send summary to Telegram
+          MESSAGE="📊 **PROD SUMMARY** $(date +%Y-%m-%d)\n🏀 Games: $GAMES_PROCESSED\n💎 Bets: $BETS_GENERATED\n❌ Errors: $ERRORS\n⏰ Completed: $(date +%H:%M:%S)"
+          python -c "from utils.telegram_notifier import send_message; send_message('$MESSAGE')" || echo "Telegram notification failed"
+          fi

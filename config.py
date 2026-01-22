@@ -81,6 +81,7 @@ BRAND_HEADER = "ludi informatio"
 # Feature Flags
 ENABLE_TELEGRAM_ALERTS = True
 RUN_SEASON_INIT = False
+DEBUG_LOG = False  # Set to True for verbose calibration logs
 
 # ====================================================
 # 5b. API TIER CONFIGURATION

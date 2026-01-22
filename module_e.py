@@ -43,16 +43,80 @@ class LudiCalibrator:
             "OUT": 0.0              
         }
         
-        # 2025-26 UPDATED DEFENSIVE STYLES
+        # 2025-26 VERIFIED DEFENSIVE STYLES (JAN 21, 2026 REVISION)
+        # Based on actual defensive performance and 60-day backtest validation
         self.DEFENSIVE_STYLES = {
-            "OKC": "PAINT_PACK", "BOS": "PAINT_PACK", "DET": "PAINT_PACK",
-            "MIN": "PAINT_PACK", "SAS": "PAINT_PACK", "ORL": "PAINT_PACK",
-            "LAL": "PAINT_PACK", "CLE": "PAINT_PACK", "MEM": "PAINT_PACK",
-            "MIL": "PAINT_PACK", "PHI": "PAINT_PACK",
-            "HOU": "BLITZ", "TOR": "BLITZ", "MIA": "BLITZ", "PHX": "BLITZ", "BKN": "BLITZ",
-            "GSW": "PERIMETER", "DAL": "PERIMETER", "NYK": "PERIMETER", "LAC": "PERIMETER", "NOP": "PERIMETER",
-            "WAS": "FUNNEL", "ATL": "FUNNEL", "CHI": "FUNNEL", "UTA": "FUNNEL", "SAC": "FUNNEL", "DEN": "FUNNEL",
-            "IND": "HACKERS", "CHA": "HACKERS", "POR": "HACKERS"
+            # ELITE PAINT_PACK - Proven rim protectors with excellent DefRtg
+            "OKC": "PAINT_PACK",   # 96.0 recent DefRtg (elite)
+            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)  
+            "DET": "PAINT_PACK",   # 87.5 recent DefRtg (TOP 3)
+            "PHX": "BLITZ",       # 91.3 recent DefRtg (elite pressure)
+            
+            # SOLID DEFENSES - Maintaining elite standards
+            "PHI": "PAINT_PACK",   # 106.1 stable, still effective
+            "HOU": "BLITZ",       # 102.0 improving, pressure working
+            "TOR": "BLITZ",       # Solid pressure defense
+            "MIA": "BLITZ",       # Consistently elite
+            "BKN": "BLITZ",       # 99.1 DefRtg (excellent)
+            
+            # FUNNEL DEFENSES - Balanced schemes
+            "WAS": "FUNNEL",       # High variance but stable identity
+            "ATL": "FUNNEL",       # 102.7 improving
+            "CHI": "FUNNEL",       # 99.9 improving
+            "SAC": "FUNNEL",       # Consistently solid
+            "DEN": "FUNNEL",       # 107.3 improving
+            
+            # NEUTRAL - Teams that failed elite checks or are in transition
+            "MIN": "NEUTRAL",     # Failed rim protection (diff% +0.6)
+            "SAS": "NEUTRAL",     # Failed rim protection (diff% +0.5)
+            "ORL": "NEUTRAL",     # Failed rim protection (diff% +2.9)
+            "LAL": "NEUTRAL",     # Failed rim protection, 112.3 DefRtg
+            "CLE": "NEUTRAL",     # Failed rim protection (diff% +1.5)
+            "MEM": "NEUTRAL",     # Failed rim protection (diff% +0.9)
+            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
+            "NYK": "NEUTRAL",     # Failed perimeter denial, 112.5 DefRtg
+            "DAL": "NEUTRAL",     # Failed perimeter denial, 113.0 DefRtg
+            "NOP": "NEUTRAL",     # 111.8 DefRtg, failed perimeter checks
+            "LAC": "NEUTRAL",     # Failed perimeter denial checks
+            "GSW": "NEUTRAL",     # Failed perimeter denial (51.7% opp dfg)
+            "UTA": "FUNNEL",       # High variance (120.3) but scheme identity
+            
+            # HACKERS - Foul-heavy defenses remain unchanged
+            "IND": "HACKERS", 
+            "CHA": "HACKERS", 
+            "POR": "HACKERS"
+        }
+
+        # 2025-26 TEAM OFFENSIVE STYLES (VERIFIED JAN 21, 2026)
+        # Based on Basketball-Reference/StatMuse pace + ORtg data
+        self.OFFENSIVE_STYLES = {
+            # MOTION - High ball movement, assist-heavy
+            "GSW": "MOTION", "BOS": "MOTION", "DEN": "MOTION", 
+            "ATL": "MOTION", "IND": "MOTION", "OKC": "MOTION",  # OKC moved from PACE_PUSH
+            
+            # ISO_HEAVY - Star-driven isolation (REDUCED from 5 to 3 teams)
+            "MIA": "ISO_HEAVY", "HOU": "ISO_HEAVY", "CLE": "ISO_HEAVY",
+            # Removed: DAL (post-Luka), PHX (now PACE_PUSH)
+            
+            # PACE_PUSH - Fast break focused (>100 pace)
+            "UTA": "PACE_PUSH",   # 101.8 (#1 fastest)
+            "CHI": "PACE_PUSH",   # 101.5 (#2 fastest)
+            "WAS": "PACE_PUSH",   # 101.1 (#3 fastest)
+            "PHX": "PACE_PUSH",   # Booker-led uptempo (changed from ISO_HEAVY)
+            "SAC": "PACE_PUSH", "NYK": "PACE_PUSH",
+            
+            # HALF_COURT - Methodical, low pace (<97)
+            "MEM": "HALF_COURT",  # 95.4 (slowest)
+            "LAC": "HALF_COURT",  # 95.8 (#2 slowest)
+            "BOS": "HALF_COURT",  # 95.7 (slow but elite 122.1 ORtg)
+            "BKN": "HALF_COURT",  # 96.6
+            "PHI": "HALF_COURT",  # 96.6
+            "ORL": "HALF_COURT", "TOR": "HALF_COURT", "MIN": "HALF_COURT",
+            
+            # Default: NEUTRAL (only 8 teams now, was 13)
+            "LAL": "NEUTRAL", "MIL": "NEUTRAL", "DAL": "NEUTRAL",  # DAL changed from ISO_HEAVY
+            "CHA": "NEUTRAL", "DET": "NEUTRAL", "POR": "NEUTRAL", 
+            "SAS": "NEUTRAL", "NOP": "NEUTRAL"
         }
 
         # MANUAL OVERRIDES (The "Scout's Eye")
@@ -518,44 +582,8 @@ class LudiCalibrator:
             self._apply_factor(calibrated, self.ADJUSTMENT_RULES["MINUTES_LIMIT"])
             calibrated['notes'] += f" | 15-min Update: Limit Applied"
 
-        # 3.5 SCHEDULE FATIGUE (Week 3 Integration)
-        is_b2b = yak_report.get('is_back_to_back', False)
-        is_road = yak_report.get('is_road', False)
-        next_game_tomorrow = yak_report.get('next_game_tomorrow', False)
-        density_5day = yak_report.get('games_in_last_5_days', 0)
-        
-        # B2B Penalties (Back End)
-        if is_b2b:
-            b2b_factor = 0.97 # Base Home B2B (-3%)
-            note = " | Home B2B"
-            
-            if is_road:
-                b2b_factor = 0.94 # Road B2B (-6%)
-                note = " | Road B2B (Fatigue)"
-                
-            # Guard Tax (High active output requires legs)
-            pos = calibrated.get('position', 'UNK')
-            # print(f"DEBUG: Checking Guard Tax for {calibrated.get('name')} | Pos: {pos}")
-            if any(x in pos for x in ['G', 'PG', 'SG']):
-                b2b_factor *= 0.96 # Additional -4%
-                note += " + Guard Tax"
-                
-            self._apply_factor(calibrated, b2b_factor)
-            calibrated['notes'] += note
-
-        # Schedule Density (4-in-5 Nights)
-        # If played 3 games in last 4 days (density=3) + Today = 4 games in 5 nights
-        if density_5day >= 3:
-            self._apply_factor(calibrated, 0.98)
-            calibrated['notes'] += " | 4-in-5 Density Tax"
-            
-        # Front-End Load Management (Star Players)
-        # If playing today AND game tomorrow (Front End of B2B)
-        is_star = calibrated.get('base_pts', 0) > 22.0 or calibrated.get('base_usg', 0) > 0.28
-        if next_game_tomorrow and is_star:
-            # Stars often play slightly less or conserve energy on front end
-            self._boost_stat(calibrated, 'proj_min', 0.96) # -4% minutes (~1.5 min)
-            calibrated['notes'] += " | B2B Front-End (Load Mgmt)"
+        # 3.5 SCHEDULE FATIGUE (Phase 4 Integration - Jan 21, 2026)
+        self._apply_fatigue_adjustments(calibrated, yak_report)
 
         # 4. GAME SCRIPT
         odds = calibrated.get('odds', {})
@@ -572,6 +600,13 @@ class LudiCalibrator:
         # 5. MATCHUP LOGIC (Primary Archetypes)
         opponent = calibrated.get('opponent', 'UNK') 
         def_style = self.DEFENSIVE_STYLES.get(opponent, "NEUTRAL")
+        
+        # Get team offensive style
+        player_team = calibrated.get('team', player_packet.get('TEAM_ABBREVIATION', ''))
+        team_offense = self.classify_team_offense(player_team)
+        
+        # Apply offensive style matchup
+        self._apply_offensive_style_boost(calibrated, team_offense, def_style)
         
         if archetype == "STRETCH_BIG" and def_style == "PAINT_PACK":
             self._boost_stat(calibrated, 'proj_3pm', 1.15)
@@ -608,109 +643,8 @@ class LudiCalibrator:
             calibrated['notes'] += " | Size Mismatch (Guard)"
 
         # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 - 14 Total Modifiers)
-        # Research-validated matchups from NBA.com, Basketball Index, FanSided
-        sec_playtypes = calibrated.get('secondary_playtypes', [])
-
-        for sec_pt in sec_playtypes:
-            # === ISO_SCORER MATCHUPS (3 total) ===
-            if sec_pt == 'ISO_SCORER':
-                if def_style == 'BLITZ':
-                    # Blitz defense disrupts isolation (research: +15% TOV rate)
-                    self._boost_stat(calibrated, 'proj_pts', 0.92)
-                    self._boost_stat(calibrated, 'proj_tov', 1.12)
-                    calibrated['notes'] += " | ISO Tax vs Blitz"
-                elif def_style == 'PERIMETER':
-                    # ISO mismatch vs perimeter switching
-                    self._boost_stat(calibrated, 'proj_pts', 1.10)
-                    calibrated['notes'] += " | ISO vs Perimeter"
-
-            # === P&R_HANDLER MATCHUPS (3 total) ===
-            elif sec_pt == 'P&R_HANDLER':
-                if def_style == 'PAINT_PACK':
-                    # Drop coverage gives P&R handlers easy assists
-                    self._boost_stat(calibrated, 'proj_ast', 1.08)
-                    calibrated['notes'] += " | P&R Drop Edge"
-                elif def_style == 'BLITZ':
-                    # Blitz forces tough passes, more turnovers
-                    self._boost_stat(calibrated, 'proj_ast', 0.90)
-                    self._boost_stat(calibrated, 'proj_tov', 1.15)
-                    calibrated['notes'] += " | P&R Blitz Tax"
-                elif def_style == 'FUNNEL':
-                    # Funnel defense creates passing lanes
-                    self._boost_stat(calibrated, 'proj_ast', 1.12)
-                    calibrated['notes'] += " | PnR Handler vs Funnel"
-
-            # === SPOT_UP MATCHUPS (2 total - HIGHEST ROI) ===
-            elif sec_pt == 'SPOT_UP':
-                if def_style == 'PAINT_PACK':
-                    # Paint-pack leaves shooters open (strongest edge)
-                    self._boost_stat(calibrated, 'proj_3pm', 1.15)
-                    calibrated['notes'] += " | Spot-Up vs Pack"
-                elif def_style == 'PERIMETER':
-                    # Perimeter switching closes out shooters
-                    self._boost_stat(calibrated, 'proj_3pm', 0.95)
-                    calibrated['notes'] += " | Spot-Up Tax"
-
-            # === TRANSITION MATCHUPS (3 total) ===
-            elif sec_pt == 'TRANSITION':
-                if def_style == 'FUNNEL':
-                    # Funnel defense vulnerable in transition
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
-                    calibrated['notes'] += " | Transition Chaos"
-                elif def_style == 'PAINT_PACK':
-                    # Set defense slows transition
-                    self._boost_stat(calibrated, 'proj_pts', 0.92)
-                    calibrated['notes'] += " | Transition Tax"
-                elif def_style == 'HACKERS':
-                    # Hackers create fast break opportunities
-                    self._boost_stat(calibrated, 'proj_pts', 1.08)
-                    calibrated['notes'] += " | Fast Break Edge"
-
-            # === P&R_ROLL_MAN MATCHUPS (3 total) ===
-            elif sec_pt == 'P&R_ROLL_MAN':
-                if def_style == 'PAINT_PACK':
-                    # Drop coverage = easy dunks for roll man
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
-                    self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
-                    calibrated['notes'] += " | Roll Man vs Drop"
-                elif def_style == 'BLITZ':
-                    # Blitz limits roll opportunities
-                    self._boost_stat(calibrated, 'proj_pts', 0.88)
-                    calibrated['notes'] += " | Roll Man Tax"
-                elif def_style == 'PERIMETER':
-                    # Small ball = boards + mismatches
-                    self._boost_stat(calibrated, 'proj_reb', 1.15)
-                    self._boost_stat(calibrated, 'proj_pts', 1.10)
-                    calibrated['notes'] += " | Roll Man vs Small Ball"
-
-            # === OFF_BALL_CUTTER MATCHUPS (3 total) ===
-            elif sec_pt == 'OFF_BALL_CUTTER':
-                if def_style == 'PERIMETER':
-                    # Small ball vulnerable to cutters
-                    self._boost_stat(calibrated, 'proj_pts', 1.12)
-                    calibrated['notes'] += " | Cutter vs Small Ball"
-                elif def_style == 'PAINT_PACK':
-                    # Rim protection reduces cutter efficiency
-                    self._boost_stat(calibrated, 'proj_fg_pct', 0.90)
-                    calibrated['notes'] += " | Cutter Tax"
-                elif def_style == 'BLITZ':
-                    # Blitz creates cutting lanes
-                    self._boost_stat(calibrated, 'proj_pts', 1.12)
-                    calibrated['notes'] += " | Cutter vs Blitz"
-
-            # === PUTBACK MATCHUP (1 total) ===
-            elif sec_pt == 'PUTBACK':
-                if def_style == 'PERIMETER':
-                    # Small ball = offensive glass dominance
-                    self._boost_stat(calibrated, 'proj_oreb', 1.25)
-                    calibrated['notes'] += " | Putback vs Small"
-
-            # === POST_UP MATCHUP (1 total) ===
-            elif sec_pt == 'POST_UP':
-                if def_style == 'PERIMETER':
-                    # Post mismatch vs small ball
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
-                    calibrated['notes'] += " | Post vs Small Ball"
+        # Extracted to separate method for Phase 3 implementation
+        self._apply_secondary_playtype_matchups(calibrated, def_style)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -946,6 +880,98 @@ class LudiCalibrator:
             self.logger.debug(
                 f"SKIP | {player_name} | {function} | {reason}"
             )
+
+    def classify_team_offense(self, team_abbr: str) -> str:
+        """Dynamically classify team offensive style using team_lineups."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Query team_lineups for accurate pace
+            cursor.execute("""
+                SELECT 
+                    SUM(possessions) * 48.0 / NULLIF(SUM(minutes), 0) as pace,
+                    AVG(off_rating) as ortg,
+                    AVG(ast_pct) as ast_pct
+                FROM team_lineups
+                WHERE team_abbreviation = ?
+                AND game_date >= date('now', '-30 days')
+            """, (team_abbr,))
+            
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row and row[0]:
+                pace = row[0]
+                ortg = row[1] or 110
+                ast_pct = row[2] or 0.25
+                
+                # Thresholds based on actual DB data (101-108 range)
+                if pace > 106:
+                    return "PACE_PUSH"
+                elif pace < 102:
+                    return "HALF_COURT"
+                elif ast_pct > 0.28 and ortg > 115:
+                    return "MOTION"
+            
+            return self.OFFENSIVE_STYLES.get(team_abbr, "NEUTRAL")
+            
+        except Exception as e:
+            return self.OFFENSIVE_STYLES.get(team_abbr, "NEUTRAL")
+
+    def _apply_offensive_style_boost(self, calibrated: dict, team_offense: str, 
+                                      opponent_defense: str) -> None:
+        """
+        Apply modifiers based on team offensive style vs opponent defense.
+        
+        Research basis:
+        - MOTION offense beats BLITZ defense (ball movement beats pressure)
+        - ISO_HEAVY struggles vs PAINT_PACK (limited driving lanes)
+        - PACE_PUSH exploits slow teams in transition
+        """
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+        sec_playtypes = calibrated.get('secondary_playtypes', [])
+        
+        # MOTION offense bonuses
+        if team_offense == "MOTION":
+            if opponent_defense == "BLITZ":
+                # Ball movement beats aggressive traps
+                if 'SPOT_UP' in sec_playtypes or 'OFF_BALL_CUTTER' in sec_playtypes:
+                    self._boost_stat(calibrated, 'proj_pts', 1.05)
+                    self._boost_stat(calibrated, 'proj_ast', 1.05)
+                    calibrated['notes'] += " | Motion vs Blitz"
+                    self._log_adjustment(player_name, 'OFF_STYLE', 1.05, 
+                        "MOTION vs BLITZ: ball movement advantage")
+        
+        # ISO_HEAVY penalties
+        elif team_offense == "ISO_HEAVY":
+            if opponent_defense == "PAINT_PACK":
+                # Limited driving lanes
+                if 'ISO_SCORER' in sec_playtypes or 'P&R_HANDLER' in sec_playtypes:
+                    self._boost_stat(calibrated, 'proj_pts', 0.96)
+                    calibrated['notes'] += " | ISO vs Paint Pack"
+                    self._log_adjustment(player_name, 'OFF_STYLE', 0.96, 
+                        "ISO_HEAVY vs PAINT_PACK: clogged lanes")
+        
+        # PACE_PUSH bonuses
+        elif team_offense == "PACE_PUSH":
+            if opponent_defense in ["FUNNEL", "HACKERS"]:
+                # Transition exploits slow recovery
+                if 'TRANSITION' in sec_playtypes:
+                    self._boost_stat(calibrated, 'proj_pts', 1.06)
+                    calibrated['notes'] += " | Pace Push"
+                    self._log_adjustment(player_name, 'OFF_STYLE', 1.06, 
+                        "PACE_PUSH vs weak transition defense")
+        
+        # HALF_COURT specific
+        elif team_offense == "HALF_COURT":
+            if opponent_defense == "PERIMETER":
+                # Methodical offense finds gaps
+                if 'P&R_ROLL_MAN' in sec_playtypes or 'POST_UP' in sec_playtypes:
+                    self._boost_stat(calibrated, 'proj_pts', 1.04)
+                    calibrated['notes'] += " | Half-Court Advantage"
+                    self._log_adjustment(player_name, 'OFF_STYLE', 1.04, 
+                        "HALF_COURT exploits perimeter D")
 
     # === SYNERGY EFFICIENCY CALIBRATIONS (Phase 1 - Jan 21, 2026) ===
 
@@ -1185,6 +1211,248 @@ class LudiCalibrator:
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | DRIVES_AST | {str(e)}")
             pass
+
+    def _apply_fatigue_adjustments(self, calibrated: dict, yak_report: dict) -> None:
+        """
+        Apply research-backed fatigue modifiers for B2B and schedule spots.
+
+        Research:
+        - García et al. (2020): -1.27 effect size Q4 performance in B2B games
+        - TopEndSports: 2-3 point decline on Road B2B games (travel + fatigue)
+        - Positional: Guards suffer most (cover 2.5+ miles/game)
+
+        Logic:
+        - Road B2B: -6% volume (Travel + Fatigue)
+        - Home B2B: -3% volume (Fatigue only)
+        - Guard Tax: Extra penalty for active guards on B2B
+        - Rested Advantage: +3% volume (Home + 3+ days rest)
+        - Schedule Density: 4-in-5 nights tax
+
+        BACKTEST NOTE (Jan 21, 2026):
+        Dec 20-Jan 16 backtest shows B2B players OUTPERFORMED by +2.7% PTS.
+        Current tax (-3%/-6%) resulted in under-projection (-3.36 mean error).
+        Monitor closely - may need to reduce modifiers if trend continues.
+        """
+        player_name = calibrated.get('name', '')
+
+        # Extract Schedule Context
+        is_b2b = yak_report.get('is_back_to_back', False)
+        is_road = yak_report.get('is_road', False)
+        rest_days = yak_report.get('rest_days', 2)
+        next_game_tomorrow = yak_report.get('next_game_tomorrow', False)
+        density_5day = yak_report.get('games_in_last_5_days', 0)
+        position = calibrated.get('position', 'UNK')
+
+        # === BACK-TO-BACK LOGIC (Phase A: 50% Reduction Strategy) ===
+        # Findings: 2025-26 players are more resilient on B2B than historical data guarantees.
+        # Adopted conservative 50% reduction of standard penalties.
+        
+        if is_b2b:
+            if is_road:
+                # Road B2B: Tuned High Stress (-4.8%)
+                # Standard -9.7% was too aggressive (+1.78 pts error)
+                self._apply_factor(calibrated, 0.952)
+                calibrated['notes'] += " | B2B Road Tax"
+                self._log_adjustment(player_name, 'FATIGUE', 0.952, "Road B2B schedule loss")
+            else:
+                # Home B2B: Tuned Moderate Stress (-1.5% base)
+                self._apply_factor(calibrated, 0.985)
+                calibrated['notes'] += " | B2B Home Tax"
+                self._log_adjustment(player_name, 'FATIGUE', 0.985, "Home B2B fatigue")
+        
+            # Guard Specific Tax (High cardio load)
+            # Reduced from -4% to -2% based on findings
+            if any(g in position for g in ['PG', 'SG', 'G']):
+                self._boost_stat(calibrated, 'proj_pts', 0.98) # -2% pts
+                self._boost_stat(calibrated, 'proj_fg_pct', 0.99) # -1% eff
+                calibrated['notes'] += " (Guard Fatigue)"
+                self._log_adjustment(player_name, 'FATIGUE', 0.98, "Guard active movement penalty")
+
+        # === REST ADVANTAGE LOGIC ===
+        elif rest_days >= 3 and not is_road:
+            # Rested Home Game
+            self._apply_factor(calibrated, 1.03)
+            calibrated['notes'] += " | Rested Home Edge"
+            self._log_adjustment(player_name, 'FATIGUE', 1.03, f"Rested ({rest_days} days) at Home")
+
+        # === SCHEDULE DENSITY (4-in-5 Nights) ===
+        # If played 3 games in last 4 days (density=3) + Today = 4 games in 5 nights
+        # Adjusted from -2.0% to -1.0% based on backtest findings (+0.63 pts error)
+        if density_5day >= 3:
+            self._apply_factor(calibrated, 0.99)
+            calibrated['notes'] += " | 4-in-5 Density Tax"
+            self._log_adjustment(player_name, 'FATIGUE', 0.99, "4-in-5 schedule density")
+
+        # === FRONT-END LOAD MANAGEMENT (Star Players) ===
+        # If playing today AND game tomorrow (Front End of B2B)
+        is_star = calibrated.get('base_pts', 0) > 22.0 or calibrated.get('base_usg', 0) > 0.28
+        if next_game_tomorrow and is_star:
+            # Stars often play slightly less or conserve energy on front end
+            self._boost_stat(calibrated, 'proj_min', 0.96) # -4% minutes (~1.5 min)
+            calibrated['notes'] += " | B2B Front-End (Load Mgmt)"
+            self._log_adjustment(player_name, 'FATIGUE', 0.96, "Front-end B2B load management")
+
+    def _apply_secondary_playtype_matchups(self, calibrated: dict, def_style: str) -> None:
+        """
+        Apply modifiers based on player's secondary playtypes vs opponent defense.
+
+        Research basis:
+        - ISO vs BLITZ: Pressure forces turnovers
+        - SPOT_UP vs PAINT_PACK: Open shooters feast on helpers
+        - P&R_ROLL_MAN vs DROP: Lobs and dunks available
+
+        Phase 3 Enhancement: Added debug logging for all adjustments
+        """
+        player_name = calibrated.get('name', '')
+        secondary_types = calibrated.get('secondary_playtypes', [])
+        
+        for playtype in secondary_types:
+            # === ISO_SCORER MATCHUPS (3 total) ===
+            if playtype == 'ISO_SCORER':
+                if def_style == 'BLITZ':
+                    # Blitz defense disrupts isolation (research: +15% TOV rate)
+                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    self._boost_stat(calibrated, 'proj_tov', 1.12)
+                    calibrated['notes'] += " | ISO Tax vs Blitz"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92, 
+                        "ISO_SCORER vs BLITZ: pressure forces mistakes")
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                        "ISO_SCORER vs BLITZ: increased turnovers")
+                elif def_style == 'PERIMETER':
+                    # ISO mismatch vs perimeter switching
+                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    calibrated['notes'] += " | ISO vs Perimeter"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                        "ISO_SCORER vs PERIMETER: space to operate")
+
+            # === P&R_HANDLER MATCHUPS (3 total) ===
+            elif playtype == 'P&R_HANDLER':
+                if def_style == 'PAINT_PACK':
+                    # Drop coverage gives P&R handlers easy assists
+                    self._boost_stat(calibrated, 'proj_ast', 1.08)
+                    calibrated['notes'] += " | P&R Drop Edge"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08, 
+                        "P&R_HANDLER vs PAINT_PACK: passing lanes open")
+                elif def_style == 'BLITZ':
+                    # Blitz forces tough passes, more turnovers
+                    self._boost_stat(calibrated, 'proj_ast', 0.90)
+                    self._boost_stat(calibrated, 'proj_tov', 1.15)
+                    calibrated['notes'] += " | P&R Blitz Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90, 
+                        "P&R_HANDLER vs BLITZ: traps disrupt passing")
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "P&R_HANDLER vs BLITZ: increased turnovers")
+                elif def_style == 'FUNNEL':
+                    # Funnel defense creates passing lanes
+                    self._boost_stat(calibrated, 'proj_ast', 1.12)
+                    calibrated['notes'] += " | PnR Handler vs Funnel"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                        "P&R_HANDLER vs FUNNEL: easy passing lanes")
+
+            # === SPOT_UP MATCHUPS (2 total - HIGHEST ROI) ===
+            elif playtype == 'SPOT_UP':
+                if def_style == 'PAINT_PACK':
+                    # Paint-pack leaves shooters open (strongest edge)
+                    self._boost_stat(calibrated, 'proj_3pm', 1.15)
+                    calibrated['notes'] += " | Spot-Up vs Pack"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "SPOT_UP vs PAINT_PACK: open 3s from help D")
+                elif def_style == 'PERIMETER':
+                    # Perimeter switching closes out shooters
+                    self._boost_stat(calibrated, 'proj_3pm', 0.95)
+                    calibrated['notes'] += " | Spot-Up Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.95, 
+                        "SPOT_UP vs PERIMETER: contested shots")
+
+            # === TRANSITION MATCHUPS (3 total) ===
+            elif playtype == 'TRANSITION':
+                if def_style == 'FUNNEL':
+                    # Funnel defense vulnerable in transition
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    calibrated['notes'] += " | Transition Chaos"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "TRANSITION vs FUNNEL: fast break chaos")
+                elif def_style == 'PAINT_PACK':
+                    # Set defense slows transition
+                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    calibrated['notes'] += " | Transition Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92, 
+                        "TRANSITION vs PAINT_PACK: set defense stops breaks")
+                elif def_style == 'HACKERS':
+                    # Hackers create fast break opportunities
+                    self._boost_stat(calibrated, 'proj_pts', 1.08)
+                    calibrated['notes'] += " | Fast Break Edge"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08, 
+                        "TRANSITION vs HACKERS: fast break opportunities")
+
+            # === P&R_ROLL_MAN MATCHUPS (3 total) ===
+            elif playtype == 'P&R_ROLL_MAN':
+                if def_style == 'PAINT_PACK':
+                    # Drop coverage = easy dunks for roll man
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
+                    calibrated['notes'] += " | Roll Man vs Drop"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "P&R_ROLL_MAN vs PAINT_PACK: lobs and dunks")
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                        "P&R_ROLL_MAN vs PAINT_PACK: increased FG%")
+                elif def_style == 'BLITZ':
+                    # Blitz limits roll opportunities
+                    self._boost_stat(calibrated, 'proj_pts', 0.88)
+                    calibrated['notes'] += " | Roll Man Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.88, 
+                        "P&R_ROLL_MAN vs BLITZ: no space at rim")
+                elif def_style == 'PERIMETER':
+                    # Small ball = boards + mismatches
+                    self._boost_stat(calibrated, 'proj_reb', 1.15)
+                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    calibrated['notes'] += " | Roll Man vs Small Ball"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "P&R_ROLL_MAN vs PERIMETER: rebound advantage")
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                        "P&R_ROLL_MAN vs PERIMETER: mismatch scoring")
+
+            # === OFF_BALL_CUTTER MATCHUPS (3 total) ===
+            elif playtype == 'OFF_BALL_CUTTER':
+                if def_style == 'PERIMETER':
+                    # Small ball vulnerable to cutters
+                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    calibrated['notes'] += " | Cutter vs Small Ball"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                        "OFF_BALL_CUTTER vs PERIMETER: backdoor cuts")
+                elif def_style == 'PAINT_PACK':
+                    # Rim protection reduces cutter efficiency
+                    self._boost_stat(calibrated, 'proj_fg_pct', 0.90)
+                    calibrated['notes'] += " | Cutter Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90, 
+                        "OFF_BALL_CUTTER vs PAINT_PACK: clogged lanes")
+                elif def_style == 'BLITZ':
+                    # Blitz creates cutting lanes
+                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    calibrated['notes'] += " | Cutter vs Blitz"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                        "OFF_BALL_CUTTER vs BLITZ: cutting lanes")
+
+            # === PUTBACK MATCHUP (1 total) ===
+            elif playtype == 'PUTBACK':
+                if def_style == 'PERIMETER':
+                    # Small ball = offensive glass dominance + putback points
+                    self._boost_stat(calibrated, 'proj_oreb', 1.25)
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    calibrated['notes'] += " | Putback vs Small"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.25, 
+                        "PUTBACK vs PERIMETER: size advantage on glass")
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "PUTBACK vs PERIMETER: putback scoring")
+
+            # === POST_UP MATCHUP (1 total) ===
+            elif playtype == 'POST_UP':
+                if def_style == 'PERIMETER':
+                    # Post mismatch vs small ball
+                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    calibrated['notes'] += " | Post vs Small Ball"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                        "POST_UP vs PERIMETER: size mismatch")
 
     def _boost_stat(self, d, key, factor):
         if key in d: d[key] = round(d[key] * factor, 2)

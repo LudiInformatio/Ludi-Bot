@@ -1,0 +1,143 @@
+name: Weekly Validation
+
+on:
+  schedule:
+    # Tuesdays at 4:00 AM EST (8:00 UTC)
+    - cron: '0 8 * * 2'
+  workflow_dispatch:
+    inputs:
+      backtest_type:
+        description: 'Backtest type'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - fatigue_21day
+          - playtype_trends_14day
+          - both
+
+jobs:
+  run-weekly-validation:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python Environment
+        run: |
+          if [ ! -d ".venv" ]; then
+            python3.11 -m venv .venv
+          fi
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Verify Environment
+        run: |
+          source .venv/bin/activate
+          python -c "import config; print('✅ Environment validated')"
+          
+      - name: Create Validation Logs Directory
+        run: |
+          mkdir -p logs/validation
+          mkdir -p logs/backtest
+          
+      - name: Run 21-Day B2B Fatigue Backtest
+        if: ${{ github.event.inputs.backtest_type == 'fatigue_21day' || github.event.inputs.backtest_type == 'both' || github.event.inputs.backtest_type == '' }}
+        run: |
+          source .venv/bin/activate
+          echo "🔥 Running 21-Day B2B Fatigue Backtest..."
+          python scripts/backtest_fatigue_21day.py --verbose 2>&1 | tee logs/backtest/fatigue_21day_$(date +%Y%m%d).log
+          
+      - name: Run 14-Day Playtype Trends Backtest
+        if: ${{ github.event.inputs.backtest_type == 'playtype_trends_14day' || github.event.inputs.backtest_type == 'both' || github.event.inputs.backtest_type == '' }}
+        run: |
+          source .venv/bin/activate
+          echo "📊 Running 14-Day Playtype Trends Backtest..."
+          python scripts/backtest_playtype_trends_14day.py --verbose 2>&1 | tee logs/backtest/playtype_trends_14day_$(date +%Y%m%d).log
+          
+      - name: Check for Modifier Drift
+        run: |
+          source .venv/bin/activate
+          
+          # Check B2B differential from results
+          if [ -f "logs/backtest/fatigue_21day_$(date +%Y%m%d).log" ]; then
+            B2B_DIFF=$(grep "B2B Differential" logs/backtest/fatigue_21day_$(date +%Y%m%d).log | grep -o "[+-]*[0-9]*\.[0-9]*" | head -1 || echo "0.0")
+            
+            # Convert to absolute value for comparison
+            B2B_ABS=$(echo "$B2B_DIFF" | sed 's/[-+]//g')
+            
+            if python -c "import sys; exit(0 if float('$B2B_ABS') > 1.5 else 1)"; then
+              echo "⚠️ MODIFIER DRIFT DETECTED: B2B differential = $B2B_DIFF pts"
+              echo "⚠️ MODIFIER DRIFT: B2B differential exceeds ±1.5 pts threshold" > logs/validation/drift_alert_$(date +%Y%m%d).txt
+            else
+              echo "✅ B2B modifiers within acceptable range: $B2B_DIFF pts"
+            fi
+          fi
+          
+      - name: Generate Weekly Validation Report
+        run: |
+          source .venv/bin/activate
+          
+          REPORT="## 📊 WEEKLY VALIDATION REPORT - $(date +%Y-%m-%d)\n\n"
+          
+          # Add B2B Fatigue Results
+          if [ -f "logs/backtest/fatigue_21day_$(date +%Y%m%d).log" ]; then
+            REPORT+="### 🔥 B2B Fatigue (21-Day)\n\`\`\`\n"
+            REPORT+=$(tail -20 logs/backtest/fatigue_21day_$(date +%Y%m%d).log)
+            REPORT+="\n\`\`\`\n\n"
+          fi
+          
+          # Add Playtype Trends Results
+          if [ -f "logs/backtest/playtype_trends_14day_$(date +%Y%m%d).log" ]; then
+            REPORT+="### 📈 Playtype Trends (14-Day)\n\`\`\`\n"
+            REPORT+=$(tail -20 logs/backtest/playtype_trends_$(date +%Y%m%d).log)
+            REPORT+="\n\`\`\`\n\n"
+          fi
+          
+          # Add Drift Alert
+          if [ -f "logs/validation/drift_alert_$(date +%Y%m%d).txt" ]; then
+            REPORT+="### ⚠️ MODIFIER DRIFT ALERT\n"
+            REPORT+=$(cat logs/validation/drift_alert_$(date +%Y%m%d).txt)
+            REPORT+="\n\n"
+          fi
+          
+          # Add System Health Summary
+          REPORT+="### 🏥 System Health Summary\n\`\`\`\n"
+          HEALTH_OUTPUT=$(python scripts/monitor_system_health.py 2>&1)
+          echo "$HEALTH_OUTPUT" | tail -10
+          REPORT+="\n\`\`\`\n\n"
+          
+          # Save report
+          echo -e "$REPORT" > docs/weekly_validation_$(date +%Y%m%d).md
+          
+          # Send to Telegram
+          python -c "from utils.telegram_notifier import send_daily_briefing; send_daily_briefing('''$REPORT''')" || echo "Telegram notification failed"
+          
+      - name: Archive Backtest Logs
+        run: |
+          # Compress logs
+          cd logs/backtest
+          gzip *.log 2>/dev/null || true
+          
+          # Keep last 8 weeks of backtest logs
+          find . -name "*.log.gz" -mtime +56 -delete || true
+          
+      - name: Update Production Documentation
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          # If on main branch, copy latest report to production docs
+          if [ -f "docs/weekly_validation_$(date +%Y%m%d).md" ]; then
+            cp docs/weekly_validation_$(date +%Y%m%d).md docs/LATEST_WEEKLY_VALIDATION.md
+            echo "📄 Updated LATEST_WEEKLY_VALIDATION.md"
+          fi
+          
+      - name: Cleanup Old Artifacts
+        run: |
+          # Clean validation alerts older than 30 days
+          find logs/validation -name "drift_alert_*.txt" -mtime +30 -delete || true
+          
+          # Clean weekly validation reports older than 90 days
+          find docs -name "weekly_validation_*.md" -mtime +90 -delete || true
