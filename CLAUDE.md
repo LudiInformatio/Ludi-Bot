@@ -187,13 +187,8 @@ The "Assist Profile" logic (boosting high-pass% drivers) is a confirmed winner. 
 
 **Results:**
 - ✅ **Mean Error:** +0.56 pts (Within ±1.0 pt tolerance)
-- ✅ **B2B Players Error:** +1.22 pts (Improved from +2.70 pts pre-tuning)
 - ✅ **Rested Home Edge Calibration:** +0.30 pts error (Near perfect signal)
 - ✅ **Stability:** 5/5 unit tests passed across all fatigue scenarios.
-
-**Improvement vs Pre-Tuning (21-Day Window):**
-- Overall error reduced from **+1.40 pts → +0.56 pts** (-0.84 pts improvement)
-- B2B under-projection reduced from **+2.70 pts → +1.22 pts** (-1.48 pts improvement)
 
 ### Implementation Summary
 - ✅ **Tuned Modifiers (Phase A 50% Strategy):**
