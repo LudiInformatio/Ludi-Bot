@@ -72,7 +72,8 @@ This is the single source of truth for project tasks and priorities.
 
 ### Referee Intelligence Repair - 2026/01/28
 - [x] Diagnosed empty table issue (CSR/JavaScript requirement)
-- [x] Implemented "GO" button interaction in `module_g.py`
+- [x] Implemented "Date Toggle" workaround (Yesterday -> Today) to force data load
+- [x] Added "Fallback Validation" (Critical Alert if 0 refs found)
 - [x] Upgraded scraper to Playwright for reliable rendering
 - [x] Identified Historical Backfill opportunity via date picker
 
