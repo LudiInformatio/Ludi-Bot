@@ -47,19 +47,18 @@ jobs:
           # Set production flag
           export IS_PRODUCTION=true
           export DEBUG_LOG=false
-          
+
           # Determine test mode
           if [ "${{ github.event.inputs.test_mode }}" = "true" ]; then
-            TEST_FLAG="--limit-games 1"
+            export LIMIT_GAMES=1
             echo "🧪 Running in TEST MODE (1 game only)"
           else
-            TEST_FLAG=""
             echo "🚀 Running FULL PRODUCTION pipeline"
           fi
-          
+
           # Run main pipeline
           echo "⏰ Starting pipeline at $(date)"
-          python main.py $TEST_FLAG --production-mode 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
+          python main.py --send-telegram 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
           
           # Check if pipeline completed successfully
           if [ ${PIPESTATUS[0]} -eq 0 ]; then

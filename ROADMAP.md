@@ -1,0 +1,113 @@
+# Ludi-Bot Roadmap
+
+**Last Updated:** January 28, 2026
+**Current Phase:** Phase 5 - Production Deployment & Automation
+
+This is the single source of truth for project tasks and priorities.
+
+---
+
+## Legend
+
+- `[ ]` = Todo
+- `[-]` = In Progress
+- `[x]` = Completed
+
+---
+
+## High Priority
+
+### Phase 5: Production Deployment & Automation
+**Target:** Transition from "stable development" to "automated production"
+
+- [ ] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger)
+- [ ] Create `scripts/monitor_system_health.py` (data integrity + model drift alerts)
+- [ ] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST)
+- [ ] Implement automated weekly backtests with drift alerts
+- [ ] Create `scripts/cleanup_old_logs.py` (30-day retention)
+- [ ] Add `IS_PRODUCTION` flag handling in `config.py`
+- [ ] Verify all workflows via manual trigger
+- [ ] Update `docs/PRODUCTION_HANDBOOK.md`
+
+**Success Criteria:**
+- [ ] `daily_simulation_pipeline.yml` operational and sending Telegram cards
+- [ ] `scripts/monitor_system_health.py` implemented and reporting status
+- [ ] Weekly validation automated with drift alerts
+- [ ] Production logging directory established
+
+---
+
+## Medium Priority
+
+### Ludi Lens Dashboard (Week 6)
+- [ ] Streamlit dashboard scaffold (`app.py`)
+- [ ] "War Room" visual design implementation
+- [ ] Real-time prop display integration
+- [ ] Historical performance charts
+
+### CLV Tracking Enhancement
+- [ ] `scripts/capture_closing_lines.py` (5 min before tipoff)
+- [ ] `utils/clv_calculator.py` implementation
+- [ ] CLV reporting in PM Bot daily summary
+- [ ] 30-day rolling CLV metrics
+
+### Data Pipeline Improvements
+- [ ] Multi-book arbitrage detection
+- [ ] Steam move detection (rapid line movement alerts)
+
+---
+
+## Low Priority
+
+### Future Enhancements
+- [ ] DFS multiplier conversion (PrizePicks/Underdog)
+- [ ] Strength of Schedule (SOS) adjustment
+- [ ] Depth Chart Authority modeling
+- [ ] Shooting Luck Deviation signals
+
+---
+
+## Recently Completed
+
+### Phase 4: B2B Fatigue & Schedule Integration - 2026/01/21
+- [x] Integrated research-backed fatigue modifiers
+- [x] Tuned modifiers for 2025-26 player resilience
+- [x] 60-day backtest validated (+0.56 pts mean error)
+- [x] Guard resilience confirmed (+1.45 pts vs historical)
+
+### Phase 3: Secondary Playtype Matchups - 2026/01/21
+- [x] Implemented player-vs-defense matchups (ISO, P&R, Spot-Up)
+- [x] 8 specific matchups verified
+- [x] 14-day defensive trends validated
+
+### Phase 1: Synergy Playtype Integration - 2026/01/21
+- [x] Integrated NBA Synergy efficiency metrics
+- [x] 3 new calibration functions in Module E
+- [x] 5 new database tables created
+- [x] Ghost Protocol scraper operational
+
+### Referee Sync Orchestration Fix - 2026/01/20
+- [x] Auto-population system for games table
+- [x] Module G enhancement complete
+
+### Tank01 ID Integrity Update - 2026/01/20
+- [x] Canonical ID system implemented
+- [x] Auto-healing ingestion in database.py
+
+### WOWY Calculator Integration - 2026/01/18
+- [x] `utils/wowy_calculator.py` (450 lines)
+- [x] Smart blowout tax (V4.7)
+
+### Module G Referee Intelligence - 2026/01/17
+- [x] 78 referees in database (100% coverage)
+- [x] Day forward capture system
+- [x] Weekly zebra reports automated
+
+### Ghost Protocol Backfill - 2026/01/16
+- [x] ~14,700 records (Physics: 9.4k | Brain: 5.3k)
+
+---
+
+## Archive
+
+For detailed historical status updates, see `docs/STATUS_HISTORY.md`.

@@ -233,7 +233,18 @@ class LudiOrchestrator:
 
         # STEP 1: FETCH SLATE
         self.gate.fetch_live_slate()
-        
+
+        # --- APPLY GAME LIMIT (for testing) ---
+        limit_games = os.getenv('LIMIT_GAMES')
+        if limit_games:
+            limit_games = int(limit_games)
+            games_list = list(self.gate.games.items())
+            if len(games_list) > limit_games:
+                print(f"🧪 TEST MODE: Limiting to {limit_games} game(s) (found {len(games_list)})")
+                # Keep only the first N games
+                limited_games = dict(games_list[:limit_games])
+                self.gate.games = limited_games
+
         # --- APPLY DAILY LOCK FILTERING (if TESTING mode) ---
         if lock_config:
             # Convert games dict to list for filtering

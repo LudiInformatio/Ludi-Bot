@@ -10,6 +10,11 @@
         "code": true,
         "/Applications/Visual\\": true,
         "true": true,
-        "cp": true
+        "cp": true,
+        "git rev-parse": true,
+        "git add": true,
+        "git commit": true,
+        "git push": true,
+        "git pull": true
     }
 }
