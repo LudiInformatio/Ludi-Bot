@@ -22,6 +22,7 @@ This is the single source of truth for project tasks and priorities.
 
 - [ ] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger)
 - [ ] Create `scripts/monitor_system_health.py` (data integrity + model drift alerts)
+- [ ] Create `scripts/backfill_referees.py` (Historical 45-day backfill via date picker)
 - [ ] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST)
 - [ ] Implement automated weekly backtests with drift alerts
 - [ ] Create `scripts/cleanup_old_logs.py` (30-day retention)
@@ -68,6 +69,12 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## Recently Completed
+
+### Referee Intelligence Repair - 2026/01/28
+- [x] Diagnosed empty table issue (CSR/JavaScript requirement)
+- [x] Implemented "GO" button interaction in `module_g.py`
+- [x] Upgraded scraper to Playwright for reliable rendering
+- [x] Identified Historical Backfill opportunity via date picker
 
 ### Phase 4: B2B Fatigue & Schedule Integration - 2026/01/21
 - [x] Integrated research-backed fatigue modifiers

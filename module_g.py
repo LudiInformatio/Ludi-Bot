@@ -228,23 +228,55 @@ class LudiRefEngine:
 
     def build_ref_database(self):
         """
-        Scrapes the official NBA Referee Assignments page.
+        Scrapes the official NBA Referee Assignments page using Playwright.
+        Handles dynamic JavaScript rendering.
         """
         url = "https://official.nba.com/referee-assignments/"
-        print("   [ZEBRAS] 🦓 Scraping Official NBA Assignments...", end=" ")
+        print("   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...", end=" ")
         
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-
         try:
-            r = requests.get(url, headers=headers)
-            if r.status_code != 200:
-                print(f"❌ Failed (Status {r.status_code}). Using Neutral Pace.")
-                return {}
+            from playwright.sync_api import sync_playwright
+            
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                # Use a standard user agent
+                context = browser.new_context(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+                page = context.new_page()
+                
+                try:
+                    # Looser timeout and wait condition to handle heavy scripts
+                    page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    
+                    # Essential: Click the "GO" button to load data
+                    # The table is empty by default until this interaction occurs
+                    try:
+                        print("   [ZEBRAS] 🖱️ Clicking 'GO' to load assignments...", end=" ")
+                        page.wait_for_selector('input#date-filter', timeout=10000)
+                        page.click('input#date-filter')
+                        print("Done.")
+                    except Exception as e:
+                        print(f"\n   [ZEBRAS] ⚠️ 'GO' button issue: {e}")
+
+                    # Wait for the table to actually populate with rows
+                    try:
+                        # Specific class found by browser agent: .nba-refs-content table
+                        page.wait_for_selector(".nba-refs-content table tbody tr", timeout=15000)
+                    except Exception:
+                        print("   [ZEBRAS] ⚠️ Timeout waiting for table rows.")
+                        
+                    content = page.content()
+                    
+                except Exception as e:
+                    print(f"❌ Browser Error: {e}")
+                    browser.close()
+                    return {}
+                    
+                browser.close()
 
             # Parse Tables with StringIO fix applied
-            dfs = pd.read_html(StringIO(r.text))
+            dfs = pd.read_html(StringIO(content))
             
             if not dfs:
                 print("⚠️ No tables found on page.")

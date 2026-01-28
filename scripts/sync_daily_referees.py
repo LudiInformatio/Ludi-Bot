@@ -174,29 +174,53 @@ class DailyRefereeSync:
     def scrape_assignments(self) -> Dict[str, List[str]]:
         """
         Scrape today's referee assignments from NBA official site.
-        
-        Reuses logic from module_g.build_ref_database()
+        Uses Playwright to handle dynamic JS rendering.
         
         Returns:
             dict: {team_abbr: [ref1, ref2, ref3]}
         """
         url = "https://official.nba.com/referee-assignments/"
         
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-
         try:
-            r = requests.get(url, headers=headers)
-            if r.status_code != 200:
-                print(f"❌ Failed (Status {r.status_code}).")
-                return {}
+            from playwright.sync_api import sync_playwright
+            
+            print(f"   [SYNC] Launching Playwright for {url}...")
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+                page = context.new_page()
+                
+                try:
+                    page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    
+                    # Essential: Click the "GO" button to load data
+                    try:
+                        page.wait_for_selector('input#date-filter', timeout=10000)
+                        page.click('input#date-filter')
+                    except Exception as e:
+                        print(f"   ⚠️ 'GO' button issue: {e}")
+                    
+                    # Wait for table to populate
+                    try:
+                        page.wait_for_selector(".nba-refs-content table tbody tr", timeout=15000)
+                    except Exception:
+                        print("   ⚠️ Timeout waiting for table rows (page might be empty or slow)")
+                    
+                    content = page.content()
+                except Exception as e:
+                    print(f"   ❌ Browser Navigation Error: {e}")
+                    browser.close()
+                    return {}
+                
+                browser.close()
 
-            # Parse Tables with StringIO fix applied
-            dfs = pd.read_html(StringIO(r.text))
+            # Parse Tables
+            dfs = pd.read_html(StringIO(content))
             
             if not dfs:
-                print("⚠️ No tables found on page.")
+                print("   ⚠️ No tables found on page.")
                 return {}
 
             df = dfs[0]
@@ -229,8 +253,11 @@ class DailyRefereeSync:
             
             return assignments
             
+        except ImportError:
+            print("   ❌ Playwright not installed. Run: pip install playwright && playwright install")
+            return {}
         except Exception as e:
-            print(f"❌ Scrape failed: {e}")
+            print(f"   ❌ Scrape failed: {e}")
             return {}
     
     def _resolve_team_abbr(self, raw_name: str) -> str:
