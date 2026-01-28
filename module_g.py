@@ -2,10 +2,11 @@ import pandas as pd
 import requests
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 import sys
 import os
+from utils.mappings import resolve_team_abbr
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE G: THE ZEBRAS
@@ -25,20 +26,6 @@ class LudiRefEngine:
         
         # League average baseline (used for unknown refs)
         self.LEAGUE_AVG_FOULS = 21.5
-        
-        # Team name resolver (still needed for scraping assignments)
-        self.TEAM_MAP = {
-            "Atlanta": "ATL", "Boston": "BOS", "Brooklyn": "BKN", "Charlotte": "CHA",
-            "Chicago": "CHI", "Cleveland": "CLE", "Dallas": "DAL", "Denver": "DEN",
-            "Detroit": "DET", "Golden State": "GSW", "Houston": "HOU", "Indiana": "IND",
-            "L.A. Clippers": "LAC", "LA Clippers": "LAC", "Clippers": "LAC",
-            "L.A. Lakers": "LAL", "LA Lakers": "LAL", "Lakers": "LAL", "Los Angeles Lakers": "LAL",
-            "Memphis": "MEM", "Miami": "MIA", "Milwaukee": "MIL", "Minnesota": "MIN",
-            "New Orleans": "NOP", "New York": "NYK", "Knicks": "NYK",
-            "Oklahoma City": "OKC", "Orlando": "ORL", "Philadelphia": "PHI", "Phoenix": "PHX",
-            "Portland": "POR", "Sacramento": "SAC", "San Antonio": "SAS", "Toronto": "TOR",
-            "Utah": "UTA", "Washington": "WAS"
-        }
         
         # Ensure today's games exist before any referee operations
         self._ensure_todays_games()
@@ -94,23 +81,6 @@ class LudiRefEngine:
             response.raise_for_status()
             data = response.json()
             
-            # Team mapping (copied from populate_todays_games.py)
-            TEAM_MAP = {
-                "Atlanta Hawks": "ATL", "Boston Celtics": "BOS", "Brooklyn Nets": "BKN",
-                "Charlotte Hornets": "CHA", "Chicago Bulls": "CHI", "Cleveland Cavaliers": "CLE",
-                "Dallas Mavericks": "DAL", "Denver Nuggets": "DEN", "Detroit Pistons": "DET",
-                "Golden State Warriors": "GSW", "Houston Rockets": "HOU", "Indiana Pacers": "IND",
-                "Los Angeles Clippers": "LAC", "Los Angeles Lakers": "LAL", "Memphis Grizzlies": "MEM",
-                "Miami Heat": "MIA", "Milwaukee Bucks": "MIL", "Minnesota Timberwolves": "MIN",
-                "New Orleans Pelicans": "NOP", "New York Knicks": "NYK", "Oklahoma City Thunder": "OKC",
-                "Orlando Magic": "ORL", "Philadelphia 76ers": "PHI", "Phoenix Suns": "PHX",
-                "Portland Trail Blazers": "POR", "Sacramento Kings": "SAC", "San Antonio Spurs": "SAS",
-                "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
-            }
-            
-            def resolve_team(name):
-                return TEAM_MAP.get(name, name[:3].upper())
-            
             # Get today's date in EST
             import pytz
             EST_TZ = pytz.timezone('US/Eastern')
@@ -125,8 +95,8 @@ class LudiRefEngine:
                 
                 if game_date == today_str:
                     game_id = game['id']  # Use API ID as unique identifier
-                    home_team = resolve_team(game['home_team'])
-                    away_team = resolve_team(game['away_team'])
+                    home_team = resolve_team_abbr(game['home_team'])
+                    away_team = resolve_team_abbr(game['away_team'])
                     
                     # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
                     ludi_game_id = f"{est_time.strftime('%Y%m%d')}_{away_team}@{home_team}"
@@ -249,15 +219,24 @@ class LudiRefEngine:
                     # Looser timeout and wait condition to handle heavy scripts
                     page.goto(url, wait_until="domcontentloaded", timeout=45000)
                     
-                    # Essential: Click the "GO" button to load data
-                    # The table is empty by default until this interaction occurs
-                    try:
-                        print("   [ZEBRAS] 🖱️ Clicking 'GO' to load assignments...", end=" ")
-                        page.wait_for_selector('input#date-filter', timeout=10000)
-                        page.click('input#date-filter')
-                        print("Done.")
-                    except Exception as e:
-                        print(f"\n   [ZEBRAS] ⚠️ 'GO' button issue: {e}")
+                    
+                    # Essential: Click "GO" isn't enough. We must "jiggle" the date.
+                    # 1. Set to Yesterday -> Click GO
+                    # 2. Set to Today -> Click GO
+                    print("   [ZEBRAS] 🔄 Toggling date to force refresh...", end=" ")
+                    
+                    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    
+                    # Step 1: Yesterday
+                    page.fill('input#ref-date', yesterday_str)
+                    page.click('input#date-filter')
+                    page.wait_for_timeout(1000)
+                    
+                    # Step 2: Today (Target)
+                    page.fill('input#ref-date', today_str)
+                    page.click('input#date-filter')
+                    print("Done.")
 
                     # Wait for the table to actually populate with rows
                     try:
@@ -297,7 +276,7 @@ class LudiRefEngine:
                         if '(' in raw_home:
                             raw_home = raw_home.split('(')[0].strip()
                             
-                        home_abbr = self._resolve_team_abbr(raw_home)
+                        home_abbr = resolve_team_abbr(raw_home)
                         
                         crew = []
                         for col in df.columns:
@@ -317,20 +296,7 @@ class LudiRefEngine:
             print(f"❌ Error scraping refs: {e}")
             return {}
 
-    def _resolve_team_abbr(self, raw_name):
-        clean_name = raw_name.replace('.', '').strip()
-        
-        if clean_name in self.TEAM_MAP:
-            return self.TEAM_MAP[clean_name]
-            
-        for key, abbr in self.TEAM_MAP.items():
-            if key in clean_name: 
-                return abbr
-            
-        if len(clean_name) == 3 and clean_name.isupper():
-            return clean_name
-            
-        return None
+
 
     def get_game_impact(self, home_team_abbr):
         """

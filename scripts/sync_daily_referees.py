@@ -14,61 +14,22 @@ import argparse
 import sqlite3
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 from io import StringIO
 import sys
 import os
+
+# Add project root to path to allow imports from utils
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.mappings import resolve_team_abbr
 
 class DailyRefereeSync:
     """Daily capture system for referee intelligence."""
     
     def __init__(self, db_path='ludi.db'):
         self.db_path = db_path
-        
-        # Copy TEAM_MAP from module_g.py (lines 26-55)
-        self.TEAM_MAP = {
-            "Atlanta": "ATL", "Boston": "BOS", "Brooklyn": "BKN", "Charlotte": "CHA",
-            "Chicago": "CHI", "Cleveland": "CLE", "Dallas": "DAL", "Denver": "DEN",
-            "Detroit": "DET", "Golden State": "GSW", "Houston": "HOU", "Indiana": "IND",
-            "L.A. Clippers": "LAC", "LA Clippers": "LAC", "Clippers": "LAC",
-            "L.A. Lakers": "LAL", "LA Lakers": "LAL", "Lakers": "LAL", "Los Angeles Lakers": "LAL",
-            "Memphis": "MEM", "Miami": "MIA", "Milwaukee": "MIL", "Minnesota": "MIN",
-            "New Orleans": "NOP", "New York": "NYK", "Knicks": "NYK",
-            "Oklahoma City": "OKC", "Orlando": "ORL", "Philadelphia": "PHI", "Phoenix": "PHX",
-            "Portland": "POR", "Sacramento": "SAC", "San Antonio": "SAS", "Toronto": "TOR",
-            "Utah": "UTA", "Washington": "WAS",
-            "Atlanta Hawks": "ATL",
-            "Boston Celtics": "BOS",
-            "Brooklyn Nets": "BKN",
-            "Charlotte Hornets": "CHA",
-            "Chicago Bulls": "CHI",
-            "Cleveland Cavaliers": "CLE",
-            "Dallas Mavericks": "DAL",
-            "Denver Nuggets": "DEN",
-            "Detroit Pistons": "DET",
-            "Golden State Warriors": "GSW",
-            "Houston Rockets": "HOU",
-            "Indiana Pacers": "IND",
-            "Los Angeles Clippers": "LAC",
-            "Los Angeles Lakers": "LAL",
-            "Memphis Grizzlies": "MEM",
-            "Miami Heat": "MIA",
-            "Milwaukee Bucks": "MIL",
-            "Minnesota Timberwolves": "MIN",
-            "New Orleans Pelicans": "NOP",
-            "New York Knicks": "NYK",
-            "Oklahoma City Thunder": "OKC",
-            "Orlando Magic": "ORL",
-            "Philadelphia 76ers": "PHI",
-            "Phoenix Suns": "PHX",
-            "Portland Trail Blazers": "POR",
-            "Sacramento Kings": "SAC",
-            "San Antonio Spurs": "SAS",
-            "Toronto Raptors": "TOR",
-            "Utah Jazz": "UTA",
-            "Washington Wizards": "WAS"
-        }
         
         # Ensure today's games exist before any referee operations
         self._ensure_todays_games()
@@ -135,8 +96,8 @@ class DailyRefereeSync:
                 
                 if game_date == today_str:
                     game_id = game['id']  # Use API ID as unique identifier
-                    home_team = self._resolve_team_abbr(game['home_team'])
-                    away_team = self._resolve_team_abbr(game['away_team'])
+                    home_team = resolve_team_abbr(game['home_team'])
+                    away_team = resolve_team_abbr(game['away_team'])
                     
                     if home_team and away_team:
                         # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
@@ -193,18 +154,43 @@ class DailyRefereeSync:
                 page = context.new_page()
                 
                 try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    # Retry logic for navigation
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            print(f"   [SYNC] Attempt {attempt+1}: Navigating to {url}...")
+                            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                            break
+                        except Exception as e:
+                            if attempt == max_retries - 1: raise e
+                            print(f"   ⚠️ Navigation attempt {attempt+1} failed, retrying...")
                     
-                    # Essential: Click the "GO" button to load data
+                    
+                    # Essential: Click "GO" isn't enough. We must "jiggle" the date.
+                    # 1. Set to Yesterday -> Click GO
+                    # 2. Set to Today -> Click GO
+                    print("   [SYNC] 🔄 Toggling date to force refresh...")
+                    
+                    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    
                     try:
-                        page.wait_for_selector('input#date-filter', timeout=10000)
+                        # Step 1: Yesterday
+                        page.wait_for_selector('input#ref-date', timeout=10000)
+                        page.fill('input#ref-date', yesterday_str)
+                        page.click('input#date-filter')
+                        page.wait_for_timeout(1000)
+                        
+                        # Step 2: Today (Target)
+                        page.fill('input#ref-date', today_str)
                         page.click('input#date-filter')
                     except Exception as e:
-                        print(f"   ⚠️ 'GO' button issue: {e}")
-                    
+                         print(f"   ⚠️ Date toggle issue: {e}")
+
                     # Wait for table to populate
+                    print("   [SYNC] Waiting for table rows...")
                     try:
-                        page.wait_for_selector(".nba-refs-content table tbody tr", timeout=15000)
+                        page.wait_for_selector(".nba-refs-content table tbody tr", timeout=30000)
                     except Exception:
                         print("   ⚠️ Timeout waiting for table rows (page might be empty or slow)")
                     
@@ -227,6 +213,7 @@ class DailyRefereeSync:
             df.columns = [c.upper() for c in df.columns]
             
             assignments = {}
+            print(f"   [SYNC] Parsing {len(df)} rows from table...")
             for _, row in df.iterrows():
                 game_str = str(row.get('GAME', ''))
                 
@@ -238,7 +225,8 @@ class DailyRefereeSync:
                         if '(' in raw_home:
                             raw_home = raw_home.split('(')[0].strip()
                             
-                        home_abbr = self._resolve_team_abbr(raw_home)
+                        home_abbr = resolve_team_abbr(raw_home)
+                        print(f"   [SYNC] Found Game: {game_str} | Raw Home: '{raw_home}' | Resolved: '{home_abbr}'")
                         
                         crew = []
                         for col in df.columns:
@@ -260,25 +248,7 @@ class DailyRefereeSync:
             print(f"   ❌ Scrape failed: {e}")
             return {}
     
-    def _resolve_team_abbr(self, raw_name: str) -> str:
-        """
-        Standardize team names to 3-letter abbreviations.
-        
-        Copy from module_g.py lines 169-182
-        """
-        clean_name = raw_name.replace('.', '').strip()
-        
-        if clean_name in self.TEAM_MAP:
-            return self.TEAM_MAP[clean_name]
-            
-        for key, abbr in self.TEAM_MAP.items():
-            if key in clean_name: 
-                return abbr
-            
-        if len(clean_name) == 3 and clean_name.isupper():
-            return clean_name
-            
-        return None
+
     
     def get_todays_games(self) -> List[Tuple[int, str, str]]:
         """
@@ -418,6 +388,24 @@ class DailyRefereeSync:
         
         print()
         print(f"✅ Summary: {matched}/{len(games)} games updated")
+        
+        # --- VALIDATION GUARDRAIL ---
+        if not dry_run and len(games) > 0 and matched == 0:
+            error_msg = f"CRITICAL: Found 0 referee assignments for {len(games)} games.\nCheck official.nba.com for changes or blocking."
+            print(f"\n❌ {error_msg}")
+            
+            # Send Telegram Alert
+            try:
+                from utils.telegram_notifier import send_alert
+                send_alert("Referee Sync Failed", error_msg)
+            except ImportError:
+                print("   ⚠️ Could not import telegram_notifier for alert")
+            except Exception as e:
+                print(f"   ⚠️ Failed to send alert: {e}")
+                
+            # Fail the workflow
+            sys.exit(1)
+        # ----------------------------
         
         if not dry_run:
             print("🎯 Referee learning engines can now run!")
