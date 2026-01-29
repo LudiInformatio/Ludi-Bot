@@ -55,7 +55,11 @@ def close_popups(page):
             ".modal-close",
             "button[class*='close']",
             "div[class*='close']",
-            ".p-close" # Common in some frameworks
+            ".p-close", # Common in some frameworks
+            # OddsShark Specific
+            ".os-react-modal-close",
+            "div[class*='os-react-modal'] button",
+            "[data-testid='close-modal']"
         ]
         for sel in close_selectors:
             try:

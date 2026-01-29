@@ -26,7 +26,7 @@ from typing import Dict, List, Optional
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
-from utils.browser_utils import close_popups, simulate_human_interaction
+from utils.browser_utils import close_popups, simulate_human_interaction, wait_for_selector_safe
 
 # Playwright import with graceful fallback
 try:
@@ -49,7 +49,9 @@ def scrape_covers_ou(page, max_retries: int = 3) -> List[Dict]:
             page.goto(url, timeout=60000, wait_until='domcontentloaded')
             close_popups(page)
             simulate_human_interaction(page)
-            page.wait_for_selector("table tbody tr", timeout=30000)
+            if not wait_for_selector_safe(page, "table tbody tr", timeout=30000, message="Covers Table"):
+                print("   ❌ Timeout waiting for Covers table (even after popup check)")
+                continue
             
             # Execute JS to extract table data
             data = page.evaluate('''() => {
@@ -92,7 +94,9 @@ def scrape_oddsshark_ats(page, max_retries: int = 3) -> List[Dict]:
             page.goto(url, timeout=60000, wait_until='domcontentloaded')
             close_popups(page)
             simulate_human_interaction(page)
-            page.wait_for_selector("table tbody tr", timeout=30000)
+            if not wait_for_selector_safe(page, "table tbody tr", timeout=30000, message="OddsShark Table"):
+                print("   ❌ Timeout waiting for OddsShark table (even after popup check)")
+                continue
             
             data = page.evaluate('''() => {
                 const rows = Array.from(document.querySelectorAll('table tbody tr'));
