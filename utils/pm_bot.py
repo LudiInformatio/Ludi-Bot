@@ -168,56 +168,62 @@ class ProjectManagerBot:
         if not self.client:
             return False
 
-        context = self._get_context(mode=mode)
+        roadmap = self._parse_roadmap()
         today_str = datetime.datetime.now().strftime('%b %d').upper()
 
         if mode == "morning":
+            # Pre-format tasks to embed directly in prompt
+            pending_tasks = roadmap['pending'][:3] if roadmap else []
+            task_bullets = "\n".join([f"• {t}" for t in pending_tasks]) or "• No pending tasks found"
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 5 - Production Deployment & Automation'
+
             header_img = str(self.morning_img)
-            prompt = f"""
-            You are the "Vibe Starters Assistant" (Powered by Ludi).
-            Your persona is the "Smart Creative" - efficient, low-key, professional but casual.
+            prompt = f"""You are the "Vibe Starters Assistant" (Powered by Ludi).
 
-            **OBJECTIVE:** Generate a "Morning Brief" for the user.
-            **CONTEXT:** {context}
+**CRITICAL RULES:**
+- DO NOT invent or paraphrase tasks
+- DO NOT use generic placeholders
+- Output EXACTLY as shown below
 
-            **FORMATTING RULES:**
-            1. **METADATA:** `📅 {today_str} | 🟢 ONLINE`
-            2. **SEPARATORS:** `──────────────`
-            3. **ICONS:** Vision: 💎 | Blueprint: 📐 | Intel: 🥃
+**OUTPUT (copy exactly):**
 
-            **STRUCTURE:**
-            ──────────────
-            **THE VISION** 💎
-            (Use the CURRENT PHASE from context as the one-sentence goal. Keep it punchy.)
-            ──────────────
-            **THE BLUEPRINT** 📐
-            (List 3 key tasks from PENDING TASKS. Use the exact task names from context.)
-            ──────────────
-            **THE INTEL** 🥃
-            (One smart insight or market nugget related to the project.)
-            """
+📅 {today_str} | 🟢 ONLINE
+──────────────
+**THE VISION** 💎
+{current_phase}
+──────────────
+**THE BLUEPRINT** 📐
+{task_bullets}
+──────────────
+**THE INTEL** 🥃
+(Add ONE brief insight about NBA analytics or betting markets.)
+"""
         else:
+            # Pre-format completed tasks and next task
+            completed_tasks = roadmap['completed'][:3] if roadmap else []
+            wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
+            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
+
             header_img = str(self.nightly_img)
-            prompt = f"""
-            You are the "Vibe Starters Assistant". End of day protocol.
-            **CONTEXT:** {context}
+            prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
 
-            **FORMATTING RULES:**
-            1. **METADATA:** `📅 {today_str} | 🌙 OFFLINE`
-            2. **SEPARATORS:** `──────────────`
-            3. **ICONS:** Wins: 🍾 | Pivot: 🥊 | Vibe: 🧊
+**CRITICAL RULES:**
+- DO NOT invent or paraphrase tasks
+- Output EXACTLY as shown below
 
-            **STRUCTURE:**
-            ──────────────
-            **THE WINS** 🍾
-            (Highlight 2-3 items from RECENTLY COMPLETED. Use the exact task names from context.)
-            ──────────────
-            **THE PIVOT** 🥊
-            (Suggest the next task from PENDING TASKS as tomorrow's focus.)
-            ──────────────
-            **THE VIBE** 🧊
-            (Closing energy check - keep it brief and motivating.)
-            """
+**OUTPUT (copy exactly):**
+
+📅 {today_str} | 🌙 OFFLINE
+──────────────
+**THE WINS** 🍾
+{wins_bullets}
+──────────────
+**THE PIVOT** 🥊
+Tomorrow's focus: {next_task}
+──────────────
+**THE VIBE** 🧊
+(Add ONE brief motivational closing line.)
+"""
 
         try:
             # New SDK Syntax
@@ -245,32 +251,31 @@ class ProjectManagerBot:
         if not self.client:
             return False
 
+        roadmap = self._parse_roadmap()
         header_img = str(self.break_img)
         time_str = datetime.datetime.now().strftime('%I:%M %p')
-        context = self._get_context(mode="break")
 
-        prompt = f"""
-        You are the "Vibe Starters Assistant". Break time protocol.
-        **CONTEXT:** {context}
+        # Pre-format context - embed actual values
+        in_progress = roadmap['in_progress'][0] if roadmap and roadmap['in_progress'] else None
+        current_phase = roadmap['current_phase'] if roadmap else "Phase 5 - Production Deployment"
+        recent_wins = roadmap['completed'][:2] if roadmap else []
+        wins_text = "\n".join([f"• {t}" for t in recent_wins]) if recent_wins else "• Making progress"
 
-        **OBJECTIVE:** Generate a "State Preservation" card for when the user takes a break.
+        state_text = f"Working on: {in_progress}" if in_progress else f"Current focus: {current_phase}"
 
-        **FORMATTING RULES:**
-        1. **METADATA:** `🛑 PAUSED | {time_str}`
-        2. **SEPARATORS:** `──────────────`
-        3. **ICONS:** Pause: 🛑 | Context: 📋 | Vibe: 🧊
+        prompt = f"""**OUTPUT (copy exactly):**
 
-        **STRUCTURE:**
-        ──────────────
-        **STATE PRESERVED** 📋
-        (1-2 sentences summarizing what was IN PROGRESS from context. If nothing in progress, mention the current phase.)
-        ──────────────
-        **QUICK WINS** 🍾
-        (If there are RECENTLY COMPLETED items, list 1-2. Otherwise skip this section.)
-        ──────────────
-        **THE VIBE** 🧊
-        (Short break message - "Go touch grass" energy. Keep it to one line.)
-        """
+🛑 PAUSED | {time_str}
+──────────────
+**STATE PRESERVED** 📋
+{state_text}
+──────────────
+**QUICK WINS** 🍾
+{wins_text}
+──────────────
+**THE VIBE** 🧊
+Go touch grass. Context saved.
+"""
 
         try:
             response = self.client.models.generate_content(

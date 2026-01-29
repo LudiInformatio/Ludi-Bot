@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** January 29, 2026
+**Last Updated:** January 29, 2026 @ 3:21 PM EST
 **Current Phase:** Phase 5 - Production Deployment & Automation
 
 This is the single source of truth for project tasks and priorities.
@@ -38,6 +38,49 @@ This is the single source of truth for project tasks and priorities.
 
 ---
 
+### Phase 5.5: Defensive Stat Fix & 16-Archetype Expansion
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅
+**Started:** January 29, 2026
+**Completed:** January 29, 2026
+
+**Phase 0: URGENT FIX - ✅ COMPLETE**
+- [x] Fix STAT_MAPPING in main.py (add STL, BLK, DREB) - Commits: 27f2392, b3cb571
+- [x] Production test verified STL/BLK projections work (Alex Sarr: 2.0 BLK, Kyshawn George: 1.4 STL)
+- [x] Committed and deployed fix
+
+**Phase 1: 16-Archetype System (Week 1-2) - ✅ COMPLETE**
+- [x] Implement unified archetype classification in module_e.py
+- [x] Merge synergy playtypes as modifiers (not separate tags)
+- [x] Add new archetypes:
+  - TIER 1 ENGINES: HELIOCENTRIC_MAESTRO, ISO_ASSASSIN, SLASHING_CREATOR, JUMBO_FACILITATOR
+  - TIER 2 SCORERS: SNIPER_ELITE, TWO_LEVEL_SCORER, ATHLETIC_FINISHER
+  - TIER 3 BIG MEN: WARRIOR_BIG, VULTURE_BIG, STRETCH_BIG, POST_ANCHOR, ROLL_MAN
+  - TIER 4 ROLE PLAYERS: SCREEN_NAVIGATOR, ISLAND_DEFENDER, CUTTER_SPECIALIST, FACILITATOR
+- [x] Update matchup matrix for all 16 archetypes
+- [x] Update populate_archetypes.py with new classification logic
+- [x] Re-run archetype population to reduce GENERALIST % (now 25.4%, was 73.8%)
+- [x] Database cleanup: Removed old archetype entries (TWO_WAY_WING, RIM_RUNNER, HELIOCENTRIC)
+
+**Phase 2: Enhanced Defensive Tracking (Week 2)**
+- [ ] Add opponent context (TOV rate, FGA, 3PA%) to player packets in main.py
+- [ ] Implement contextual defensive stat modifiers in Module E
+- [ ] Test STL boost vs high-turnover teams (>15% TO rate)
+- [ ] Test BLK boost vs paint-heavy teams (>65% 2PA rate)
+
+**Phase 3: SportVu Integration (Optional - Week 3-4)**
+- [ ] Create scripts/sync_sportvu_tracking.py for rebounding data
+- [ ] Integrate contested/uncontested rebound % for WARRIOR vs VULTURE
+- [ ] Add defensive matchup tracking (FG% vs screens, ISO, etc.)
+
+**Success Criteria:**
+- [x] STL/BLK projections show realistic values (not 0.0) ✅
+- [x] 16 archetypes implemented with <30% GENERALIST fallback (25.4%) ✅
+- [x] Bet recommendations include new archetype tags ✅
+- [x] No regression in core stat accuracy ✅
+- [x] Database contains only 17 archetype types (16 new + GENERALIST) ✅
+
+---
+
 ## Medium Priority
 
 ### Ludi Lens Dashboard (Week 6)
@@ -69,6 +112,11 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## Recently Completed
+
+### WOWY Sync Repair - 2026/01/29
+- [x] Fixed `scripts/sync_wowy_data.py` import ordering bug (ModuleNotFoundError)
+- [x] Implemented Game ID Auto-Healing for custom Tank01 IDs
+- [x] Backfilled 8 days of missing data (Jan 20-27) - 1,116 records restored
 
 ### Module G Browser Timeout Fix - 2026/01/29
 - [x] Switched scraper to `headless=False` (Visible Browser) for reliability

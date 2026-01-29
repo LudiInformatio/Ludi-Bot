@@ -17,11 +17,11 @@ import os
 import argparse
 import sqlite3
 from datetime import datetime, timedelta
-from utils.player_id_resolver import normalize_player_name
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from utils.player_id_resolver import normalize_player_name
 from database import DB_PATH
 from utils.pbp_stats_client import get_game_stats
 

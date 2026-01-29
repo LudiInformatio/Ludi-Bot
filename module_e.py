@@ -621,25 +621,15 @@ class LudiCalibrator:
             # Player not found or error - will use 'UNK' position
             pass
 
-        # 1. ASSIGN PRIMARY ARCHETYPE (now has position field)
-        archetype, secondary_arch = self._assign_archetype(calibrated)
-        
-        # NEW: ASSIGN SECONDARY PLAYTYPES (Phase 1)
-        tracking_data = self._get_tracking_stats(player_name)
-        secondary_playtypes = self._assign_secondary_playtypes(calibrated, tracking_data)
-        
+        # 1. ASSIGN UNIFIED ARCHETYPE (returns archetype + synergy dict)
+        archetype, synergy_dict = self._assign_unified_archetype(calibrated)
+
         if archetype:
             calibrated['archetype'] = archetype
             calibrated['notes'] += f" [{archetype}]"
-        
-        if secondary_playtypes:
-            calibrated['secondary_playtypes'] = secondary_playtypes
-            # Add playtypes to notes for visibility, prefixed with +
-            calibrated['notes'] += f" +{'+'.join(secondary_playtypes)}"
-            
-        if secondary_arch and not secondary_playtypes: # Fallback to old secondary if no new ones
-            calibrated['secondary_archetype'] = secondary_arch
-            calibrated['notes'] += f" / {secondary_arch}"
+
+            # Store synergy modifiers for later application
+            calibrated['synergy_modifiers'] = synergy_dict
 
         # 3. NEWS CALIBRATION
         status = yak_report.get('status', 'ACTIVE')
@@ -676,40 +666,122 @@ class LudiCalibrator:
         
         # Apply offensive style matchup
         self._apply_offensive_style_boost(calibrated, team_offense, def_style)
-        
-        if archetype == "STRETCH_BIG" and def_style == "PAINT_PACK":
-            self._boost_stat(calibrated, 'proj_3pm', 1.15)
-            self._boost_stat(calibrated, 'proj_3pa', 1.15)
-            calibrated['notes'] += f" | {opponent} Paint Pack Edge"
-        elif archetype == "SLASHER" and def_style == "HACKERS":
-            self._boost_stat(calibrated, 'proj_fta', 1.20)
-            self._boost_stat(calibrated, 'proj_pts', 1.05)
-            calibrated['notes'] += " | Foul Drawn Magnet"
-        elif archetype == "RIM_RUNNER" and def_style == "PERIMETER":
-            self._boost_stat(calibrated, 'proj_oreb', 1.30)
-            self._boost_stat(calibrated, 'proj_reb', 1.15)
-            calibrated['notes'] += " | Size Advantage (O-Boards)"
-        elif archetype == "HELIOCENTRIC" and def_style == "BLITZ":
-            self._boost_stat(calibrated, 'proj_ast', 1.18)
-            self._boost_stat(calibrated, 'proj_pts', 0.92)
-            self._boost_stat(calibrated, 'proj_tov', 1.10)
-            calibrated['notes'] += " | Trap Scheme (Pass-First)"
-        elif archetype == "TWO_WAY_WING" and def_style == "FUNNEL":
-            self._boost_stat(calibrated, 'proj_3pa', 1.12)
+
+        # === NEW 16-ARCHETYPE MATCHUP MATRIX ===
+
+        if archetype == "HELIOCENTRIC_MAESTRO":
+            if def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_ast', 1.18)
+                self._boost_stat(calibrated, 'proj_pts', 0.92)
+                self._boost_stat(calibrated, 'proj_tov', 1.10)
+                calibrated['notes'] += " | Maestro vs Trap (Pass-First)"
+            elif def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_ast', 1.08)
+                calibrated['notes'] += " | P&R Drop Edge"
+
+        elif archetype == "ISO_ASSASSIN":
+            if def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_pts', 0.92)
+                self._boost_stat(calibrated, 'proj_tov', 1.12)
+                calibrated['notes'] += " | ISO Tax vs Blitz"
+            elif def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_pts', 1.10)
+                calibrated['notes'] += " | ISO Mismatch"
+
+        elif archetype == "SLASHING_CREATOR":
+            if def_style == "HACKERS":
+                self._boost_stat(calibrated, 'proj_fta', 1.20)
+                self._boost_stat(calibrated, 'proj_pts', 1.05)
+                calibrated['notes'] += " | Foul Drawn Magnet"
+            elif def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                calibrated['notes'] += " | Transition Chaos"
+
+        elif archetype == "JUMBO_FACILITATOR":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_ast', 1.12)
+                self._boost_stat(calibrated, 'proj_reb', 1.15)
+                calibrated['notes'] += " | Size Mismatch Hub"
+
+        elif archetype == "SNIPER_ELITE":
+            if def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_3pm', 1.12)
+                calibrated['notes'] += " | Spot-Up vs Helpers"
+
+        elif archetype == "TWO_LEVEL_SCORER":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_pts', 1.08)
+                calibrated['notes'] += " | Mid-Range Mismatch"
+
+        elif archetype == "ATHLETIC_FINISHER":
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                calibrated['notes'] += " | Transition Edge"
+
+        elif archetype == "WARRIOR_BIG":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_reb', 1.20)
+                self._boost_stat(calibrated, 'proj_oreb', 1.30)
+                calibrated['notes'] += " | Warrior Boards vs Small Ball"
+            elif def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
+                calibrated['notes'] += " | Roll Man vs Drop"
+
+        elif archetype == "VULTURE_BIG":
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_dreb', 1.15)
+                self._boost_stat(calibrated, 'proj_pts', 1.08)
+                calibrated['notes'] += " | Vulture Transition Edge"
+
+        elif archetype == "STRETCH_BIG":
+            if def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_3pm', 1.15)
+                self._boost_stat(calibrated, 'proj_3pa', 1.15)
+                calibrated['notes'] += f" | {opponent} Paint Pack Edge"
+
+        elif archetype == "POST_ANCHOR":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                calibrated['notes'] += " | Post Mismatch"
+
+        elif archetype == "ROLL_MAN":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_oreb', 1.30)
+                self._boost_stat(calibrated, 'proj_reb', 1.15)
+                calibrated['notes'] += " | Size Advantage (O-Boards)"
+            elif def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                calibrated['notes'] += " | Roll Man vs Drop"
+
+        elif archetype == "SCREEN_NAVIGATOR":
+            # Defensive archetype - focus on defensive stats
             self._boost_stat(calibrated, 'proj_stl', 1.15)
-            calibrated['notes'] += " | High Pace Target"
-        elif archetype == "ELITE_SCORER" and def_style == "PERIMETER":
-            self._boost_stat(calibrated, 'proj_pts', 1.08)
-            self._boost_stat(calibrated, 'proj_3pm', 1.10)
-            calibrated['notes'] += " | ISO Mismatch"
-        elif archetype == "HUB_BIG" and def_style == "PERIMETER":
-            self._boost_stat(calibrated, 'proj_ast', 1.12)
-            self._boost_stat(calibrated, 'proj_reb', 1.15)
-            calibrated['notes'] += " | Size Mismatch Hub"
-        elif archetype == "JUMBO_CREATOR" and def_style == "PERIMETER":
-            self._boost_stat(calibrated, 'proj_pts', 1.08)
-            self._boost_stat(calibrated, 'proj_reb', 1.10)
-            calibrated['notes'] += " | Size Mismatch (Guard)"
+            calibrated['notes'] += " | Screen Navigator"
+
+        elif archetype == "ISLAND_DEFENDER":
+            # Defensive archetype
+            self._boost_stat(calibrated, 'proj_stl', 1.10)
+            self._boost_stat(calibrated, 'proj_blk', 1.08)
+            calibrated['notes'] += " | Island Defender"
+
+        elif archetype == "CUTTER_SPECIALIST":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                calibrated['notes'] += " | Cutter vs Small Ball"
+            elif def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                calibrated['notes'] += " | Cutting Lanes"
+
+        elif archetype == "FACILITATOR":
+            if def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_ast', 1.08)
+                calibrated['notes'] += " | Playmaking vs Drop"
+
+        # Apply archetype-specific synergy modifiers
+        synergy_dict = calibrated.get('synergy_modifiers', {})
+        if synergy_dict:
+            self._apply_archetype_synergy_weights(calibrated, archetype, synergy_dict)
 
         # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 - 14 Total Modifiers)
         # Extracted to separate method for Phase 3 implementation
@@ -832,17 +904,21 @@ class LudiCalibrator:
         return calibrated
 
 
-    def _assign_archetype(self, p):
+    def _assign_unified_archetype(self, p):
+        """
+        Assign 1 of 16 unified archetypes that combine style + specialization.
+        Synergy playtypes now become modifier weights, not separate classifications.
+
+        Returns: (archetype_str, synergy_dict)
+        """
         # 0. MANUAL OVERRIDE
         raw_name = p.get('name', p.get('PLAYER_NAME', ''))
         clean_name = raw_name.lower().replace(' ', '').replace('.', '').replace("'", "").replace('-', '')
         if clean_name in self.MANUAL_OVERRIDES:
-            return self.MANUAL_OVERRIDES[clean_name], None
+            return self.MANUAL_OVERRIDES[clean_name], {}
 
-        # Extract Position (NEW - Week 2 Enhancement)
+        # Extract Position
         position = p.get('position', 'UNK')
-
-        # Normalize multi-position to primary (G-F → G, F-C → F)
         if position in ('G-F', 'SG', 'PG'):
             position = 'G'
         elif position in ('F-C', 'SF', 'PF'):
@@ -850,7 +926,7 @@ class LudiCalibrator:
         elif position in ('C',):
             position = 'C'
         else:
-            position = 'UNK'  # Missing data or unrecognized
+            position = 'UNK'
 
         # Extract Stats
         pts = float(p.get('base_pts', 0) or 0)
@@ -860,7 +936,7 @@ class LudiCalibrator:
         usg = float(p.get('base_usg', 0) or 0)
         stl = float(p.get('base_stl', 0) or 0)
         blk = float(p.get('base_blk', 0) or 0)
-        
+
         # Fallback Logic
         if stl == 0 and blk == 0 and usg == 0:
             team = p.get('team', p.get('TEAM_ABBREVIATION', ''))
@@ -870,78 +946,136 @@ class LudiCalibrator:
                 blk = miss.get('base_blk', 0)
                 usg = miss.get('base_usg', 0)
 
-        stocks = stl + blk
-        matches = []
+        # Get tracking data & synergy data
+        tracking = self._get_tracking_stats(raw_name)
+        synergy = self._get_synergy_playtypes(raw_name)
 
-        # === TIER 1: ENGINES ===
-        # HELIOCENTRIC: Usage > 30% OR (Usage > 28% and High Assists)
-        if (usg > 0.30 and ast > 6.0) or (usg > 0.28 and ast > 8.0):
-            matches.append("HELIOCENTRIC")
+        # Extract tracking stats
+        drives = tracking.get('avg_drives', 0)
+        speed = tracking.get('avg_speed', 0)
 
-        # SLASHER: High PTS, Low 3PM
-        if pts > 22.0 and usg > 0.30 and tpm < 2.0:
-            matches.append("SLASHER")
+        # Get synergy frequencies - create dict for easy lookup
+        synergy_dict = {}
+        for tag, freq, ppp, percentile in synergy:
+            synergy_dict[tag] = (freq, ppp)
 
-        # ELITE_SCORER: High PTS, High 3PM
-        if pts > 24.5 and tpm > 2.4:
-            matches.append("ELITE_SCORER")
+        # Get PBP shot quality data
+        rim_freq = p.get('pbp_rim_freq', 0)
 
-        # === TIER 2: REBOUNDING CREATORS ===
-        
-        # HUB_BIG: Elite Reb, Elite Pass, BIG Traits (Reb > Ast OR High Blk)
-        if reb > 7.5 and ast > 4.2 and (reb > ast or blk > 0.6):
-            matches.append("HUB_BIG")
+        # === TIER 1: ENGINES (High-Usage Creators) ===
 
-        # JUMBO_CREATOR: High Reb, High Pass, GUARD Traits (Ast >= Reb OR Low Blk)
-        if reb > 6.0 and ast > 5.0 and (ast >= reb or blk <= 0.5):
-            matches.append("JUMBO_CREATOR")
+        # HELIOCENTRIC_MAESTRO
+        prh_freq = synergy_dict.get('P&R_HANDLER', (0, 0))[0]
+        if (usg > 0.30 and ast > 6.0 and prh_freq > 15.0):
+            return 'HELIOCENTRIC_MAESTRO', synergy_dict
 
-        # === TIER 3: SPECIALISTS ===
-        
-        # STRETCH_BIG: Reb + 3PM, Low Assist (Not a creator)
-        if reb > 6.5 and tpm > 1.8 and ast < 4.0:
-            matches.append("STRETCH_BIG")
+        # ISO_ASSASSIN
+        iso_freq = synergy_dict.get('ISO_SCORER', (0, 0))[0]
+        if (pts > 24.0 and usg > 0.28 and iso_freq > 12.0):
+            return 'ISO_ASSASSIN', synergy_dict
 
-        # RIM_RUNNER: Elite Reb, No 3s
-        if reb > 8.0 and tpm < 0.6 and ast < 3.0:
-            matches.append("RIM_RUNNER")
+        # SLASHING_CREATOR
+        trans_freq = synergy_dict.get('TRANSITION', (0, 0))[0]
+        if (pts > 22.0 and drives > 8.0 and tpm < 2.0 and trans_freq > 10.0):
+            return 'SLASHING_CREATOR', synergy_dict
 
-        # SNIPER: High 3PM
-        if tpm > 2.8 and ast < 3.5:
-            matches.append("SNIPER")
+        # JUMBO_FACILITATOR
+        if (reb > 6.0 and ast > 5.0 and prh_freq > 10.0):
+            return 'JUMBO_FACILITATOR', synergy_dict
 
-        # === TIER 4: ROLE PLAYERS ===
-        
-        # TWO_WAY_WING: Defense + 3s
-        if stocks >= 1.8 and tpm >= 1.5 and pts < 22.0:
-            matches.append("TWO_WAY_WING")
+        # === TIER 2: SCORING SPECIALISTS ===
 
-        # FACILITATOR: High Ast, Low Usg
-        if ast >= 5.0 and pts < 15.0 and usg < 0.28:
-            matches.append("FACILITATOR")
+        # SNIPER_ELITE
+        spot_freq = synergy_dict.get('SPOT_UP', (0, 0))[0]
+        if (tpm > 2.8 and spot_freq > 15.0 and ast < 3.5):
+            return 'SNIPER_ELITE', synergy_dict
 
-        # === SELECTION ===
-        if not matches:
-            return "GENERALIST", None
+        # TWO_LEVEL_SCORER
+        if (pts > 22.0 and 1.5 < tpm < 2.5 and iso_freq > 8.0):
+            return 'TWO_LEVEL_SCORER', synergy_dict
 
-        # Apply position-based priority if multiple matches (Week 2 Enhancement)
-        if len(matches) > 1 and position in self.POSITION_ARCHETYPE_AFFINITY:
-            affinity_scores = []
-            for archetype in matches:
-                # Get affinity score, default to 0.5 if archetype not in position's affinity map
-                affinity = self.POSITION_ARCHETYPE_AFFINITY[position].get(archetype, 0.5)
-                affinity_scores.append((archetype, affinity))
+        # ATHLETIC_FINISHER
+        if (pts > 18.0 and rim_freq > 0.45 and trans_freq > 12.0):
+            return 'ATHLETIC_FINISHER', synergy_dict
 
-            # Sort by affinity (highest first)
-            affinity_scores.sort(key=lambda x: x[1], reverse=True)
+        # === TIER 3: BIG MEN (Rebounding & Rim) ===
 
-            primary = affinity_scores[0][0]
-            secondary = affinity_scores[1][0] if len(affinity_scores) > 1 else None
+        # Get rebounding data (future enhancement - use defaults for now)
+        contested_reb_pct = p.get('contested_reb_pct', 0.5)
 
-            return primary, secondary
-        else:
-            # No position data or single match - use existing priority
-            return matches[0], (matches[1] if len(matches) > 1 else None)
+        # WARRIOR_BIG
+        prr_freq = synergy_dict.get('P&R_ROLL_MAN', (0, 0))[0]
+        if (reb > 8.0 and contested_reb_pct > 0.40 and prr_freq > 8.0):
+            return 'WARRIOR_BIG', synergy_dict
+
+        # VULTURE_BIG
+        if (reb > 8.0 and contested_reb_pct < 0.30 and trans_freq > 10.0):
+            return 'VULTURE_BIG', synergy_dict
+
+        # STRETCH_BIG
+        if (reb > 6.5 and tpm > 1.8 and ast < 4.0):
+            return 'STRETCH_BIG', synergy_dict
+
+        # POST_ANCHOR
+        post_freq = synergy_dict.get('POST_UP', (0, 0))[0]
+        if (reb > 8.0 and speed < 4.2 and post_freq > 10.0):
+            return 'POST_ANCHOR', synergy_dict
+
+        # ROLL_MAN
+        if (rim_freq > 0.50 and prr_freq > 12.0 and ast < 3.0):
+            return 'ROLL_MAN', synergy_dict
+
+        # === TIER 4: ROLE PLAYERS & DEFENDERS ===
+
+        # Get defensive data (future enhancement - use defaults for now)
+        def_diff_screen = p.get('def_diff_vs_screen', 0)
+        def_diff_iso = p.get('def_diff_vs_iso', 0)
+
+        # SCREEN_NAVIGATOR
+        if (def_diff_screen < -3.0 and stl > 1.2):
+            return 'SCREEN_NAVIGATOR', synergy_dict
+
+        # ISLAND_DEFENDER
+        if (def_diff_iso < -5.0 and (stl + blk) > 1.5):
+            return 'ISLAND_DEFENDER', synergy_dict
+
+        # CUTTER_SPECIALIST
+        cut_freq = synergy_dict.get('OFF_BALL_CUTTER', (0, 0))[0]
+        if (rim_freq > 0.55 and cut_freq > 10.0 and drives < 2.0):
+            return 'CUTTER_SPECIALIST', synergy_dict
+
+        # FACILITATOR
+        if (ast >= 5.0 and pts < 15.0 and usg < 0.28):
+            return 'FACILITATOR', synergy_dict
+
+        # === FALLBACK: Try relaxed thresholds to reduce GENERALIST % ===
+
+        # Relaxed HELIOCENTRIC_MAESTRO (high usage + assists)
+        if (usg > 0.28 and ast > 8.0):
+            return 'HELIOCENTRIC_MAESTRO', synergy_dict
+
+        # Relaxed SLASHING_CREATOR (high pts, low 3s)
+        if (pts > 20.0 and tpm < 1.5 and usg > 0.28):
+            return 'SLASHING_CREATOR', synergy_dict
+
+        # Relaxed SNIPER_ELITE (just high 3PM)
+        if (tpm > 2.5 and ast < 4.0):
+            return 'SNIPER_ELITE', synergy_dict
+
+        # Relaxed STRETCH_BIG (reb + some 3s)
+        if (reb > 5.5 and tpm > 1.5 and position in ['F', 'C']):
+            return 'STRETCH_BIG', synergy_dict
+
+        # Relaxed ROLL_MAN (big with high rim freq)
+        if (reb > 7.0 and rim_freq > 0.45 and tpm < 1.0):
+            return 'ROLL_MAN', synergy_dict
+
+        # Relaxed FACILITATOR (focus on passing)
+        if (ast > 4.0 and pts < 18.0):
+            return 'FACILITATOR', synergy_dict
+
+        # GENERALIST (fallback)
+        return 'GENERALIST', synergy_dict
 
     def _log_adjustment(self, player_name: str, function: str, 
                         modifier: float, reason: str) -> None:
@@ -1515,6 +1649,75 @@ class LudiCalibrator:
                     calibrated['notes'] += " | Post vs Small Ball"
                     self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
                         "POST_UP vs PERIMETER: size mismatch")
+
+    def _apply_archetype_synergy_weights(self, calibrated, archetype, synergy_dict):
+        """
+        Apply synergy PPP/frequency as modifier weights based on archetype.
+        Replaces old secondary playtype matchup system with archetype-specific modifiers.
+        """
+        if not synergy_dict:
+            return  # No synergy data available
+
+        player_name = calibrated.get('name', '')
+
+        # Map archetypes to their primary synergy playtype
+        archetype_synergy_map = {
+            'HELIOCENTRIC_MAESTRO': 'P&R_HANDLER',
+            'ISO_ASSASSIN': 'ISO_SCORER',
+            'SLASHING_CREATOR': 'TRANSITION',
+            'JUMBO_FACILITATOR': 'P&R_HANDLER',
+            'SNIPER_ELITE': 'SPOT_UP',
+            'TWO_LEVEL_SCORER': 'ISO_SCORER',
+            'ATHLETIC_FINISHER': 'TRANSITION',
+            'WARRIOR_BIG': 'P&R_ROLL_MAN',
+            'VULTURE_BIG': 'TRANSITION',
+            'STRETCH_BIG': 'SPOT_UP',
+            'POST_ANCHOR': 'POST_UP',
+            'ROLL_MAN': 'P&R_ROLL_MAN',
+            'CUTTER_SPECIALIST': 'OFF_BALL_CUTTER',
+            'FACILITATOR': 'P&R_HANDLER',
+        }
+
+        primary_playtype = archetype_synergy_map.get(archetype)
+        if not primary_playtype or primary_playtype not in synergy_dict:
+            return  # No modifier for this archetype
+
+        freq, ppp = synergy_dict[primary_playtype]
+
+        # Apply PPP efficiency modifier
+        league_avg_ppp = 1.05
+        ppp_mod = 1.0 + ((ppp - league_avg_ppp) / league_avg_ppp * 0.5)  # Max ±50% of diff
+        ppp_mod = max(0.90, min(ppp_mod, 1.12))  # Cap at ±12%
+
+        # Apply frequency weight (higher freq = more impact)
+        freq_weight = min(freq / 20.0, 1.0)  # Scale to 1.0 at 20% freq
+
+        final_mod = 1.0 + ((ppp_mod - 1.0) * freq_weight)
+
+        # Apply to relevant stats based on playtype
+        if primary_playtype in ['ISO_SCORER', 'TRANSITION', 'POST_UP']:
+            self._boost_stat(calibrated, 'proj_pts', final_mod)
+            if self.debug_log:
+                self._log_adjustment(player_name, 'SYNERGY_EFFICIENCY', final_mod,
+                    f"{primary_playtype} PPP: {ppp:.2f} ({freq:.0f}%)")
+        elif primary_playtype == 'P&R_HANDLER':
+            self._boost_stat(calibrated, 'proj_ast', final_mod)
+            if self.debug_log:
+                self._log_adjustment(player_name, 'SYNERGY_EFFICIENCY', final_mod,
+                    f"{primary_playtype} PPP: {ppp:.2f} ({freq:.0f}%)")
+        elif primary_playtype == 'SPOT_UP':
+            self._boost_stat(calibrated, 'proj_3pm', final_mod)
+            if self.debug_log:
+                self._log_adjustment(player_name, 'SYNERGY_EFFICIENCY', final_mod,
+                    f"{primary_playtype} PPP: {ppp:.2f} ({freq:.0f}%)")
+        elif primary_playtype in ['P&R_ROLL_MAN', 'OFF_BALL_CUTTER']:
+            self._boost_stat(calibrated, 'proj_pts', final_mod)
+            self._boost_stat(calibrated, 'proj_fg_pct', final_mod)
+            if self.debug_log:
+                self._log_adjustment(player_name, 'SYNERGY_EFFICIENCY', final_mod,
+                    f"{primary_playtype} PPP: {ppp:.2f} ({freq:.0f}%)")
+
+        calibrated['notes'] += f" | {primary_playtype} PPP: {ppp:.2f} ({freq:.0f}%)"
 
     def _boost_stat(self, d, key, factor):
         if key in d: d[key] = round(d[key] * factor, 2)
