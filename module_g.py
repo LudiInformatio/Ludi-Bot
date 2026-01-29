@@ -24,7 +24,7 @@ class LudiRefEngine:
         self.db_path = db_path
         self.daily_assignments = {}
         
-        # League average baseline (used for unknown refs)
+        # League average baseline (per team)
         self.LEAGUE_AVG_FOULS = 21.5
         
         # Ensure today's games exist before any referee operations
@@ -208,7 +208,8 @@ class LudiRefEngine:
             from playwright.sync_api import sync_playwright
             
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
+                # User requested visible browser window
+                browser = p.chromium.launch(headless=False)
                 # Use a standard user agent
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -217,9 +218,49 @@ class LudiRefEngine:
                 
                 try:
                     # Looser timeout and wait condition to handle heavy scripts
-                    page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    page.goto(url, wait_until="domcontentloaded", timeout=60000)
                     
+                    # --- PRIVACY POPUP HANDLING ---
+                    print("   [ZEBRAS] 🛡️ Checking for privacy popup...", end=" ")
+                    try:
+                        # Wait briefly for popup to appear
+                        popup = page.wait_for_selector('#onetrust-banner-sdk', timeout=5000)
+                        if popup:
+                            # Try Reject Button First
+                            reject_btn = page.locator('#onetrust-reject-all-handler')
+                            if reject_btn.is_visible():
+                                reject_btn.click()
+                                print("Rejected cookies.")
+                            else:
+                                # Fallback to Close Button (X)
+                                close_btn = page.locator('.onetrust-close-btn-handler')
+                                if close_btn.is_visible():
+                                    close_btn.click()
+                                    print("Closed popup.")
+                            
+                            # Wait for it to disappear
+                            page.wait_for_selector('#onetrust-banner-sdk', state='hidden', timeout=3000)
+                        else:
+                            print("None found.")
+                    except Exception as e:
+                        print(f"(No popup/ignored: {str(e)[:50]}...)")
+                    # ------------------------------
                     
+                    # 1. Open Date Dropdown (MANDATORY)
+                    print("   [ZEBRAS] 🔽 Opening date dropdown...", end=" ")
+                    try:
+                        dropdown = page.wait_for_selector('button.dropdown-toggle', timeout=10000)
+                        if dropdown:
+                            dropdown.click(force=True)
+                            # Wait for input to become visible
+                            page.wait_for_selector('input#ref-date', state='visible', timeout=5000)
+                            print("Done.")
+                        else:
+                            print("Failed (not found).")
+                    except Exception as e:
+                        print(f"   [ZEBRAS] ⚠️ Error opening dropdown: {e}")
+                        # Continue anyway, maybe it's already open?
+
                     # Essential: Click "GO" isn't enough. We must "jiggle" the date.
                     # 1. Set to Yesterday -> Click GO
                     # 2. Set to Today -> Click GO
@@ -229,13 +270,28 @@ class LudiRefEngine:
                     today_str = datetime.now().strftime('%Y-%m-%d')
                     
                     # Step 1: Yesterday
+                    # Ensure element is visible before filling. If hidden, re-open dropdown.
+                    if not page.is_visible('input#ref-date'):
+                        print("(Re-opening dropdown)...", end=" ")
+                        page.click('button.dropdown-toggle', force=True)
+                        page.wait_for_selector('input#ref-date', state='visible', timeout=5000)
+
                     page.fill('input#ref-date', yesterday_str)
-                    page.click('input#date-filter')
+                    
+                    # Click GO (ensure we click the button not the input if they overlap, but usage here matches script)
+                    # Note: We might need to re-click dropdown if it closes? 
+                    # Usually fill doesn't close it. 
+                    page.click('input#date-filter', force=True)
                     page.wait_for_timeout(1000)
                     
                     # Step 2: Today (Target)
+                    # Re-open dropdown if needed? The site behavior implies filter closes it.
+                    if not page.is_visible('input#ref-date'):
+                         page.click('button.dropdown-toggle', force=True)
+                         page.wait_for_selector('input#ref-date', state='visible', timeout=5000)
+
                     page.fill('input#ref-date', today_str)
-                    page.click('input#date-filter')
+                    page.click('input#date-filter', force=True)
                     print("Done.")
 
                     # Wait for the table to actually populate with rows
@@ -249,6 +305,12 @@ class LudiRefEngine:
                     
                 except Exception as e:
                     print(f"❌ Browser Error: {e}")
+                    # CAPTURE SCREENSHOT ON ERROR
+                    try:
+                        page.screenshot(path="error_state.png")
+                        print("   [ZEBRAS] 📸 Screenshot saved to 'error_state.png'")
+                    except: pass
+                    
                     browser.close()
                     return {}
                     
@@ -343,6 +405,10 @@ class LudiRefEngine:
         avg_pace = sum(pace_factors) / len(pace_factors)
         avg_whistle = sum(whistle_factors) / len(whistle_factors)
         confidence = known_count / len(crew)
+        
+        # Apply safety caps (MAX 10% deviation from baseline)
+        avg_pace = max(0.90, min(1.10, avg_pace))
+        avg_whistle = max(0.90, min(1.10, avg_whistle))
         
         return {
             'pace_impact': round(avg_pace, 3),

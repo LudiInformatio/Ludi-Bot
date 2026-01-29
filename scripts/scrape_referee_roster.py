@@ -29,7 +29,7 @@ DB_PATH = "ludi.db"
 BBR_URL = "https://www.basketball-reference.com/referees/2026_register.html"
 
 # League averages (2025-26 season through Jan 2026)
-LEAGUE_AVG_FOULS_PER_GAME = 21.5  # Avg total fouls called per game
+LEAGUE_AVG_FOULS_PER_GAME = 21.5  # Avg fouls called per team per game
 LEAGUE_AVG_PACE = 100.3  # Avg possessions per game
 
 
@@ -61,87 +61,130 @@ def scrape_referee_roster(dry_run=False):
     }
     
     try:
-        print(f"   🌐 Fetching: {BBR_URL}")
+        from playwright.sync_api import sync_playwright
         
-        # Create a session to handle cookies
-        session = requests.Session()
-        session.headers.update(headers)
+        print(f"   🌐 Fetching: {BBR_URL} (via Playwright)")
         
-        response = session.get(BBR_URL, timeout=30)
+        content = ""
         
-        if response.status_code == 403:
-            print("   ⚠️  BBR blocked request (403). Trying NBAStuffer fallback...")
-            return scrape_nbastuffer_fallback()
-        
-        if response.status_code != 200:
-            print(f"   ❌ HTTP Error: {response.status_code}")
-            return None
+        with sync_playwright() as p:
+            # User visible browser to bypass bot detection
+            browser = p.chromium.launch(headless=False)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+            
+            try:
+                response = page.goto(BBR_URL, wait_until="domcontentloaded", timeout=60000)
+                
+                if response.status == 403:
+                    print("   ⚠️  BBR blocked request (403).")
+                    browser.close()
+                    return scrape_nbastuffer_fallback()
+                
+                # Check for table
+                try:
+                    # Generic wait for any table to ensure render
+                    page.wait_for_selector("table", timeout=15000)
+                except:
+                    print("   ⚠️  Timed out waiting for table")
+                
+                content = page.content()
+                
+            except Exception as e:
+                print(f"   ❌ Browser Error: {e}")
+                browser.close()
+                return scrape_nbastuffer_fallback()
+                
+            browser.close()
         
         # Parse HTML tables
-        dfs = pd.read_html(StringIO(response.text))
+        dfs = pd.read_html(StringIO(content))
         
         if not dfs:
             print("   ❌ No tables found on page")
             return None
+            
+        print(f"   found {len(dfs)} tables in page content")
         
-        # BBR typically has the main referee table as the first one
-        df = dfs[0]
-        print(f"   📊 Found table with {len(df)} rows")
+        # Find the correct table (one with 'REFEREE' and 'G' columns)
+        df = None
+        for i, table in enumerate(dfs):
+            # Handle MultiIndex columns (flatten to single level)
+            if isinstance(table.columns, pd.MultiIndex):
+                # Flatten: take the last level if it's meaningful, or join them
+                new_cols = []
+                for col_tuple in table.columns:
+                    # Usually the name we want is at the bottom level, e.g. ('Per Game', 'FTA') -> 'FTA'
+                    # or ('Unnamed: 0_level_0', 'Referee') -> 'Referee'
+                    col_name = str(col_tuple[-1]).strip().upper()
+                    new_cols.append(col_name)
+                table.columns = new_cols
+            else:
+                table.columns = [str(c).strip().upper() for c in table.columns]
+                
+            if 'REFEREE' in table.columns and ('G' in table.columns or 'GAMES' in table.columns):
+                df = table
+                print(f"   📊 Found target table at index {i} with {len(df)} rows")
+                break
         
-        # Normalize column names (BBR uses varying formats)
-        df.columns = [str(c).strip().upper() for c in df.columns]
-        
-        # Debug: Print actual columns found
-        print(f"   📋 Columns: {list(df.columns)[:8]}...")
+        if df is None:
+             print("   ❌ Could not find referee table (checked all tables)")
+             # Print columns of potential candidates for debugging
+             if len(dfs) > 0:
+                 print(f"   Last table cols: {dfs[-1].columns.tolist()[:5]}")
+             return scrape_nbastuffer_fallback()
+
+        print(f"   📊 Processing {len(df)} rows from table...")
         
         # Map BBR columns to our schema
-        # Expected columns: Rk, Referee, G (games), PF (personal fouls on plays officiated)
         referee_data = []
         
         for _, row in df.iterrows():
-            # Skip header rows that get mixed in
             ref_name = str(row.get('REFEREE', row.get('NAME', ''))).strip()
             if not ref_name or ref_name.upper() in ['REFEREE', 'NAME', 'RK']:
                 continue
             
-            # Parse games officiated
             try:
                 games = int(float(row.get('G', row.get('GAMES', 0))))
             except:
                 games = 0
             
-            if games < 5:  # Skip refs with minimal games
+            if games < 5:
                 continue
             
-            # Parse fouls per game (BBR shows total PF, we divide by games)
             try:
-                total_fouls = float(row.get('PF', row.get('FOULS', 0)))
-                fouls_per_game = total_fouls / games if games > 0 else 0
+                # BBR 'PF' is total fouls in the game (both teams).
+                # Normalize to per-team for consistency with our 21.5 baseline.
+                # Check for 'PF' or 'FOULS'
+                pf_val = row.get('PF', row.get('FOULS', 0))
+                # BBR might have multiple 'PF' columns if flattening failed poorly, usually unique though
+                total_fouls_combined = float(pf_val)
+                fouls_per_game_team = (total_fouls_combined / games) / 2.0 if games > 0 else 0
             except:
-                fouls_per_game = LEAGUE_AVG_FOULS_PER_GAME
+                fouls_per_game_team = LEAGUE_AVG_FOULS_PER_GAME
             
-            # Calculate pace impact (relative to league average)
-            # Higher fouls typically = faster pace (more stoppages but more FTs)
-            pace_impact = round(fouls_per_game / LEAGUE_AVG_FOULS_PER_GAME, 3)
+            pace_impact = round(fouls_per_game_team / LEAGUE_AVG_FOULS_PER_GAME, 3)
             
-            # Parse technical fouls (if available)
+            # технических fouls
             try:
                 techs = float(row.get('TECH', row.get('T', 0)))
-                tech_rate = techs / games if games > 0 else 0
+                tech_rate = (techs / games) / 2.0 if games > 0 else 0 # per team
             except:
                 tech_rate = 0.0
             
-            # Classify style based on fouls/game
-            if fouls_per_game < 20.0:
+            # Classify style
+            if fouls_per_game_team < 20.0:
                 style = 'LENIENT'
-            elif fouls_per_game > 23.0:
+            elif fouls_per_game_team > 23.0:
                 style = 'STRICT'
             else:
                 style = 'NEUTRAL'
             
             referee_data.append({
                 'referee_name': ref_name,
-                'avg_fouls_per_game': round(fouls_per_game, 2),
+                'avg_fouls_per_game': round(fouls_per_game_team, 2),
                 'avg_pace_impact': pace_impact,
                 'avg_technical_rate': round(tech_rate, 3),
                 'style': style,
@@ -157,9 +200,6 @@ def scrape_referee_roster(dry_run=False):
         
         return referee_data
         
-    except requests.exceptions.Timeout:
-        print("   ❌ Request timed out")
-        return scrape_nbastuffer_fallback()
     except Exception as e:
         print(f"   ❌ Error: {e}")
         return scrape_nbastuffer_fallback()

@@ -4,15 +4,15 @@
 💎 TOP TARGETS BY GAME
 
 🏀 Milwaukee Bucks @ Washington Wizards
-   💎 Kyle Kuzma | UNDER 3.5 AST
-      Proj: 2.5 | EV: +97.5% | 1.5u
-      🏷️  GENERALIST | vs_FUNNEL
-      📝 [GENERALIST] | Spot-Up 3s | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
    💎 Ryan Rollins | UNDER 6.5 AST
-      Proj: 4.94 | EV: +97.1% | 1.5u
+      Proj: 4.62 | EV: +91.9% | 1.5u
       🏷️  GENERALIST | vs_FUNNEL
-      📝 [TWO_WAY_WING] +P&R_HANDLER | High Pace Target | PnR Handler vs Funnel | Inefficient (-5% PPP) | High Pass Rate | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+      📝 [TWO_WAY_WING] | High Pace Target | Inefficient (-5% PPP) | High Pass Rate | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+   💎 Ryan Rollins | UNDER 21.5 PTS
+      Proj: 14.62 | EV: +79.8% | 1.5u
+      🏷️  GENERALIST | vs_FUNNEL
+      📝 [TWO_WAY_WING] | High Pace Target | Inefficient (-5% PPP) | High Pass Rate | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
    💎 Kyle Kuzma | UNDER 6.5 REB
-      Proj: 4.3 | EV: +95.9% | 1.5u
+      Proj: 4.5 | EV: +78.7% | 1.5u
       🏷️  GENERALIST | vs_FUNNEL | CORRELATED_SGP
-      📝 [GENERALIST] | Spot-Up 3s | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]
+      📝 [GENERALIST] +P&R_ROLL_MAN+OFF_BALL_CUTTER | Elite Rim D (Sharife Co, -12%) | Spot-Up 3s | ⚠️ VERIFY LINE [🔥 CORRELATED SGP]

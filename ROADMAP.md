@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** January 28, 2026
+**Last Updated:** January 29, 2026
 **Current Phase:** Phase 5 - Production Deployment & Automation
 
 This is the single source of truth for project tasks and priorities.
@@ -69,6 +69,17 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## Recently Completed
+
+### Module G Browser Timeout Fix - 2026/01/29
+- [x] Switched scraper to `headless=False` (Visible Browser) for reliability
+- [x] Added Date Dropdown interaction logic to force layout update
+- [x] Relaxed navigation timeout to 60s
+- [x] Verified with manual dry-run (8 games scraped)
+
+### Basketball-Reference Scraper Fix - 2026/01/29
+- [x] Migrated `scrape_referee_roster.py` to Playwright (Bypass 403 Forbidden)
+- [x] Implemented MultiIndex column flattening for new table layout
+- [x] Verified live scraping of 72 referees (replacing fallback)
 
 ### Alt Line Bug Fix & Archetype Verification - 2026/01/29
 - [x] Fixed alt line selection bug in Module A (voting mechanism)

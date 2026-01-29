@@ -146,8 +146,10 @@ class DailyRefereeSync:
             from playwright.sync_api import sync_playwright
             
             print(f"   [SYNC] Launching Playwright for {url}...")
+            print(f"   [SYNC] Launching Playwright for {url}...")
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
+                # User requested visible browser
+                browser = p.chromium.launch(headless=False)
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 )
@@ -176,14 +178,23 @@ class DailyRefereeSync:
                     
                     try:
                         # Step 1: Yesterday
+                        page.wait_for_selector('button.dropdown-toggle', timeout=5000)
+                        page.click('button.dropdown-toggle', force=True)
+                        
                         page.wait_for_selector('input#ref-date', timeout=10000)
                         page.fill('input#ref-date', yesterday_str)
-                        page.click('input#date-filter')
+                        page.click('input#date-filter', force=True)
                         page.wait_for_timeout(1000)
                         
                         # Step 2: Today (Target)
+                        # Re-open dropdown
+                        try:
+                             page.click('button.dropdown-toggle', force=True)
+                        except:
+                            pass
+                            
                         page.fill('input#ref-date', today_str)
-                        page.click('input#date-filter')
+                        page.click('input#date-filter', force=True)
                     except Exception as e:
                          print(f"   ⚠️ Date toggle issue: {e}")
 
