@@ -394,7 +394,10 @@ class LudiReporter:
             'reb': 'proj_reb',
             'ast': 'proj_ast',
             '3pm': 'proj_3pm',
-            'oreb': 'proj_oreb'
+            'oreb': 'proj_oreb',
+            'steals': 'proj_stl',
+            'blocks': 'proj_blk',
+            'defensive_rebounds': 'proj_dreb'
         }
         return p.get(m.get(key.lower(), ''), 0)
 
