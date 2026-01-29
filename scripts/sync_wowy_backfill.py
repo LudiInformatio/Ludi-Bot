@@ -27,6 +27,11 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
+from utils.browser_utils import (
+    get_playwright_browser, 
+    smart_wait_for_selector, 
+    handle_pagination_dropdown
+)
 
 # Playwright check
 try:
@@ -138,49 +143,22 @@ def format_date_db(dt_obj):
 # SCRAPING LOGIC
 # ============================================================
 
-def handle_pagination(page, label):
-    """Ensure all rows are visible by selecting 'All' in pagination."""
-    try:
-        # Standard NBA.com stats pagination dropdown
-        select_selector = ".Pagination_pageDropdown__KgjBU select"
-        
-        # Check if selector exists before trying to select
-        if page.is_visible(select_selector):
-            page.select_option(select_selector, value="-1")
-            # Wait for reload - Lineups can be heavy
-            wait_ms = 4000 if "Lineups" in label else 2500
-            page.wait_for_timeout(wait_ms)
-        else:
-            # Sometimes there's no pagination if data is small, which is fine
-            pass
-            
-    except Exception as e:
-        print(f"      ⚠️  Pagination Warning: {e}")
-
 def scrape_table(page, label):
-    """Extract table data with retry logic."""
+    """Extract table data with centralized retry logic."""
     print(f"      Scanning {label} table...")
     
-    timeout = 30000 # 30s timeout for heavy lineup pages
-    table_found = False
-    
-    for attempt in range(3):
-        try:
-            # Wait for the table body to ensure data is loaded
-            page.wait_for_selector("table.Crom_table__p1iZz tbody tr", timeout=timeout)
-            table_found = True
-            break
-        except:
-            if attempt < 2:
-                print(f"      ⏳ Retry {attempt+1}/3: Table not found, waiting...")
-                page.wait_for_timeout(5000)
-    
-    if not table_found:
-        print("      ⚠️  Table not found (or no data for this date).")
+    # Use centralized smart wait (handles OneTrust/Popups automatically)
+    table_selector = "table.Crom_table__p1iZz tbody tr"
+    if not smart_wait_for_selector(page, table_selector, timeout=30000):
+        print(f"      ⚠️  Table not found for {label} (or no data).")
         return []
     
-    # Handle pagination
-    handle_pagination(page, label)
+    # Handle pagination using centralized utility
+    pagination_selector = ".Pagination_pageDropdown__KgjBU select"
+    if page.is_visible(pagination_selector):
+        handle_pagination_dropdown(page, pagination_selector)
+        # Extra wait for table reload after pagination
+        page.wait_for_timeout(2500)
 
     # Headers
     headers = page.evaluate('''() => {
@@ -343,31 +321,8 @@ def run_wowy_backfill(start_date, end_date, headless=False):
         is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'
         headless_mode = False if is_self_hosted else headless
         
-        browser = p.chromium.launch(
-            headless=headless_mode,  # False for local/self-hosted (Ghost Protocol), True for Cloud CI
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-infobars',
-                '--ignore-certificate-errors',
-                '--ignore-ssl-errors',
-                '--disable-http2'  # REQUIRED - forces HTTP/1.1
-            ]
-        )
-        context = browser.new_context(
-            viewport={'width': 1366, 'height': 768},
-            user_agent=random.choice(USER_AGENTS),
-            ignore_https_errors=True,
-            java_script_enabled=True
-        )
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            });
-        """)
-        
-        page = context.new_page()
+        # Use centralized browser launcher (handles stealth args, User-Agents, Viewport)
+        browser, context, page = get_playwright_browser(p, headless=headless_mode)
 
         total_lineups = 0
         total_on_off = 0
