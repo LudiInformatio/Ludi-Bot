@@ -3,6 +3,7 @@ import sqlite3
 import json
 from pathlib import Path
 from utils.player_id_resolver import PlayerIDResolver
+from utils.team_offensive_classifier import TEAM_OFFENSIVE_TYPES
 
 # ==========================================
 # LUDI INFORMATIO | MODULE E: THE CALIBRATOR
@@ -504,6 +505,86 @@ class LudiCalibrator:
             # print(f"DEBUG: Error in _get_tracking_stats: {e}")
             return {}
 
+    def _assign_secondary_playtypes(self, p, tracking_data):
+        """
+        Assign 0-2 secondary playtypes using strict thresholds.
+        
+        Threshold Logic: Player must meet 2 of 3 criteria for each playtype.
+        This prevents every player from populating every tag.
+        """
+        secondaries = []
+        
+        # Extract stats
+        drives = tracking_data.get('avg_drives', 0)
+        cs_fga = tracking_data.get('avg_cs_fga', 0)
+        cs_pct = tracking_data.get('cs_pct', 0)
+        pu_fga = tracking_data.get('avg_pu_fga', 0)
+        speed = tracking_data.get('avg_speed', 0)
+        distance = tracking_data.get('avg_distance', 0)
+        
+        ast = p.get('base_ast', 0)
+        # Calculate approximate usage if not present
+        fga = p.get('base_fga', 0)
+        fta = p.get('base_fta', 0)
+        tov = p.get('base_tov', 0)
+        mins = p.get('base_min', 1)
+        usg = p.get('base_usg', 0)
+        if usg == 0 and mins > 0:
+             usg = ((fga + 0.44*fta + tov)/mins)/2.1
+             
+        oreb = p.get('base_oreb', 0)
+        tpm = p.get('base_3pm', 0)
+        
+        # Approximate metrics
+        rim_freq = tracking_data.get('rim_freq', 0)
+        rim_fg_pct = p.get('pbp_rim_fg_pct', 0.60) # Fallback
+        paint_pts = p.get('base_pts', 0) * 0.45  # Rough estimate
+        
+        # 1. ISO_SCORER (2 of 3)
+        iso_criteria = [drives > 8, pu_fga > 4.5, usg > 0.28]
+        if sum(iso_criteria) >= 2:
+            secondaries.append('ISO_SCORER')
+        
+        # 2. P&R_HANDLER (2 of 3)
+        prh_criteria = [drives > 5, ast > 6.0, cs_fga < pu_fga]
+        if sum(prh_criteria) >= 2:
+            secondaries.append('P&R_HANDLER')
+        
+        # 3. P&R_ROLL_MAN (2 of 3)
+        prr_criteria = [rim_freq > 0.40, cs_fga > pu_fga, ast < 3.0]
+        if sum(prr_criteria) >= 2:
+            secondaries.append('P&R_ROLL_MAN')
+        
+        # 4. SPOT_UP (2 of 3)
+        spot_criteria = [cs_fga > 3.5, cs_pct > 0.38, tpm > 1.5]
+        if sum(spot_criteria) >= 2:
+            secondaries.append('SPOT_UP')
+        
+        # 5. OFF_BALL_CUTTER (2 of 3)
+        cut_criteria = [rim_fg_pct > 0.65, cs_fga > pu_fga, drives < 4]
+        if sum(cut_criteria) >= 2:
+            secondaries.append('OFF_BALL_CUTTER')
+        
+        # 6. TRANSITION (2 of 3)
+        # Get team pace if available
+        team_pace = p.get('team_pace', 100)
+        trans_criteria = [speed > 4.5, distance > 2.3, team_pace > 102]
+        if sum(trans_criteria) >= 2:
+            secondaries.append('TRANSITION')
+        
+        # 7. PUTBACK (2 of 3)
+        rim_fga = p.get('base_fga', 0) * rim_freq if rim_freq > 0 else 0
+        putback_criteria = [oreb > 2.2, rim_freq > 0.45, rim_fga > 4]
+        if sum(putback_criteria) >= 2:
+            secondaries.append('PUTBACK')
+        
+        # 8. POST_UP (2 of 3) - Approximation
+        post_criteria = [paint_pts > 10, rim_freq > 0.40, speed < 4.0]
+        if sum(post_criteria) >= 2:
+            secondaries.append('POST_UP')
+        
+        # Return max 2 secondary playtypes (prioritize first matches)
+        return secondaries[:2]
 
     def calibrate_player(self, player_packet, yak_report, use_synergy=True):
         calibrated = player_packet.copy()
@@ -543,34 +624,22 @@ class LudiCalibrator:
         # 1. ASSIGN PRIMARY ARCHETYPE (now has position field)
         archetype, secondary_arch = self._assign_archetype(calibrated)
         
+        # NEW: ASSIGN SECONDARY PLAYTYPES (Phase 1)
+        tracking_data = self._get_tracking_stats(player_name)
+        secondary_playtypes = self._assign_secondary_playtypes(calibrated, tracking_data)
+        
         if archetype:
             calibrated['archetype'] = archetype
             calibrated['notes'] += f" [{archetype}]"
-        if secondary_arch:
+        
+        if secondary_playtypes:
+            calibrated['secondary_playtypes'] = secondary_playtypes
+            # Add playtypes to notes for visibility, prefixed with +
+            calibrated['notes'] += f" +{'+'.join(secondary_playtypes)}"
+            
+        if secondary_arch and not secondary_playtypes: # Fallback to old secondary if no new ones
             calibrated['secondary_archetype'] = secondary_arch
             calibrated['notes'] += f" / {secondary_arch}"
-
-        # 2. ASSIGN SECONDARY PLAYTYPES (Week 2 Integration)
-        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
-        tracking_data = self._get_tracking_stats(player_name)
-        
-        if tracking_data:
-            # Merge position into calibrated if found
-            if 'position' in tracking_data and tracking_data['position'] != 'UNK':
-                calibrated['position'] = tracking_data['position']
-            
-            # Select top 1-2 secondary playtypes
-            sec_primary, sec_secondary = self._select_top_playtypes(tracking_data)
-            
-            if sec_primary or sec_secondary:
-                secondary_tags = [t for t in [sec_primary, sec_secondary] if t]
-                calibrated['secondary_playtypes'] = secondary_tags
-                
-                # Format: PRIMARY + SECONDARY for notes
-                if sec_primary and sec_secondary:
-                    calibrated['notes'] += f" +{sec_primary}+{sec_secondary}"
-                elif sec_primary:
-                    calibrated['notes'] += f" +{sec_primary}"
 
         # 3. NEWS CALIBRATION
         status = yak_report.get('status', 'ACTIVE')
@@ -734,7 +803,31 @@ class LudiCalibrator:
         # Westbrook/Giddey Rule: Guards who crash boards
         if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_CREATOR"] and calibrated.get('base_reb', 0) > 5.5:
             self._boost_stat(calibrated, 'proj_reb', 1.10)
-            calibrated['notes'] += " | Hustle Guard"
+        # === NEW: B2B FATIGUE TAX (Phase 4) ===
+        is_b2b = yak_report.get('is_back_to_back', False)
+        is_road = calibrated.get('is_road', False)
+        rest_days = yak_report.get('rest_days', 2)
+        position = calibrated.get('position', '')
+
+        if is_b2b:
+            if is_road:
+                # Road B2B: -6% volume (research: 2-3 pt decline)
+                self._apply_factor(calibrated, 0.94)
+                calibrated['notes'] += " | B2B Road Tax"
+            else:
+                # Home B2B: -3% volume
+                self._apply_factor(calibrated, 0.97)
+                calibrated['notes'] += " | B2B Home Tax"
+            
+            # Guard-specific penalty (cover most distance)
+            if position in ['PG', 'SG', 'G']:
+                self._boost_stat(calibrated, 'proj_pts', 0.96)
+                self._boost_stat(calibrated, 'proj_ast', 0.95)
+                calibrated['notes'] += " | Guard Fatigue"
+
+        elif rest_days >= 3 and not is_road:
+            self._apply_factor(calibrated, 1.03)
+            calibrated['notes'] += " | Rested Home Edge"
 
         return calibrated
 
@@ -882,42 +975,11 @@ class LudiCalibrator:
             )
 
     def classify_team_offense(self, team_abbr: str) -> str:
-        """Dynamically classify team offensive style using team_lineups."""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Query team_lineups for accurate pace
-            cursor.execute("""
-                SELECT 
-                    SUM(possessions) * 48.0 / NULLIF(SUM(minutes), 0) as pace,
-                    AVG(off_rating) as ortg,
-                    AVG(ast_pct) as ast_pct
-                FROM team_lineups
-                WHERE team_abbreviation = ?
-                AND game_date >= date('now', '-30 days')
-            """, (team_abbr,))
-            
-            row = cursor.fetchone()
-            conn.close()
-            
-            if row and row[0]:
-                pace = row[0]
-                ortg = row[1] or 110
-                ast_pct = row[2] or 0.25
-                
-                # Thresholds based on actual DB data (101-108 range)
-                if pace > 106:
-                    return "PACE_PUSH"
-                elif pace < 102:
-                    return "HALF_COURT"
-                elif ast_pct > 0.28 and ortg > 115:
-                    return "MOTION"
-            
-            return self.OFFENSIVE_STYLES.get(team_abbr, "NEUTRAL")
-            
-        except Exception as e:
-            return self.OFFENSIVE_STYLES.get(team_abbr, "NEUTRAL")
+        """
+        Dynamically classify team offensive style using new automated system.
+        Phase 1: Uses utils/team_offensive_classifier.py
+        """
+        return TEAM_OFFENSIVE_TYPES.get(team_abbr, "BALANCED")
 
     def _apply_offensive_style_boost(self, calibrated: dict, team_offense: str, 
                                       opponent_defense: str) -> None:
