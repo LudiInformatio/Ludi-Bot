@@ -113,6 +113,12 @@ This is the single source of truth for project tasks and priorities.
 
 ## Recently Completed
 
+### System Stability & Browser Automation Revamp - 2026/01/29
+- [x] Resolved CI/CD race conditions (added `git pull --rebase`) in 5 core workflows
+- [x] Created `utils/browser_utils.py` for centralized pop-up suppression & stealth
+- [x] Refactored all 6 scrapers (including WOWY backfill) to use unified browser logic
+- [x] Improved reliability against OneTrust modals and WAF detection
+
 ### WOWY Sync Repair - 2026/01/29
 - [x] Fixed `scripts/sync_wowy_data.py` import ordering bug (ModuleNotFoundError)
 - [x] Implemented Game ID Auto-Healing for custom Tank01 IDs
