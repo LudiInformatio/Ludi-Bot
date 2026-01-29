@@ -136,7 +136,8 @@ class LudiOrchestrator:
         STAT_MAPPING = {
             'PTS': 'proj_pts', 'REB': 'proj_reb', 'AST': 'proj_ast',
             'FG3M': 'proj_3pm', 'OREB': 'proj_oreb', 'MIN': 'proj_min',
-            'FGA': 'proj_fga', 'FTA': 'proj_fta'
+            'FGA': 'proj_fga', 'FTA': 'proj_fta',
+            'STL': 'proj_stl', 'BLK': 'proj_blk', 'DREB': 'proj_dreb'
         }
         home, away = self.gate._get_abbr(game_data.get('home')), self.gate._get_abbr(game_data.get('away'))
         spread = game_data.get('vegas', {}).get('spread', 0)
