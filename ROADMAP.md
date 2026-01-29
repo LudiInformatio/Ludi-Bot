@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** January 29, 2026 @ 3:21 PM EST
+**Last Updated:** January 29, 2026 @ 3:55 PM EST
 **Current Phase:** Phase 5 - Production Deployment & Automation
 
 This is the single source of truth for project tasks and priorities.
@@ -115,9 +115,11 @@ This is the single source of truth for project tasks and priorities.
 
 ### System Stability & Browser Automation Revamp - 2026/01/29
 - [x] Resolved CI/CD race conditions (added `git pull --rebase`) in 5 core workflows
-- [x] Created `utils/browser_utils.py` for centralized pop-up suppression & stealth
-- [x] Refactored all 6 scrapers (including WOWY backfill) to use unified browser logic
-- [x] Improved reliability against OneTrust modals and WAF detection
+- [x] Created `utils/browser_utils.py` and `utils/browser_utils_async.py` for centralized suppression & stealth
+- [x] Added OddsShark modal suppression & safe selector waits
+- [x] Refactored all 6 scrapers (Sync, Backfill, Referees, Intel, WOWY, Synergy) to use unified logic
+- [x] Improved reliability against OneTrust modals, newsletters, and WAF detection across all environments
+- [x] Standardized on `domcontentloaded` wait strategy to prevent hanging on external tracking pixels
 
 ### WOWY Sync Repair - 2026/01/29
 - [x] Fixed `scripts/sync_wowy_data.py` import ordering bug (ModuleNotFoundError)
