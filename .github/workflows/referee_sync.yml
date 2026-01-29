@@ -52,6 +52,7 @@ jobs:
           else
             REFEREE_COUNT=$(python3 -c "import sqlite3; conn = sqlite3.connect('ludi.db'); cursor = conn.cursor(); cursor.execute(\"SELECT COUNT(*) FROM games WHERE date = date('now') AND referee_crew IS NOT NULL\"); print(cursor.fetchone()[0]); conn.close()")
             git commit -m "chore: referee sync - ${REFEREE_COUNT} games updated $(date +'%Y-%m-%d %H:%M')"
+            git pull --rebase origin main
             git push
             echo "✅ Referee assignments synced and pushed!"
           fi
