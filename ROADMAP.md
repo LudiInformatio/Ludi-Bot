@@ -70,6 +70,15 @@ This is the single source of truth for project tasks and priorities.
 
 ## Recently Completed
 
+### Alt Line Bug Fix & Archetype Verification - 2026/01/29
+- [x] Fixed alt line selection bug in Module A (voting mechanism)
+- [x] Added NC Legal coverage validation (defense-in-depth)
+- [x] Verified secondary playtypes system deployed and active
+- [x] Verified team offensive types system deployed and active
+- [x] Fixed BALL_HOG archetype (1 player updated to HELIOCENTRIC)
+- [x] Production tested: Max ratio reduced from 9.6x to 1.64x
+- [x] Created comprehensive documentation (AUDIT_FINDINGS_JAN28.md, TEST_RESULTS_JAN29.md)
+
 ### Referee Intelligence Repair - 2026/01/28
 - [x] Diagnosed empty table issue (CSR/JavaScript requirement)
 - [x] Implemented "Date Toggle" workaround (Yesterday -> Today) to force data load

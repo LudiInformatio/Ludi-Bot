@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import poisson
+# from scipy.stats import poisson
 
 # --- CONFIGURATION (The knobs we turn) ---
 SIM_ITERATIONS = 2500

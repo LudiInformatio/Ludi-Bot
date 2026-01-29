@@ -16,63 +16,89 @@ DB_PATH = "ludi.db"
 # Archetype thresholds (from Module E v2.0)
 def classify_archetype(pts, reb, ast, tpm, stl, blk, usg):
     """
-    8-Archetype Classification System
-    Evaluates in priority order to prevent false positives.
+    10-Archetype Classification System (Matched to Module E v7.0)
+    Evaluates in priority order.
     """
     stocks = stl + blk
     
-    # === TIER 1: HIGH-USAGE SPECIALISTS ===
+    # === TIER 1: ENGINES (The System) ===
     
-    # 1. HELIOCENTRIC: High usage + high assists (primary ball-handlers)
-    if usg > 0.30 and ast > 6.0:
+    # 1. HELIOCENTRIC: Usage > 30% OR (Usage > 28% and High Assists)
+    # Examples: Luka, Trae
+    if (usg > 0.30 and ast > 6.0) or (usg > 0.28 and ast > 8.0):
         return "HELIOCENTRIC"
-    
-    # 2. SLASHER: High scoring + high usage + low 3PM (interior scorers)
+
+    # 2. SLASHER: High PTS, High Usage, Low 3PM
+    # Examples: Zion, Giannis, Ja
     if pts > 22.0 and usg > 0.30 and tpm < 2.0:
         return "SLASHER"
+
+    # 3. ELITE_SCORER: High PTS, High 3PM (3-Level Scorers)
+    # Examples: Tatum, Durant, Booker
+    if pts > 24.5 and tpm > 2.4:
+        return "ELITE_SCORER"
+
+    # === TIER 2: REBOUNDING CREATORS ===
+
+    # 4. HUB_BIG: Elite Reb, Elite Pass, Big Traits
+    # Examples: Jokic, Sabonis, Sengun
+    if reb > 7.5 and ast > 4.2 and (reb > ast or blk > 0.6):
+        return "HUB_BIG"
+
+    # 5. JUMBO_CREATOR: High Reb, High Pass, Guard/Wing Traits
+    # Examples: LeBron, Giddey, Barnes
+    if reb > 6.0 and ast > 5.0 and (ast >= reb or blk <= 0.5):
+        return "JUMBO_CREATOR"
+
+    # === TIER 3: SPECIALISTS ===
     
-    # === TIER 2: SPECIALISTS ===
-    
-    # 3. STRETCH_BIG: Rebounding + floor spacing (modern bigs)
+    # 6. STRETCH_BIG: Rebounding + floor spacing
+    # Examples: KAT, Porzingis, Turner
     if reb > 6.5 and tpm > 1.8:
         return "STRETCH_BIG"
     
-    # 4. RIM_RUNNER: Elite rebounding + no perimeter game (traditional bigs)
+    # 7. RIM_RUNNER: Elite rebounding + no perimeter game
+    # Examples: Gobert, Allen, Capela
     if reb > 8.0 and tpm < 0.6:
         return "RIM_RUNNER"
     
-    # 5. SNIPER: Elite 3PM + low assists (catch-and-shoot specialists)
-    if tpm > 2.8 and ast < 3.5:
+    # 8. SNIPER: High 3PM volume
+    # Examples: Curry, Klay, Hield
+    if tpm > 2.8 and ast < 4.0:
         return "SNIPER"
     
-    # === TIER 3: ROLE PLAYERS ===
+    # === TIER 4: ROLE PLAYERS ===
     
-    # 6. TWO_WAY_WING: Defensive versatility + floor spacing
+    # 9. TWO_WAY_WING: Defense + 3s
+    # Examples: OG Anunoby, Bridges, Herb Jones
     if stocks >= 1.8 and tpm >= 1.5 and pts < 22.0:
         return "TWO_WAY_WING"
     
-    # 7. FACILITATOR: High assists + low usage + low scoring
-    if ast >= 5.0 and pts < 15.0 and usg < 0.28:
+    # 10. FACILITATOR: High Ast, Low Usg
+    # Examples: Tyus Jones, CP3 (current), Conley
+    if ast >= 5.0 and pts < 16.0 and usg < 0.28:
         return "FACILITATOR"
     
-    # === TIER 4: DEFAULT ===
+    # === TIER 5: DEFAULT ===
     return "GENERALIST"
 
 
 def calculate_usage(fga, fta, tov, minutes, team_minutes=48.0):
     """
     Estimate usage rate from available stats.
-    Simplified formula: (FGA + 0.44*FTA + TOV) / Minutes * Team Pace Factor
+    Simplified formula: (FGA + 0.44*FTA + TOV) / Minutes / Team Pace Factor (2.1)
     """
     if minutes < 5:
         return 0.0
     
     possessions = fga + (0.44 * fta) + tov
     per_minute = possessions / minutes
-    # Normalize to ~0.20 baseline (league average usage)
-    # A player using 20 plays in 30 min = ~0.20 usage
-    usage = per_minute / 0.7  # Scaling factor
-    return min(max(usage, 0.10), 0.40)  # Clamp to realistic range
+    
+    # Usage % = (Player Poss / Player Mins) / (Team Poss / Team Mins)
+    # Team Poss / Team Mins is roughly 100 / 48 = ~2.08 (round to 2.1)
+    usage = per_minute / 2.1
+    
+    return min(max(usage, 0.05), 0.50)  # Clamp to realistic range (5% to 50%)
 
 
 def populate_archetypes():
@@ -150,14 +176,17 @@ def populate_archetypes():
         archetype = classify_archetype(pts, reb, ast, tpm, stl, blk, usg)
         
         # Update players table (upsert)
+        # FIXED: Now updates base_ppg and usg_pct
         c.execute('''
-            INSERT INTO players (player_id, name, team, archetype, updated_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO players (player_id, name, team, archetype, base_ppg, usg_pct, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(player_id) DO UPDATE SET
                 archetype = excluded.archetype,
                 team = excluded.team,
+                base_ppg = excluded.base_ppg,
+                usg_pct = excluded.usg_pct,
                 updated_at = CURRENT_TIMESTAMP
-        ''', (player_id, player_name, team, archetype))
+        ''', (player_id, player_name, team, archetype, pts, usg))
         
         # Track counts
         archetype_counts[archetype] = archetype_counts.get(archetype, 0) + 1

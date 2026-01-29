@@ -271,11 +271,14 @@ class Gatekeeper:
 
                                 prop = self.games[g_id]['props'][player][short_key]
 
-                                # Record line vote (priority books vote more)
-                                vote_weight = 2 if is_priority else 1
-                                if line not in prop['_line_votes']:
-                                    prop['_line_votes'][line] = 0
-                                prop['_line_votes'][line] += vote_weight
+                                # ONLY COUNT VOTES FROM NC LEGAL BOOKS (FIX: Alt line bug)
+                                # Alt lines from DFS/Sharp books will not influence main line selection
+                                # We can only bet at NC Legal books, so only their lines should vote
+                                if book_name in nc_legal:
+                                    vote_weight = 2 if is_priority else 1
+                                    if line not in prop['_line_votes']:
+                                        prop['_line_votes'][line] = 0
+                                    prop['_line_votes'][line] += vote_weight
 
                                 # Store odds by book and line
                                 if book_name not in prop['_all_books']:
@@ -294,8 +297,25 @@ class Gatekeeper:
                             if not prop.get('_line_votes'):
                                 continue
 
-                            # Find consensus line (most votes)
+                            # Find consensus line (most votes FROM NC LEGAL BOOKS)
                             main_line = max(prop['_line_votes'].keys(), key=lambda x: prop['_line_votes'][x])
+
+                            # Validate NC Legal coverage exists (FIX: Alt line bug defense-in-depth)
+                            nc_legal_has_odds = False
+                            for book in nc_legal:
+                                if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
+                                    odds = prop['_all_books'][book][main_line]
+                                    if odds.get('over') or odds.get('under'):
+                                        nc_legal_has_odds = True
+                                        break
+
+                            if not nc_legal_has_odds:
+                                # No NC Legal books offer this line - SKIP IT
+                                # This prevents alt lines from being selected
+                                if g_id == target_ids[0]:  # Debug first game only
+                                    print(f"         ⚠️ Skipped {stat_key} line {main_line} (no NC Legal odds)")
+                                continue
+
                             prop['line'] = main_line
 
                             # Find best NC Legal at main line (FOR BETTING)

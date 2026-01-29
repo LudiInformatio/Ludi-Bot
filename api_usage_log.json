@@ -1,0 +1,51 @@
+[
+  {
+    "timestamp": "2026-01-29T09:03:58.992803",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "3375",
+      "requests_used": "16625",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-29T09:07:00.862000",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "3369",
+      "requests_used": "16631",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-29T09:08:59.615924",
+    "api": "odds_api",
+    "endpoint": "fetch_slate",
+    "rate_limit_info": {
+      "requests_remaining": "3363",
+      "requests_used": "16637",
+      "request_cost": "6"
+    }
+  },
+  {
+    "timestamp": "2026-01-29T09:09:01.501987",
+    "api": "odds_api",
+    "endpoint": "fetch_props",
+    "rate_limit_info": {
+      "requests_remaining": "3327",
+      "requests_used": "16673",
+      "request_cost": "36"
+    }
+  },
+  {
+    "timestamp": "2026-01-29T09:09:02.988056",
+    "api": "tank01",
+    "endpoint": "injury_list",
+    "rate_limit_info": {
+      "requests_remaining": "988",
+      "requests_limit": "1000"
+    }
+  }
+]
