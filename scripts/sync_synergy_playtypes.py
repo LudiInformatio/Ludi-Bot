@@ -19,6 +19,7 @@ import sys
 import os
 from datetime import datetime
 from playwright.async_api import async_playwright
+from utils.browser_utils_async import close_popups_async, simulate_human_interaction_async
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -55,6 +56,8 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
     try:
         # Use domcontentloaded instead of networkidle
         await page.goto(url, wait_until='domcontentloaded', timeout=60000)
+        await close_popups_async(page)
+        await simulate_human_interaction_async(page)
         
         # Wait for table with retries
         for attempt in range(3):

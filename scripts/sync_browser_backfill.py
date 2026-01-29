@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
+from utils.browser_utils import simulate_human_interaction, close_popups
 
 # Playwright check
 try:
@@ -172,37 +173,17 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def simulate_human_interaction(page):
-    """
-    Performs random mouse movements, scrolling, and clicks to simulate human behavior.
-    Crucial for triggering lazy-loaded elements and bypassing bot detection.
-    """
-    try:
-        # Random mouse movements
-        for _ in range(random.randint(2, 4)):
-            x = random.randint(100, 1000)
-            y = random.randint(100, 800)
-            page.mouse.move(x, y, steps=5)
-            time.sleep(random.uniform(0.1, 0.3))
-
-        # Random scroll
-        page.mouse.wheel(0, random.randint(300, 700))
-        time.sleep(random.uniform(0.5, 1.0))
-        
-        # Scroll back up a bit sometimes
-        if random.random() > 0.7:
-            page.mouse.wheel(0, -random.randint(100, 300))
-            time.sleep(random.uniform(0.2, 0.5))
-            
-    except Exception as e:
-        print(f"      ⚠️ Interaction Error: {e}")
-
 def handle_pagination(page, category_label=None):
     """Ensure all rows are visible by selecting 'All' in pagination."""
     try:
+        close_popups(page)
+        
         select_selector = ".Pagination_pageDropdown__KgjBU select"
         if page.is_visible(select_selector):
-            page.select_option(select_selector, value="-1")
+            # Ensure dropdown is in view and not blocked
+            page.locator(select_selector).scroll_into_view_if_needed()
+            page.select_option(select_selector, value="-1", timeout=10000)
+            
             # Increase wait for slower-loading tables
             slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
             wait_ms = 4000 if category_label in slow_categories else 2000
@@ -223,6 +204,9 @@ def format_date_db(dt_obj):
 def scrape_table(page, label):
     """Extract generic table data."""
     print(f"      Scanning {label} table...")
+    
+    # Clear any blocking popups first
+    close_popups(page)
     
     # Simulate human attention before scanning
     simulate_human_interaction(page)

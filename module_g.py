@@ -7,6 +7,7 @@ from io import StringIO
 import sys
 import os
 from utils.mappings import resolve_team_abbr
+from utils.browser_utils import close_popups, simulate_human_interaction
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE G: THE ZEBRAS
@@ -220,31 +221,12 @@ class LudiRefEngine:
                     # Looser timeout and wait condition to handle heavy scripts
                     page.goto(url, wait_until="domcontentloaded", timeout=60000)
                     
-                    # --- PRIVACY POPUP HANDLING ---
-                    print("   [ZEBRAS] 🛡️ Checking for privacy popup...", end=" ")
-                    try:
-                        # Wait briefly for popup to appear
-                        popup = page.wait_for_selector('#onetrust-banner-sdk', timeout=5000)
-                        if popup:
-                            # Try Reject Button First
-                            reject_btn = page.locator('#onetrust-reject-all-handler')
-                            if reject_btn.is_visible():
-                                reject_btn.click()
-                                print("Rejected cookies.")
-                            else:
-                                # Fallback to Close Button (X)
-                                close_btn = page.locator('.onetrust-close-btn-handler')
-                                if close_btn.is_visible():
-                                    close_btn.click()
-                                    print("Closed popup.")
-                            
-                            # Wait for it to disappear
-                            page.wait_for_selector('#onetrust-banner-sdk', state='hidden', timeout=3000)
-                        else:
-                            print("None found.")
-                    except Exception as e:
-                        print(f"(No popup/ignored: {str(e)[:50]}...)")
-                    # ------------------------------
+                    # --- UNIFIED POPUP & STEALTH HANDLING ---
+                    print("   [ZEBRAS] 🛡️ Cleaning UI and simulating human...", end=" ")
+                    close_popups(page)
+                    simulate_human_interaction(page)
+                    print("Done.")
+                    # ----------------------------------------
                     
                     # 1. Open Date Dropdown (MANDATORY)
                     print("   [ZEBRAS] 🔽 Opening date dropdown...", end=" ")

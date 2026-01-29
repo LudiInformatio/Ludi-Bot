@@ -12,6 +12,7 @@ import time
 import json
 from datetime import datetime, timedelta
 from database import DB_PATH
+from utils.browser_utils import close_popups, simulate_human_interaction
 
 # ============================================================
 # WOWY DATA MANIFEST
@@ -139,7 +140,9 @@ def scrape_wowy_data(date_str, data_type, config, page):
     try:
         # Navigate with anti-bot measures
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        time.sleep(2 + (random.random() * 2))  # 2-4 seconds
+        close_popups(page)
+        simulate_human_interaction(page)
+        time.sleep(1 + (random.random() * 1))
         
         # Wait for table to load
         page.wait_for_selector('table.Crom_table__p1iZz', timeout=10000)

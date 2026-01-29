@@ -24,6 +24,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.mappings import resolve_team_abbr
+from utils.browser_utils import close_popups, simulate_human_interaction
 
 class DailyRefereeSync:
     """Daily capture system for referee intelligence."""
@@ -162,6 +163,8 @@ class DailyRefereeSync:
                         try:
                             print(f"   [SYNC] Attempt {attempt+1}: Navigating to {url}...")
                             page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                            close_popups(page)
+                            simulate_human_interaction(page)
                             break
                         except Exception as e:
                             if attempt == max_retries - 1: raise e
