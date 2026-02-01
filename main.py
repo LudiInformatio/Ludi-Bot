@@ -48,11 +48,12 @@ class LudiOrchestrator:
         self.send_telegram = send_telegram
 
         # 1. INITIALIZE ALL SYSTEMS
+        debug_mode = os.getenv('DEBUG_LOG', 'false').lower() == 'true'
         self.gate = Gatekeeper()
         self.historian = LudiHistorian()
         self.sim = LudiOracle()
         self.yak = LudiYak()
-        self.calib = LudiCalibrator()
+        self.calib = LudiCalibrator(debug_log=debug_mode)
         self.reporter = LudiReporter()
         self.zebras = LudiRefEngine()
         self.scenario_builder = ScenarioBuilder()
@@ -108,6 +109,31 @@ class LudiOrchestrator:
             })
         return roster
 
+    def get_opponent_stats(self, opponent_abbr: str) -> Dict:
+        """Query database for team-wide opponent stats."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = '''
+            SELECT SUM(tov), SUM(fga), SUM(fg3a), SUM(fta)
+            FROM player_game_logs
+            WHERE team_abbreviation = ? AND game_date >= date('now', '-30 days')
+        '''
+        cursor.execute(query, (opponent_abbr,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row or not row[0]:
+            return {'tov_rate': 0, 'two_pa_rate': 0}
+
+        total_tov, total_fga, total_fg3a, total_fta = row
+        
+        possessions = total_fga + 0.44 * total_fta + total_tov
+        tov_rate = total_tov / possessions if possessions else 0
+
+        two_pa_rate = (total_fga - total_fg3a) / total_fga if total_fga else 0
+
+        return {'tov_rate': tov_rate, 'two_pa_rate': two_pa_rate}
+
     def fetch_props_for_game(self, game_id: str) -> Dict[str, Dict]:
         return self.gate.games.get(game_id, {}).get('props', {})
 
@@ -142,20 +168,27 @@ class LudiOrchestrator:
         home, away = self.gate._get_abbr(game_data.get('home')), self.gate._get_abbr(game_data.get('away'))
         spread = game_data.get('vegas', {}).get('spread', 0)
         total = game_data.get('vegas', {}).get('total', 0)
+
+        home_stats = self.get_opponent_stats(home)
+        away_stats = self.get_opponent_stats(away)
         
         players = []
         for sim in sim_results:
             p_name = sim.get('PLAYER_NAME')
             if p_name not in props_data: continue
+
+            is_home = sim.get('TEAM') == home
+            opponent_stats = away_stats if is_home else home_stats
             
             p_dict = {
-                'name': p_name, 'team': sim.get('TEAM'), 'opponent': away if sim.get('TEAM') == home else home,
+                'name': p_name, 'team': sim.get('TEAM'), 'opponent': away if is_home else home,
                 'status': sim.get('status', 'Active'), 'scenario': sim.get('SCENARIO', 'BASE'),
                 'decision_note': sim.get('decision_note', ''),  # Captured from Yak
                 'notes': '', 'odds': {'spread': spread, 'total': total},
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
                 'base_ast': sim.get('AST', 0), 'base_3pm': sim.get('FG3M', 0),
-                'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0)
+                'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0),
+                'opponent_stats': opponent_stats
             }
             
             # Map stats

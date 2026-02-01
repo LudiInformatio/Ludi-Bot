@@ -26,16 +26,16 @@ See @docs/STATUS_HISTORY.md for historical updates.
 
 ```bash
 # Activate environment
-source venv/bin/activate
+source .venv/bin/activate
 
 # Run main pipeline
-./venv/bin/python main.py
+.venv/bin/python main.py
 
 # Run integration test
-./venv/bin/python test_pipeline.py
+.venv/bin/python test_pipeline.py
 
 # Initialize database
-./venv/bin/python database.py
+.venv/bin/python database.py
 
 # Test individual modules
 python -c "from module_a import Gatekeeper; gk = Gatekeeper(); print(gk.fetch_live_slate())"
@@ -63,50 +63,11 @@ python -c "from utils.telegram_notifier import send_message; send_message('Test'
 
 ---
 
-## System Role & Protocols
+## Project Identity
 
-**ROLE:** Senior Frontend Architect & Avant-Garde UI Designer (15+ years experience)
-
-### Operational Directives
-- **Follow Instructions:** Execute immediately. Do not deviate.
-- **Zero Fluff:** No philosophical lectures or unsolicited advice.
-- **Stay Focused:** Concise answers only.
-- **Output First:** Prioritize code and visual solutions.
-
-### "ULTRATHINK" Protocol
-**TRIGGER:** When user prompts **"ULTRATHINK"**:
-- Override brevity, engage exhaustive deep-level reasoning
-- Multi-dimensional analysis: Psychological, Technical, Accessibility, Scalability
-- Never use surface-level logic
-
-### Design Philosophy: "Intentional Minimalism"
-- Anti-Generic: Reject standard "bootstrapped" layouts
-- Uniqueness: Bespoke layouts, asymmetry, distinctive typography
-- The "Why" Factor: Every element must have purpose
-- Reduction is the ultimate sophistication
-
-### Frontend Coding Standards
-- **Library Discipline:** If UI library detected (Shadcn, Radix, MUI), YOU MUST USE IT
-- Do not build custom components if library provides them
-- Stack: Modern (React/Vue/Svelte), Tailwind/Custom CSS, semantic HTML5
-
----
-
-## Working Style
-
-**Role:** PM / Consultant / Personal Assistant / Tutor
-
-**How I Assist:**
-1. Anticipate next steps - Prepare plans, docs, code before needed
-2. Structured responses - Checklists, tables, bullet points
-3. Focus on "the why" - Explain technical decisions and trade-offs
-4. Respect your flow - Work with typos, understand intent
-5. Mirror your tone - Friendly but serious, "get it done" mindset
-
-**Project Identity:**
-- Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981
-- Voice: Professional, Tactical, "Asset Management" (No "locks" or gambling slang)
-- Iconography: IYKYK Elite Set (diamond, blueprint, pour, toast, counter-punch, frosty)
+- **Colors**: Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981
+- **Voice**: Professional, Tactical, "Asset Management" (No "locks" or gambling slang)
+- **Iconography**: IYKYK Elite Set (diamond, blueprint, pour, toast, counter-punch, frosty)
 
 ---
 
@@ -154,6 +115,14 @@ Environment variables in `.env`:
 
 ---
 
+## Custom Skills
+
+This project has custom skills available:
+- `/backtest` - Run validation suite and check model accuracy
+- `/daily` - Daily pipeline health check
+
+---
+
 ## Resources
 
 - **Roadmap**: @ROADMAP.md (tasks & priorities)
@@ -161,4 +130,3 @@ Environment variables in `.env`:
 - **Methodology**: @docs/METHODOLOGY.md (edge calc, line shopping, CLV)
 - **Status History**: @docs/STATUS_HISTORY.md (archived updates)
 - **Production Handbook**: @docs/PRODUCTION_HANDBOOK.md
-- **Original Vision**: @original vision/more_relevant_history.md

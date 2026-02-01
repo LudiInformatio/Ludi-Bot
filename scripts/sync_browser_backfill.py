@@ -157,6 +157,20 @@ DATA_MANIFEST = {
             "CONTESTED 3PT SHOTS": "contested_3pt_shots",
             "CONTESTED SHOTS": "contested_shots"
         }
+    },
+    "closest_defender": {
+        "url": "https://www.nba.com/stats/players/shots-closest-defender?DateFrom={date}&DateTo={date}",
+        "type": "closest_defender",
+        "label": "Closest Defender",
+        "distance_ranges": [
+            {"param": "0-2 Feet - Very Tight", "db_col": "very_tight_fga", "add_to_contested": True},
+            {"param": "2-4 Feet - Tight", "db_col": "tight_fga", "add_to_contested": True},
+            {"param": "4-6 Feet - Open", "db_col": "open_fga", "add_to_contested": False},
+            {"param": "6+ Feet - Wide Open", "db_col": "wide_open_fga", "add_to_contested": False}
+        ],
+        "col_map": {
+            "FGA": "fga_value"
+        }
     }
 }
 
@@ -235,9 +249,12 @@ def scrape_table(page, label):
     # Then handle pagination to show all rows
     handle_pagination(page, label)
 
-    # Headers
+    # Headers - use LAST header row only (handles multi-row headers like Closest Defender page)
     headers = page.evaluate('''() => {
-        const ths = Array.from(document.querySelectorAll('table.Crom_table__p1iZz thead th'));
+        const headerRows = Array.from(document.querySelectorAll('table.Crom_table__p1iZz thead tr'));
+        if (headerRows.length === 0) return [];
+        const lastRow = headerRows[headerRows.length - 1];
+        const ths = Array.from(lastRow.querySelectorAll('th'));
         return ths.map(th => th.innerText.trim());
     }''')
     headers = [h.replace('\xa0', ' ').replace('\n', ' ') for h in headers]
@@ -261,7 +278,7 @@ def scrape_table(page, label):
 def process_item(item_key, data, date_str):
     """Generic processor based on manifest type."""
     if not data or not data['rows']: return 0
-    
+
     manifest_entry = DATA_MANIFEST[item_key]
     col_map = manifest_entry['col_map']
     table_type = manifest_entry['type']
@@ -269,7 +286,7 @@ def process_item(item_key, data, date_str):
     if table_type == "advanced": target_table = "player_game_advanced"
     if table_type == "clutch": target_table = "player_clutch_stats"
 
-    # Reverting to specific functions for safety in this iteration 
+    # Reverting to specific functions for safety in this iteration
     # as generic SQL construction is error-prone without an ORM.
     if table_type == "tracking":
         return process_tracking_row(data, date_str, col_map)
@@ -281,6 +298,7 @@ def process_item(item_key, data, date_str):
         return process_opponent_row(data, date_str, col_map)
     elif table_type == "hustle":
         return process_hustle_row(data, date_str, col_map)
+    # closest_defender is handled specially in main loop, not here
     return 0
 
 def extract_id_from_href(href):
@@ -588,6 +606,130 @@ def process_hustle_row(data, date_str, col_map):
     conn.close()
     return count
 
+
+def process_closest_defender(page, date_str, nba_date):
+    """
+    Special handler for Closest Defender data.
+    Scrapes all 4 distance ranges and aggregates into shot difficulty columns.
+
+    Returns: number of records updated
+    """
+    from urllib.parse import quote
+
+    config = DATA_MANIFEST['closest_defender']
+    base_url = config['url'].format(date=nba_date)
+    distance_ranges = config['distance_ranges']
+
+    # Accumulator: player_id -> {player_name, team, very_tight_fga, tight_fga, open_fga, wide_open_fga}
+    player_data = {}
+
+    for range_config in distance_ranges:
+        param_value = range_config['param']
+        db_col = range_config['db_col']
+
+        # Build URL with distance range filter
+        url = f"{base_url}&CloseDefDistRange={quote(param_value)}"
+
+        try:
+            print(f"      Scraping {param_value}...")
+            page.goto(url, wait_until='domcontentloaded', timeout=90000)
+
+            # Use standard table scraping
+            data = scrape_table(page, f"Closest Defender ({param_value})")
+
+            if not data or not data.get('rows'):
+                print(f"         ⚠️ No data for {param_value}")
+                continue
+
+            headers = data['headers']
+            rows = data['rows']
+            header_idx = {h: i for i, h in enumerate(headers)}
+
+            if 'PLAYER' not in header_idx or 'FGA' not in header_idx:
+                print(f"         ⚠️ Missing PLAYER or FGA column")
+                continue
+
+            for row_obj in rows:
+                try:
+                    row_data = row_obj['data']
+                    href = row_obj['href']
+
+                    player_name = row_data[header_idx['PLAYER']]
+                    team_val = row_data[header_idx.get('TEAM', 1)]
+                    fga_str = row_data[header_idx['FGA']]
+
+                    pid = extract_id_from_href(href)
+                    if not pid:
+                        pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+
+                    fga = 0
+                    if fga_str and fga_str != '-':
+                        fga = int(float(fga_str))
+
+                    # Initialize player entry if not exists
+                    if pid not in player_data:
+                        player_data[pid] = {
+                            'player_name': player_name,
+                            'team': team_val,
+                            'very_tight_fga': 0,
+                            'tight_fga': 0,
+                            'open_fga': 0,
+                            'wide_open_fga': 0
+                        }
+
+                    # Set the appropriate column
+                    player_data[pid][db_col] = fga
+
+                except Exception as e:
+                    continue
+
+            # Human-like pause between range scrapes
+            time.sleep(random.uniform(2.0, 4.0))
+
+        except Exception as e:
+            print(f"         ❌ Error scraping {param_value}: {e}")
+            continue
+
+    # Now write all accumulated data to database
+    if not player_data:
+        return 0
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    count = 0
+
+    for pid, pdata in player_data.items():
+        try:
+            # Calculate contested_fga = very_tight (0-2ft) + tight (2-4ft)
+            contested_fga = pdata['very_tight_fga'] + pdata['tight_fga']
+
+            sql = '''
+                INSERT INTO player_game_tracking (
+                    nba_player_id, player_name, game_date, team_abbr, nba_game_id, synced_at,
+                    contested_fga, tight_fga, open_fga, wide_open_fga
+                ) VALUES (?, ?, ?, ?, 'GHOST', CURRENT_TIMESTAMP, ?, ?, ?, ?)
+                ON CONFLICT(nba_player_id, game_date) DO UPDATE SET
+                    contested_fga = excluded.contested_fga,
+                    tight_fga = excluded.tight_fga,
+                    open_fga = excluded.open_fga,
+                    wide_open_fga = excluded.wide_open_fga,
+                    synced_at = CURRENT_TIMESTAMP
+            '''
+
+            params = [
+                pid, pdata['player_name'], date_str, pdata['team'],
+                contested_fga, pdata['tight_fga'], pdata['open_fga'], pdata['wide_open_fga']
+            ]
+            c.execute(sql, params)
+            count += 1
+        except Exception as e:
+            continue
+
+    conn.commit()
+    conn.close()
+    return count
+
+
 # ============================================================
 # MAIN GHOST PROTOCOL LOOP
 # ============================================================
@@ -655,31 +797,43 @@ def run_ghost_protocol(start_date, end_date, headless=False):
             
             print(f"\n[{db_date}] Processing...")
 
-            # Iterate through Manifest
+            # Iterate through Manifest (skip closest_defender - handled separately)
             for key, config in DATA_MANIFEST.items():
+                # Skip closest_defender - it requires special multi-page handling
+                if config['type'] == 'closest_defender':
+                    continue
+
                 label = config['label']
                 url_template = config['url']
-                
+
                 try:
                     url = url_template.format(date=nba_date)
-                    
+
                     # 1. Navigate with optimized wait strategy
                     # Use 'domcontentloaded' to avoid hanging on ads/tracking pixels
                     # Increase timeout to 90s for safety
                     page.goto(url, wait_until='domcontentloaded', timeout=90000)
-                    
+
                     # 2. Scrape (includes human interaction)
                     data = scrape_table(page, label)
-                    
+
                     # 3. Process
                     count = process_item(key, data, db_date)
                     print(f"   ✓ {label}: {count} records")
-                    
+
                     # Human-like pause between tables
                     time.sleep(random.uniform(3.0, 6.0))
-                    
+
                 except Exception as e:
                     print(f"   ❌ {label} Error: {e}")
+
+            # Process Closest Defender separately (requires scraping 4 distance ranges)
+            try:
+                print(f"   📊 Closest Defender (4 distance ranges)...")
+                count = process_closest_defender(page, db_date, nba_date)
+                print(f"   ✓ Closest Defender: {count} records")
+            except Exception as e:
+                print(f"   ❌ Closest Defender Error: {e}")
 
         browser.close()
         print("\n✅ Ghost Protocol Complete.")

@@ -1,26 +1,59 @@
-# Environment
-venv/
-.venv/
-*.env
-.env
-
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# macOS
+# Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Generated artifacts
+api_usage_log.json
+daily_briefing.txt
+assets/generated/*.png
+logs/bets/*.json
+
+# Database
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS
 .DS_Store
+Thumbs.db
 
-# Logs
-*.log
+# Claude Code
+.claude/
+.claudeignore
 
-# Caches (regenerated at runtime)
-yak_cache.json
-cache/nba_api/
-
-# NOTE: ludi.db and ludi_history_db.json are NOT ignored
-# They are committed to enable GitHub Actions data sync automation
-gemini-cli/
-ludi.db.backup*
-ludi_corrupted*
-scripts/test_*.py
+# Extensions
+perplexity-ext/

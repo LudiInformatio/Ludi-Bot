@@ -25,16 +25,9 @@ class LudiCalibrator:
         # Initialize debug logger if enabled
         if debug_log:
             import logging
-            import os
-            os.makedirs('logs', exist_ok=True)
-            logging.basicConfig(
-                filename='logs/calibration_debug.log',
-                level=logging.DEBUG,
-                format='%(asctime)s | %(message)s',
-                datefmt='%Y-%m-%d %H:%M:%S'
-            )
+            logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             self.logger = logging.getLogger('module_e')
-            self.logger.debug("=== Module E Debug Logging Initialized ===")
+            self.logger.info("=== Module E Debug Logging Initialized ===")
         
         self.id_resolver = PlayerIDResolver()
         
@@ -505,6 +498,49 @@ class LudiCalibrator:
             # print(f"DEBUG: Error in _get_tracking_stats: {e}")
             return {}
 
+    def _get_shot_difficulty_stats(self, player_name_or_id: str, days: int = 60) -> dict:
+        """
+        Get shot difficulty stats for a player from the database.
+        """
+        try:
+            canonical_id = self.id_resolver.resolve_to_canonical_id(player_name_or_id)
+            player_info = self.id_resolver.get_player_info(canonical_id)
+            canonical_name = player_info.get('full_name', player_name_or_id)
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            query = """
+            SELECT
+                AVG(contested_fga) as avg_contested_fga,
+                AVG(tight_fga) as avg_tight_fga,
+                AVG(open_fga) as avg_open_fga,
+                AVG(wide_open_fga) as avg_wide_open_fga,
+                AVG(avg_defender_dist) as avg_defender_dist,
+                COUNT(*) as games
+            FROM player_game_tracking
+            WHERE player_name = ? AND game_date >= date('now', ?)
+            """
+            cursor.execute(query, (canonical_name, f'-{days} days'))
+            row = cursor.fetchone()
+
+            if not row or row[5] < 3:  # Need at least 3 games
+                conn.close()
+                return {}
+
+            stats = {
+                'avg_contested_fga': row[0] or 0,
+                'avg_tight_fga': row[1] or 0,
+                'avg_open_fga': row[2] or 0,
+                'avg_wide_open_fga': row[3] or 0,
+                'avg_defender_dist': row[4] or 0,
+                'shot_difficulty_games': row[5]
+            }
+            conn.close()
+            return stats
+        except Exception as e:
+            return {}
+
     def _assign_secondary_playtypes(self, p, tracking_data):
         """
         Assign 0-2 secondary playtypes using strict thresholds.
@@ -871,6 +907,14 @@ class LudiCalibrator:
                         f"Catch-shoot: {1-shot_creation_ratio:.0%} of 3s")
         # === END SHOT CREATION SPLIT ===
 
+        # === NEW: SHOT DIFFICULTY MODIFIER ===
+        self._apply_shot_difficulty_modifier(calibrated)
+        # === END SHOT DIFFICULTY MODIFIER ===
+
+        # === NEW: OPPONENT CONTEXT MODIFIER ===
+        self._apply_opponent_context_modifiers(calibrated)
+        # === END OPPONENT CONTEXT MODIFIER ===
+
         # === 8. NUANCE CHECKS ===
         # Westbrook/Giddey Rule: Guards who crash boards
         if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_CREATOR"] and calibrated.get('base_reb', 0) > 5.5:
@@ -1107,6 +1151,74 @@ class LudiCalibrator:
             self.logger.debug(
                 f"SKIP | {player_name} | {function} | {reason}"
             )
+
+    def _apply_shot_difficulty_modifier(self, calibrated: dict) -> None:
+        """
+        Adjusts shooting efficiency based on defender distance and shot quality.
+        """
+        player_name = calibrated.get('name', '')
+        if not player_name:
+            return
+
+        shot_difficulty_stats = self._get_shot_difficulty_stats(player_name)
+
+        if not shot_difficulty_stats or shot_difficulty_stats['shot_difficulty_games'] < 3:
+            self._log_skip(player_name, 'SHOT_DIFFICULTY', 'Insufficient tracking data')
+            return
+
+        total_fga = shot_difficulty_stats['avg_tight_fga'] + shot_difficulty_stats['avg_open_fga'] + shot_difficulty_stats['avg_wide_open_fga']
+        if total_fga == 0:
+            self._log_skip(player_name, 'SHOT_DIFFICULTY', 'No tracked FGA')
+            return
+            
+        wide_open_ratio = shot_difficulty_stats['avg_wide_open_fga'] / total_fga
+
+        if wide_open_ratio > 0.5:
+            # High Quality Shot Selection
+            fg_pct_mod = 1.03
+            tpm_mod = 1.05
+            self._boost_stat(calibrated, 'proj_fg_pct', fg_pct_mod)
+            self._boost_stat(calibrated, 'proj_3pm', tpm_mod)
+            calibrated['notes'] += " | High Quality Shots"
+            self._log_adjustment(player_name, 'SHOT_DIFFICULTY', fg_pct_mod, f"Wide Open Ratio: {wide_open_ratio:.1%}")
+        elif wide_open_ratio < 0.2:
+            # Low Quality Shot Selection
+            fg_pct_mod = 0.97
+            tpm_mod = 0.95
+            self._boost_stat(calibrated, 'proj_fg_pct', fg_pct_mod)
+            self._boost_stat(calibrated, 'proj_3pm', tpm_mod)
+            calibrated['notes'] += " | Low Quality Shots"
+            self._log_adjustment(player_name, 'SHOT_DIFFICULTY', fg_pct_mod, f"Wide Open Ratio: {wide_open_ratio:.1%}")
+
+    def _apply_opponent_context_modifiers(self, calibrated: dict) -> None:
+        """
+        Adjusts defensive stats based on opponent tendencies.
+        """
+        player_name = calibrated.get('name', '')
+        if not player_name:
+            return
+
+        opponent_stats = calibrated.get('opponent_stats', {})
+        if not opponent_stats:
+            self._log_skip(player_name, 'OPPONENT_CONTEXT', 'No opponent stats found')
+            return
+
+        tov_rate = opponent_stats.get('tov_rate', 0)
+        two_pa_rate = opponent_stats.get('two_pa_rate', 0)
+
+        # STL boost vs high-turnover teams
+        if tov_rate > 0.15:
+            stl_mod = 1.10
+            self._boost_stat(calibrated, 'proj_stl', stl_mod)
+            calibrated['notes'] += " | STL Boost (High TOV%)"
+            self._log_adjustment(player_name, 'OPPONENT_CONTEXT', stl_mod, f"Opponent TOV Rate: {tov_rate:.1%}")
+
+        # BLK boost vs paint-heavy teams
+        if two_pa_rate > 0.65:
+            blk_mod = 1.10
+            self._boost_stat(calibrated, 'proj_blk', blk_mod)
+            calibrated['notes'] += " | BLK Boost (High 2PA%)"
+            self._log_adjustment(player_name, 'OPPONENT_CONTEXT', blk_mod, f"Opponent 2PA Rate: {two_pa_rate:.1%}")
 
     def classify_team_offense(self, team_abbr: str) -> str:
         """

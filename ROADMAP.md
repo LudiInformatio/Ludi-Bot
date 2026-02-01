@@ -1,7 +1,7 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** January 29, 2026 @ 3:55 PM EST
-**Current Phase:** Phase 5 - Production Deployment & Automation
+**Last Updated:** February 1, 2026 @ 2:50 PM EST
+**Current Phase:** Phase 5 - Production Deployment & Automation + Phase 5.5 Phase 2 (Complete ✅)
 
 This is the single source of truth for project tasks and priorities.
 
@@ -39,9 +39,9 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ### Phase 5.5: Defensive Stat Fix & 16-Archetype Expansion
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅
 **Started:** January 29, 2026
-**Completed:** January 29, 2026
+**Last Updated:** February 1, 2026
 
 **Phase 0: URGENT FIX - ✅ COMPLETE**
 - [x] Fix STAT_MAPPING in main.py (add STL, BLK, DREB) - Commits: 27f2392, b3cb571
@@ -61,11 +61,32 @@ This is the single source of truth for project tasks and priorities.
 - [x] Re-run archetype population to reduce GENERALIST % (now 25.4%, was 73.8%)
 - [x] Database cleanup: Removed old archetype entries (TWO_WAY_WING, RIM_RUNNER, HELIOCENTRIC)
 
-**Phase 2: Enhanced Defensive Tracking (Week 2)**
-- [ ] Add opponent context (TOV rate, FGA, 3PA%) to player packets in main.py
-- [ ] Implement contextual defensive stat modifiers in Module E
-- [ ] Test STL boost vs high-turnover teams (>15% TO rate)
-- [ ] Test BLK boost vs paint-heavy teams (>65% 2PA rate)
+**Phase 2: Enhanced Defensive Tracking - ✅ COMPLETE**
+**Started:** February 1, 2026
+**Completed:** February 1, 2026
+**Status:** Implementation complete, data backfilled, ready for validation
+
+**Completed (Feb 1, 2026):**
+- [x] Add opponent context (TOV rate, 2PA rate) to player packets in main.py
+- [x] Implement contextual defensive stat modifiers in Module E (STL +10%, BLK +10%)
+- [x] Shot difficulty integration using defender distance data from player_game_tracking
+- [x] Unit tests created (test_module_e.py) - all passing
+- [x] Integration test successful (exit code 0, no crashes)
+- [x] Data sync issue resolved - Added closest_defender to Ghost Protocol DATA_MANIFEST
+- [x] Backfill completed - Jan 14-31 (17 days), 2,492/2,711 records with shot difficulty data (91.9%)
+- [x] Daily workflow configured - tracking_sync.yml will auto-sync closest defender data at 9 AM EST
+
+**Coverage Metrics:**
+- Overall: 91.9% of records have complete shot difficulty data (2,492/2,711)
+- Daily average: ~95% coverage (Jan 14-31, excluding Jan 25 anomaly)
+- Data integrity verified: contested_fga >= tight_fga relationship holds across all records
+
+**Next Phase:**
+- [ ] Phase 2 Validation: 14-day backtest to measure hit rate improvements (separate task)
+  - [ ] Test STL boost vs high-turnover teams (>15% TOV rate)
+  - [ ] Test BLK boost vs paint-heavy teams (>65% 2PA rate)
+  - [ ] Confirm ≥+2% hit rate improvement on PTS props
+  - [ ] Confirm ≥+3% hit rate improvement on STL/BLK props
 
 **Phase 3: SportVu Integration (Optional - Week 3-4)**
 - [ ] Create scripts/sync_sportvu_tracking.py for rebounding data
@@ -112,6 +133,25 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## Recently Completed
+
+### Phase 5.5 Phase 2: Shot Difficulty & Opponent Context Integration - 2026/02/01
+**Implementation:**
+- [x] Integrated defender distance data (contested, tight, open, wide-open FGA) into Module E calibration
+- [x] Added `_get_shot_difficulty_stats()` method to query player_game_tracking table
+- [x] Implemented `_apply_shot_difficulty_modifier()` with wide-open ratio logic for FG% adjustments
+- [x] Enhanced opponent context pipeline (TOV rate, 2PA rate) in main.py
+- [x] Added `_apply_opponent_context_modifiers()` for contextual STL/BLK boosts
+- [x] Created unit tests (test_module_e.py) - all passing
+- [x] Integration test verified (exit code 0, no crashes)
+
+**Data Sync Resolution:**
+- [x] Root cause identified: Ghost Protocol missing closest_defender in DATA_MANIFEST (stopped syncing Jan 14)
+- [x] Fixed sync_browser_backfill.py: Added closest_defender entry with 4 distance ranges
+- [x] Fixed header extraction: Uses last row only (handles multi-row headers)
+- [x] Added process_closest_defender() function to scrape all 4 distance ranges
+- [x] Backfill completed: Jan 14-31 (17 days), 2,492/2,711 records (91.9% coverage)
+- [x] Daily workflow verified: tracking_sync.yml will auto-sync at 9 AM EST going forward
+- **Status**: ✅ COMPLETE - Ready for backtest validation
 
 ### System Stability & Browser Automation Revamp - 2026/01/29
 - [x] Resolved CI/CD race conditions (added `git pull --rebase`) in 5 core workflows
