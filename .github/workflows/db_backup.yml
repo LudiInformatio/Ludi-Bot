@@ -1,10 +1,13 @@
-name: Daily DB Backup
+name: Daily Database Backup
 
 on:
   schedule:
-    # 08:40 UTC = 03:40 EST / 04:40 EDT
-    - cron: '40 8 * * *'
+    - cron: '0 9 * * *'  # 4 AM EST (9 AM UTC) daily
   workflow_dispatch:
+    inputs:
+      description:
+        description: 'Manual backup trigger'
+        required: false
 
 permissions:
   contents: read
@@ -15,7 +18,8 @@ concurrency:
 
 jobs:
   backup:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,91 +29,41 @@ jobs:
         run: |
           if [[ -f ludi.db ]]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Database found locally"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Database not found at $(pwd)/ludi.db"
           fi
 
       - name: Report missing database
         if: steps.db.outputs.present != 'true'
         run: |
-          echo "ludi.db not found in the repository checkout. Skipping backup."
+          echo "ludi.db not found. Database is managed locally and not in git."
+          echo "Ensure the self-hosted runner has the database file."
+          exit 1
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+      - name: Create database backup
         if: steps.db.outputs.present == 'true'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-        if: steps.db.outputs.present == 'true'
-
-      - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
-        if: steps.db.outputs.present == 'true'
+          bash scripts/backup_database.sh
 
-      - name: Set timestamp
-        id: ts
-        run: echo "ts=$(date -u +%Y%m%d_%H%M%S)" >> "$GITHUB_OUTPUT"
+      - name: List recent backups
         if: steps.db.outputs.present == 'true'
-
-      - name: Verify DB integrity and create backup
-        env:
-          BACKUP_TS: ${{ steps.ts.outputs.ts }}
         run: |
-          python3 - <<'PY'
-          import os
-          import sqlite3
-          import sys
-
-          db_path = "ludi.db"
-          if not os.path.exists(db_path):
-            print(f"Missing database: {db_path}")
-            sys.exit(1)
-
-          backup_dir = os.environ.get("RUNNER_TEMP", ".")
-          ts = os.environ["BACKUP_TS"]
-          backup_path = os.path.join(backup_dir, f"ludi.db.backup_{ts}.sqlite")
-
-          con = sqlite3.connect(db_path)
-          try:
-            result = con.execute("PRAGMA quick_check;").fetchone()[0]
-            print(f"PRAGMA quick_check: {result}")
-            if result != "ok":
-              sys.exit(1)
-
-            dest = sqlite3.connect(backup_path)
-            try:
-              con.backup(dest)
-            finally:
-              dest.close()
-          finally:
-            con.close()
-
-          print(f"Backup created: {backup_path}")
-          PY
-        if: steps.db.outputs.present == 'true'
-
-      - name: Compress backup
-        env:
-          BACKUP_TS: ${{ steps.ts.outputs.ts }}
-        run: |
-          backup_path="$RUNNER_TEMP/ludi.db.backup_${BACKUP_TS}.sqlite"
-          tar -czf "$RUNNER_TEMP/ludi.db.backup_${BACKUP_TS}.tar.gz" -C "$RUNNER_TEMP" "ludi.db.backup_${BACKUP_TS}.sqlite"
-          ls -lh "$RUNNER_TEMP/ludi.db.backup_${BACKUP_TS}.tar.gz"
-        if: steps.db.outputs.present == 'true'
+          echo "Recent backups:"
+          ls -lht archives/data/ludi.db.backup_*.gz 2>/dev/null | head -5 || echo "No compressed backups found"
 
       - name: Upload backup artifact
+        if: steps.db.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ludi-db-backup-${{ steps.ts.outputs.ts }}
-          path: ${{ runner.temp }}/ludi.db.backup_${{ steps.ts.outputs.ts }}.tar.gz
+          name: database-backup-${{ github.run_number }}
+          path: archives/data/ludi.db.backup_*.gz
           retention-days: 30
+
+      - name: Backup summary
         if: steps.db.outputs.present == 'true'
+        run: |
+          BACKUP_COUNT=$(ls -1 archives/data/ludi.db.backup_*.gz 2>/dev/null | wc -l | tr -d ' ')
+          echo "✅ Backup complete"
+          echo "📊 Total backups: $BACKUP_COUNT"

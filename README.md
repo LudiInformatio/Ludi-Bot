@@ -1,5 +1,37 @@
 # Ludi Lens v2.0 - Day 1 Quick Start
 
+## Database Setup
+
+The database (`ludi.db`) is generated locally and **NOT tracked in git** to prevent merge conflicts.
+
+### First-Time Setup
+
+**Option 1: Initialize fresh database**
+```bash
+python database.py
+```
+
+**Option 2: Restore from backup**
+```bash
+bash scripts/restore_database.sh archives/data/ludi.db.backup_<latest>.gz
+```
+
+### Database Management
+
+**Create backup:**
+```bash
+bash scripts/backup_database.sh
+```
+
+**Restore backup:**
+```bash
+bash scripts/restore_database.sh <backup_file>
+```
+
+> **Warning:** Never commit `ludi.db` to git. Use backup/restore workflow instead.
+
+---
+
 ## What You Have Right Now
 
 ### 1. `prototype_engine.py` - The Math Validator

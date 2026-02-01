@@ -47,6 +47,46 @@ python -c "from utils.telegram_notifier import send_message; send_message('Test'
 
 ---
 
+## Database Management
+
+**IMPORTANT:** `ludi.db` is NOT tracked in git to prevent merge conflicts.
+
+**Architecture:**
+- **Local Development:** Database managed locally with backup/restore workflow
+- **CI/CD Workflows:** Database rebuilt via data sync (not restored from git)
+- **Backups:** Automated daily backups at 4 AM EST via GitHub Actions
+
+### Backup & Restore
+
+**Create manual backup:**
+```bash
+bash scripts/backup_database.sh
+```
+
+**Restore from backup:**
+```bash
+# List available backups
+bash scripts/restore_database.sh
+
+# Restore specific backup
+bash scripts/restore_database.sh archives/data/ludi.db.backup_YYYYMMDD_HHMMSS.gz
+```
+
+**List recent backups:**
+```bash
+ls -lht archives/data/ludi.db.backup_*.gz | head -10
+```
+
+### Why Database is Not in Git
+
+**Problem:** Binary database files create merge conflicts that cause data loss
+**Solution:** Local database + automated backups + data sync workflows
+**Result:** No more merge conflicts, data is safe, CI/CD still works
+
+**If you need to share database state:** Use backup files, not git commits
+
+---
+
 ## Module Reference
 
 | Module | File | Class Name |
