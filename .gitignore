@@ -42,7 +42,9 @@ daily_briefing.txt
 assets/generated/*.png
 logs/bets/*.json
 
-# Database
+# Database files (local only, use backups for recovery)
+ludi.db
+*.db
 *.db-journal
 *.db-wal
 *.db-shm
