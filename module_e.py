@@ -188,6 +188,13 @@ class LudiCalibrator:
         self.config_path = Path(__file__).parent / 'config' / 'playtype_thresholds.json'
         self.playtype_thresholds = self._load_playtype_thresholds()
 
+    def _get_conn(self):
+        """Get database connection with WAL mode (Phase 6.1)"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+        return conn
+
     def _fetch_missing_stats(self, player_name, team_abbr=None):
         """Database fallback for missing stats."""
         try:
@@ -626,6 +633,9 @@ class LudiCalibrator:
         calibrated = player_packet.copy()
         if 'notes' not in calibrated: calibrated['notes'] = ""
 
+        # Extract WOWY confidence for boost weighting (Phase 6.3)
+        wowy_confidence = player_packet.get('wowy_confidence', None)
+
         # INITIALIZE PROJECTION KEYS from BASE KEYS if missing
         # This ensures subsequent _boost_stat calls work correctly
         mappings = {
@@ -704,90 +714,91 @@ class LudiCalibrator:
         self._apply_offensive_style_boost(calibrated, team_offense, def_style)
 
         # === NEW 16-ARCHETYPE MATCHUP MATRIX ===
+        # Phase 6.3: Key boosts use _boost_stat_with_confidence for WOWY weighting
 
         if archetype == "HELIOCENTRIC_MAESTRO":
             if def_style == "BLITZ":
-                self._boost_stat(calibrated, 'proj_ast', 1.18)
-                self._boost_stat(calibrated, 'proj_pts', 0.92)
+                self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.18, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
                 self._boost_stat(calibrated, 'proj_tov', 1.10)
                 calibrated['notes'] += " | Maestro vs Trap (Pass-First)"
             elif def_style == "PAINT_PACK":
-                self._boost_stat(calibrated, 'proj_ast', 1.08)
+                self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.08, wowy_confidence)
                 calibrated['notes'] += " | P&R Drop Edge"
 
         elif archetype == "ISO_ASSASSIN":
             if def_style == "BLITZ":
-                self._boost_stat(calibrated, 'proj_pts', 0.92)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
                 self._boost_stat(calibrated, 'proj_tov', 1.12)
                 calibrated['notes'] += " | ISO Tax vs Blitz"
             elif def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_pts', 1.10)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.10, wowy_confidence)
                 calibrated['notes'] += " | ISO Mismatch"
 
         elif archetype == "SLASHING_CREATOR":
             if def_style == "HACKERS":
-                self._boost_stat(calibrated, 'proj_fta', 1.20)
-                self._boost_stat(calibrated, 'proj_pts', 1.05)
+                self._boost_stat_with_confidence(calibrated, 'proj_fta', 1.20, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.05, wowy_confidence)
                 calibrated['notes'] += " | Foul Drawn Magnet"
             elif def_style == "FUNNEL":
-                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Transition Chaos"
 
         elif archetype == "JUMBO_FACILITATOR":
             if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_ast', 1.12)
-                self._boost_stat(calibrated, 'proj_reb', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.12, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Size Mismatch Hub"
 
         elif archetype == "SNIPER_ELITE":
             if def_style == "PAINT_PACK":
-                self._boost_stat(calibrated, 'proj_3pm', 1.12)
+                self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Spot-Up vs Helpers"
 
         elif archetype == "TWO_LEVEL_SCORER":
             if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_pts', 1.08)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                 calibrated['notes'] += " | Mid-Range Mismatch"
 
         elif archetype == "ATHLETIC_FINISHER":
             if def_style == "FUNNEL":
-                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Transition Edge"
 
         elif archetype == "WARRIOR_BIG":
             if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_reb', 1.20)
-                self._boost_stat(calibrated, 'proj_oreb', 1.30)
+                self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.20, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.30, wowy_confidence)
                 calibrated['notes'] += " | Warrior Boards vs Small Ball"
             elif def_style == "PAINT_PACK":
-                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                 self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
         elif archetype == "VULTURE_BIG":
             if def_style == "FUNNEL":
-                self._boost_stat(calibrated, 'proj_dreb', 1.15)
-                self._boost_stat(calibrated, 'proj_pts', 1.08)
+                self._boost_stat_with_confidence(calibrated, 'proj_dreb', 1.15, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                 calibrated['notes'] += " | Vulture Transition Edge"
 
         elif archetype == "STRETCH_BIG":
             if def_style == "PAINT_PACK":
-                self._boost_stat(calibrated, 'proj_3pm', 1.15)
-                self._boost_stat(calibrated, 'proj_3pa', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.15, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_3pa', 1.15, wowy_confidence)
                 calibrated['notes'] += f" | {opponent} Paint Pack Edge"
 
         elif archetype == "POST_ANCHOR":
             if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_pts', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Post Mismatch"
 
         elif archetype == "ROLL_MAN":
             if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_oreb', 1.30)
-                self._boost_stat(calibrated, 'proj_reb', 1.15)
+                self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.30, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Size Advantage (O-Boards)"
             elif def_style == "PAINT_PACK":
-                self._boost_stat(calibrated, 'proj_pts', 1.12)
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
         elif archetype == "SCREEN_NAVIGATOR":
@@ -821,7 +832,8 @@ class LudiCalibrator:
 
         # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 - 14 Total Modifiers)
         # Extracted to separate method for Phase 3 implementation
-        self._apply_secondary_playtype_matchups(calibrated, def_style)
+        # Phase 6.3: Pass wowy_confidence for BENEFICIARY weighting
+        self._apply_secondary_playtype_matchups(calibrated, def_style, wowy_confidence)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -1118,7 +1130,29 @@ class LudiCalibrator:
         if (ast > 4.0 and pts < 18.0):
             return 'FACILITATOR', synergy_dict
 
-        # GENERALIST (fallback)
+        # === ADDITIONAL FALLBACKS (Feb 2026 Calibration) ===
+
+        # TWO_LEVEL_SCORER fallback: Scoring guards/wings who don't fit other categories
+        if (pts > 15.0 and tpm > 1.0 and usg > 0.22):
+            return 'TWO_LEVEL_SCORER', synergy_dict
+
+        # SNIPER_ELITE relaxed further: High 3PM shooters regardless of assists
+        if (tpm > 2.2):
+            return 'SNIPER_ELITE', synergy_dict
+
+        # CUTTER_SPECIALIST fallback: Role players with high rim freq
+        if (rim_freq > 0.40 and pts < 15.0):
+            return 'CUTTER_SPECIALIST', synergy_dict
+
+        # ROLL_MAN fallback: Bigs without many stats
+        if (reb > 5.0 and position in ['C', 'F-C', 'F'] and pts < 12.0):
+            return 'ROLL_MAN', synergy_dict
+
+        # FACILITATOR relaxed: Any player with decent assists
+        if (ast > 3.5):
+            return 'FACILITATOR', synergy_dict
+
+        # GENERALIST (final fallback - low usage role players)
         return 'GENERALIST', synergy_dict
 
     def _log_adjustment(self, player_name: str, function: str, 
@@ -1600,7 +1634,7 @@ class LudiCalibrator:
             calibrated['notes'] += " | B2B Front-End (Load Mgmt)"
             self._log_adjustment(player_name, 'FATIGUE', 0.96, "Front-end B2B load management")
 
-    def _apply_secondary_playtype_matchups(self, calibrated: dict, def_style: str) -> None:
+    def _apply_secondary_playtype_matchups(self, calibrated: dict, def_style: str, wowy_confidence: str = None) -> None:
         """
         Apply modifiers based on player's secondary playtypes vs opponent defense.
 
@@ -1610,6 +1644,7 @@ class LudiCalibrator:
         - P&R_ROLL_MAN vs DROP: Lobs and dunks available
 
         Phase 3 Enhancement: Added debug logging for all adjustments
+        Phase 6.3 Enhancement: WOWY confidence weighting on key boosts
         """
         player_name = calibrated.get('name', '')
         secondary_types = calibrated.get('secondary_playtypes', [])
@@ -1619,147 +1654,147 @@ class LudiCalibrator:
             if playtype == 'ISO_SCORER':
                 if def_style == 'BLITZ':
                     # Blitz defense disrupts isolation (research: +15% TOV rate)
-                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
                     self._boost_stat(calibrated, 'proj_tov', 1.12)
                     calibrated['notes'] += " | ISO Tax vs Blitz"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92,
                         "ISO_SCORER vs BLITZ: pressure forces mistakes")
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12,
                         "ISO_SCORER vs BLITZ: increased turnovers")
                 elif def_style == 'PERIMETER':
                     # ISO mismatch vs perimeter switching
-                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.10, wowy_confidence)
                     calibrated['notes'] += " | ISO vs Perimeter"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10,
                         "ISO_SCORER vs PERIMETER: space to operate")
 
             # === P&R_HANDLER MATCHUPS (3 total) ===
             elif playtype == 'P&R_HANDLER':
                 if def_style == 'PAINT_PACK':
                     # Drop coverage gives P&R handlers easy assists
-                    self._boost_stat(calibrated, 'proj_ast', 1.08)
+                    self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.08, wowy_confidence)
                     calibrated['notes'] += " | P&R Drop Edge"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
                         "P&R_HANDLER vs PAINT_PACK: passing lanes open")
                 elif def_style == 'BLITZ':
                     # Blitz forces tough passes, more turnovers
-                    self._boost_stat(calibrated, 'proj_ast', 0.90)
+                    self._boost_stat_with_confidence(calibrated, 'proj_ast', 0.90, wowy_confidence)
                     self._boost_stat(calibrated, 'proj_tov', 1.15)
                     calibrated['notes'] += " | P&R Blitz Tax"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90,
                         "P&R_HANDLER vs BLITZ: traps disrupt passing")
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "P&R_HANDLER vs BLITZ: increased turnovers")
                 elif def_style == 'FUNNEL':
                     # Funnel defense creates passing lanes
-                    self._boost_stat(calibrated, 'proj_ast', 1.12)
+                    self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.12, wowy_confidence)
                     calibrated['notes'] += " | PnR Handler vs Funnel"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12,
                         "P&R_HANDLER vs FUNNEL: easy passing lanes")
 
             # === SPOT_UP MATCHUPS (2 total - HIGHEST ROI) ===
             elif playtype == 'SPOT_UP':
                 if def_style == 'PAINT_PACK':
                     # Paint-pack leaves shooters open (strongest edge)
-                    self._boost_stat(calibrated, 'proj_3pm', 1.15)
+                    self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.15, wowy_confidence)
                     calibrated['notes'] += " | Spot-Up vs Pack"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "SPOT_UP vs PAINT_PACK: open 3s from help D")
                 elif def_style == 'PERIMETER':
                     # Perimeter switching closes out shooters
-                    self._boost_stat(calibrated, 'proj_3pm', 0.95)
+                    self._boost_stat_with_confidence(calibrated, 'proj_3pm', 0.95, wowy_confidence)
                     calibrated['notes'] += " | Spot-Up Tax"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.95, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.95,
                         "SPOT_UP vs PERIMETER: contested shots")
 
             # === TRANSITION MATCHUPS (3 total) ===
             elif playtype == 'TRANSITION':
                 if def_style == 'FUNNEL':
                     # Funnel defense vulnerable in transition
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                     calibrated['notes'] += " | Transition Chaos"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "TRANSITION vs FUNNEL: fast break chaos")
                 elif def_style == 'PAINT_PACK':
                     # Set defense slows transition
-                    self._boost_stat(calibrated, 'proj_pts', 0.92)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
                     calibrated['notes'] += " | Transition Tax"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.92,
                         "TRANSITION vs PAINT_PACK: set defense stops breaks")
                 elif def_style == 'HACKERS':
                     # Hackers create fast break opportunities
-                    self._boost_stat(calibrated, 'proj_pts', 1.08)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                     calibrated['notes'] += " | Fast Break Edge"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
                         "TRANSITION vs HACKERS: fast break opportunities")
 
             # === P&R_ROLL_MAN MATCHUPS (3 total) ===
             elif playtype == 'P&R_ROLL_MAN':
                 if def_style == 'PAINT_PACK':
                     # Drop coverage = easy dunks for roll man
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                     self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
                     calibrated['notes'] += " | Roll Man vs Drop"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "P&R_ROLL_MAN vs PAINT_PACK: lobs and dunks")
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10,
                         "P&R_ROLL_MAN vs PAINT_PACK: increased FG%")
                 elif def_style == 'BLITZ':
                     # Blitz limits roll opportunities
-                    self._boost_stat(calibrated, 'proj_pts', 0.88)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.88, wowy_confidence)
                     calibrated['notes'] += " | Roll Man Tax"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.88, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.88,
                         "P&R_ROLL_MAN vs BLITZ: no space at rim")
                 elif def_style == 'PERIMETER':
                     # Small ball = boards + mismatches
-                    self._boost_stat(calibrated, 'proj_reb', 1.15)
-                    self._boost_stat(calibrated, 'proj_pts', 1.10)
+                    self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.15, wowy_confidence)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.10, wowy_confidence)
                     calibrated['notes'] += " | Roll Man vs Small Ball"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "P&R_ROLL_MAN vs PERIMETER: rebound advantage")
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10,
                         "P&R_ROLL_MAN vs PERIMETER: mismatch scoring")
 
             # === OFF_BALL_CUTTER MATCHUPS (3 total) ===
             elif playtype == 'OFF_BALL_CUTTER':
                 if def_style == 'PERIMETER':
                     # Small ball vulnerable to cutters
-                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                     calibrated['notes'] += " | Cutter vs Small Ball"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12,
                         "OFF_BALL_CUTTER vs PERIMETER: backdoor cuts")
                 elif def_style == 'PAINT_PACK':
                     # Rim protection reduces cutter efficiency
                     self._boost_stat(calibrated, 'proj_fg_pct', 0.90)
                     calibrated['notes'] += " | Cutter Tax"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.90,
                         "OFF_BALL_CUTTER vs PAINT_PACK: clogged lanes")
                 elif def_style == 'BLITZ':
                     # Blitz creates cutting lanes
-                    self._boost_stat(calibrated, 'proj_pts', 1.12)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                     calibrated['notes'] += " | Cutter vs Blitz"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.12,
                         "OFF_BALL_CUTTER vs BLITZ: cutting lanes")
 
             # === PUTBACK MATCHUP (1 total) ===
             elif playtype == 'PUTBACK':
                 if def_style == 'PERIMETER':
                     # Small ball = offensive glass dominance + putback points
-                    self._boost_stat(calibrated, 'proj_oreb', 1.25)
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.25, wowy_confidence)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                     calibrated['notes'] += " | Putback vs Small"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.25, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.25,
                         "PUTBACK vs PERIMETER: size advantage on glass")
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "PUTBACK vs PERIMETER: putback scoring")
 
             # === POST_UP MATCHUP (1 total) ===
             elif playtype == 'POST_UP':
                 if def_style == 'PERIMETER':
                     # Post mismatch vs small ball
-                    self._boost_stat(calibrated, 'proj_pts', 1.15)
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                     calibrated['notes'] += " | Post vs Small Ball"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15, 
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "POST_UP vs PERIMETER: size mismatch")
 
     def _apply_archetype_synergy_weights(self, calibrated, archetype, synergy_dict):
@@ -1834,6 +1869,39 @@ class LudiCalibrator:
     def _boost_stat(self, d, key, factor):
         if key in d: d[key] = round(d[key] * factor, 2)
 
+    def _boost_stat_with_confidence(self, d, key, factor, wowy_confidence=None):
+        """
+        Apply stat boost weighted by WOWY confidence level.
+
+        For BENEFICIARY scenarios, reduces boost impact when WOWY data is weak.
+
+        Args:
+            d: Player dict containing projections
+            key: Stat key to boost (e.g., 'proj_pts')
+            factor: Base boost factor (e.g., 1.15 for +15%)
+            wowy_confidence: 'high', 'medium', 'low', or None
+        """
+        if key not in d:
+            return
+
+        # If no WOWY scenario, apply full boost
+        if not wowy_confidence:
+            d[key] = round(d[key] * factor, 2)
+            return
+
+        # Weight boost by confidence (Phase 6.3 Enhancement)
+        confidence_weights = {
+            'high': 1.0,     # Full boost
+            'medium': 0.85,  # 15% reduction in boost magnitude
+            'low': 0.70,     # 30% reduction in boost magnitude
+        }
+        weight = confidence_weights.get(wowy_confidence, 0.70)
+
+        # Apply weighted boost: factor=1.15 with low confidence becomes 1.105
+        # Formula: 1 + ((factor - 1) * weight)
+        weighted_factor = 1.0 + ((factor - 1.0) * weight)
+        d[key] = round(d[key] * weighted_factor, 2)
+
     def _apply_factor(self, d, factor):
         keys = ['proj_pts', 'proj_ast', 'proj_reb', 'proj_3pm', 'proj_min', 'proj_fga', 'proj_3pa', 'proj_fta', 'proj_oreb', 'proj_dreb', 'proj_stl', 'proj_blk']
         for k in keys:
@@ -1842,6 +1910,128 @@ class LudiCalibrator:
     def _zero_out(self, d):
         keys = ['proj_pts', 'proj_ast', 'proj_reb', 'proj_3pm', 'proj_min', 'proj_fga', 'proj_3pa', 'proj_fta', 'proj_oreb', 'proj_dreb', 'proj_stl', 'proj_blk']
         for k in keys: d[k] = 0.0
+
+    # ============================================================================
+    # PHASE 6.1: DEPTH CHART INTEGRATION (Feb 2, 2026)
+    # ============================================================================
+
+    def get_starter_status(self, player_name, team_abbr=None):
+        """
+        Get player's depth chart status (BASIC LOOKUP - no historical analysis).
+
+        This is a foundation method for Phase 6.1. Phase 6.2 will add
+        get_effective_beneficiaries() that combines this with historical data.
+
+        Args:
+            player_name: Player's full name
+            team_abbr: Team abbreviation (optional, for disambiguation)
+
+        Returns:
+            {
+                "is_starter": bool,           # depth_order == 1
+                "position": str,              # PG, SG, SF, PF, C
+                "depth_order": int,           # 1, 2, or 3
+                "team": str,                  # Team abbreviation
+                "confidence": str             # "official" (from Tank01)
+            }
+
+            Returns None if player not found in depth charts
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        try:
+            if team_abbr:
+                # Query with team filter
+                cursor.execute('''
+                    SELECT team_abbr, position, depth_order
+                    FROM depth_charts
+                    WHERE player_name = ? AND team_abbr = ?
+                    ORDER BY depth_order
+                    LIMIT 1
+                ''', (player_name, team_abbr))
+            else:
+                # Query without team filter (get first match)
+                cursor.execute('''
+                    SELECT team_abbr, position, depth_order
+                    FROM depth_charts
+                    WHERE player_name = ?
+                    ORDER BY depth_order
+                    LIMIT 1
+                ''', (player_name,))
+
+            row = cursor.fetchone()
+
+            if row:
+                team, position, depth_order = row
+                return {
+                    "is_starter": (depth_order == 1),
+                    "position": position,
+                    "depth_order": depth_order,
+                    "team": team,
+                    "confidence": "official"  # From Tank01 depth charts
+                }
+            else:
+                return None
+
+        except Exception as e:
+            if self.debug_log:
+                print(f"⚠️  Error fetching starter status for {player_name}: {e}")
+            return None
+
+        finally:
+            conn.close()
+
+    def get_backup_at_position(self, team_abbr, position, depth=2):
+        """
+        Get the backup player at a specific position.
+
+        Useful for identifying who steps up when a starter is OUT.
+
+        Args:
+            team_abbr: Team abbreviation (e.g., "ATL")
+            position: Position code (PG, SG, SF, PF, C)
+            depth: Depth order to retrieve (default=2 for first backup)
+
+        Returns:
+            {
+                "player_name": str,
+                "player_id": str,
+                "depth_order": int
+            }
+
+            Returns None if no player at that depth
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('''
+                SELECT player_name, player_id, depth_order
+                FROM depth_charts
+                WHERE team_abbr = ? AND position = ? AND depth_order = ?
+                LIMIT 1
+            ''', (team_abbr, position, depth))
+
+            row = cursor.fetchone()
+
+            if row:
+                player_name, player_id, depth_order = row
+                return {
+                    "player_name": player_name,
+                    "player_id": player_id,
+                    "depth_order": depth_order
+                }
+            else:
+                return None
+
+        except Exception as e:
+            if self.debug_log:
+                print(f"⚠️  Error fetching backup at {team_abbr} {position}{depth}: {e}")
+            return None
+
+        finally:
+            conn.close()
 
 if __name__ == "__main__":
     calib = LudiCalibrator()

@@ -16,8 +16,14 @@ except ImportError:
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
-# V4.4 - DEVIGGED EDGE CALCULATION | 2026 PRO-SHARP META
+# V5.1 - CALIBRATION UPDATE | FEB 2026
 # ==============================================================================
+# CHANGELOG V5.1 (Feb 2, 2026):
+# - Added REB OVER filter (skip until calibration - was -198u leak)
+# - Added 3PM OVER filter for low-volume shooters (<5 3PA)
+# - Reduced max unit sizing from 1.5u to 1.0u for conservative testing
+# - Widened stdevs by 30% to reduce probability overconfidence
+#
 # CHANGELOG V4.4:
 # - Added devigging to calculate TRUE edge against fair market probability
 # - Edge calculation now removes bookmaker vig (~2-5%) for accurate EV
@@ -27,7 +33,7 @@ except ImportError:
 class LudiReporter:
     def __init__(self):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE F (V4.6) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE F (V5.1) ONLINE")
         print(f"   >>> DETERMINISTIC REPORTING | NO SPECULATION")
         print(f"   >>> BET LOGGING ENABLED")
         print(f"{'='*40}")
@@ -133,6 +139,23 @@ class LudiReporter:
                         bet_direction = 'over' if final_proj > line else 'under'
                         model_prob = our_prob if bet_direction == 'over' else (1 - our_prob)
 
+                        # --- V5.1: CALIBRATION FILTERS (Feb 2026) ---
+                        # Skip bets that historically underperform based on Jan 2026 analysis
+
+                        # Filter 1: REB OVER (-198 units leak in backtest)
+                        # Model over-projects rebounds by ~1.65 per bet
+                        if stat_key.lower() == 'reb' and bet_direction == 'over':
+                            continue  # Skip until REB calibration complete
+
+                        # Filter 2: 3PM OVER on low-volume shooters
+                        # Only bet 3PM OVER on players with 5+ 3PA average
+                        if stat_key.lower() == '3pm' and bet_direction == 'over':
+                            player_3pa_avg = p.get('base_3pa', 0) or p.get('season_3pa', 0)
+                            if player_3pa_avg < 5.0:
+                                continue  # Skip low-volume shooters
+
+                        # --- END CALIBRATION FILTERS ---
+
                         # Calculate TRUE edge using devigged fair probability
                         edge = calculate_true_edge(
                             model_prob,
@@ -141,6 +164,17 @@ class LudiReporter:
                             side=bet_direction
                         )
                         edge = round(edge, 1)
+
+                        # WOWY Confidence Penalty (Phase 6.3 Enhancement)
+                        # Reduce edge for low-confidence BENEFICIARY plays
+                        wowy_confidence = p.get('wowy_confidence', None)
+                        if wowy_confidence:
+                            wowy_edge_multipliers = {
+                                'high': 1.0,      # Full edge - strong WOWY data
+                                'medium': 0.90,   # 10% penalty - moderate data
+                                'low': 0.75,      # 25% penalty - weak data
+                            }
+                            edge = round(edge * wowy_edge_multipliers.get(wowy_confidence, 0.75), 1)
 
                         # Store fair probability for reporting
                         fair_prob = get_fair_probability(odds_over, odds_under, bet_direction)
@@ -167,8 +201,9 @@ class LudiReporter:
                             elif ev > 15:
                                 ev_flag = "📊 EXCEPTIONAL"
 
-                            # Bankroll Unit Sizing (0.25u to 1.5u)
-                            units = min(max(round(ev / 8.0, 2), 0.25), 1.5) if ev >= 1.0 else 0
+                            # Bankroll Unit Sizing (0.25u to 1.0u) - V5.1 Conservative during calibration
+                            # Reduced from 1.5u max to 1.0u max per Feb 2026 analysis
+                            units = min(max(round(ev / 10.0, 2), 0.25), 1.0) if ev >= 1.0 else 0
 
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
@@ -419,18 +454,20 @@ class LudiReporter:
         Returns:
             Probability of going OVER the line (0.0 to 1.0)
         """
-        # Typical standard deviations by stat category (from historical NBA data)
-        # These represent "one sigma" of typical game-to-game variance
+        # Typical standard deviations by stat category
+        # V5.1 (Feb 2026): Widened by ~30% to reduce overconfidence
+        # Based on analysis showing model probabilities were too extreme
+        # Research: FiveThirtyEight uses wider bands; props have high variance
         stat_stdev = {
-            'pts': 6.5,    # Points: ~6.5 point standard deviation
-            'reb': 3.2,    # Rebounds: ~3.2 boards
-            'ast': 2.5,    # Assists: ~2.5 assists
-            '3pm': 1.3,    # Three-pointers made: ~1.3
-            'oreb': 1.5,   # Offensive rebounds: ~1.5
-            'stl': 0.9,    # Steals: ~0.9
-            'blk': 1.0,    # Blocks: ~1.0
-            'tov': 1.2,    # Turnovers: ~1.2
-            'pra': 8.0,    # Pts+Reb+Ast combo: ~8.0
+            'pts': 8.5,    # Points: widened from 6.5 to 8.5
+            'reb': 4.2,    # Rebounds: widened from 3.2 to 4.2
+            'ast': 3.3,    # Assists: widened from 2.5 to 3.3
+            '3pm': 1.7,    # Three-pointers made: widened from 1.3 to 1.7
+            'oreb': 2.0,   # Offensive rebounds: widened from 1.5 to 2.0
+            'stl': 1.2,    # Steals: widened from 0.9 to 1.2
+            'blk': 1.3,    # Blocks: widened from 1.0 to 1.3
+            'tov': 1.6,    # Turnovers: widened from 1.2 to 1.6
+            'pra': 10.4,   # Pts+Reb+Ast combo: widened from 8.0 to 10.4
         }
 
         # Get standard deviation for this stat (default to pts if unknown)

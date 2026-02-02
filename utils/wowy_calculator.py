@@ -164,6 +164,80 @@ class WOWYCalculator:
         }
         return weights.get(confidence, 0.0)
 
+    def get_confidence_weight_bayesian(self, possessions: float) -> float:
+        """
+        Continuous Bayesian confidence weighting (replaces discrete tiers).
+
+        Returns value between 0.0 and 1.0 based on sample size vs target.
+        Uses concave scaling to be more conservative with small samples.
+
+        Args:
+            possessions: Total possessions in sample
+
+        Returns:
+            Confidence weight (0.0 = no confidence, 1.0 = full confidence)
+        """
+        target = self.THRESHOLD_HIGH  # 500 at full season (scaled)
+
+        # Linear confidence based on sample vs target
+        raw_confidence = min(max(possessions / target, 0.0), 1.0)
+
+        # Apply concave scaling (more conservative early)
+        # Exponent < 1 means confidence grows slower at low sample sizes
+        return raw_confidence ** 0.85
+
+    def cap_outlier_netrtg(self, netrtg_diff: float) -> tuple:
+        """
+        Cap extreme NetRtg differentials to prevent outliers from dominating.
+
+        Thresholds based on NBA lineup reality:
+        - ±10 is exceptional but plausible (top 5% of lineups)
+        - ±15 is extreme (top 1%)
+        - ±20+ is almost certainly noise/small sample
+
+        Args:
+            netrtg_diff: Raw on/off NetRtg differential
+
+        Returns:
+            Tuple of (capped_value, severity_flag)
+            severity_flag: 'normal', 'elevated', or 'outlier'
+        """
+        abs_diff = abs(netrtg_diff)
+
+        if abs_diff <= 10:
+            return netrtg_diff, 'normal'
+        elif abs_diff <= 15:
+            # Apply 15% dampening to elevated values
+            dampened = netrtg_diff * 0.85
+            return dampened, 'elevated'
+        else:
+            # Cap at ±15, flag as outlier
+            capped = 15.0 if netrtg_diff > 0 else -15.0
+            return capped, 'outlier'
+
+    def get_role_adjusted_threshold(self, base_threshold: int, avg_minutes: float) -> int:
+        """
+        Adjust possession threshold based on player role (minutes per game).
+
+        Bench players have higher variance, need more data to trust.
+
+        Args:
+            base_threshold: Base possession threshold (e.g., 200 for HIGH)
+            avg_minutes: Player's average minutes per game
+
+        Returns:
+            Adjusted threshold (higher for bench players)
+        """
+        if avg_minutes < 10:
+            # Deep bench - need 50% more data
+            return int(base_threshold * 1.5)
+        elif avg_minutes < 20:
+            # Rotation player - need 25% more data
+            return int(base_threshold * 1.25)
+        else:
+            # Starter - baseline threshold
+            return base_threshold
+
     def get_threshold_info(self) -> dict:
         """
         Get current threshold configuration and season progress.
@@ -351,7 +425,10 @@ class WOWYCalculator:
             without_ortg = without_star_row['ortg'] or 0
             with_ortg = with_star_row['ortg'] or 0
             ortg_boost = without_ortg - with_ortg
-            
+
+            # Cap outlier values (Phase 6.3)
+            capped_boost, outlier_flag = self.cap_outlier_netrtg(ortg_boost)
+
             beneficiaries.append({
                 'player': candidate,
                 'without_star': {
@@ -362,7 +439,9 @@ class WOWYCalculator:
                     'ortg': with_ortg,
                     'poss': with_poss
                 },
-                'ortg_boost': ortg_boost,
+                'ortg_boost': capped_boost,
+                'raw_ortg_boost': ortg_boost,  # Preserve original for debugging
+                'outlier_flag': outlier_flag,
                 'confidence': self.get_confidence_tier(min(without_poss, with_poss))
             })
         

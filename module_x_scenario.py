@@ -106,10 +106,20 @@ class ScenarioBuilder:
                 # Attach WOWY confidence for tag classifier
                 if wowy_confidence:
                     new_p['wowy_confidence'] = wowy_confidence
-                
+
                 # Efficiency Tax (10% decay on volume efficiency)
                 dampened_ratio = 1.0 + ((scale_ratio - 1.0) * 0.90)
-                
+
+                # WOWY Confidence Penalty (Phase 6.3 Enhancement)
+                # Further dampen volume boost for low-confidence WOWY data
+                if wowy_confidence == 'low':
+                    # Extra 20% dampening: if dampened_ratio was 1.54, now 1.432
+                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * 0.80)
+                elif wowy_confidence == 'medium':
+                    # Extra 10% dampening: if dampened_ratio was 1.54, now 1.486
+                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * 0.90)
+                # HIGH confidence: no extra penalty (already has 90% efficiency tax)
+
                 # SCALE LIST: Updated to match LIVE SCHEMA (Uppercase)
                 stats_to_scale = [
                     'PTS', 'AST', 'REB', 'FG3M', 
