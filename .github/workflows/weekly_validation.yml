@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          clean: false  # Preserve ludi.db between runs
         
       - name: Setup Python Environment
         run: |
