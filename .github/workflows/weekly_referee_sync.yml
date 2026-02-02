@@ -56,11 +56,11 @@ jobs:
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
-          git add ludi.db logs/
+          git add logs/
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: weekly referee sync $(date +'%Y-%m-%d %H:%M')"
+            git commit -m "chore: weekly intelligence logs $(date +'%Y-%m-%d %H:%M')"
             git pull --rebase origin main
             git push
           fi

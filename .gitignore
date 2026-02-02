@@ -49,6 +49,9 @@ ludi.db
 *.db-wal
 *.db-shm
 
+# Legacy JSON database (migrated to SQLite)
+ludi_history_db.json
+
 # OS
 .DS_Store
 Thumbs.db
