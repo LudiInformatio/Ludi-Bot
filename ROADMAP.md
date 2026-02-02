@@ -48,13 +48,13 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] Log `scenario` field in `bet_recommendations` table ✅
 - [x] Created `tests/test_beneficiary_pipeline.py` with 6 unit tests ✅
 
-**Phase 6.3: WOWY Data Enhancement** ← NEXT
-- [ ] Create `lineup_season_totals` SQL view (aggregate per-game lineup data)
-- [ ] Lower WOWY confidence thresholds (HIGH=200, MEDIUM=100, LOW=50 possessions)
-- [ ] Create `scripts/sync_pbp_wowy.py` using existing PBP Stats API client
-- [ ] Integrate PBP Stats WOWY data into `utils/wowy_calculator.py`
-- [ ] Add to `data_sync.yml` workflow (Daily 3 AM EST)
-- [ ] Create `tests/test_wowy_enhancement.py` with 5 unit tests
+**Phase 6.3: WOWY Data Enhancement** ✅ COMPLETE (Feb 2, 2026)
+- [x] Create `lineup_season_totals` SQL view (aggregate per-game lineup data) ✅
+- [x] Adaptive WOWY confidence thresholds (BASE: 500/350/150, scales with season progress) ✅
+- [x] Create `scripts/sync_pbp_wowy.py` using PBP Stats API `stat_type='team'` endpoint ✅
+- [x] Integrate PBP Stats WOWY data into `player_season_wowy` table ✅
+- [ ] Add to `data_sync.yml` workflow (Daily 3 AM EST) - Optional, can run manually
+- [x] Create `tests/test_wowy_enhancement.py` with 5 unit tests ✅
 
 **Phase 6.4: ROLE_CHANGE Detection**
 - [ ] Module D already parses RotoWire for "will start", "moved to bench" keywords
@@ -76,7 +76,7 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 **Success Criteria:**
 - [x] Depth charts synced daily, starter status accurate for all 30 teams ✅ (Phase 6.1)
 - [x] BENEFICIARY scenarios tagged when star OUT ✅ (Phase 6.2 - pipeline ready)
-- [ ] WOWY differential used with real confidence scoring (Phase 6.3)
+- [x] WOWY differential used with real confidence scoring ✅ (Phase 6.3 - adaptive thresholds + PBP Stats sync)
 - [ ] CLV captured going forward (not just historical backfill)
 - [ ] API audit document created with integration roadmap
 

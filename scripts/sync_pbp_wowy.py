@@ -80,60 +80,81 @@ def fetch_player_wowy(player_id: str, team_id: str, season: str = CURRENT_SEASON
                      verbose: bool = False) -> Optional[Dict]:
     """
     Fetch WOWY data for a single player from PBP Stats API.
-    
+
+    Uses stat_type='team' to get team-level on/off stats for when the player
+    is on vs off the court.
+
     Args:
         player_id: NBA.com player ID
         team_id: NBA.com team ID
         season: Season string (default: current season)
         verbose: Print debug info
-        
+
     Returns:
         Dict with on/off splits or None if API fails
     """
     if verbose:
         print(f"   Fetching WOWY for player {player_id}...")
-    
+
     try:
-        response = get_on_off(team_id, player_id, stat_type="player", season=season)
-        
+        # Use stat_type='team' to get team-level on/off data
+        response = get_on_off(team_id, player_id, stat_type="team", season=season)
+
         if not response:
             if verbose:
                 print(f"   ❌ No response from PBP Stats API")
             return None
-        
-        # Parse response - format: {'multi_row_table_data': [{'OnOff': 'On', ...}, {'OnOff': 'Off', ...}]}
-        data = response.get('multi_row_table_data', [])
-        
-        if len(data) < 2:
+
+        # Parse response - format: {'results': [{'Stat': 'Name', 'On': val, 'Off': val}, ...]}
+        results = response.get('results', [])
+
+        if not results or not isinstance(results, list):
             if verbose:
-                print(f"   ❌ Insufficient data rows ({len(data)})")
+                print(f"   ❌ No results in PBP Stats response")
             return None
-        
-        # Extract ON and OFF rows
-        on_row = next((d for d in data if d.get('OnOff') == 'On'), data[0])
-        off_row = next((d for d in data if d.get('OnOff') == 'Off'), data[1] if len(data) > 1 else {})
-        
-        # Extract metrics
+
+        def find_stat(stat_name: str) -> Dict:
+            """Find a stat row by exact stat name."""
+            for row in results:
+                if row.get('Stat') == stat_name:
+                    return row
+            return {}
+
+        # Find the key stats from the team-level response
+        ortg_row = find_stat('Pts per 100 Possessions')
+        drtg_row = find_stat('Pts per 100 Possessions - Defense')
+
+        # Extract On/Off values (stored as strings, need to convert)
+        on_ortg = float(ortg_row.get('On', 0) or 0)
+        off_ortg = float(ortg_row.get('Off', 0) or 0)
+        on_drtg = float(drtg_row.get('On', 0) or 0)
+        off_drtg = float(drtg_row.get('Off', 0) or 0)
+
+        # Calculate NetRtg (ORtg - DRtg)
+        on_netrtg = on_ortg - on_drtg
+        off_netrtg = off_ortg - off_drtg
+
         wowy = {
-            'on_possessions': int(on_row.get('OffPoss', 0) or 0),
-            'on_ortg': float(on_row.get('OffRtg', 0) or 0),
-            'on_drtg': float(on_row.get('DefRtg', 0) or 0),
-            'on_netrtg': float(on_row.get('NetRtg', 0) or 0),
-            'off_possessions': int(off_row.get('OffPoss', 0) or 0),
-            'off_ortg': float(off_row.get('OffRtg', 0) or 0),
-            'off_drtg': float(off_row.get('DefRtg', 0) or 0),
-            'off_netrtg': float(off_row.get('NetRtg', 0) or 0),
+            'on_ortg': on_ortg,
+            'off_ortg': off_ortg,
+            'on_drtg': on_drtg,
+            'off_drtg': off_drtg,
+            'on_netrtg': on_netrtg,
+            'off_netrtg': off_netrtg,
+            'on_possessions': 0,  # Not directly available in team endpoint
+            'off_possessions': 0,  # Not directly available in team endpoint
         }
-        
+
         # Calculate on/off diff (player's impact on team NetRtg)
-        wowy['on_off_diff'] = wowy['on_netrtg'] - wowy['off_netrtg']
-        
+        wowy['on_off_diff'] = on_netrtg - off_netrtg
+
         if verbose:
-            print(f"   ✅ On/Off: {wowy['on_netrtg']:.1f} / {wowy['off_netrtg']:.1f} (Δ {wowy['on_off_diff']:+.1f})")
-            print(f"      Possessions: {wowy['on_possessions']} / {wowy['off_possessions']}")
-        
+            print(f"   ✅ ORtg On/Off: {on_ortg:.1f} / {off_ortg:.1f}")
+            print(f"      DRtg On/Off: {on_drtg:.1f} / {off_drtg:.1f}")
+            print(f"      NetRtg On/Off: {on_netrtg:.1f} / {off_netrtg:.1f} (Δ {wowy['on_off_diff']:+.1f})")
+
         return wowy
-        
+
     except Exception as e:
         if verbose:
             print(f"   ❌ Error: {e}")

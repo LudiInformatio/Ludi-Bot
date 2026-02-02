@@ -47,25 +47,37 @@ class TestWOWYEnhancement:
         print("✅ Test 1 passed: SQL view returns aggregated data")
 
     def test_new_confidence_thresholds(self):
-        """Test 2: Confidence thresholds calibrated for mid-season"""
+        """Test 2: Confidence thresholds are adaptive based on season progress"""
         calc = WOWYCalculator()
-        
-        # Test new thr esholds
-        assert calc.THRESHOLD_HIGH == 200, "HIGH threshold should be 200"
-        assert calc.THRESHOLD_MEDIUM == 100, "MEDIUM threshold should be 100"
-        assert calc.THRESHOLD_LOW == 50, "LOW threshold should be 50"
-        
-        # Test confidence tier assignment
-        assert calc.get_confidence_tier(300) == 'high', "300 poss should be HIGH"
-        assert calc.get_confidence_tier(150) == 'medium', "150 poss should be MEDIUM"
-        assert calc.get_confidence_tier(75) == 'low', "75 poss should be LOW"
-        assert calc.get_confidence_tier(25) == 'insufficient', "25 poss should be INSUFFICIENT"
-        
-        # Test that DEN top lineup qualifies as HIGH (was failing with old thresholds)
-        assert calc.get_confidence_tier(269) == 'high', "269 poss (DEN top lineup) should be HIGH confidence"
-        
+
+        # Test adaptive thresholds (scaled from BASE values by season progress)
+        # BASE: HIGH=500, MEDIUM=350, LOW=150
+        # Scale factor range: 0.40 (floor) to 1.00 (full season)
+        info = calc.get_threshold_info()
+
+        # Verify thresholds are properly scaled
+        assert calc.THRESHOLD_HIGH == int(calc.BASE_THRESHOLD_HIGH * calc._season_progress), \
+            f"HIGH should be scaled: {calc.THRESHOLD_HIGH} != {int(calc.BASE_THRESHOLD_HIGH * calc._season_progress)}"
+        assert calc.THRESHOLD_MEDIUM == int(calc.BASE_THRESHOLD_MEDIUM * calc._season_progress), \
+            "MEDIUM should be scaled from base"
+        assert calc.THRESHOLD_LOW == int(calc.BASE_THRESHOLD_LOW * calc._season_progress), \
+            "LOW should be scaled from base"
+
+        # Test floor enforced (40% minimum)
+        assert calc._season_progress >= 0.40, "Season progress should have 40% floor"
+
+        # Test confidence tier assignment works correctly
+        # Use relative thresholds for testing
+        assert calc.get_confidence_tier(calc.THRESHOLD_HIGH + 100) == 'high', "Above HIGH threshold should be HIGH"
+        assert calc.get_confidence_tier(calc.THRESHOLD_MEDIUM + 10) == 'medium', "Just above MEDIUM should be MEDIUM"
+        assert calc.get_confidence_tier(calc.THRESHOLD_LOW + 5) == 'low', "Just above LOW should be LOW"
+        assert calc.get_confidence_tier(calc.THRESHOLD_LOW - 10) == 'insufficient', "Below LOW should be INSUFFICIENT"
+
+        print(f"   Season progress: {info['season_progress']}")
+        print(f"   Scaled thresholds: HIGH={calc.THRESHOLD_HIGH}, MEDIUM={calc.THRESHOLD_MEDIUM}, LOW={calc.THRESHOLD_LOW}")
+
         calc.close()
-        print("✅ Test 2 passed: New confidence thresholds work correctly")
+        print("✅ Test 2 passed: Adaptive confidence thresholds work correctly")
 
     def test_player_season_wowy_table_exists(self):
         """Test 3: player_season_wowy table created with correct schema"""

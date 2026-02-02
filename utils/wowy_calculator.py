@@ -26,22 +26,92 @@ Date: January 2026 | Updated: February 2, 2026 (Phase 6.3)
 import argparse
 import sqlite3
 import sys
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 
+def get_season_progress(db_path: str = "ludi.db") -> float:
+    """
+    Calculate season completion percentage (0.0 to 1.0).
+
+    Uses games played from player_game_logs to estimate season progress.
+    Full NBA season = 1,230 games (30 teams × 82 games / 2)
+
+    Returns:
+        Float between 0.0 (season start) and 1.0 (season end)
+        Floored at 0.40 to prevent too-strict thresholds early season
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Count unique games in current season
+        # Assumes game_date format: 'YYYY-MM-DD'
+        current_year = datetime.now().year
+
+        # Determine season year (if before July, use previous year as season start)
+        if datetime.now().month < 7:
+            season_year = current_year - 1
+        else:
+            season_year = current_year
+
+        season_start = f"{season_year}-10-01"  # NBA season starts ~October
+        season_end = f"{season_year + 1}-04-30"  # Regular season ends ~April
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT game_id) as games_played
+            FROM player_game_logs
+            WHERE game_date >= ? AND game_date <= ?
+        """, (season_start, season_end))
+
+        row = cursor.fetchone()
+        games_played = row[0] if row else 0
+        conn.close()
+
+        # Calculate progress (1230 total games in full season)
+        progress = min(games_played / 1230.0, 1.0)
+
+        # Floor at 40% to prevent too-strict thresholds early season
+        return max(0.40, progress)
+
+    except Exception as e:
+        # Fallback to mid-season assumption if error
+        print(f"Warning: Could not calculate season progress ({e}), using 0.65 default")
+        return 0.65
+
+
 class WOWYCalculator:
-    """WOWY calculator for NBA lineup analysis."""
-    
-    # Possession thresholds for confidence tiers (Phase 6.3 - Mid-season calibration)
-    THRESHOLD_HIGH = 200      # Was 500 (full season) - now ~170 min shared playtime
-    THRESHOLD_MEDIUM = 100    # Was 350 (full season) - now ~85 min shared playtime  
-    THRESHOLD_LOW = 50        # Was 150 (full season) - now ~42 min shared playtime
-    
+    """WOWY calculator for NBA lineup analysis with adaptive thresholds."""
+
+    # Base thresholds for FULL season (82 games, 100% progress)
+    BASE_THRESHOLD_HIGH = 500      # Full season target (~425 min shared playtime)
+    BASE_THRESHOLD_MEDIUM = 350    # Full season target (~300 min shared playtime)
+    BASE_THRESHOLD_LOW = 150       # Full season target (~125 min shared playtime)
+
     def __init__(self, db_path: str = "ludi.db"):
-        """Initialize calculator with database connection."""
+        """
+        Initialize calculator with database connection.
+
+        Thresholds auto-scale based on season progress:
+        - Early season (10 games, 40% floor): HIGH=200, MEDIUM=140, LOW=60
+        - Mid-season (60 games, 65% progress): HIGH=325, MEDIUM=228, LOW=98
+        - Late season (80 games, 97% progress): HIGH=485, MEDIUM=340, LOW=146
+        - Next season start (auto-resets to 40%): HIGH=200, MEDIUM=140, LOW=60
+        """
         self.db_path = db_path
         self.conn = None
         self._connect()
+
+        # Calculate adaptive thresholds based on season progress
+        progress = get_season_progress(db_path)
+        scale_factor = progress  # Already floored at 40% in helper function
+
+        self.THRESHOLD_HIGH = int(self.BASE_THRESHOLD_HIGH * scale_factor)
+        self.THRESHOLD_MEDIUM = int(self.BASE_THRESHOLD_MEDIUM * scale_factor)
+        self.THRESHOLD_LOW = int(self.BASE_THRESHOLD_LOW * scale_factor)
+
+        # Store progress for reporting
+        self._season_progress = progress
     
     def _connect(self):
         """Establish database connection."""
@@ -93,7 +163,31 @@ class WOWYCalculator:
             'insufficient': 0.0
         }
         return weights.get(confidence, 0.0)
-    
+
+    def get_threshold_info(self) -> dict:
+        """
+        Get current threshold configuration and season progress.
+
+        Useful for debugging and validation.
+
+        Returns:
+            Dict with threshold values, scaling info, and season progress
+        """
+        return {
+            'season_progress': f"{self._season_progress * 100:.1f}%",
+            'scale_factor': f"{self._season_progress:.2f}",
+            'thresholds': {
+                'high': self.THRESHOLD_HIGH,
+                'medium': self.THRESHOLD_MEDIUM,
+                'low': self.THRESHOLD_LOW
+            },
+            'base_thresholds': {
+                'high': self.BASE_THRESHOLD_HIGH,
+                'medium': self.BASE_THRESHOLD_MEDIUM,
+                'low': self.BASE_THRESHOLD_LOW
+            }
+        }
+
     def get_player_impact(self, player_name: str, team: str, min_possessions: float = 100) -> Optional[Dict]:
         """
         Get player's impact on lineup efficiency (WITH vs WITHOUT).
