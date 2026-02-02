@@ -45,8 +45,8 @@ class ScenarioBuilder:
                     # Scenario B: Player Sits (Usage Vacuum)
                     contingency = self._build_out_scenario(game, player)
                     if contingency:
-                        # Rename for clarity
-                        contingency['scenario_name'] = f"IF {player['PLAYER_NAME']} SITS"
+                        # Keep "WITHOUT" format for resolver detection
+                        # (Module D resolve_scenarios() searches for "WITHOUT" keyword)
                         final_scenarios.append(contingency)
                         
         return final_scenarios

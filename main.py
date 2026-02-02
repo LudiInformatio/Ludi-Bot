@@ -182,7 +182,9 @@ class LudiOrchestrator:
             
             p_dict = {
                 'name': p_name, 'team': sim.get('TEAM'), 'opponent': away if is_home else home,
-                'status': sim.get('status', 'Active'), 'scenario': sim.get('SCENARIO', 'BASE'),
+                'status': sim.get('status', 'Active'), 
+                'scenario': sim.get('SCENARIO', 'BASE'),  # Propagate scenario name
+                'wowy_confidence': sim.get('wowy_confidence'),  # Propagate WOWY confidence (if exists)
                 'decision_note': sim.get('decision_note', ''),  # Captured from Yak
                 'notes': '', 'odds': {'spread': spread, 'total': total},
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
@@ -375,8 +377,19 @@ class LudiOrchestrator:
                 game_sim_results = []
                 for item in items:
                     res = self.sim.run_simulation_batch([item['scenario']])
-                    # Propagate scenario name
-                    for r in res: r['SCENARIO'] = item['scenario']['scenario_name']
+                    scenario_name = item['scenario']['scenario_name']
+                    
+                    # Propagate scenario name AND wowy_confidence from scenario player data
+                    for r in res:
+                        r['SCENARIO'] = scenario_name
+                        
+                        # Find original player data in scenario to preserve wowy_confidence
+                        for scenario_player in item['scenario']['players']:
+                            if scenario_player.get('PLAYER_NAME') == r.get('PLAYER_NAME'):
+                                if 'wowy_confidence' in scenario_player:
+                                    r['wowy_confidence'] = scenario_player['wowy_confidence']
+                                break
+                    
                     game_sim_results.extend(res)
                 
                 # 2. Resolve Scenarios via Yak (Handle Injuries)
