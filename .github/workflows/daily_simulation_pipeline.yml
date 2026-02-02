@@ -38,6 +38,10 @@ jobs:
           python -m playwright install chromium
           
       - name: Verify Environment
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           source .venv/bin/activate
           python -c "import config; print('Environment validated')"
@@ -45,6 +49,7 @@ jobs:
       - name: Create Production Logs Directory
         run: |
           mkdir -p logs/production
+          mkdir -p logs/health
           mkdir -p assets/generated
           
       - name: Run Daily Simulation Pipeline
@@ -85,6 +90,14 @@ jobs:
           fi
           
       - name: Run System Health Monitor
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
         run: |
           source .venv/bin/activate
           export PYTHONPATH=$PWD
@@ -96,14 +109,23 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          set -x
           source .venv/bin/activate
           export PYTHONPATH=$PWD
           
           LOG_FILE="logs/production/pipeline_$(date +%Y%m%d).log"
           if [ -f "$LOG_FILE" ]; then
-            GAMES=$(grep -c "GAME" "$LOG_FILE" 2>/dev/null || echo "0")
-            BETS=$(grep -c -E "DIAMOND|BLUE CHIP|CORE ASSET|THE STEAL" "$LOG_FILE" 2>/dev/null || echo "0")
-            ERRS=$(grep -c -E "ERROR|Error" "$LOG_FILE" 2>/dev/null || echo "0")
+            # Use tr to ensure we only get digits (sanitize newline/whitespace)
+            GAMES=$(grep -c "GAME" "$LOG_FILE" 2>/dev/null || true)
+            GAMES=${GAMES:-0}
+            
+            BETS=$(grep -c -E "DIAMOND|BLUE CHIP|CORE ASSET|THE STEAL" "$LOG_FILE" 2>/dev/null || true)
+            BETS=${BETS:-0}
+            
+            ERRS=$(grep -c -E "ERROR|Error" "$LOG_FILE" 2>/dev/null || true)
+            ERRS=${ERRS:-0}
+            
+            echo "DEBUG: Games: '${GAMES}', Bets: '${BETS}', Errors: '${ERRS}'"
             python3 scripts/send_workflow_summary.py --games "$GAMES" --bets "$BETS" --errors "$ERRS" || echo "Summary notification skipped"
           else
             echo "Log file not found, skipping summary"
@@ -125,4 +147,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 -c "from utils.telegram_notifier import send_message; send_message('WORKFLOW FAILED: Daily Production Pipeline - Check GitHub Actions')" || echo "Telegram notification failed"
+          python3 -c "from utils.telegram_notifier import send_message; send_message('WORKFLOW FAILED: Daily Production Pipeline')" || echo "Telegram notification failed"
