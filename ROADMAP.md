@@ -1,7 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 1, 2026 @ 2:50 PM EST
-**Current Phase:** Phase 5 - Production Deployment & Automation + Phase 5.5 Phase 2 (Complete ✅)
+**Last Updated:** February 2, 2026 @ 8:30 PM EST
+**Current Phase:** Phase 6 - Full Data Integration
+**Active Work:** Phase 6.3 - WOWY Data Enhancement
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -16,6 +18,81 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## High Priority
+
+### Phase 6: Full Data Integration (NEW - Feb 2, 2026)
+
+**Goal:** Integrate ALL unused data sources and fix broken data flows before further calibration
+**Priority:** CRITICAL (must complete before any more validation work)
+**Rationale:** Analysis revealed significant missed opportunities - we have valuable data that isn't being used
+
+**Problem Statement:**
+The Feb 2 performance analysis revealed that despite having profitable results (+292u, 55.7% win rate), we are NOT using:
+- ~~Tank01 depth charts (starters vs backups) - NOT synced~~ ✅ FIXED in Phase 6.1
+- ~~BENEFICIARY scenario tagging - 99.9% of bets logged as "Active" with zero "WITHOUT" scenarios~~ ✅ FIXED in Phase 6.2 (pipeline ready, awaiting star OUT trigger)
+- WOWY data for usage vacuum calculations - Tables exist but unused
+- player_touches, player_drives tables - Synced but not integrated
+- ROLE_CHANGE detection from RotoWire RSS - Configured but no downstream usage
+- Forward CLV capture - Historical backfill done, but no ongoing capture
+
+**Phase 6.1: Tank01 Depth Charts Integration** ✅ COMPLETE (Feb 2, 2026)
+- [x] Create `scripts/sync_depth_charts.py` using Tank01 `/getNBADepthCharts` endpoint ✅
+- [x] Store in new `depth_charts` table (team, position, player_name, depth_order) ✅
+- [x] Add `is_starter` column to `players` table (PG1/SG1/SF1/PF1/C1 = starter) ✅
+- [x] Integrate starter status into Module E matchup calculations ✅
+- [x] Created `tests/test_depth_charts.py` with 7 unit tests ✅
+
+**Phase 6.2: BENEFICIARY Scenario Pipeline Fix** ✅ COMPLETE (Feb 2, 2026)
+- [x] Audit Module D → Module F data flow for scenario tagging ✅
+- [x] Fix: When star is OUT, tag teammates with `BENEFICIARY` scenario ✅
+- [x] Integrate WOWY data (`team_lineups` table) to calculate actual usage boost ✅ (heuristic fallback active)
+- [x] Log `scenario` field in `bet_recommendations` table ✅
+- [x] Created `tests/test_beneficiary_pipeline.py` with 6 unit tests ✅
+
+**Phase 6.3: WOWY Data Enhancement** ← NEXT
+- [ ] Create `lineup_season_totals` SQL view (aggregate per-game lineup data)
+- [ ] Lower WOWY confidence thresholds (HIGH=200, MEDIUM=100, LOW=50 possessions)
+- [ ] Create `scripts/sync_pbp_wowy.py` using existing PBP Stats API client
+- [ ] Integrate PBP Stats WOWY data into `utils/wowy_calculator.py`
+- [ ] Add to `data_sync.yml` workflow (Daily 3 AM EST)
+- [ ] Create `tests/test_wowy_enhancement.py` with 5 unit tests
+
+**Phase 6.4: ROLE_CHANGE Detection**
+- [ ] Module D already parses RotoWire for "will start", "moved to bench" keywords
+- [ ] Create downstream handler to adjust projections when ROLE_CHANGE detected
+- [ ] Add minutes projection adjustment for starter elevation (+8 min) / demotion (-8 min)
+
+**Phase 6.5: Forward CLV Capture**
+- [ ] Create `scripts/capture_closing_lines.py` (runs 5 min before tipoff)
+- [ ] Store closing odds in `bet_recommendations.closing_odds_*` columns
+- [ ] Calculate and store real CLV (not just closing line value)
+- [ ] Add CLV metrics to daily Telegram summary
+
+**Phase 6.6: API Audit & Optimization**
+- [ ] Document all Tank01 endpoints in use vs available
+- [ ] Document all The-Odds-API endpoints in use vs available
+- [ ] Evaluate Ball Don't Lie API integration (free tier, 60 req/min)
+- [ ] Create `docs/API_USAGE_AUDIT.md` with findings
+
+**Success Criteria:**
+- [x] Depth charts synced daily, starter status accurate for all 30 teams ✅ (Phase 6.1)
+- [x] BENEFICIARY scenarios tagged when star OUT ✅ (Phase 6.2 - pipeline ready)
+- [ ] WOWY differential used with real confidence scoring (Phase 6.3)
+- [ ] CLV captured going forward (not just historical backfill)
+- [ ] API audit document created with integration roadmap
+
+**CLV Finding (Important Context):**
+Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
+| Edge Bucket | Real CLV (pts) | Win Rate |
+|-------------|----------------|----------|
+| 5-10% | +0.013 | 58.3% |
+| 10-15% | +0.050 | 52.8% |
+| 15-20% | +0.096 | 58.6% |
+| 20-25% | +0.115 | 51.5% |
+| 25%+ | +0.147 | 51.6% |
+
+This suggests the model IS finding real value (CLV positive), but variance is affecting win rate at high edges. Full data integration may improve both signal AND reduce variance.
+
+---
 
 ### Phase 5: Production Deployment & Automation
 **Target:** Transition from "stable development" to "automated production"
@@ -39,66 +116,110 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ### Phase 5.5: Defensive Stat Fix & 16-Archetype Expansion
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅
-**Started:** January 29, 2026
-**Last Updated:** February 1, 2026
 
-**Phase 0: URGENT FIX - ✅ COMPLETE**
-- [x] Fix STAT_MAPPING in main.py (add STL, BLK, DREB) - Commits: 27f2392, b3cb571
-- [x] Production test verified STL/BLK projections work (Alex Sarr: 2.0 BLK, Kyshawn George: 1.4 STL)
-- [x] Committed and deployed fix
+**Completed Phases:** ✅ Phase 0-2 COMPLETE (Jan 29 - Feb 1, 2026)
+- Details: See docs/archive/PHASE_5_5_COMPLETION_LOG.md
 
-**Phase 1: 16-Archetype System (Week 1-2) - ✅ COMPLETE**
-- [x] Implement unified archetype classification in module_e.py
-- [x] Merge synergy playtypes as modifiers (not separate tags)
-- [x] Add new archetypes:
-  - TIER 1 ENGINES: HELIOCENTRIC_MAESTRO, ISO_ASSASSIN, SLASHING_CREATOR, JUMBO_FACILITATOR
-  - TIER 2 SCORERS: SNIPER_ELITE, TWO_LEVEL_SCORER, ATHLETIC_FINISHER
-  - TIER 3 BIG MEN: WARRIOR_BIG, VULTURE_BIG, STRETCH_BIG, POST_ANCHOR, ROLL_MAN
-  - TIER 4 ROLE PLAYERS: SCREEN_NAVIGATOR, ISLAND_DEFENDER, CUTTER_SPECIALIST, FACILITATOR
-- [x] Update matchup matrix for all 16 archetypes
-- [x] Update populate_archetypes.py with new classification logic
-- [x] Re-run archetype population to reduce GENERALIST % (now 25.4%, was 73.8%)
-- [x] Database cleanup: Removed old archetype entries (TWO_WAY_WING, RIM_RUNNER, HELIOCENTRIC)
+**Phase 2 Validation:** ✅ READY FOR TESTING (Feb 2, 2026)
+- **Status:** Implementation complete, data restored, ready for backtest validation
+- **Data Coverage:** 91.9% (2,650/2,883 records) - Jan 14 to Feb 1, 2026
+- **Blockers Resolved:** Ghost Protocol scraper fixed, backfill data restored (Feb 1)
+- **Database Sync:** Redesigned architecture prevents future data loss (see DATABASE_SYNC_REDESIGN_HANDOFF.md)
 
-**Phase 2: Enhanced Defensive Tracking - ✅ COMPLETE**
-**Started:** February 1, 2026
-**Completed:** February 1, 2026
-**Status:** Implementation complete, data backfilled, ready for validation
+**Infrastructure Fixes (Completed Feb 1, 2026):**
+- [x] URGENT: Fixed Ghost Protocol scraper to restore defender distance data sync ✅
+- [x] HIGH: Database removed from git tracking (prevents merge conflicts) ✅
+- [x] MEDIUM: Backfilled missing data for Jan 14-Feb 1 (91.9% coverage achieved) ✅
+- [x] MEDIUM: Automated backup system deployed (daily at 4 AM EST) ✅
 
-**Completed (Feb 1, 2026):**
-- [x] Add opponent context (TOV rate, 2PA rate) to player packets in main.py
-- [x] Implement contextual defensive stat modifiers in Module E (STL +10%, BLK +10%)
-- [x] Shot difficulty integration using defender distance data from player_game_tracking
-- [x] Unit tests created (test_module_e.py) - all passing
-- [x] Integration test successful (exit code 0, no crashes)
-- [x] Data sync issue resolved - Added closest_defender to Ghost Protocol DATA_MANIFEST
-- [x] Backfill completed - Jan 14-31 (17 days), 2,492/2,711 records with shot difficulty data (91.9%)
-- [x] Daily workflow configured - tracking_sync.yml will auto-sync closest defender data at 9 AM EST
+**Next Step:**
+- [ ] ACTIVE: Run Phase 2 validation backtest (assigned to separate agent)
 
-**Coverage Metrics:**
-- Overall: 91.9% of records have complete shot difficulty data (2,492/2,711)
-- Daily average: ~95% coverage (Jan 14-31, excluding Jan 25 anomaly)
-- Data integrity verified: contested_fga >= tight_fga relationship holds across all records
-
-**Next Phase:**
-- [ ] Phase 2 Validation: 14-day backtest to measure hit rate improvements (separate task)
-  - [ ] Test STL boost vs high-turnover teams (>15% TOV rate)
-  - [ ] Test BLK boost vs paint-heavy teams (>65% 2PA rate)
-  - [ ] Confirm ≥+2% hit rate improvement on PTS props
-  - [ ] Confirm ≥+3% hit rate improvement on STL/BLK props
+**Validation Tests (Ready to Execute):**
+- [ ] Test 1: Data coverage verification (≥80% required)
+- [ ] Test 2: Shot difficulty impact on PTS (≥+2% hit rate OR ≥1.0 RMSE reduction)
+- [ ] Test 3: STL boost vs high-TOV teams (≥+3% hit rate improvement)
+- [ ] Test 4: BLK boost vs paint-heavy teams (≥+3% hit rate improvement)
+- [ ] Test 5: Integration test - no regressions on AST/REB
 
 **Phase 3: SportVu Integration (Optional - Week 3-4)**
 - [ ] Create scripts/sync_sportvu_tracking.py for rebounding data
 - [ ] Integrate contested/uncontested rebound % for WARRIOR vs VULTURE
 - [ ] Add defensive matchup tracking (FG% vs screens, ISO, etc.)
 
+---
+
+### Betting Model Calibration (Feb 2, 2026) ✅ COMPLETE
+
+**Analysis Period:** Jan 7-29, 2026 (9,605 bets, 6,344 settled)
+**Key Findings:** Model profitable (+292u, 55.7% win rate) but with calibration opportunities
+
+**Data Cleanup (CRITICAL):** ✅ COMPLETE
+- [x] Created `scripts/cleanup_player_duplicates.py`
+- [x] Removed 420 Tank01 composite ID duplicates
+- [x] Reduced player count from 957 to 536 active players
+- [x] Verified no duplicate names remain
+
+**Archetype Re-Assignment:** ✅ COMPLETE
+- [x] Created `scripts/reassign_archetypes.py` (V2 - uses full season box scores)
+- [x] Assigned 15 distinct archetypes (was mostly GENERALIST before)
+- [x] GENERALIST rate: 31% (acceptable for low-minute bench players)
+- [x] Top players now have meaningful archetypes (ISO_ASSASSIN, HELIOCENTRIC_MAESTRO, etc.)
+
+**Team Offensive Classification:** ✅ COMPLETE
+- [x] Updated `utils/team_offensive_classifier.py` with real DB data
+- [x] All 30 teams classified into 6 offensive types
+- [x] Types: THREE_POINT_CENTRIC, MOTION_OFFENSE, PACE_PUSH, PAINT_ATTACK, ISOLATION_HEAVY, BALANCED
+
+**Module F Calibration (V5.1):** ✅ COMPLETE
+- [x] Added REB OVER filter (skip until calibration - was -198u leak)
+- [x] Added 3PM OVER filter for low-volume shooters (<5 3PA)
+- [x] Reduced max unit sizing from 1.5u to 1.0u (conservative testing)
+- [x] Widened probability stdevs by 30% (reduce overconfidence)
+
+**Impact Summary:**
+- REB OVER leak fixed: +198u saved
+- 3PM OVER low-volume filter: +110u expected savings
+- Conservative sizing: Reduced risk during validation
+- Better archetype calibration: More accurate matchup adjustments
+
+**Performance Analysis (Feb 2, 2026):** ✅ COMPLETE
+- [x] Created `scripts/sync_positions_by_name.py` (Tank01 position sync)
+- [x] Fixed position data: 82.6% coverage (was 2.6% before)
+- [x] Created `scripts/analyze_model_performance.py`
+- [x] Generated `reports/performance_analysis_feb2.md` (6 analysis tables)
+- [x] Generated `reports/CALIBRATION_RECOMMENDATIONS_FEB2.md`
+
+---
+
+### Calibration Refinement (Option A) - ON HOLD
+
+**Status:** ⏸️ PAUSED - Waiting for Phase 6 (Full Data Integration) to complete
+**Reason:** CLV analysis revealed model IS finding value (positive CLV all buckets). Better to integrate unused data first, then re-evaluate calibration needs.
+
+**Original Problem (may be resolved by Phase 6):**
+- 20-25% edge bets: Expected 61.4% win rate, actual 51.5% (-9.9% gap)
+- 25%+ edge bets: Expected 64.4% win rate, actual 51.9% (-12.5% gap)
+- However: CLV is POSITIVE for these buckets (+0.115, +0.147 pts) suggesting variance, not overconfidence
+
+**Tasks (resume after Phase 6):**
+- [ ] Implement tiered stdev widening in `module_f.py`:
+  - 20%+ edge: 60% wider (currently 30% flat)
+  - 15-20% edge: 40% wider
+  - 5-15% edge: 30% wider (current)
+- [ ] Add filter for marginal 20-22% edge bets (likely false positives)
+- [ ] Add archetype edge bonuses in `module_e.py`:
+  - TWO_WAY_WING: +3% edge bonus (+95u profit, 59.7% win rate)
+  - ELITE_SCORER: +3% edge bonus (+91u profit, 59.0% win rate)
+- [ ] Add archetype edge penalties for underperformers:
+  - STRETCH_BIG: -3% edge penalty (-13u, 46.1% win rate)
+  - JUMBO_CREATOR: -3% edge penalty (-16u, 47.3% win rate)
+- [ ] Run validation after changes (target: 20%+ edge win rate > 58%)
+
 **Success Criteria:**
-- [x] STL/BLK projections show realistic values (not 0.0) ✅
-- [x] 16 archetypes implemented with <30% GENERALIST fallback (25.4%) ✅
-- [x] Bet recommendations include new archetype tags ✅
-- [x] No regression in core stat accuracy ✅
-- [x] Database contains only 17 archetype types (16 new + GENERALIST) ✅
+- [ ] 20%+ edge calibration gap reduced from -10% to < -5%
+- [ ] No regression in 15-20% edge bucket (currently excellent at -0.8%)
+- [ ] Overall win rate maintained > 55%
 
 ---
 
@@ -111,8 +232,9 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Historical performance charts
 
 ### CLV Tracking Enhancement
-- [ ] `scripts/capture_closing_lines.py` (5 min before tipoff)
-- [ ] `utils/clv_calculator.py` implementation
+- [x] Historical CLV backfill (Jan 7-29, 2026) - 63.5% of bets updated ✅
+- [ ] `scripts/capture_closing_lines.py` (5 min before tipoff) → **Moved to Phase 6.5**
+- [ ] `utils/clv_calculator.py` implementation → **Moved to Phase 6.5**
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
 
@@ -127,111 +249,52 @@ This is the single source of truth for project tasks and priorities.
 ### Future Enhancements
 - [ ] DFS multiplier conversion (PrizePicks/Underdog)
 - [ ] Strength of Schedule (SOS) adjustment
-- [ ] Depth Chart Authority modeling
+- [x] Depth Chart Authority modeling → **COMPLETE in Phase 6.1** ✅
 - [ ] Shooting Luck Deviation signals
-
----
-
-## Recently Completed
-
-### Phase 5.5 Phase 2: Shot Difficulty & Opponent Context Integration - 2026/02/01
-**Implementation:**
-- [x] Integrated defender distance data (contested, tight, open, wide-open FGA) into Module E calibration
-- [x] Added `_get_shot_difficulty_stats()` method to query player_game_tracking table
-- [x] Implemented `_apply_shot_difficulty_modifier()` with wide-open ratio logic for FG% adjustments
-- [x] Enhanced opponent context pipeline (TOV rate, 2PA rate) in main.py
-- [x] Added `_apply_opponent_context_modifiers()` for contextual STL/BLK boosts
-- [x] Created unit tests (test_module_e.py) - all passing
-- [x] Integration test verified (exit code 0, no crashes)
-
-**Data Sync Resolution:**
-- [x] Root cause identified: Ghost Protocol missing closest_defender in DATA_MANIFEST (stopped syncing Jan 14)
-- [x] Fixed sync_browser_backfill.py: Added closest_defender entry with 4 distance ranges
-- [x] Fixed header extraction: Uses last row only (handles multi-row headers)
-- [x] Added process_closest_defender() function to scrape all 4 distance ranges
-- [x] Backfill completed: Jan 14-31 (17 days), 2,492/2,711 records (91.9% coverage)
-- [x] Daily workflow verified: tracking_sync.yml will auto-sync at 9 AM EST going forward
-- **Status**: ✅ COMPLETE - Ready for backtest validation
-
-### System Stability & Browser Automation Revamp - 2026/01/29
-- [x] Resolved CI/CD race conditions (added `git pull --rebase`) in 5 core workflows
-- [x] Created `utils/browser_utils.py` and `utils/browser_utils_async.py` for centralized suppression & stealth
-- [x] Added OddsShark modal suppression & safe selector waits
-- [x] Refactored all 6 scrapers (Sync, Backfill, Referees, Intel, WOWY, Synergy) to use unified logic
-- [x] Improved reliability against OneTrust modals, newsletters, and WAF detection across all environments
-- [x] Standardized on `domcontentloaded` wait strategy to prevent hanging on external tracking pixels
-
-### WOWY Sync Repair - 2026/01/29
-- [x] Fixed `scripts/sync_wowy_data.py` import ordering bug (ModuleNotFoundError)
-- [x] Implemented Game ID Auto-Healing for custom Tank01 IDs
-- [x] Backfilled 8 days of missing data (Jan 20-27) - 1,116 records restored
-
-### Module G Browser Timeout Fix - 2026/01/29
-- [x] Switched scraper to `headless=False` (Visible Browser) for reliability
-- [x] Added Date Dropdown interaction logic to force layout update
-- [x] Relaxed navigation timeout to 60s
-- [x] Verified with manual dry-run (8 games scraped)
-
-### Basketball-Reference Scraper Fix - 2026/01/29
-- [x] Migrated `scrape_referee_roster.py` to Playwright (Bypass 403 Forbidden)
-- [x] Implemented MultiIndex column flattening for new table layout
-- [x] Verified live scraping of 72 referees (replacing fallback)
-
-### Alt Line Bug Fix & Archetype Verification - 2026/01/29
-- [x] Fixed alt line selection bug in Module A (voting mechanism)
-- [x] Added NC Legal coverage validation (defense-in-depth)
-- [x] Verified secondary playtypes system deployed and active
-- [x] Verified team offensive types system deployed and active
-- [x] Fixed BALL_HOG archetype (1 player updated to HELIOCENTRIC)
-- [x] Production tested: Max ratio reduced from 9.6x to 1.64x
-- [x] Created comprehensive documentation (AUDIT_FINDINGS_JAN28.md, TEST_RESULTS_JAN29.md)
-
-### Referee Intelligence Repair - 2026/01/28
-- [x] Diagnosed empty table issue (CSR/JavaScript requirement)
-- [x] Implemented "Date Toggle" workaround (Yesterday -> Today) to force data load
-- [x] Added "Fallback Validation" (Critical Alert if 0 refs found)
-- [x] Upgraded scraper to Playwright for reliable rendering
-- [x] Identified Historical Backfill opportunity via date picker
-
-### Phase 4: B2B Fatigue & Schedule Integration - 2026/01/21
-- [x] Integrated research-backed fatigue modifiers
-- [x] Tuned modifiers for 2025-26 player resilience
-- [x] 60-day backtest validated (+0.56 pts mean error)
-- [x] Guard resilience confirmed (+1.45 pts vs historical)
-
-### Phase 3: Secondary Playtype Matchups - 2026/01/21
-- [x] Implemented player-vs-defense matchups (ISO, P&R, Spot-Up)
-- [x] 8 specific matchups verified
-- [x] 14-day defensive trends validated
-
-### Phase 1: Synergy Playtype Integration - 2026/01/21
-- [x] Integrated NBA Synergy efficiency metrics
-- [x] 3 new calibration functions in Module E
-- [x] 5 new database tables created
-- [x] Ghost Protocol scraper operational
-
-### Referee Sync Orchestration Fix - 2026/01/20
-- [x] Auto-population system for games table
-- [x] Module G enhancement complete
-
-### Tank01 ID Integrity Update - 2026/01/20
-- [x] Canonical ID system implemented
-- [x] Auto-healing ingestion in database.py
-
-### WOWY Calculator Integration - 2026/01/18
-- [x] `utils/wowy_calculator.py` (450 lines)
-- [x] Smart blowout tax (V4.7)
-
-### Module G Referee Intelligence - 2026/01/17
-- [x] 78 referees in database (100% coverage)
-- [x] Day forward capture system
-- [x] Weekly zebra reports automated
-
-### Ghost Protocol Backfill - 2026/01/16
-- [x] ~14,700 records (Physics: 9.4k | Brain: 5.3k)
 
 ---
 
 ## Archive
 
-For detailed historical status updates, see `docs/STATUS_HISTORY.md`.
+For detailed historical status updates and completion reports, see:
+- **docs/STATUS_HISTORY.md** - Comprehensive historical record (Phases 1-4)
+- **docs/archive/PHASE_5_5_COMPLETION_LOG.md** - Phase 5.5 completion details (Feb 1)
+- **docs/archive/JAN_2026_SYSTEM_STABILITY_FIXES.md** - January fixes log (Jan 16-31)
+- **docs/DATABASE_SYNC_REDESIGN_HANDOFF.md** - Database architecture redesign (Feb 1)
+- **reports/CALIBRATION_RECOMMENDATIONS_FEB2.md** - Calibration analysis & recommendations (Feb 2)
+- **reports/performance_analysis_feb2.md** - Full performance breakdown by stat/position/archetype (Feb 2)
+- **Phase 6.1 Completion** - See "Phase 6.1 Completion Summary" section above (Feb 2)
+- **docs/archive/** - Organized by phase/topic
+
+### Phase 6.1 Completion Summary (Feb 2, 2026 @ 7:00 PM EST)
+
+**Deliverables:**
+| File | Action | Status |
+|------|--------|--------|
+| `scripts/sync_depth_charts.py` | Created | ✅ |
+| `tests/test_depth_charts.py` | Created | ✅ |
+| `database.py` | Modified - added `depth_charts` table | ✅ |
+| `module_e.py` | Modified - added `get_starter_status()` | ✅ |
+
+**Results:**
+- All 30 teams synced to `depth_charts` table
+- 150 starters identified (30 teams × 5 positions)
+- `players.is_starter` column populated
+- All 7 unit tests pass
+
+**Next:** Phase 6.2 - BENEFICIARY Scenario Pipeline Fix
+
+---
+
+### Phase 6 Discovery Notes (Feb 2, 2026)
+**Data Gaps Identified:**
+- 99.9% of `bet_recommendations` have `scenario=NULL` (BENEFICIARY not being tagged)
+- ~~Tank01 depth charts endpoint available but not implemented~~ ✅ FIXED
+- `player_touches`, `player_drives`, `player_wowy_stats` tables exist but unused
+- RotoWire ROLE_CHANGE parsing works but no downstream handling
+- CLV column stores closing LINE value, not CLV difference (fixed via SQL calculation)
+
+**CLV Backfill Results:**
+- Script: `scripts/sync_historical_odds.py`
+- Coverage: 63.5% of bets (Jan 7-29) updated with closing lines
+- Finding: Positive CLV across ALL edge buckets (model finding real value)

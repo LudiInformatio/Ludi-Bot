@@ -1,0 +1,345 @@
+"""
+PBP Stats WOWY Sync Script (Phase 6.3)
+
+Fetches full-season on/off splits from PBP Stats API for top usage players.
+Stores in player_season_wowy table for BENEFICIARY confidence scoring.
+
+Usage:
+    python scripts/sync_pbp_wowy.py --verbose
+    python scripts/sync_pbp_wowy.py --team LAL --verbose
+    python scripts/sync_pbp_wowy.py --dry-run --top 5
+
+Author: Ludi Informatio
+Date: February 2, 2026 (Phase 6.3)
+"""
+
+import argparse
+import sqlite3
+import sys
+from datetime import datetime
+from typing import List, Dict, Optional
+
+# Add project root to path
+sys.path.insert(0, '.')
+
+from utils.pbp_stats_client import get_on_off
+
+# NBA team IDs mapping (NBA.com official IDs)
+TEAM_IDS = {
+    'ATL': '1610612737', 'BOS': '1610612738', 'BKN': '1610612751',
+    'CHA': '1610612766', 'CHI': '1610612741', 'CLE': '1610612739',
+    'DAL': '1610612742', 'DEN': '1610612743', 'DET': '1610612765',
+    'GSW': '1610612744', 'HOU': '1610612745', 'IND': '1610612754',
+    'LAC': '1610612746', 'LAL': '1610612747', 'MEM': '1610612763',
+    'MIA': '1610612748', 'MIL': '1610612749', 'MIN': '1610612750',
+    'NOP': '1610612740', 'NYK': '1610612752', 'OKC': '1610612760',
+    'ORL': '1610612753', 'PHI': '1610612755', 'PHX': '1610612756',
+    'POR': '1610612757', 'SAC': '1610612758', 'SAS': '1610612759',
+    'TOR': '1610612761', 'UTA': '1610612762', 'WAS': '1610612764',
+}
+
+CURRENT_SEASON = "2025-26"
+
+def get_db_connection(db_path: str = "ludi.db") -> sqlite3.Connection:
+    """Get database connection."""
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_top_players(conn: sqlite3.Connection, team_abbr: str, top_n: int = 10) -> List[Dict]:
+    """
+    Get top N players by usage from players table.
+    
+    Args:
+        conn: Database connection
+        team_abbr: Team abbreviation (e.g., 'LAL')
+        top_n: Number of players to return (default: 10)
+        
+    Returns:
+        List of player dicts with player_id, name, team, usg_pct
+    """
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT player_id, name, team, usg_pct
+        FROM players
+        WHERE team = ?
+            AND is_active = 1
+            AND usg_pct IS NOT NULL
+        ORDER BY usg_pct DESC
+        LIMIT ?
+    """, (team_abbr, top_n))
+    
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def fetch_player_wowy(player_id: str, team_id: str, season: str = CURRENT_SEASON,
+                     verbose: bool = False) -> Optional[Dict]:
+    """
+    Fetch WOWY data for a single player from PBP Stats API.
+    
+    Args:
+        player_id: NBA.com player ID
+        team_id: NBA.com team ID
+        season: Season string (default: current season)
+        verbose: Print debug info
+        
+    Returns:
+        Dict with on/off splits or None if API fails
+    """
+    if verbose:
+        print(f"   Fetching WOWY for player {player_id}...")
+    
+    try:
+        response = get_on_off(team_id, player_id, stat_type="player", season=season)
+        
+        if not response:
+            if verbose:
+                print(f"   ❌ No response from PBP Stats API")
+            return None
+        
+        # Parse response - format: {'multi_row_table_data': [{'OnOff': 'On', ...}, {'OnOff': 'Off', ...}]}
+        data = response.get('multi_row_table_data', [])
+        
+        if len(data) < 2:
+            if verbose:
+                print(f"   ❌ Insufficient data rows ({len(data)})")
+            return None
+        
+        # Extract ON and OFF rows
+        on_row = next((d for d in data if d.get('OnOff') == 'On'), data[0])
+        off_row = next((d for d in data if d.get('OnOff') == 'Off'), data[1] if len(data) > 1 else {})
+        
+        # Extract metrics
+        wowy = {
+            'on_possessions': int(on_row.get('OffPoss', 0) or 0),
+            'on_ortg': float(on_row.get('OffRtg', 0) or 0),
+            'on_drtg': float(on_row.get('DefRtg', 0) or 0),
+            'on_netrtg': float(on_row.get('NetRtg', 0) or 0),
+            'off_possessions': int(off_row.get('OffPoss', 0) or 0),
+            'off_ortg': float(off_row.get('OffRtg', 0) or 0),
+            'off_drtg': float(off_row.get('DefRtg', 0) or 0),
+            'off_netrtg': float(off_row.get('NetRtg', 0) or 0),
+        }
+        
+        # Calculate on/off diff (player's impact on team NetRtg)
+        wowy['on_off_diff'] = wowy['on_netrtg'] - wowy['off_netrtg']
+        
+        if verbose:
+            print(f"   ✅ On/Off: {wowy['on_netrtg']:.1f} / {wowy['off_netrtg']:.1f} (Δ {wowy['on_off_diff']:+.1f})")
+            print(f"      Possessions: {wowy['on_possessions']} / {wowy['off_possessions']}")
+        
+        return wowy
+        
+    except Exception as e:
+        if verbose:
+            print(f"   ❌ Error: {e}")
+        return None
+
+
+def save_to_db(conn: sqlite3.Connection, player_id: str, player_name: str,
+               team_abbr: str, team_id: str, wowy_data: Dict,
+               season: str = CURRENT_SEASON, dry_run: bool = False) -> bool:
+    """
+    Save WOWY data to player_season_wowy table.
+    
+    Args:
+        conn: Database connection
+        player_id: NBA.com player ID
+        player_name: Player name
+        team_abbr: Team abbreviation (e.g., 'LAL')
+        team_id: NBA.com team ID
+        wowy_data: WOWY stats dict from fetch_player_wowy()
+        season: Season string
+        dry_run: If True, don't actually write to DB
+        
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    if dry_run:
+        print(f"   [DRY RUN] Would save: {player_name} ({team_abbr})")
+        return True
+    
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO player_season_wowy (
+                player_id, player_name, team_abbr, team_id, season,
+                on_possessions, on_ortg, on_drtg, on_netrtg,
+                off_possessions, off_ortg, off_drtg, off_netrtg,
+                on_off_diff, synced_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(player_id, season) DO UPDATE SET
+                team_abbr = excluded.team_abbr,
+                team_id = excluded.team_id,
+                on_possessions = excluded.on_possessions,
+                on_ortg = excluded.on_ortg,
+                on_drtg = excluded.on_drtg,
+                on_netrtg = excluded.on_netrtg,
+                off_possessions = excluded.off_possessions,
+                off_ortg = excluded.off_ortg,
+                off_drtg = excluded.off_drtg,
+                off_netrtg = excluded.off_netrtg,
+                on_off_diff = excluded.on_off_diff,
+                synced_at = excluded.synced_at
+        """, (
+            player_id, player_name, team_abbr, team_id, season,
+            wowy_data['on_possessions'], wowy_data['on_ortg'],
+            wowy_data['on_drtg'], wowy_data['on_netrtg'],
+            wowy_data['off_possessions'], wowy_data['off_ortg'],
+            wowy_data['off_drtg'], wowy_data['off_netrtg'],
+            wowy_data['on_off_diff'], datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        return True
+        
+    except sqlite3.Error as e:
+        print(f"   ❌ Database error: {e}")
+        return False
+
+
+def sync_team(conn: sqlite3.Connection, team_abbr: str, top_n: int = 10,
+              verbose: bool = False, dry_run: bool = False) -> Dict:
+    """
+    Sync WOWY data for top N players on a team.
+    
+    Args:
+        conn: Database connection
+        team_abbr: Team abbreviation (e.g., 'LAL')
+        top_n: Number of players to sync (default: 10)
+        verbose: Print detailed progress
+        dry_run: Don't write to database
+        
+    Returns:
+        Dict with sync stats (success_count, fail_count, players_synced)
+    """
+    team_id = TEAM_IDS.get(team_abbr)
+    if not team_id:
+        print(f"❌ Unknown team: {team_abbr}")
+        return {'success_count': 0, 'fail_count': 0, 'players_synced': []}
+    
+    print(f"\n🏀 Syncing WOWY for {team_abbr} (top {top_n} by usage)...")
+    
+    # Get top players
+    players = get_top_players(conn, team_abbr, top_n)
+    
+    if not players:
+        print(f"   ❌ No players found for {team_abbr}")
+        return {'success_count': 0, 'fail_count': 0, 'players_synced': []}
+    
+    print(f"   Found {len(players)} players")
+    
+    success_count = 0
+    fail_count = 0
+    players_synced = []
+    
+    for i, player in enumerate(players, 1):
+        player_id = player['player_id']
+        player_name = player['name']
+        usg = player.get('usg_pct', 0)
+        
+        print(f"\n   [{i}/{len(players)}] {player_name} (USG: {usg:.1%})")
+        
+        # Fetch WOWY data
+        wowy_data = fetch_player_wowy(player_id, team_id, CURRENT_SEASON, verbose)
+        
+        if not wowy_data:
+            fail_count += 1
+            continue
+        
+        # Save to DB
+        if save_to_db(conn, player_id, player_name, team_abbr, team_id,
+                     wowy_data, CURRENT_SEASON, dry_run):
+            success_count += 1
+            players_synced.append(player_name)
+        else:
+            fail_count += 1
+    
+    return {
+        'success_count': success_count,
+        'fail_count': fail_count,
+        'players_synced': players_synced
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Sync full-season WOWY data from PBP Stats API",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Sync all 30 teams (top 10 players each)
+  python scripts/sync_pbp_wowy.py --verbose
+  
+  # Sync single team
+  python scripts/sync_pbp_wowy.py --team LAL --verbose
+  
+  # Test with top 5 players per team without writing
+  python scripts/sync_pbp_wowy.py --top 5 --dry-run --verbose
+        """
+    )
+    
+    parser.add_argument('--team', type=str,
+                       help='Sync single team (e.g., LAL)')
+    parser.add_argument('--top', type=int, default=10,
+                       help='Number of players per team (default: 10)')
+    parser.add_argument('--verbose', action='store_true',
+                       help='Print detailed progress')
+    parser.add_argument('--dry-run', action='store_true',
+                       help='Preview without database writes')
+    parser.add_argument('--db', type=str, default='ludi.db',
+                       help='Database path (default: ludi.db)')
+    
+    args = parser.parse_args()
+    
+    print("="*70)
+    print("PBP Stats WOWY Sync - Phase 6.3")
+    print("="*70)
+    
+    if args.dry_run:
+        print("⚠️  DRY RUN MODE - No database writes")
+    
+    # Connect to database
+    conn = get_db_connection(args.db)
+    
+    # Determine teams to sync
+    teams_to_sync = [args.team] if args.team else list(TEAM_IDS.keys())
+    
+    total_success = 0
+    total_fail = 0
+    all_players_synced = []
+    
+    try:
+        for team in teams_to_sync:
+            result = sync_team(conn, team, args.top, args.verbose, args.dry_run)
+            total_success += result['success_count']
+            total_fail += result['fail_count']
+            all_players_synced.extend(result['players_synced'])
+        
+        # Summary
+        print("\n" + "="*70)
+        print("SYNC COMPLETE")
+        print("="*70)
+        print(f"✅ Success: {total_success} players")
+        print(f"❌ Failed: {total_fail} players")
+        print(f"📊 Total: {total_success + total_fail} attempted")
+        
+        if not args.dry_run:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM player_season_wowy")
+            total_records = cursor.fetchone()[0]
+            print(f"💾 Database: {total_records} total WOWY records")
+        
+        print("="*70)
+        
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    main()

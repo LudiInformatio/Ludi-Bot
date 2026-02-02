@@ -6,18 +6,21 @@ Queries team_lineups table (scraped from NBA.com/stats) to find:
 - Beneficiaries when a player is OUT (usage vacuum)
 - Best/worst lineups for a team
 
-Uses 350 possession threshold as reliable sample size (industry midpoint).
+Uses mid-season calibrated thresholds for NBA lineup reality.
 
-Confidence tiers:
-- HIGH: 500+ possessions (very reliable)
-- MEDIUM: 350-499 possessions (reliable)
-- LOW: 150-349 possessions (marginal)
-- INSUFFICIENT: <150 possessions (do not use)
+Confidence tiers (updated Phase 6.3 - Feb 2, 2026):
+- HIGH: 200+ possessions (~170 min shared playtime - reliable)
+- MEDIUM: 100-199 possessions (~85 min shared playtime - moderate)
+- LOW: 50-99 possessions (~42 min shared playtime - minimum viable)
+- INSUFFICIENT: <50 possessions (too small to trust)
+
+Previous thresholds (500/350/150) were designed for full-season data.
+Mid-season reality: Top lineups have ~300-500 possessions, need lower thresholds.
 
 Integrates with Module X (Scenario Builder) for data-driven usage vacuum.
 
 Author: Ludi Informatio
-Date: January 2026
+Date: January 2026 | Updated: February 2, 2026 (Phase 6.3)
 """
 
 import argparse
@@ -29,10 +32,10 @@ from typing import Dict, List, Optional, Tuple
 class WOWYCalculator:
     """WOWY calculator for NBA lineup analysis."""
     
-    # Possession thresholds for confidence tiers
-    THRESHOLD_HIGH = 500
-    THRESHOLD_MEDIUM = 350
-    THRESHOLD_LOW = 150
+    # Possession thresholds for confidence tiers (Phase 6.3 - Mid-season calibration)
+    THRESHOLD_HIGH = 200      # Was 500 (full season) - now ~170 min shared playtime
+    THRESHOLD_MEDIUM = 100    # Was 350 (full season) - now ~85 min shared playtime  
+    THRESHOLD_LOW = 50        # Was 150 (full season) - now ~42 min shared playtime
     
     def __init__(self, db_path: str = "ludi.db"):
         """Initialize calculator with database connection."""
@@ -91,14 +94,14 @@ class WOWYCalculator:
         }
         return weights.get(confidence, 0.0)
     
-    def get_player_impact(self, player_name: str, team: str, min_possessions: float = 350) -> Optional[Dict]:
+    def get_player_impact(self, player_name: str, team: str, min_possessions: float = 100) -> Optional[Dict]:
         """
         Get player's impact on lineup efficiency (WITH vs WITHOUT).
         
         Args:
             player_name: Player's full name
             team: 3-letter team abbreviation
-            min_possessions: Minimum possessions required (default: 350)
+            min_possessions: Minimum possessions required (default: 100 - MEDIUM threshold)
             
         Returns:
             Dict with WITH/WITHOUT stats and confidence, or None if insufficient data
@@ -177,14 +180,14 @@ class WOWYCalculator:
             'confidence': self.get_confidence_tier(min(with_poss, without_poss))
         }
     
-    def find_beneficiaries(self, absent_player: str, team: str, min_possessions: float = 350) -> List[Dict]:
+    def find_beneficiaries(self, absent_player: str, team: str, min_possessions: float = 100) -> List[Dict]:
         """
         Find players who benefit when a star is OUT (usage vacuum).
         
         Args:
             absent_player: Name of OUT player
             team: 3-letter team abbreviation
-            min_possessions: Minimum possessions required (default: 350)
+            min_possessions: Minimum possessions required (default: 100 - MEDIUM threshold)
             
         Returns:
             List of dicts with beneficiary stats and confidence
@@ -274,14 +277,14 @@ class WOWYCalculator:
         
         return beneficiaries
     
-    def get_team_best_lineups(self, team: str, limit: int = 10, min_possessions: float = 150) -> List[Dict]:
+    def get_team_best_lineups(self, team: str, limit: int = 10, min_possessions: float = 50) -> List[Dict]:
         """
         Get team's best lineups by NetRtg.
         
         Args:
             team: 3-letter team abbreviation
             limit: Number of lineups to return (default: 10)
-            min_possessions: Minimum possessions required (default: 150)
+            min_possessions: Minimum possessions required (default: 50 - LOW threshold)
             
         Returns:
             List of lineup dicts sorted by NetRtg
@@ -305,14 +308,14 @@ class WOWYCalculator:
         
         return [dict(row) for row in cursor.fetchall()]
     
-    def get_team_worst_lineups(self, team: str, limit: int = 10, min_possessions: float = 150) -> List[Dict]:
+    def get_team_worst_lineups(self, team: str, limit: int = 10, min_possessions: float = 50) -> List[Dict]:
         """
         Get team's worst lineups by NetRtg.
         
         Args:
             team: 3-letter team abbreviation
             limit: Number of lineups to return (default: 10)
-            min_possessions: Minimum possessions required (default: 150)
+            min_possessions: Minimum possessions required (default: 50 - LOW threshold)
             
         Returns:
             List of lineup dicts sorted by NetRtg (ascending)
@@ -372,8 +375,8 @@ Examples:
                         help='Display full report with context')
     parser.add_argument('--limit', type=int, default=10,
                         help='Number of lineups to show (default: 10)')
-    parser.add_argument('--min-poss', type=float, default=350,
-                        help='Minimum possessions required (default: 350)')
+    parser.add_argument('--min-poss', type=float, default=100,
+                        help='Minimum possessions required (default: 100)')
     
     args = parser.parse_args()
     

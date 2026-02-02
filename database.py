@@ -555,6 +555,84 @@ class LudiHistorian:
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_ref_bias_player ON referee_player_bias(player_id)')
 
+        # 12. Depth Charts Table (Phase 6.1 - Feb 2, 2026)
+        # Stores official NBA depth charts from Tank01 API
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS depth_charts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_abbr TEXT NOT NULL,           -- ATL, LAL, etc.
+                team_id TEXT,                       -- NBA team ID
+                position TEXT NOT NULL,             -- PG, SG, SF, PF, C
+                player_name TEXT NOT NULL,          -- Full name (from Tank01)
+                player_id TEXT,                     -- NBA player ID (canonical)
+                depth_order INTEGER NOT NULL,       -- 1=starter, 2=backup, 3=deep bench
+                synced_at TEXT NOT NULL,            -- ISO timestamp of sync
+                UNIQUE(team_abbr, position, depth_order)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_depth_charts_team ON depth_charts(team_abbr)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_depth_charts_player ON depth_charts(player_name)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_depth_charts_position ON depth_charts(team_abbr, position)')
+
+        # Add is_starter column to players table if it doesn't exist
+        # SQLite doesn't support IF NOT EXISTS for ALTER COLUMN, so we check manually
+        try:
+            c.execute('SELECT is_starter FROM players LIMIT 1')
+        except sqlite3.OperationalError:
+            # Column doesn't exist, add it
+            c.execute('ALTER TABLE players ADD COLUMN is_starter INTEGER DEFAULT 0')
+
+        # 13. Player Season WOWY Table (Phase 6.3 - Feb 2, 2026)
+        # Stores full-season on/off splits from PBP Stats API
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_season_wowy (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT,
+                team_abbr TEXT,
+                team_id TEXT,
+                season TEXT DEFAULT '2025-26',
+                -- ON-court stats (team with this player)
+                on_possessions INTEGER,
+                on_ortg REAL,
+                on_drtg REAL,
+                on_netrtg REAL,
+                -- OFF-court stats (team without this player)
+                off_possessions INTEGER,
+                off_ortg REAL,
+                off_drtg REAL,
+                off_netrtg REAL,
+                -- Impact metrics
+                on_off_diff REAL,  -- on_netrtg - off_netrtg (star player impact)
+                -- Metadata
+                synced_at TEXT,
+                UNIQUE(player_id, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_season_wowy_player ON player_season_wowy(player_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_season_wowy_team ON player_season_wowy(team_abbr)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_season_wowy_season ON player_season_wowy(season)')
+
+        # Create lineup_season_totals view (aggregates per-game lineup data)
+        # This view aggregates team_lineups from per-game to full-season totals
+        c.execute('''
+            CREATE VIEW IF NOT EXISTS lineup_season_totals AS
+            SELECT
+                team_abbreviation,
+                lineup_players,
+                SUM(possessions) as total_possessions,
+                SUM(minutes) as total_minutes,
+                AVG(off_rating) as avg_ortg,
+                AVG(def_rating) as avg_drtg,
+                AVG(net_rating) as avg_netrtg,
+                COUNT(*) as games_played
+            FROM team_lineups
+            GROUP BY team_abbreviation, lineup_players
+            HAVING SUM(possessions) >= 25
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
