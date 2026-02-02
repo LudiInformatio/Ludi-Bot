@@ -82,6 +82,7 @@ jobs:
       - name: Generate Weekly Validation Report
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=$PWD
           
           REPORT="## 📊 WEEKLY VALIDATION REPORT - $(date +%Y-%m-%d)\n\n"
           

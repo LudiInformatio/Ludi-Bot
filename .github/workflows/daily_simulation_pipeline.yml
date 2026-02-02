@@ -31,6 +31,11 @@ jobs:
           source .venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          source .venv/bin/activate
+          python -m playwright install chromium
           
       - name: Verify Environment
         run: |
@@ -45,6 +50,7 @@ jobs:
       - name: Run Daily Simulation Pipeline
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=$PWD
           
           # Set production flag
           export IS_PRODUCTION=true
@@ -73,6 +79,7 @@ jobs:
       - name: Run System Health Monitor
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=$PWD
           python scripts/monitor_system_health.py --production-mode
           
       - name: Archive Production Logs
@@ -89,22 +96,30 @@ jobs:
           
       - name: Send Production Summary
         if: always()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=$PWD
           
-          # Extract key metrics from today's log
           LOG_FILE="logs/production/pipeline_$(date +%Y%m%d).log"
           if [ -f "$LOG_FILE" ]; then
-            # Count games processed
             GAMES_PROCESSED=$(grep -c "🏀 GAME" "$LOG_FILE" || echo "0")
-            
-            # Count bets generated
             BETS_GENERATED=$(grep -c "💎 DIAMOND\|🔷 BLUE CHIP\|💙 CORE ASSET\|🎯 THE STEAL" "$LOG_FILE" || echo "0")
-            
-            # Check for errors
             ERRORS=$(grep -c "❌\|🚨\|ERROR" "$LOG_FILE" || echo "0")
+            DATE_STR=$(date +%Y-%m-%d)
+            TIME_STR=$(date +%H:%M:%S)
             
-          # Send summary to Telegram
-          MESSAGE="📊 **PROD SUMMARY** $(date +%Y-%m-%d)\n🏀 Games: $GAMES_PROCESSED\n💎 Bets: $BETS_GENERATED\n❌ Errors: $ERRORS\n⏰ Completed: $(date +%H:%M:%S)"
-          python -c "from utils.telegram_notifier import send_message; send_message('$MESSAGE')" || echo "Telegram notification failed"
+            MSG="📊 PROD SUMMARY ${DATE_STR} | 🏀 Games: ${GAMES_PROCESSED} | 💎 Bets: ${BETS_GENERATED} | ❌ Errors: ${ERRORS} | ⏰ ${TIME_STR}"
+            python3 -c "from utils.telegram_notifier import send_message; send_message('$MSG')" || echo "Telegram notification failed"
           fi
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"

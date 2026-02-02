@@ -85,6 +85,15 @@ jobs:
              echo "No changes to commit"
           fi
 
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (work-notes) - Check GitHub Actions')" || echo "Telegram notification failed"
+
   bet-summary:
     runs-on: self-hosted
 
@@ -122,3 +131,12 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
           python3 scripts/send_settlement_summary.py
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (bet-summary) - Check GitHub Actions')" || echo "Telegram notification failed"
