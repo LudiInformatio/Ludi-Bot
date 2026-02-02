@@ -48,6 +48,14 @@ jobs:
           mkdir -p assets/generated
           
       - name: Run Daily Simulation Pipeline
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
         run: |
           source .venv/bin/activate
           export PYTHONPATH=$PWD
