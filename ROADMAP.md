@@ -53,7 +53,7 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] Adaptive WOWY confidence thresholds (BASE: 500/350/150, scales with season progress) ✅
 - [x] Create `scripts/sync_pbp_wowy.py` using PBP Stats API `stat_type='team'` endpoint ✅
 - [x] Integrate PBP Stats WOWY data into `player_season_wowy` table ✅
-- [ ] Add to `data_sync.yml` workflow (Daily 3 AM EST) - Optional, can run manually
+- [x] Add to `data_sync.yml` workflow (Daily 8 AM UTC / 3 AM EST) ✅
 - [x] Create `tests/test_wowy_enhancement.py` with 5 unit tests ✅
 
 **Phase 6.4: System Refinements & ROLE_CHANGE Detection** ✅ COMPLETE (Feb 2, 2026)
