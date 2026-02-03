@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 2, 2026 @ 10:30 PM EST
+**Last Updated:** February 3, 2026 @ 12:40 AM EST
 **Current Phase:** Phase 6 - Full Data Integration
 **Active Work:** Phase 6.5 - Forward CLV Capture
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements**
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -63,8 +63,11 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] ROLE_CHANGE handler in Module E - Dynamic ±8 min adjustments for starter elevation/demotion ✅
 - [x] Created `tests/test_role_change_handler.py` with 3 unit tests ✅
 - [x] Created `docs/PHASE_6_4_COMPLETION_REPORT.md` ✅
+- [x] Referee Backfill Execution - 60-day backfill via nba_api (452 games, 100% success) ✅
+- [x] Referee Learning Re-run - 171 games processed, 65 referee profiles updated ✅
 
 **PF Data Coverage:** 21,328 / 26,936 game logs (79.2%) for full 2025-26 season
+**Referee Coverage:** 515 / 1,769 games (29.1%) - up from 3.6%
 **Test Results:** 3/3 unit tests passing
 **Time Investment:** 2.5 hours (vs 3.5 hours estimated - 29% efficiency gain)
 
@@ -106,7 +109,8 @@ This suggests the model IS finding real value (CLV positive), but variance is af
 
 - [ ] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger)
 - [ ] Create `scripts/monitor_system_health.py` (data integrity + model drift alerts)
-- [ ] Create `scripts/backfill_referees.py` (Historical 45-day backfill via date picker)
+- [x] Run referee backfill via `scripts/backfill_referee_assignments.py` (60-day, 452 games) ✅
+  - Note: Script needs update to use `BoxScoreSummaryV3` (V2 deprecated after April 2025)
 - [ ] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST)
 - [ ] Implement automated weekly backtests with drift alerts
 - [ ] Create `scripts/cleanup_old_logs.py` (30-day retention)

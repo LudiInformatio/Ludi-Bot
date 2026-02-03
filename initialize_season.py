@@ -2,8 +2,14 @@ import pandas as pd
 import time
 import json
 import requests
+import sys
+import os
 from datetime import datetime
 from nba_api.stats.endpoints import leaguegamelog
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils.api_helpers import retry_with_backoff
 
 # ==========================================
 # LUDI INFORMATIO | DATA INITIALIZER
@@ -29,6 +35,30 @@ def get_current_nba_season():
     season_str = f"{start_year}-{str(end_year)[-2:]}"
     return season_str
 
+@retry_with_backoff(max_attempts=3, backoff=2.0, exceptions=(Exception,))
+def fetch_season_game_logs(target_season: str, headers: dict):
+    """
+    Fetch full season game logs from NBA API with retry logic.
+
+    Args:
+        target_season: Season string (e.g., "2025-26")
+        headers: HTTP headers for API request
+
+    Returns:
+        DataFrame of game logs
+
+    Note:
+        Enhanced with 120s timeout + retry logic (Phase 6.4)
+    """
+    logs = leaguegamelog.LeagueGameLog(
+        season=target_season,
+        player_or_team_abbreviation='P',
+        headers=headers,
+        timeout=120
+    ).get_data_frames()[0]
+
+    return logs
+
 def update_stats():
     print(f"\n{'='*40}")
     print(f"LUDI INFORMATIO: SEASON INITIALIZATION")
@@ -53,14 +83,9 @@ def update_stats():
     try:
         # 2. FETCH FULL GAME LOGS
         print("   > Downloading Full Season Game Logs...", end=" ")
-        
-        logs = leaguegamelog.LeagueGameLog(
-            season=target_season,
-            player_or_team_abbreviation='P', 
-            headers=headers,
-            timeout=120
-        ).get_data_frames()[0]
-        
+
+        logs = fetch_season_game_logs(target_season, headers)
+
         count = len(logs)
         
         if count < 100:

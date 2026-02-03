@@ -86,16 +86,33 @@ def build_game_lookup(pbp_games):
         'NY': ['NY', 'NYK', 'N.Y.'],
         'NOP': ['NOP', 'NO', 'N.O.'],
         'SA': ['SA', 'SAS', 'S.A.'],
+        'PHX': ['PHX', 'PHO'],
     }
+
+    def normalize_team_abbr(abbr: str) -> str:
+        """
+        Normalize team abbreviations to canonical form.
+
+        This ensures consistent matching regardless of which variant
+        appears in The-Odds-API vs PBP Stats API.
+        """
+        normalizations = {
+            'PHO': 'PHX',  # Phoenix Suns
+            'GS': 'GSW',   # Golden State Warriors
+            'NO': 'NOP',   # New Orleans Pelicans
+            'SA': 'SAS',   # San Antonio Spurs
+            'NY': 'NYK',   # New York Knicks
+        }
+        return normalizations.get(abbr, abbr)
     
     lookup = {}
     
     for game in pbp_games:
         nba_game_id = game.get('GameId')
         date = game.get('Date')
-        home_abbr = game.get('HomeTeamAbbreviation')
-        away_abbr = game.get('AwayTeamAbbreviation')
-        
+        home_abbr = normalize_team_abbr(game.get('HomeTeamAbbreviation', ''))
+        away_abbr = normalize_team_abbr(game.get('AwayTeamAbbreviation', ''))
+
         if nba_game_id and date and home_abbr and away_abbr:
             # Create entries for all possible abbreviation combinations
             for home_var in [home_abbr] + abbr_aliases.get(home_abbr, []):

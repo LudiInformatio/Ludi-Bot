@@ -25,7 +25,8 @@ from typing import List, Dict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
-from nba_api.stats.endpoints import boxscoresummaryv2
+from nba_api.stats.endpoints import boxscoresummaryv3
+from utils.api_helpers import retry_with_backoff
 
 # Configuration
 API_SLEEP_SECONDS = 0.6  # Respect rate limits (NBA API is strict)
@@ -62,29 +63,59 @@ def get_games_needing_backfill(conn: sqlite3.Connection, days: int) -> List[Dict
     return games
 
 
+@retry_with_backoff(max_attempts=3, backoff=2.0, exceptions=(Exception,))
 def fetch_referees_for_game(nba_game_id: str) -> str:
     """
-    Fetch officials from NBA API for a specific game.
-    Returns comma-separated string of Full Names.
+    Fetch officials from NBA API V3 for a specific game.
+
+    Args:
+        nba_game_id: NBA game ID format (e.g., "0022500123")
+
+    Returns:
+        Comma-separated string of referee full names, or None if unavailable
+
+    Note:
+        Migrated from boxscoresummaryv2 to boxscoresummaryv3 (Feb 2026)
+        V3 is required for games after April 2025.
+        Enhanced with 60s timeout + retry logic (Phase 6.4)
     """
     try:
-        box = boxscoresummaryv2.BoxScoreSummaryV2(game_id=nba_game_id)
-        officials_df = box.officials.get_data_frame()
-        
-        if officials_df.empty:
+        # Call V3 API endpoint with extended timeout (60s vs default 30s)
+        box = boxscoresummaryv3.BoxScoreSummaryV3(game_id=nba_game_id, timeout=60)
+        data = box.get_dict()
+
+        # V3 structure: data['boxScoreSummary']['officials']
+        # Each official has: personId, name, nameI, firstName, familyName, jerseyNum, assignment
+        box_summary = data.get('boxScoreSummary', {})
+        officials = box_summary.get('officials', [])
+
+        if not officials:
+            print(f"      [WARN] No officials data for game {nba_game_id}")
             return None
-            
-        # Combine First + Last Name
-        # Check column names (they vary sometimes)
-        if 'FIRST_NAME' in officials_df.columns and 'LAST_NAME' in officials_df.columns:
-            officials_df['FULL_NAME'] = officials_df['FIRST_NAME'] + ' ' + officials_df['LAST_NAME']
-            refs = officials_df['FULL_NAME'].tolist()
-            return ", ".join(refs)
-            
-        return None
-        
+
+        # Extract full names (V3 provides 'name' field directly)
+        ref_names = []
+        for official in officials:
+            # V3 provides 'name' field with full name (e.g., "Scott Foster")
+            full_name = official.get('name')
+
+            # Fallback: construct from firstName + familyName if 'name' missing
+            if not full_name:
+                first = official.get('firstName', '')
+                last = official.get('familyName', '')
+                full_name = f"{first} {last}".strip()
+
+            if full_name:
+                ref_names.append(full_name)
+
+        if not ref_names:
+            print(f"      [WARN] Officials list empty after parsing for {nba_game_id}")
+            return None
+
+        return ", ".join(ref_names)
+
     except Exception as e:
-        print(f"      ❌ API Error: {e}")
+        print(f"      [ERROR] API Error for {nba_game_id}: {e}")
         return None
 
 

@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import DB_PATH
 from nba_api.stats.endpoints import leaguedashlineups
 from scripts.sync_wowy_backfill import run_wowy_backfill as run_ghost_protocol
+from utils.api_helpers import retry_with_backoff
 
 # Configuration
 API_RATE_LIMIT = 1.0  # Seconds between API calls
@@ -48,10 +49,14 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@retry_with_backoff(max_attempts=3, backoff=2.0, exceptions=(Exception,))
 def sync_via_api(target_date: datetime) -> int:
     """
     Tier 1: Fetch single day lineup data via nba_api.
     Returns: Number of records processed.
+
+    Note:
+        Enhanced with 120s timeout + retry logic (Phase 6.4)
     """
     nba_date_str = target_date.strftime("%m/%d/%Y")
     db_date_str = target_date.strftime("%Y-%m-%d")

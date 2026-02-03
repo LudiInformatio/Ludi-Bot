@@ -272,8 +272,9 @@ def process_game(conn: sqlite3.Connection, game: Dict, dry_run: bool = False) ->
     }
     
     # Get actual fouls from game logs
-    # First try nba_game_id (standard NBA format), then fall back to game_id
-    lookup_id = game.get('nba_game_id') or game['game_id']
+    # IMPORTANT: player_game_logs stores game_id in Tank01 format (YYYYMMDD_AWAY@HOME)
+    # The games.nba_game_id field is NBA API format (0022500XXX) and incompatible
+    lookup_id = game['game_id']  # Always use Tank01 format for player_game_logs queries
     total_fouls = get_game_fouls_from_logs(conn, lookup_id)
     
     if not total_fouls:
