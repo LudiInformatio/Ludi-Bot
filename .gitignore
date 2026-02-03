@@ -62,3 +62,6 @@ Thumbs.db
 
 # Extensions
 perplexity-ext/
+
+# Cache files
+cache/pbp_stats/*.json

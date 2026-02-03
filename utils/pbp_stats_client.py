@@ -9,10 +9,16 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from typing import Dict, List, Optional
+import os
+import json
+import hashlib
+from datetime import datetime, timedelta
 
 
 BASE_URL = "https://api.pbpstats.com"
 CURRENT_SEASON = "2025-26"
+CACHE_DIR = "cache/pbp_stats"
+CACHE_TTL_HOURS = 24  # Cache expires after 24 hours
 
 def _get_session():
     session = requests.Session()
@@ -23,9 +29,9 @@ def _get_session():
         'Origin': 'https://www.pbpstats.com'
     })
     retry = Retry(
-        total=5, 
-        backoff_factor=1, 
-        status_forcelist=[500, 502, 503, 504],
+        total=3,  # Reduced from 5 (faster failure, less wasted time)
+        backoff_factor=2,  # Increased from 1 (exponential: 2s, 4s, 8s)
+        status_forcelist=[429, 500, 502, 503, 504],  # Added 429 rate limit
         allowed_methods=["GET"]
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -34,6 +40,80 @@ def _get_session():
     return session
 
 _session = _get_session()
+
+
+def _get_cache_path(endpoint: str, params: Dict) -> str:
+    """
+    Generate cache file path based on endpoint and params.
+
+    Uses MD5 hash of sorted params for deterministic cache keys.
+    This ensures same query always maps to same cache file.
+
+    Args:
+        endpoint: API endpoint name (e.g., 'get_on_off')
+        params: Request parameters dict
+
+    Returns:
+        Path to cache file
+    """
+    # Sort params for consistent hashing
+    param_str = json.dumps(params, sort_keys=True)
+    param_hash = hashlib.md5(param_str.encode()).hexdigest()[:8]
+
+    # Create cache filename: endpoint_hash.json
+    cache_file = f"{endpoint}_{param_hash}.json"
+    return os.path.join(CACHE_DIR, cache_file)
+
+
+def _read_cache(cache_path: str) -> Optional[Dict]:
+    """
+    Read from cache if file exists and is not expired.
+
+    TTL-based expiration: Files older than CACHE_TTL_HOURS are ignored.
+
+    Args:
+        cache_path: Path to cache file
+
+    Returns:
+        Cached data dict or None if expired/missing
+    """
+    if not os.path.exists(cache_path):
+        return None
+
+    # Check if cache is expired (TTL = 24 hours)
+    file_time = datetime.fromtimestamp(os.path.getmtime(cache_path))
+    if datetime.now() - file_time > timedelta(hours=CACHE_TTL_HOURS):
+        # Cache expired - could delete here but leave for debugging
+        return None
+
+    try:
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+    except Exception:
+        # Corrupt cache file - ignore and fetch fresh
+        return None
+
+
+def _write_cache(cache_path: str, data: Dict) -> None:
+    """
+    Write data to cache file.
+
+    Creates cache directory if it doesn't exist.
+    Failures are silent (cache is optional, not critical).
+
+    Args:
+        cache_path: Path to cache file
+        data: Data dict to cache
+    """
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    try:
+        with open(cache_path, 'w') as f:
+            json.dump(data, f)
+    except Exception as e:
+        # Silent failure - cache is performance optimization, not critical
+        print(f"[PBP_STATS] Warning: Failed to write cache: {e}")
+
+
 
 
 def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
@@ -54,7 +134,7 @@ def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
     }
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -85,7 +165,7 @@ def get_game_logs(entity_id: str, entity_type: str = "Player",
     }
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -122,7 +202,7 @@ def get_totals(entity_type: str = "Player", team_id: str = None,
         params["Leverage"] = leverage
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -132,23 +212,23 @@ def get_totals(entity_type: str = "Player", team_id: str = None,
 
 def get_wowy_stats(team_id: str, player_ids: List[str],
                    season: str = CURRENT_SEASON, season_type: str = "Regular Season",
-                   entity_type: str = "Team") -> Optional[Dict]:
+                   entity_type: str = "Team", use_cache: bool = True) -> Optional[Dict]:
     """
-    Get WOWY (With-Or-Without-You) stats for given players.
-    
+    Get WOWY (With-Or-Without-You) stats for given players with optional caching.
+
     This endpoint shows team/lineup stats when specific players are on/off.
-    
+
     Args:
         team_id: NBA.com team ID
         player_ids: List of player IDs to analyze
         season: Season string
         season_type: "Regular Season" or "Playoffs"
         entity_type: "Team" or "Player"
-    
+        use_cache: Enable local caching (default: True)
+
     Returns:
         Dict with WOWY stats
     """
-    url = f"{BASE_URL}/get-wowy-stats/nba"
     params = {
         "Season": season,
         "SeasonType": season_type,
@@ -157,43 +237,74 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
         # Player filters are added as special params
         "0Exactly1OnFloor": ",".join(player_ids)
     }
-    
+
+    # Check cache first
+    if use_cache:
+        cache_path = _get_cache_path("get_wowy_stats", params)
+        cached = _read_cache(cache_path)
+        if cached:
+            return cached
+
+    url = f"{BASE_URL}/get-wowy-stats/nba"
+
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        # Write to cache
+        if use_cache:
+            _write_cache(cache_path, data)
+
+        return data
     except requests.RequestException as e:
         print(f"[PBP_STATS] Error fetching WOWY stats: {e}")
         return None
 
 
 def get_wowy_combination_stats(team_id: str, player_ids: List[str],
-                               season: str = CURRENT_SEASON, 
-                               season_type: str = "Regular Season") -> Optional[Dict]:
+                               season: str = CURRENT_SEASON,
+                               season_type: str = "Regular Season",
+                               use_cache: bool = True) -> Optional[Dict]:
     """
-    Get all on/off combinations for selected players.
-    
+    Get all on/off combinations for selected players with optional caching.
+
     Args:
         team_id: NBA.com team ID
         player_ids: List of player IDs (comma-separated in request)
         season: Season string
         season_type: "Regular Season" or "Playoffs"
-    
+        use_cache: Enable local caching (default: True)
+
     Returns:
         Dict with all combination stats (on/off efficiency)
     """
-    url = f"{BASE_URL}/get-wowy-combination-stats/nba"
     params = {
         "Season": season,
         "SeasonType": season_type,
         "TeamId": team_id,
         "PlayerIds": ",".join(player_ids)
     }
-    
+
+    # Check cache first
+    if use_cache:
+        cache_path = _get_cache_path("get_wowy_combination_stats", params)
+        cached = _read_cache(cache_path)
+        if cached:
+            return cached
+
+    url = f"{BASE_URL}/get-wowy-combination-stats/nba"
+
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        # Write to cache
+        if use_cache:
+            _write_cache(cache_path, data)
+
+        return data
     except requests.RequestException as e:
         print(f"[PBP_STATS] Error fetching WOWY combo stats: {e}")
         return None
@@ -201,10 +312,10 @@ def get_wowy_combination_stats(team_id: str, player_ids: List[str],
 
 def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
                season: str = CURRENT_SEASON, season_type: str = "Regular Season",
-               leverage: str = None) -> Optional[Dict]:
+               leverage: str = None, use_cache: bool = True) -> Optional[Dict]:
     """
-    Get on/off data for a player.
-    
+    Get on/off data for a player with optional caching.
+
     Args:
         team_id: NBA.com team ID
         player_id: NBA.com player ID
@@ -212,7 +323,8 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
         season: Season string
         season_type: "Regular Season" or "Playoffs"
         leverage: Optional filter ("Medium,High,VeryHigh")
-    
+        use_cache: Enable local caching (default: True)
+
     Returns:
         Dict with on/off stats
     """
@@ -223,14 +335,27 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
         "TeamId": team_id,
         "PlayerId": player_id
     }
-    
+
     if leverage:
         params["Leverage"] = leverage
-    
+
+    # Check cache first
+    if use_cache:
+        cache_path = _get_cache_path("get_on_off", params)
+        cached = _read_cache(cache_path)
+        if cached:
+            return cached
+
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        # Write to cache for future requests
+        if use_cache:
+            _write_cache(cache_path, data)
+
+        return data
     except requests.RequestException as e:
         print(f"[PBP_STATS] Error fetching on/off data: {e}")
         return None
@@ -259,7 +384,7 @@ def get_shots(entity_id: str, entity_type: str = "Player",
     }
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -286,7 +411,7 @@ def get_team_leverage_summary(season: str = CURRENT_SEASON,
         params["Leverage"] = leverage
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -304,7 +429,7 @@ def get_live_games() -> Optional[Dict]:
     url = f"{BASE_URL}/live/games/nba"
     
     try:
-        response = _session.get(url, timeout=60)
+        response = _session.get(url, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -322,7 +447,7 @@ def get_all_players() -> Optional[Dict]:
     url = f"{BASE_URL}/get-all-players-for-league/nba"
     
     try:
-        response = _session.get(url, timeout=60)
+        response = _session.get(url, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -351,7 +476,7 @@ def get_team_players(team_id: str, season: str = CURRENT_SEASON,
     }
     
     try:
-        response = _session.get(url, params=params, timeout=60)
+        response = _session.get(url, params=params, timeout=120)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

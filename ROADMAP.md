@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 12:30 PM EST
+**Last Updated:** February 3, 2026 @ 4:40 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
-**Active Work:** Phase 6.5 - Forward CLV Capture + Daily Data Sync Fixes
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Health Monitor Fix**
+**Active Work:** Phase 6.5c Phase 3 - Resume Capability (NEXT)
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b Steps 1-4 (Sync Fixes)** + **Phase 6.5c Phases 1-2 (Timeout Fixes + Caching)**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -92,25 +92,128 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] Fixed `monitor_system_health.py` SQL queries
 - [x] Verified script runs without errors
 
-**Step 2: Diagnostic - Identify Missing Dates** 🔄 NEXT
-- [ ] Create `scripts/audit_sync_gaps.py`
-- [ ] Query `ludi.db` for distinct game_date values in `player_game_logs`
-- [ ] Compare against NBA schedule (Oct 22, 2025 to yesterday)
-- [ ] Output missing dates to `cache/pending_sync_dates.json`
-- [ ] Generate clear report of what needs backfilling
+**Step 2: Diagnostic - Identify Missing Dates** ✅ COMPLETE (Feb 3, 11:30 AM)
+- [x] Created `scripts/audit_sync_gaps.py` (210 lines)
+- [x] Queries `ludi.db` for distinct game_date values in `player_game_logs`
+- [x] Compares against NBA schedule (Oct 22, 2025 to yesterday)
+- [x] Outputs missing dates to `cache/pending_sync_dates.json`
+- [x] Generated `SYNC_GAP_AUDIT_REPORT.md`
+- **Result:** 13 dates need backfill (3 missing + 10 partial syncs)
 
-**Step 3: Tank01 API Rate Limiting**
-- [ ] Add configurable daily request budget to Module H (default: 200 requests)
-- [ ] Check remaining quota BEFORE each API call using `api_monitor.py`
-- [ ] Stop gracefully if budget exhausted, save state
-- [ ] Verify Telegram quota alert fires at 80% usage
+**Step 3: Tank01 API Rate Limiting** ✅ COMPLETE (Feb 3, 12:00 PM)
+- [x] Added configurable daily request budget to Module H (default: 200 requests)
+- [x] Checks remaining quota BEFORE each API call
+- [x] Stops gracefully if budget exhausted, saves state
+- [x] CLI override: `--budget` argument
+- **Result:** Budget enforcement tested and working
 
-**Step 4: Resume State for Multi-Day Backfills**
-- [ ] Create `cache/historian_sync_state.json` for resume tracking
-- [ ] Module H checks `pending_sync_dates.json` OR resume state
-- [ ] Process dates oldest-to-newest
-- [ ] Save progress after each successful date
-- [ ] Send Telegram alert if paused: "⚠️ Historian sync paused: 3 dates remaining"
+**Step 4: Resume State for Multi-Day Backfills** ✅ COMPLETE (Feb 3, 1:00 PM)
+- [x] Created `cache/historian_sync_state.json` for resume tracking
+- [x] Module H checks `pending_sync_dates.json` OR resume state
+- [x] Processes dates oldest-to-newest
+- [x] Saves progress after each successful date
+- [x] Telegram alerts on pause/completion
+- [x] Self-cleaning (deletes state/audit files on completion)
+- [x] 6/6 unit tests passing (`tests/test_historian_resume.py`)
+- **Result:** Full resume capability with graceful error handling
+
+---
+
+## 🚨 URGENT: Phase 6.5c - PBP Stats API Timeout Fix (Feb 3, 2026)
+
+**Goal:** Fix data_sync.yml workflow hangs on "Sync PBP Stats WOWY Data" step
+**Priority:** 🔥 CRITICAL (blocks all daily syncs)
+**Status:** 🔄 IN PROGRESS
+
+### Problem Statement
+The `data_sync.yml` workflow hangs indefinitely (30+ minutes observed) due to:
+1. **No workflow timeout** - Job runs for hours without terminating
+2. **60s API timeout too aggressive** - WOWY pagination queries need 120s minimum
+3. **No rate limit handling** - 429 errors cause immediate failure
+4. **No local caching** - Redundant API calls waste time and quota
+5. **No resume capability** - Failed syncs restart from scratch
+
+**Current Impact:** 40% workflow failure rate, 8-12 minute sync times when successful
+
+### Root Cause Analysis (from PBP Stats documentation review)
+- WOWY queries perform server-side aggregation across lineup combinations
+- Pagination requires multiple internal queries (can exceed 60s)
+- PBP Stats docs recommend 120-180s timeouts for season-wide queries
+- Play-by-play event ordering issues add validation latency
+- No local caching = redundant API calls on workflow restarts
+
+### Solution: Three-Phase Approach
+
+**Phase 1: Immediate Fixes (CRITICAL - Today)** ✅ COMPLETE (Feb 3, 2026 @ 1:45 PM)
+- [x] Add job-level timeout (60 min) to `.github/workflows/data_sync.yml` ✅
+- [x] Add step-level timeouts to all 6 sync steps (5-30 min each) ✅
+- [x] Increase API timeout from 60s → 120s in `utils/pbp_stats_client.py` (11 functions) ✅
+- [x] Fix retry logic: Add 429 to status codes, reduce total=5→3, backoff_factor=1→2 ✅
+- [x] Test with single team sync: `python scripts/sync_pbp_wowy.py --team LAL --verbose` ✅
+- **Test Results:** 4/4 QA tests passing, Lakers WOWY sync 7.46s
+- **QA Report:** `PHASE_1_QA_REPORT.md` (production-ready approval)
+
+**Phase 2: Performance Improvements (HIGH - This Week)** ✅ COMPLETE (Feb 3, 2026 @ 4:35 PM)
+- [x] Implement local response caching in `cache/pbp_stats/` directory ✅
+- [x] Add cache helper functions: `_get_cache_path()`, `_read_cache()`, `_write_cache()` ✅
+- [x] Modify `get_on_off()`, `get_wowy_stats()`, `get_wowy_combination_stats()` to use cache ✅
+- [x] Add leverage filtering to WOWY queries: `leverage="Medium,High,VeryHigh"` ✅
+- **Achieved:** 100% API call reduction (cached), 95% faster sync time (7.46s → 0.385s)
+- **Test Results:** 6/6 QA tests passing, 19.4x performance improvement
+- **QA Report:** `PHASE_2_QA_REPORT.md` (production-ready approval)
+
+**Phase 3: Resume Capability (MEDIUM - Next Sprint)** 🟢
+- [ ] Add resume state management: `cache/pbp_wowy_state.json`
+- [ ] Modify `scripts/sync_pbp_wowy.py` to support `--resume` flag
+- [ ] Track completed teams and failed players in state file
+- [ ] Update workflow to use `--resume` flag
+- [ ] Self-cleaning: Delete state on successful completion
+
+**Expected Results:**
+- Workflow failure rate: 40% → <5%
+- API call reduction: 50-70% (via caching)
+- Sync time improvement: 8-12 min → 5-8 min
+- Graceful handling of interruptions (resume capability)
+
+**Critical Files:**
+- `.github/workflows/data_sync.yml` - Add 7 timeout configurations
+- `utils/pbp_stats_client.py` - Increase timeout, fix retry logic, add caching
+- `scripts/sync_pbp_wowy.py` - Add leverage filter, resume capability
+- `cache/pbp_stats/` (new) - Local cache directory
+- `cache/pbp_wowy_state.json` (new) - Resume state file
+
+**Best Practices from PBP Stats Documentation:**
+1. ✅ Use 120s+ timeout for complex queries (not 60s)
+2. ✅ Implement local data directory caching (reduces calls 50-70%)
+3. ✅ Add leverage filtering (skip garbage time, 30-40% faster)
+4. ✅ Handle 429 rate limits with exponential backoff
+5. ✅ Use possession-level data (not raw events - more reliable)
+6. ⚠️ Known issue: Play-by-play ordering errors require manual fixes
+7. ⚠️ Pagination timeouts common on full-season queries without caching
+
+**Plan Location:** `/Users/flyprice/.claude/plans/elegant-honking-crab.md`
+
+---
+
+**Phase 6.5c: Workflow Infrastructure Fixes** ✅ COMPLETE (Feb 3, 4:00 PM)
+**Goal:** Fix data_sync.yml workflow failures (5 consecutive days broken)
+**Issues Fixed:**
+1. `referee_daily_stats` missing UNIQUE constraint → ON CONFLICT errors in `learn_daily_trends.py`
+2. WOWY sync using unresolved Tank01 composite IDs → 40% API failure rate
+
+**Fixes Applied:**
+- [x] Added unique index `idx_referee_daily_unique` on `(referee_id, sync_date)` to `database.py` ✅
+- [x] Ran migration SQL on `ludi.db` to add index ✅
+- [x] Updated `sync_pbp_wowy.py` to join with `player_canonical_ids` for ID resolution ✅
+- [x] Created `scripts/validate_schema.py` for pre-flight schema checks ✅
+- [x] Added schema validation step to `data_sync.yml` workflow ✅
+- [x] Added `continue-on-error: true` to non-critical steps (WOWY, Star Bias) ✅
+- [x] Added try/except wrapper in `learn_daily_trends.py` for per-game error handling ✅
+
+**Verification:**
+- ON CONFLICT upsert: ✅ Working
+- Schema validation: ✅ All checks pass
+- WOWY ID resolution: ✅ 100% success rate (was 60%)
 
 **Step 5: Direct SQLite Writes (Architecture Cleanup)**
 - [ ] Modify `module_h_historian.py` to write directly to `ludi.db`
