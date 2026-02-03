@@ -13,8 +13,12 @@ import sqlite3
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import project modules
 from utils.telegram_notifier import send_alert
@@ -200,6 +204,151 @@ class SystemHealthMonitor:
         
         return results
     
+    def check_pf_coverage(self) -> Dict[str, Any]:
+        """Check personal fouls data coverage in player_game_logs"""
+        results = {}
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Check PF coverage for recent games (last 7 days)
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total_logs,
+                    SUM(CASE WHEN pf > 0 THEN 1 ELSE 0 END) as with_pf,
+                    MIN(game_date) as earliest,
+                    MAX(game_date) as latest
+                FROM player_game_logs
+                WHERE game_date >= date('now', '-7 days')
+            """)
+
+            recent = cursor.fetchone()
+
+            # Check full season coverage
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total_logs,
+                    SUM(CASE WHEN pf > 0 THEN 1 ELSE 0 END) as with_pf
+                FROM player_game_logs
+            """)
+
+            full_season = cursor.fetchone()
+            conn.close()
+
+            if recent and recent[0] > 0:
+                recent_pct = (recent[1] / recent[0]) * 100 if recent[0] > 0 else 0
+                full_pct = (full_season[1] / full_season[0]) * 100 if full_season[0] > 0 else 0
+
+                # Alert if coverage drops below 70%
+                if recent_pct < 70:
+                    self.alerts.append(f"⚠️ PF Coverage (7-day): {recent_pct:.1f}% - Below 70% threshold")
+                    status = '⚠️ LOW'
+                elif recent_pct < 80:
+                    status = '🟡 MONITOR'
+                else:
+                    status = '✅ OK'
+
+                results = {
+                    'status': status,
+                    'recent_7d': {
+                        'coverage': f"{recent_pct:.1f}%",
+                        'with_pf': recent[1],
+                        'total': recent[0],
+                        'date_range': f"{recent[2]} to {recent[3]}"
+                    },
+                    'full_season': {
+                        'coverage': f"{full_pct:.1f}%",
+                        'with_pf': full_season[1],
+                        'total': full_season[0]
+                    }
+                }
+            else:
+                results = {
+                    'status': '📊 NO DATA',
+                    'message': 'No recent game logs found'
+                }
+
+        except Exception as e:
+            self.alerts.append(f"🚨 PF coverage check failed: {str(e)}")
+            results = {'status': '❌ ERROR', 'error': str(e)}
+
+        return results
+
+    def check_wowy_coverage(self) -> Dict[str, Any]:
+        """Check WOWY data coverage across teams and players"""
+        results = {}
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Check player_season_wowy coverage
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total_players,
+                    COUNT(DISTINCT team_abbr) as teams,
+                    SUM(CASE WHEN on_off_diff IS NOT NULL THEN 1 ELSE 0 END) as with_data,
+                    MAX(synced_at) as last_sync
+                FROM player_season_wowy
+            """)
+
+            wowy_data = cursor.fetchone()
+
+            # Check lineup_season_totals (fallback data)
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total_lineups,
+                    COUNT(DISTINCT team_abbreviation) as teams,
+                    MAX(total_possessions) as max_poss
+                FROM lineup_season_totals
+            """)
+
+            lineup_data = cursor.fetchone()
+            conn.close()
+
+            if wowy_data and wowy_data[0] > 0:
+                coverage_pct = (wowy_data[2] / wowy_data[0]) * 100 if wowy_data[0] > 0 else 0
+
+                if wowy_data[1] < 30:
+                    self.alerts.append(f"⚠️ WOWY: Only {wowy_data[1]}/30 teams covered")
+                    status = '⚠️ INCOMPLETE'
+                elif coverage_pct < 90:
+                    status = '🟡 PARTIAL'
+                else:
+                    status = '✅ OK'
+
+                results = {
+                    'status': status,
+                    'player_wowy': {
+                        'players': wowy_data[0],
+                        'teams': f"{wowy_data[1]}/30",
+                        'with_data': wowy_data[2],
+                        'coverage': f"{coverage_pct:.1f}%",
+                        'last_sync': wowy_data[3]
+                    },
+                    'lineup_fallback': {
+                        'lineups': lineup_data[0] if lineup_data else 0,
+                        'teams': f"{lineup_data[1]}/30" if lineup_data else "0/30",
+                        'max_possessions': lineup_data[2] if lineup_data else 0
+                    }
+                }
+            else:
+                results = {
+                    'status': '📊 NO DATA',
+                    'message': 'No WOWY data found',
+                    'lineup_fallback': {
+                        'lineups': lineup_data[0] if lineup_data else 0,
+                        'teams': f"{lineup_data[1]}/30" if lineup_data else "0/30"
+                    }
+                }
+
+        except Exception as e:
+            self.alerts.append(f"🚨 WOWY coverage check failed: {str(e)}")
+            results = {'status': '❌ ERROR', 'error': str(e)}
+
+        return results
+
     def check_api_health(self) -> Dict[str, Any]:
         """Check API quotas and connectivity"""
         results = {}
@@ -283,7 +432,13 @@ class SystemHealthMonitor:
         
         print("🌐 Checking API health...")
         report['checks']['api_health'] = self.check_api_health()
-        
+
+        print("🏀 Checking PF data coverage...")
+        report['checks']['pf_coverage'] = self.check_pf_coverage()
+
+        print("📊 Checking WOWY data coverage...")
+        report['checks']['wowy_coverage'] = self.check_wowy_coverage()
+
         # Summary
         report['summary'] = {
             'total_alerts': len(self.alerts),
