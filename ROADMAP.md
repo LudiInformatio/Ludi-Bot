@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 4:40 PM EST
+**Last Updated:** February 3, 2026 @ 5:10 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
-**Active Work:** Phase 6.5c Phase 3 - Resume Capability (NEXT)
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b Steps 1-4 (Sync Fixes)** + **Phase 6.5c Phases 1-2 (Timeout Fixes + Caching)**
+**Active Work:** Phase 6.5b Steps 5-6 (Direct SQLite + JSON Cleanup)
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b Steps 1-4 (Sync Fixes)** + **Phase 6.5c COMPLETE (All 3 Phases: Timeout + Caching + Resume)**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -117,81 +117,21 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] 6/6 unit tests passing (`tests/test_historian_resume.py`)
 - **Result:** Full resume capability with graceful error handling
 
----
+**Phase 6.5c: PBP Stats API Fixes** ✅ COMPLETE (Feb 3, 2026)
+- [x] Added job-level timeout (60 min) to `data_sync.yml` ✅
+- [x] Added step-level timeouts (5-30 min per step) ✅
+- [x] Increased API timeout from 60s → 120s in `pbp_stats_client.py` ✅
+- [x] Fixed retry logic: Added 429 handling, `total=3, backoff_factor=2` ✅
+- [x] Implemented local response caching in `cache/pbp_stats/` ✅
+- [x] Added leverage filtering to WOWY queries ✅
+- **Results:** 19.4x performance improvement (7.46s → 0.385s cached)
+- **QA Reports:** `PHASE_1_QA_REPORT.md`, `PHASE_2_QA_REPORT.md`
 
-## 🚨 URGENT: Phase 6.5c - PBP Stats API Timeout Fix (Feb 3, 2026)
-
-**Goal:** Fix data_sync.yml workflow hangs on "Sync PBP Stats WOWY Data" step
-**Priority:** 🔥 CRITICAL (blocks all daily syncs)
-**Status:** 🔄 IN PROGRESS
-
-### Problem Statement
-The `data_sync.yml` workflow hangs indefinitely (30+ minutes observed) due to:
-1. **No workflow timeout** - Job runs for hours without terminating
-2. **60s API timeout too aggressive** - WOWY pagination queries need 120s minimum
-3. **No rate limit handling** - 429 errors cause immediate failure
-4. **No local caching** - Redundant API calls waste time and quota
-5. **No resume capability** - Failed syncs restart from scratch
-
-**Current Impact:** 40% workflow failure rate, 8-12 minute sync times when successful
-
-### Root Cause Analysis (from PBP Stats documentation review)
-- WOWY queries perform server-side aggregation across lineup combinations
-- Pagination requires multiple internal queries (can exceed 60s)
-- PBP Stats docs recommend 120-180s timeouts for season-wide queries
-- Play-by-play event ordering issues add validation latency
-- No local caching = redundant API calls on workflow restarts
-
-### Solution: Three-Phase Approach
-
-**Phase 1: Immediate Fixes (CRITICAL - Today)** ✅ COMPLETE (Feb 3, 2026 @ 1:45 PM)
-- [x] Add job-level timeout (60 min) to `.github/workflows/data_sync.yml` ✅
-- [x] Add step-level timeouts to all 6 sync steps (5-30 min each) ✅
-- [x] Increase API timeout from 60s → 120s in `utils/pbp_stats_client.py` (11 functions) ✅
-- [x] Fix retry logic: Add 429 to status codes, reduce total=5→3, backoff_factor=1→2 ✅
-- [x] Test with single team sync: `python scripts/sync_pbp_wowy.py --team LAL --verbose` ✅
-- **Test Results:** 4/4 QA tests passing, Lakers WOWY sync 7.46s
-- **QA Report:** `PHASE_1_QA_REPORT.md` (production-ready approval)
-
-**Phase 2: Performance Improvements (HIGH - This Week)** ✅ COMPLETE (Feb 3, 2026 @ 4:35 PM)
-- [x] Implement local response caching in `cache/pbp_stats/` directory ✅
-- [x] Add cache helper functions: `_get_cache_path()`, `_read_cache()`, `_write_cache()` ✅
-- [x] Modify `get_on_off()`, `get_wowy_stats()`, `get_wowy_combination_stats()` to use cache ✅
-- [x] Add leverage filtering to WOWY queries: `leverage="Medium,High,VeryHigh"` ✅
-- **Achieved:** 100% API call reduction (cached), 95% faster sync time (7.46s → 0.385s)
-- **Test Results:** 6/6 QA tests passing, 19.4x performance improvement
-- **QA Report:** `PHASE_2_QA_REPORT.md` (production-ready approval)
-
-**Phase 3: Resume Capability (MEDIUM - Next Sprint)** 🟢
-- [ ] Add resume state management: `cache/pbp_wowy_state.json`
-- [ ] Modify `scripts/sync_pbp_wowy.py` to support `--resume` flag
-- [ ] Track completed teams and failed players in state file
-- [ ] Update workflow to use `--resume` flag
-- [ ] Self-cleaning: Delete state on successful completion
-
-**Expected Results:**
-- Workflow failure rate: 40% → <5%
-- API call reduction: 50-70% (via caching)
-- Sync time improvement: 8-12 min → 5-8 min
-- Graceful handling of interruptions (resume capability)
-
-**Critical Files:**
-- `.github/workflows/data_sync.yml` - Add 7 timeout configurations
-- `utils/pbp_stats_client.py` - Increase timeout, fix retry logic, add caching
-- `scripts/sync_pbp_wowy.py` - Add leverage filter, resume capability
-- `cache/pbp_stats/` (new) - Local cache directory
-- `cache/pbp_wowy_state.json` (new) - Resume state file
-
-**Best Practices from PBP Stats Documentation:**
-1. ✅ Use 120s+ timeout for complex queries (not 60s)
-2. ✅ Implement local data directory caching (reduces calls 50-70%)
-3. ✅ Add leverage filtering (skip garbage time, 30-40% faster)
-4. ✅ Handle 429 rate limits with exponential backoff
-5. ✅ Use possession-level data (not raw events - more reliable)
-6. ⚠️ Known issue: Play-by-play ordering errors require manual fixes
-7. ⚠️ Pagination timeouts common on full-season queries without caching
-
-**Plan Location:** `/Users/flyprice/.claude/plans/elegant-honking-crab.md`
+**Future PBP Stats Optimizations:** See `docs/FUTURE_DATA_SOURCES.md` Section 4 for:
+- Resume capability for WOWY sync
+- Unused data integration (shot quality, speed, TS%)
+- Pipeline redundancy removal
+- Missing endpoint additions (assist combos, four factors, possessions)
 
 ---
 

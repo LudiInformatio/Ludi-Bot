@@ -247,19 +247,29 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
 
     url = f"{BASE_URL}/get-wowy-stats/nba"
 
-    try:
-        response = _session.get(url, params=params, timeout=120)
-        response.raise_for_status()
-        data = response.json()
+    # Try with 120s timeout first, fallback to 180s on timeout
+    for timeout in [120, 180]:
+        try:
+            response = _session.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            data = response.json()
 
-        # Write to cache
-        if use_cache:
-            _write_cache(cache_path, data)
+            # Write to cache
+            if use_cache:
+                _write_cache(cache_path, data)
 
-        return data
-    except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching WOWY stats: {e}")
-        return None
+            return data
+        except requests.exceptions.Timeout:
+            if timeout == 120:
+                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+                continue  # Try next timeout
+            print(f"[PBP_STATS] Final timeout at 180s for WOWY stats")
+            return None
+        except requests.RequestException as e:
+            print(f"[PBP_STATS] Error fetching WOWY stats: {e}")
+            return None
+
+    return None
 
 
 def get_wowy_combination_stats(team_id: str, player_ids: List[str],
@@ -295,26 +305,36 @@ def get_wowy_combination_stats(team_id: str, player_ids: List[str],
 
     url = f"{BASE_URL}/get-wowy-combination-stats/nba"
 
-    try:
-        response = _session.get(url, params=params, timeout=120)
-        response.raise_for_status()
-        data = response.json()
+    # Try with 120s timeout first, fallback to 180s on timeout
+    for timeout in [120, 180]:
+        try:
+            response = _session.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            data = response.json()
 
-        # Write to cache
-        if use_cache:
-            _write_cache(cache_path, data)
+            # Write to cache
+            if use_cache:
+                _write_cache(cache_path, data)
 
-        return data
-    except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching WOWY combo stats: {e}")
-        return None
+            return data
+        except requests.exceptions.Timeout:
+            if timeout == 120:
+                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+                continue  # Try next timeout
+            print(f"[PBP_STATS] Final timeout at 180s for WOWY combo stats")
+            return None
+        except requests.RequestException as e:
+            print(f"[PBP_STATS] Error fetching WOWY combo stats: {e}")
+            return None
+
+    return None
 
 
 def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
                season: str = CURRENT_SEASON, season_type: str = "Regular Season",
                leverage: str = None, use_cache: bool = True) -> Optional[Dict]:
     """
-    Get on/off data for a player with optional caching.
+    Get on/off data for a player with optional caching and timeout fallback.
 
     Args:
         team_id: NBA.com team ID
@@ -346,19 +366,29 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
         if cached:
             return cached
 
-    try:
-        response = _session.get(url, params=params, timeout=120)
-        response.raise_for_status()
-        data = response.json()
+    # Try with 120s timeout first, fallback to 180s on timeout
+    for timeout in [120, 180]:
+        try:
+            response = _session.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            data = response.json()
 
-        # Write to cache for future requests
-        if use_cache:
-            _write_cache(cache_path, data)
+            # Write to cache for future requests
+            if use_cache:
+                _write_cache(cache_path, data)
 
-        return data
-    except requests.RequestException as e:
-        print(f"[PBP_STATS] Error fetching on/off data: {e}")
-        return None
+            return data
+        except requests.exceptions.Timeout:
+            if timeout == 120:
+                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+                continue  # Try next timeout
+            print(f"[PBP_STATS] Final timeout at 180s for on/off data")
+            return None
+        except requests.RequestException as e:
+            print(f"[PBP_STATS] Error fetching on/off data: {e}")
+            return None
+
+    return None
 
 
 def get_shots(entity_id: str, entity_type: str = "Player",

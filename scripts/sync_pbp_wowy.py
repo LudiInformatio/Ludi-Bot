@@ -1,5 +1,5 @@
 """
-PBP Stats WOWY Sync Script (Phase 6.3)
+PBP Stats WOWY Sync Script (Phase 6.3 + Phase 6.5c Resume)
 
 Fetches full-season on/off splits from PBP Stats API for top usage players.
 Stores in player_season_wowy table for BENEFICIARY confidence scoring.
@@ -8,12 +8,16 @@ Usage:
     python scripts/sync_pbp_wowy.py --verbose
     python scripts/sync_pbp_wowy.py --team LAL --verbose
     python scripts/sync_pbp_wowy.py --dry-run --top 5
+    python scripts/sync_pbp_wowy.py --resume --verbose   # Resume from previous incomplete run
 
 Author: Ludi Informatio
 Date: February 2, 2026 (Phase 6.3)
+Updated: February 3, 2026 (Phase 6.5c - Resume capability)
 """
 
 import argparse
+import json
+import os
 import sqlite3
 import sys
 from datetime import datetime
@@ -39,6 +43,83 @@ TEAM_IDS = {
 }
 
 CURRENT_SEASON = "2025-26"
+
+# Resume state management
+RESUME_STATE_FILE = "cache/pbp_wowy_sync_state.json"
+
+
+def _load_resume_state() -> Optional[Dict]:
+    """
+    Load resume state from file if exists and valid.
+
+    Returns:
+        Dict with state or None if missing/corrupt
+    """
+    if not os.path.exists(RESUME_STATE_FILE):
+        return None
+
+    try:
+        with open(RESUME_STATE_FILE, 'r') as f:
+            state = json.load(f)
+
+        # Validate required fields
+        required = ['completed_teams', 'remaining_teams', 'status']
+        if not all(k in state for k in required):
+            print(f"   Warning: Invalid state file, starting fresh")
+            return None
+
+        return state
+    except Exception as e:
+        print(f"   Warning: Error loading state: {e}, starting fresh")
+        return None
+
+
+def _save_resume_state(completed: List[str], remaining: List[str],
+                       status: str = "in_progress", reason: str = None) -> None:
+    """
+    Save resume state to file.
+
+    Args:
+        completed: List of completed team abbreviations
+        remaining: List of remaining team abbreviations
+        status: "in_progress", "paused", or "complete"
+        reason: Optional reason for pause (e.g., "timeout", "error")
+    """
+    os.makedirs(os.path.dirname(RESUME_STATE_FILE), exist_ok=True)
+
+    state = {
+        "sync_version": "1.0",
+        "last_updated": datetime.now().isoformat(),
+        "total_teams": len(completed) + len(remaining),
+        "completed_teams": completed,
+        "remaining_teams": remaining,
+        "last_completed_team": completed[-1] if completed else None,
+        "status": status,
+        "pause_reason": reason
+    }
+
+    # Atomic write (temp file then rename)
+    temp_file = RESUME_STATE_FILE + ".tmp"
+    with open(temp_file, 'w') as f:
+        json.dump(state, f, indent=2)
+    os.replace(temp_file, RESUME_STATE_FILE)
+
+    print(f"   State saved: {len(completed)}/{state['total_teams']} teams completed")
+
+
+def _clear_resume_state() -> None:
+    """Delete resume state file on successful completion."""
+    if os.path.exists(RESUME_STATE_FILE):
+        os.remove(RESUME_STATE_FILE)
+        print("   Cleared resume state (sync complete)")
+
+
+def _is_team_completed(state: Optional[Dict], team_abbr: str) -> bool:
+    """Check if team was already completed in previous run."""
+    if not state:
+        return False
+    return team_abbr in state.get('completed_teams', [])
+
 
 def get_db_connection(db_path: str = "ludi.db") -> sqlite3.Connection:
     """Get database connection."""
@@ -336,7 +417,9 @@ Examples:
                        help='Preview without database writes')
     parser.add_argument('--db', type=str, default='ludi.db',
                        help='Database path (default: ludi.db)')
-    
+    parser.add_argument('--resume', action='store_true',
+                       help='Resume from previous incomplete run (skips completed teams)')
+
     args = parser.parse_args()
     
     print("="*70)
@@ -350,35 +433,88 @@ Examples:
     conn = get_db_connection(args.db)
     
     # Determine teams to sync
-    teams_to_sync = [args.team] if args.team else list(TEAM_IDS.keys())
-    
+    all_teams = [args.team] if args.team else list(TEAM_IDS.keys())
+
+    # Load resume state if --resume flag set
+    resume_state = None
+    completed_teams = []
+
+    if args.resume:
+        resume_state = _load_resume_state()
+        if resume_state and resume_state['status'] == 'paused':
+            completed_teams = resume_state.get('completed_teams', [])
+            print(f"   Resuming from previous run ({len(completed_teams)}/{len(all_teams)} teams completed)")
+        elif resume_state and resume_state['status'] == 'in_progress':
+            completed_teams = resume_state.get('completed_teams', [])
+            print(f"   Resuming from previous run ({len(completed_teams)}/{len(all_teams)} teams completed)")
+        elif resume_state:
+            print(f"   Previous run was complete, starting fresh")
+            resume_state = None
+
+    # Filter out already-completed teams
+    if completed_teams:
+        teams_to_sync = [t for t in all_teams if t not in completed_teams]
+        print(f"   Skipping {len(completed_teams)} completed teams, {len(teams_to_sync)} remaining")
+    else:
+        teams_to_sync = all_teams
+
+    # Initialize tracking
     total_success = 0
     total_fail = 0
     all_players_synced = []
-    
+    newly_completed = []
+
     try:
         for team in teams_to_sync:
-            result = sync_team(conn, team, args.top, args.verbose, args.dry_run)
-            total_success += result['success_count']
-            total_fail += result['fail_count']
-            all_players_synced.extend(result['players_synced'])
-        
+            try:
+                result = sync_team(conn, team, args.top, args.verbose, args.dry_run)
+
+                total_success += result['success_count']
+                total_fail += result['fail_count']
+                all_players_synced.extend(result['players_synced'])
+
+                # Track completion for resume state
+                newly_completed.append(team)
+
+                # Save progress after each team (if --resume enabled)
+                if args.resume and not args.dry_run:
+                    all_completed = completed_teams + newly_completed
+                    remaining = [t for t in all_teams if t not in all_completed]
+                    _save_resume_state(all_completed, remaining, "in_progress")
+
+            except Exception as e:
+                print(f"   Error syncing {team}: {e}")
+                total_fail += 1
+
+                # Save state on error (if --resume enabled)
+                if args.resume and not args.dry_run:
+                    all_completed = completed_teams + newly_completed
+                    remaining = [t for t in all_teams if t not in all_completed]
+                    _save_resume_state(all_completed, remaining, "paused", f"error: {str(e)[:100]}")
+
+        # Clear state on successful completion (all teams processed without critical failures)
+        if args.resume and not args.dry_run and len(newly_completed) == len(teams_to_sync):
+            _clear_resume_state()
+
         # Summary
         print("\n" + "="*70)
         print("SYNC COMPLETE")
         print("="*70)
-        print(f"✅ Success: {total_success} players")
-        print(f"❌ Failed: {total_fail} players")
-        print(f"📊 Total: {total_success + total_fail} attempted")
-        
+        print(f"Success: {total_success} players")
+        print(f"Failed: {total_fail} players")
+        print(f"Total: {total_success + total_fail} attempted")
+        print(f"Teams synced this run: {len(newly_completed)}")
+        if completed_teams:
+            print(f"Teams resumed from previous: {len(completed_teams)}")
+
         if not args.dry_run:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM player_season_wowy")
             total_records = cursor.fetchone()[0]
-            print(f"💾 Database: {total_records} total WOWY records")
-        
+            print(f"Database: {total_records} total WOWY records")
+
         print("="*70)
-        
+
     finally:
         conn.close()
 
