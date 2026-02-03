@@ -190,6 +190,9 @@ class LudiHistorian:
                     # Rebounding Splits
                     "OREB": float(stats.get('oreb', 0)),
                     "DREB": float(stats.get('dreb', 0)),
+
+                    # Personal Fouls
+                    "PF": float(stats.get('pf', stats.get('fouls', 0))),
                 }
                 storage_list.append(record)
 

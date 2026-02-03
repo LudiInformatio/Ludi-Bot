@@ -34,45 +34,37 @@ def get_season_progress(db_path: str = "ludi.db") -> float:
     """
     Calculate season completion percentage (0.0 to 1.0).
 
-    Uses games played from player_game_logs to estimate season progress.
-    Full NBA season = 1,230 games (30 teams × 82 games / 2)
+    Uses calendar dates for accurate progress tracking.
+    NBA season: Oct 21 - Apr 15 (177 days)
 
     Returns:
         Float between 0.0 (season start) and 1.0 (season end)
         Floored at 0.40 to prevent too-strict thresholds early season
     """
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        current_date = datetime.now()
 
-        # Count unique games in current season
-        # Assumes game_date format: 'YYYY-MM-DD'
-        current_year = datetime.now().year
-
-        # Determine season year (if before July, use previous year as season start)
-        if datetime.now().month < 7:
-            season_year = current_year - 1
+        # Determine season year
+        if current_date.month < 7:
+            season_year = current_date.year - 1
         else:
-            season_year = current_year
+            season_year = current_date.year
 
-        season_start = f"{season_year}-10-01"  # NBA season starts ~October
-        season_end = f"{season_year + 1}-04-30"  # Regular season ends ~April
+        season_start = datetime(season_year, 10, 21)
+        season_end = datetime(season_year + 1, 4, 15)
 
-        cursor.execute("""
-            SELECT COUNT(DISTINCT game_id) as games_played
-            FROM player_game_logs
-            WHERE game_date >= ? AND game_date <= ?
-        """, (season_start, season_end))
+        # Calculate progress
+        total_days = (season_end - season_start).days
+        elapsed_days = (current_date - season_start).days
 
-        row = cursor.fetchone()
-        games_played = row[0] if row else 0
-        conn.close()
+        # Bound to season window
+        if elapsed_days < 0:
+            return 0.40  # Pre-season floor
+        elif elapsed_days > total_days:
+            return 1.0   # Post-season cap
 
-        # Calculate progress (1230 total games in full season)
-        progress = min(games_played / 1230.0, 1.0)
-
-        # Floor at 40% to prevent too-strict thresholds early season
-        return max(0.40, progress)
+        progress = elapsed_days / total_days
+        return max(0.40, min(progress, 1.0))
 
     except Exception as e:
         # Fallback to mid-season assumption if error

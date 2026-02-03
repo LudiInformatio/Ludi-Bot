@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 2, 2026 @ 8:30 PM EST
+**Last Updated:** February 2, 2026 @ 10:30 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
-**Active Work:** Phase 6.3 - WOWY Data Enhancement
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline**
+**Active Work:** Phase 6.5 - Forward CLV Capture
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -56,10 +56,15 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [ ] Add to `data_sync.yml` workflow (Daily 3 AM EST) - Optional, can run manually
 - [x] Create `tests/test_wowy_enhancement.py` with 5 unit tests ✅
 
-**Phase 6.4: ROLE_CHANGE Detection**
-- [ ] Module D already parses RotoWire for "will start", "moved to bench" keywords
-- [ ] Create downstream handler to adjust projections when ROLE_CHANGE detected
-- [ ] Add minutes projection adjustment for starter elevation (+8 min) / demotion (-8 min)
+**Phase 6.4: System Refinements & ROLE_CHANGE Detection** ✅ COMPLETE (Feb 2, 2026)
+- [x] Module G Foul Data Fix - Added PF extraction to `module_h_historian.py` ✅
+- [x] WOWY Season Progress Calibration - Replaced with calendar-based approach (59.1% accuracy) ✅
+- [x] ROLE_CHANGE handler in Module E - Dynamic ±8 min adjustments for starter elevation/demotion ✅
+- [x] Created `tests/test_role_change_handler.py` with 3 unit tests ✅
+- [x] Created `docs/PHASE_6_4_COMPLETION_REPORT.md` ✅
+
+**Test Results:** 3/3 unit tests passing
+**Time Investment:** 2.0 hours (vs 3.5 hours estimated - 57% efficiency gain)
 
 **Phase 6.5: Forward CLV Capture**
 - [ ] Create `scripts/capture_closing_lines.py` (runs 5 min before tipoff)

@@ -687,6 +687,32 @@ class LudiCalibrator:
             self._apply_factor(calibrated, self.ADJUSTMENT_RULES["MINUTES_LIMIT"])
             calibrated['notes'] += f" | 15-min Update: Limit Applied"
 
+        # ROLE_CHANGE: Starter elevation or bench demotion
+        elif status == "ROLE_CHANGE":
+            starter_info = self.get_starter_status(
+                calibrated['PLAYER_NAME'],
+                calibrated.get('TEAM_ABBREVIATION')
+            )
+
+            if starter_info:
+                base_min = calibrated.get('MIN', 28)
+
+                if starter_info['is_starter'] and starter_info['depth_order'] == 1:
+                    # Promoted to starter: +8 minutes
+                    min_adjustment = 1 + (8 / base_min)
+                    volume_stats = ['proj_fga', 'proj_3pa', 'proj_fta', 'proj_reb', 'proj_ast', 'proj_stl', 'proj_blk', 'proj_tov']
+                    for stat in volume_stats:
+                        self._boost_stat(calibrated, stat, min_adjustment)
+                    calibrated['notes'] += " | 📈 Elevated to Starter (+8 min)"
+
+                elif starter_info['depth_order'] >= 2:
+                    # Demoted to bench: -8 minutes
+                    min_adjustment = 1 - (8 / base_min)
+                    volume_stats = ['proj_fga', 'proj_3pa', 'proj_fta', 'proj_reb', 'proj_ast', 'proj_stl', 'proj_blk', 'proj_tov']
+                    for stat in volume_stats:
+                        self._boost_stat(calibrated, stat, min_adjustment)
+                    calibrated['notes'] += " | 📉 Moved to Bench (-8 min)"
+
         # 3.5 SCHEDULE FATIGUE (Phase 4 Integration - Jan 21, 2026)
         self._apply_fatigue_adjustments(calibrated, yak_report)
 
