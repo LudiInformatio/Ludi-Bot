@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import time
+import argparse
 from datetime import datetime, timedelta
 import config
 
@@ -14,11 +15,18 @@ from utils.api_monitor import get_monitor
 # V1.3 - HYBRID SYNC (Matches nba_api Schema with Tank01)
 # =========================================================
 
+HISTORIAN_DAILY_BUDGET = 200  # Leave headroom for other modules
+
 class LudiHistorian:
-    def __init__(self):
+    def __init__(self, budget=None):
         print(f"\n{'='*40}")
         print(f"LUDI INFORMATIO: MODULE H (HISTORIAN) ONLINE")
         print(f"{'='*40}")
+
+        # Rate Limiting
+        self.request_budget = budget if budget is not None else HISTORIAN_DAILY_BUDGET
+        self.requests_made = 0
+        print(f"   🛡️ API Budget: {self.request_budget} requests")
 
         self.history_file = "ludi_history_db.json"
         self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
@@ -30,6 +38,18 @@ class LudiHistorian:
 
         # [PAID TIER] Initialize API Monitor
         self.monitor = get_monitor()
+
+    def _check_budget(self):
+        """
+        Checks if the daily API budget has been exceeded.
+        Returns: True if budget remaining, False if exhausted.
+        """
+        if self.requests_made >= self.request_budget:
+            print(f"\n   ⚠️ Budget exhausted ({self.request_budget} requests). Stopping sync gracefully.")
+            return False
+        
+        self.requests_made += 1
+        return True
 
     def update_database(self):
         """
@@ -108,6 +128,9 @@ class LudiHistorian:
         """
         Fetches all box scores for a specific date using Tank01.
         """
+        if not self._check_budget():
+            return []
+
         url_games = f"https://{self.TANK_HOST}/getNBAGamesForDate"
         params_games = {"gameDate": date_str}
         headers = {
@@ -140,6 +163,9 @@ class LudiHistorian:
         """
         Helper to get full stats for one gameID.
         """
+        if not self._check_budget():
+            return
+
         url_box = f"https://{self.TANK_HOST}/getNBABoxScore"
         # We need fantasyPoints=true or false, doesn't matter, but standard box is safer
         params_box = {"gameID": game_id, "fantasyPoints": "false"}
@@ -239,6 +265,10 @@ class LudiHistorian:
             return []
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Ludi Historian Module")
+    parser.add_argument("--budget", type=int, help="Override daily API request budget")
+    args = parser.parse_args()
+
     config.validate_config()
-    h = LudiHistorian()
+    h = LudiHistorian(budget=args.budget)
     h.update_database()

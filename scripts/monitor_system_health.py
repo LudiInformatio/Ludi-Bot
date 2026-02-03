@@ -29,16 +29,27 @@ class SystemHealthMonitor:
         self.db_path = 'ludi.db'
         self.alerts = []
         self.metrics = {}
-        
+
+        # Mapping of tables to their actual timestamp columns
+        # Many tables use 'synced_at' instead of 'created_at'/'updated_at'
+        self.timestamp_columns = {
+            'player_synergy_playtypes': 'synced_at',
+            'player_game_tracking': 'synced_at',
+            'player_shot_quality': 'synced_at',
+            'team_lineups': 'created_at',
+            'referee_profiles': 'last_updated',
+            'games': 'date'  # Use game date as freshness indicator
+        }
+
     def check_data_integrity(self) -> Dict[str, Any]:
         """Check if critical tables updated in last 24h"""
         results = {}
-        
+
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
-            # Check tables with their last update timestamps
+
+            # Check tables with their specific timestamp columns
             tables_to_check = [
                 ('player_synergy_playtypes', 'Synergy Playtypes'),
                 ('player_game_tracking', 'Tracking Stats'),
@@ -47,31 +58,34 @@ class SystemHealthMonitor:
                 ('referee_profiles', 'Referee Data'),
                 ('games', 'Game Data')
             ]
-            
+
             cutoff_time = datetime.now() - timedelta(hours=24)
-            
+
             for table, display_name in tables_to_check:
                 try:
+                    # Get the correct timestamp column for this table
+                    timestamp_col = self.timestamp_columns.get(table, 'created_at')
+
+                    # Query using the correct timestamp column
                     cursor.execute(f"""
                         SELECT COUNT(*) as record_count,
-                               MAX(created_at) as last_created,
-                               MAX(updated_at) as last_updated
+                               MAX({timestamp_col}) as last_activity
                         FROM {table}
-                        WHERE created_at >= ? OR updated_at >= ?
-                    """, (cutoff_time.isoformat(), cutoff_time.isoformat()))
-                    
+                        WHERE {timestamp_col} >= ?
+                    """, (cutoff_time.isoformat(),))
+
                     row = cursor.fetchone()
                     if row and row[0] > 0:
                         results[display_name] = {
                             'status': '✅ OK',
                             'records_24h': row[0],
-                            'last_update': row[1] or row[2]
+                            'last_update': row[1]
                         }
                     else:
                         # Check if table exists and has recent data at all
                         cursor.execute(f"SELECT COUNT(*) FROM {table}")
                         total_count = cursor.fetchone()[0]
-                        
+
                         if total_count == 0:
                             results[display_name] = {
                                 'status': '🚨 EMPTY',
@@ -86,50 +100,51 @@ class SystemHealthMonitor:
                                 'total_records': total_count
                             }
                             self.alerts.append(f"⚠️ {display_name}: No updates in 24h")
-                
+
                 except sqlite3.OperationalError as e:
                     results[display_name] = {
                         'status': '❌ ERROR',
                         'error': str(e)
                     }
                     self.alerts.append(f"❌ {display_name}: {str(e)}")
-            
+
             conn.close()
-            
+
         except Exception as e:
             self.alerts.append(f"🚨 Database connection failed: {str(e)}")
             results['database'] = {'status': '❌ FAILED', 'error': str(e)}
-        
+
         return results
     
     def check_model_drift(self) -> Dict[str, Any]:
         """Check if model projections are drifting from market lines"""
         results = {}
-        
+
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             # Get recent bet recommendations from last 24h
             yesterday = (datetime.now() - timedelta(days=1)).isoformat()
-            
+
+            # Fixed column names: 'projection' and 'line' (not 'proj_value' and 'line_over')
+            # Note: SQLite doesn't have STDDEV, so we calculate manually
             cursor.execute("""
-                SELECT 
-                    AVG(proj_value - line_over) as avg_deviation,
+                SELECT
+                    AVG(projection - line) as avg_deviation,
                     COUNT(*) as total_bets,
-                    AVG(edge_pct) as avg_edge,
-                    STDDEV(edge_pct) as edge_stddev
+                    AVG(true_edge) as avg_edge
                 FROM bet_recommendations
                 WHERE created_at >= ?
-                AND edge_pct IS NOT NULL
+                AND true_edge IS NOT NULL
             """, (yesterday,))
-            
+
             row = cursor.fetchone()
             if row and row[1] > 0:
                 avg_dev = row[0] or 0.0
                 total_bets = row[1]
                 avg_edge = row[2] or 0.0
-                
+
                 # Check for concerning drift
                 if abs(avg_dev) > 3.0:
                     self.alerts.append(f"⚠️ MODEL DRIFT: Avg deviation {avg_dev:.1f} pts exceeds ±3.0 threshold")
@@ -138,26 +153,25 @@ class SystemHealthMonitor:
                     status = '🟡 MONITOR'
                 else:
                     status = '✅ STABLE'
-                
+
                 results = {
                     'status': status,
                     'avg_deviation': round(avg_dev, 2),
                     'total_bets': total_bets,
-                    'avg_edge': round(avg_edge, 2),
-                    'edge_stddev': round(row[3] or 0, 2)
+                    'avg_edge': round(avg_edge, 2)
                 }
             else:
                 results = {
                     'status': '📊 NO DATA',
                     'message': 'No bet recommendations in last 24h'
                 }
-            
+
             conn.close()
-            
+
         except Exception as e:
             self.alerts.append(f"🚨 Model drift check failed: {str(e)}")
             results = {'status': '❌ ERROR', 'error': str(e)}
-        
+
         return results
     
     def check_module_output(self) -> Dict[str, Any]:
@@ -352,62 +366,77 @@ class SystemHealthMonitor:
     def check_api_health(self) -> Dict[str, Any]:
         """Check API quotas and connectivity"""
         results = {}
-        
+
         try:
             # Check API usage log if it exists
             if os.path.exists('api_usage_log.json'):
                 with open('api_usage_log.json', 'r') as f:
                     api_data = json.load(f)
-                
-                # Check latest entry
-                if api_data.get('entries'):
-                    latest = api_data['entries'][-1]
-                    
-                    # Calculate quota usage
-                    odds_usage = latest.get('the_odds_api', {}).get('requests_today', 0)
-                    tank_usage = latest.get('tank01', {}).get('requests_today', 0)
-                    
-                    odds_quota = 20000 if api_data.get('the_odds_api', {}).get('tier') == 'paid' else 500
-                    tank_quota = 1000 if api_data.get('tank01', {}).get('tier') == 'paid' else 1000
-                    
-                    odds_pct = (odds_usage / odds_quota) * 100
-                    tank_pct = (tank_usage / tank_quota) * 100
-                    
-                    if odds_pct > 80:
-                        self.alerts.append(f"⚠️ The-Odds-API: {odds_pct:.1f}% quota used")
-                        odds_status = '⚠️ HIGH'
-                    elif odds_pct > 60:
-                        odds_status = '🟡 MONITOR'
-                    else:
-                        odds_status = '✅ OK'
-                    
-                    if tank_pct > 80:
-                        self.alerts.append(f"⚠️ Tank01: {tank_pct:.1f}% quota used")
-                        tank_status = '⚠️ HIGH'
-                    elif tank_pct > 60:
-                        tank_status = '🟡 MONITOR'
-                    else:
-                        tank_status = '✅ OK'
-                    
-                    results = {
-                        'the_odds_api': {
+
+                # Handle actual log format: list of individual API calls
+                # Note: The log file is a flat list, not the expected aggregated format
+                if isinstance(api_data, list) and len(api_data) > 0:
+                    # Find most recent entries for each API
+                    odds_entries = [e for e in api_data if e.get('api') == 'odds_api']
+                    tank_entries = [e for e in api_data if e.get('api') == 'tank01']
+
+                    if odds_entries:
+                        latest_odds = odds_entries[-1]
+                        rate_info = latest_odds.get('rate_limit_info', {})
+                        odds_used = int(rate_info.get('requests_used', 0))
+                        odds_remaining = int(rate_info.get('requests_remaining', 0))
+                        odds_quota = odds_used + odds_remaining
+
+                        odds_pct = (odds_used / odds_quota * 100) if odds_quota > 0 else 0
+
+                        if odds_pct > 80:
+                            self.alerts.append(f"⚠️ The-Odds-API: {odds_pct:.1f}% quota used")
+                            odds_status = '⚠️ HIGH'
+                        elif odds_pct > 60:
+                            odds_status = '🟡 MONITOR'
+                        else:
+                            odds_status = '✅ OK'
+
+                        results['the_odds_api'] = {
                             'status': odds_status,
-                            'usage': f"{odds_usage}/{odds_quota} ({odds_pct:.1f}%)"
-                        },
-                        'tank01': {
-                            'status': tank_status,
-                            'usage': f"{tank_usage}/{tank_quota} ({tank_pct:.1f}%)"
+                            'usage': f"{odds_used}/{odds_quota} ({odds_pct:.1f}%)",
+                            'last_check': latest_odds.get('timestamp', 'Unknown')
                         }
-                    }
+
+                    if tank_entries:
+                        latest_tank = tank_entries[-1]
+                        rate_info = latest_tank.get('rate_limit_info', {})
+                        tank_remaining = int(rate_info.get('requests_remaining', 0))
+                        tank_limit = int(rate_info.get('requests_limit', 1000))
+                        tank_used = tank_limit - tank_remaining
+
+                        tank_pct = (tank_used / tank_limit * 100) if tank_limit > 0 else 0
+
+                        if tank_pct > 80:
+                            self.alerts.append(f"⚠️ Tank01: {tank_pct:.1f}% quota used")
+                            tank_status = '⚠️ HIGH'
+                        elif tank_pct > 60:
+                            tank_status = '🟡 MONITOR'
+                        else:
+                            tank_status = '✅ OK'
+
+                        results['tank01'] = {
+                            'status': tank_status,
+                            'usage': f"{tank_used}/{tank_limit} ({tank_pct:.1f}%)",
+                            'last_check': latest_tank.get('timestamp', 'Unknown')
+                        }
+
+                    if not odds_entries and not tank_entries:
+                        results = {'status': '📊 NO DATA', 'message': 'No API entries found in log'}
                 else:
-                    results = {'status': '📊 NO DATA', 'message': 'No API usage entries found'}
+                    results = {'status': '📊 NO DATA', 'message': 'API log is empty or malformed'}
             else:
                 results = {'status': '📄 NO LOG', 'message': 'API usage log not found'}
-        
+
         except Exception as e:
             self.alerts.append(f"🚨 API health check failed: {str(e)}")
             results = {'status': '❌ ERROR', 'error': str(e)}
-        
+
         return results
     
     def generate_health_report(self) -> Dict[str, Any]:

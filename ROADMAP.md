@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 12:40 AM EST
+**Last Updated:** February 3, 2026 @ 10:00 AM EST
 **Current Phase:** Phase 6 - Full Data Integration
-**Active Work:** Phase 6.5 - Forward CLV Capture
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill**
+**Active Work:** Phase 6.5 - Forward CLV Capture + Daily Data Sync Fixes
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Health Monitor Fix**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -77,6 +77,54 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [ ] Calculate and store real CLV (not just closing line value)
 - [ ] Add CLV metrics to daily Telegram summary
 
+**Phase 6.5b: Daily Data Sync Fixes (NEW - Feb 3, 2026)** 🔄 IN PROGRESS
+**Goal:** Fix data_sync.yml workflow issues and add safeguards for future backfills
+**Priority:** HIGH (critical infrastructure, affects all data pipelines)
+
+**Context:**
+- Tank01 API was over-consumed during one-off backfill (2,097 vs 1,000 limit)
+- Normal daily usage is low (~20-50 requests), but no safeguards exist
+- Health monitor was broken (now fixed), revealing deeper sync issues
+- Module H writes JSON → SQLite (unnecessary complexity)
+
+**Step 1: Health Monitor Schema Fix** ✅ COMPLETE (Feb 3, 10:00 AM)
+- [x] Created `SCHEMA_AUDIT_REPORT.md` documenting all mismatches
+- [x] Fixed `monitor_system_health.py` SQL queries
+- [x] Verified script runs without errors
+
+**Step 2: Diagnostic - Identify Missing Dates** 🔄 NEXT
+- [ ] Create `scripts/audit_sync_gaps.py`
+- [ ] Query `ludi.db` for distinct game_date values in `player_game_logs`
+- [ ] Compare against NBA schedule (Oct 22, 2025 to yesterday)
+- [ ] Output missing dates to `cache/pending_sync_dates.json`
+- [ ] Generate clear report of what needs backfilling
+
+**Step 3: Tank01 API Rate Limiting**
+- [ ] Add configurable daily request budget to Module H (default: 200 requests)
+- [ ] Check remaining quota BEFORE each API call using `api_monitor.py`
+- [ ] Stop gracefully if budget exhausted, save state
+- [ ] Verify Telegram quota alert fires at 80% usage
+
+**Step 4: Resume State for Multi-Day Backfills**
+- [ ] Create `cache/historian_sync_state.json` for resume tracking
+- [ ] Module H checks `pending_sync_dates.json` OR resume state
+- [ ] Process dates oldest-to-newest
+- [ ] Save progress after each successful date
+- [ ] Send Telegram alert if paused: "⚠️ Historian sync paused: 3 dates remaining"
+
+**Step 5: Direct SQLite Writes (Architecture Cleanup)**
+- [ ] Modify `module_h_historian.py` to write directly to `ludi.db`
+- [ ] Use `INSERT OR REPLACE` or `ON CONFLICT DO UPDATE` pattern
+- [ ] Reference `sync_pbp_wowy.py` for implementation pattern
+- [ ] Update `data_sync.yml` to remove JSON migration step
+
+**Success Criteria:**
+- [ ] No missing dates in database (audit passes)
+- [ ] Module H respects daily budget, never exceeds quota
+- [ ] Incomplete syncs resume gracefully across workflow runs
+- [ ] Health monitor shows all tables updated within 24h
+- [ ] JSON migration step removed from workflow
+
 **Phase 6.6: API Audit & Optimization**
 - [ ] Document all Tank01 endpoints in use vs available
 - [ ] Document all The-Odds-API endpoints in use vs available
@@ -108,7 +156,7 @@ This suggests the model IS finding real value (CLV positive), but variance is af
 **Target:** Transition from "stable development" to "automated production"
 
 - [ ] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger)
-- [ ] Create `scripts/monitor_system_health.py` (data integrity + model drift alerts)
+- [x] Create `scripts/monitor_system_health.py` (data integrity + model drift alerts) ✅ FIXED (Feb 3, 2026)
 - [x] Run referee backfill via `scripts/backfill_referee_assignments.py` (60-day, 452 games) ✅
   - Note: Script needs update to use `BoxScoreSummaryV3` (V2 deprecated after April 2025)
 - [ ] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST)
@@ -118,9 +166,19 @@ This suggests the model IS finding real value (CLV positive), but variance is af
 - [ ] Verify all workflows via manual trigger
 - [ ] Update `docs/PRODUCTION_HANDBOOK.md`
 
+**Health Monitor Fix (Feb 3, 2026):** ✅ COMPLETE
+- [x] Diagnosed schema mismatches (8 columns across 7 tables)
+- [x] Fixed `check_data_integrity()` - Added table-specific timestamp column mapping
+- [x] Fixed `check_model_drift()` - Corrected column names (projection, line, true_edge)
+- [x] Fixed `check_api_health()` - Updated parser to handle actual log format
+- [x] All SQL errors resolved, script now runs successfully
+- [x] Created `SCHEMA_AUDIT_REPORT.md` and `HEALTH_MONITOR_FIX_REPORT.md`
+- **Test Results:** Exit code 0, all 6 data integrity checks passing
+- **Time Investment:** 55 minutes (diagnosis + fixes + testing + documentation)
+
 **Success Criteria:**
 - [ ] `daily_simulation_pipeline.yml` operational and sending Telegram cards
-- [ ] `scripts/monitor_system_health.py` implemented and reporting status
+- [x] `scripts/monitor_system_health.py` implemented and reporting status ✅
 - [ ] Weekly validation automated with drift alerts
 - [ ] Production logging directory established
 

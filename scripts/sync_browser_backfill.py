@@ -191,17 +191,26 @@ def handle_pagination(page, category_label=None):
     """Ensure all rows are visible by selecting 'All' in pagination."""
     try:
         close_popups(page)
-        
+
         select_selector = ".Pagination_pageDropdown__KgjBU select"
         if page.is_visible(select_selector):
-            # Ensure dropdown is in view and not blocked
-            page.locator(select_selector).scroll_into_view_if_needed()
-            page.select_option(select_selector, value="-1", timeout=10000)
-            
-            # Increase wait for slower-loading tables
-            slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
-            wait_ms = 4000 if category_label in slow_categories else 2000
-            page.wait_for_timeout(wait_ms) 
+            # Check if dropdown is disabled before attempting to select
+            select_element = page.locator(select_selector)
+            is_disabled = select_element.get_attribute("disabled")
+
+            if is_disabled is None:
+                # Dropdown is enabled - proceed with selection
+                select_element.scroll_into_view_if_needed()
+                page.select_option(select_selector, value="-1", timeout=10000)
+
+                # Increase wait for slower-loading tables
+                slow_categories = ["Speed & Distance", "Opponent Stats", "Hustle Stats"]
+                wait_ms = 4000 if category_label in slow_categories else 2000
+                page.wait_for_timeout(wait_ms)
+                print(f"      ✓ Pagination set to 'All' (full dataset)")
+            else:
+                # Dropdown is disabled - skip gracefully
+                print(f"      ⚠️  Pagination disabled (low-data day, using default view)")
     except Exception as e:
         print(f"      ⚠️  Pagination Error (Non-Critical): {e}")
 
