@@ -188,11 +188,11 @@ class LudiHistorian:
                     "FTA": float(stats.get('fta', 0)),
 
                     # Rebounding Splits
-                    "OREB": float(stats.get('oreb', 0)),
-                    "DREB": float(stats.get('dreb', 0)),
+                    "OREB": float(stats.get('oreb', stats.get('OffReb', 0))),
+                    "DREB": float(stats.get('dreb', stats.get('DefReb', 0))),
 
-                    # Personal Fouls
-                    "PF": float(stats.get('pf', stats.get('fouls', 0))),
+                    # Personal Fouls (Tank01 uses uppercase 'PF')
+                    "PF": float(stats.get('PF', 0)),
                 }
                 storage_list.append(record)
 

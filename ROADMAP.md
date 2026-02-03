@@ -57,14 +57,16 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] Create `tests/test_wowy_enhancement.py` with 5 unit tests ✅
 
 **Phase 6.4: System Refinements & ROLE_CHANGE Detection** ✅ COMPLETE (Feb 2, 2026)
-- [x] Module G Foul Data Fix - Added PF extraction to `module_h_historian.py` ✅
+- [x] Module G Foul Data Fix - Fixed uppercase 'PF' key in Tank01 API response ✅
+- [x] Full Season PF Backfill - Re-fetched entire season (Oct 21 - Feb 1) with correct PF extraction ✅
 - [x] WOWY Season Progress Calibration - Replaced with calendar-based approach (59.1% accuracy) ✅
 - [x] ROLE_CHANGE handler in Module E - Dynamic ±8 min adjustments for starter elevation/demotion ✅
 - [x] Created `tests/test_role_change_handler.py` with 3 unit tests ✅
 - [x] Created `docs/PHASE_6_4_COMPLETION_REPORT.md` ✅
 
+**PF Data Coverage:** 21,328 / 26,936 game logs (79.2%) for full 2025-26 season
 **Test Results:** 3/3 unit tests passing
-**Time Investment:** 2.0 hours (vs 3.5 hours estimated - 57% efficiency gain)
+**Time Investment:** 2.5 hours (vs 3.5 hours estimated - 29% efficiency gain)
 
 **Phase 6.5: Forward CLV Capture**
 - [ ] Create `scripts/capture_closing_lines.py` (runs 5 min before tipoff)
