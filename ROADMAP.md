@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 10:00 AM EST
+**Last Updated:** February 3, 2026 @ 12:30 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
 **Active Work:** Phase 6.5 - Forward CLV Capture + Daily Data Sync Fixes
 **Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Health Monitor Fix**
@@ -118,18 +118,51 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [ ] Reference `sync_pbp_wowy.py` for implementation pattern
 - [ ] Update `data_sync.yml` to remove JSON migration step
 
+**Step 6: Database Consolidation (JSON Cleanup)**
+- [ ] Remove `ludi_history_db.json` from git tracking: `git rm --cached ludi_history_db.json`
+- [ ] Verify all JSON data exists in `player_game_logs` table (16,086 records)
+- [ ] Delete local `ludi_history_db.json` file after verification
+- [ ] Update `module_h_historian.py` to remove JSON file references
+- [ ] Update `initialize_season.py` to initialize directly in SQLite
+
 **Success Criteria:**
 - [ ] No missing dates in database (audit passes)
 - [ ] Module H respects daily budget, never exceeds quota
 - [ ] Incomplete syncs resume gracefully across workflow runs
 - [ ] Health monitor shows all tables updated within 24h
 - [ ] JSON migration step removed from workflow
+- [ ] `ludi_history_db.json` removed from git and deleted locally
 
 **Phase 6.6: API Audit & Optimization**
 - [ ] Document all Tank01 endpoints in use vs available
 - [ ] Document all The-Odds-API endpoints in use vs available
 - [ ] Evaluate Ball Don't Lie API integration (free tier, 60 req/min)
 - [ ] Create `docs/API_USAGE_AUDIT.md` with findings
+
+---
+
+### Database Architecture Strategy (Future-Proofing)
+
+**Current State:** Single SQLite database (`ludi.db`) - 30 MB, 38 tables
+**Target:** Clean architecture ready for multi-season and web app
+
+**Phase 1: Consolidation (Phase 6.5b Step 5-6)**
+- [ ] Remove JSON staging buffer (direct SQLite writes)
+- [ ] All data flows directly to SQLite
+- [ ] Single source of truth for all game data
+
+**Phase 2: Multi-Season Support (Before 2026-27 Season)**
+- [ ] Add season archive workflow: `archives/data/ludi_YYYY_YY.db`
+- [ ] Create `scripts/archive_season.py` for end-of-season backup
+- [ ] Document season rollover procedure in `docs/SEASON_ROLLOVER.md`
+
+**Phase 3: Web App Migration (When Ludi Lens Launches)**
+- [ ] Evaluate PostgreSQL vs SQLite for production web app
+- [ ] If PostgreSQL: Use `pgloader` for migration
+- [ ] Keep SQLite archives for historical seasons (read-only)
+- [ ] Design API layer between frontend and database
+
+---
 
 **Success Criteria:**
 - [x] Depth charts synced daily, starter status accurate for all 30 teams ✅ (Phase 6.1)
