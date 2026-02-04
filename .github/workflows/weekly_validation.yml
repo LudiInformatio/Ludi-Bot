@@ -96,8 +96,10 @@ jobs:
           # Add Playtype Trends Results
           if [ -f "logs/backtest/playtype_trends_14day_$(date +%Y%m%d).log" ]; then
             REPORT+="### 📈 Playtype Trends (14-Day)\n\`\`\`\n"
-            REPORT+=$(tail -20 logs/backtest/playtype_trends_$(date +%Y%m%d).log)
+            REPORT+=$(tail -20 logs/backtest/playtype_trends_14day_$(date +%Y%m%d).log)
             REPORT+="\n\`\`\`\n\n"
+          else
+            REPORT+="### 📈 Playtype Trends (14-Day)\n(Log not available)\n\n"
           fi
           
           # Add Drift Alert

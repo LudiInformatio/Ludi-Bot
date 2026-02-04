@@ -35,6 +35,18 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
+      - name: Ensure database indexes exist
+        run: |
+          python3 -c "
+          import sqlite3
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
+          conn.commit()
+          print('✅ Database indexes verified')
+          conn.close()
+          "
+
       - name: Validate database schema
         run: |
           python3 scripts/validate_schema.py --verbose

@@ -452,8 +452,11 @@ class BetLogger:
             # Calculate win_rate and roi
             settled = summary_data['wins'] + summary_data['losses']
             summary_data['win_rate'] = summary_data['wins'] / settled if settled > 0 else None
-            summary_data['roi'] = (summary_data['profit_loss'] / summary_data['total_units']
-                                  if summary_data['total_units'] > 0 else None)
+            summary_data['roi'] = (
+                summary_data['profit_loss'] / summary_data['total_units']
+                if summary_data['total_units'] > 0 and summary_data['profit_loss'] is not None
+                else None
+            )
 
         # UPSERT into bet_daily_summaries
         c.execute('''

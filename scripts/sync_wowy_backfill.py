@@ -27,11 +27,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
-from utils.browser_utils import (
-    get_playwright_browser, 
-    smart_wait_for_selector, 
-    handle_pagination_dropdown
-)
+from utils.browser_utils import simulate_human_interaction, close_popups, wait_for_selector_safe
 
 # Playwright check
 try:
@@ -143,22 +139,41 @@ def format_date_db(dt_obj):
 # SCRAPING LOGIC
 # ============================================================
 
+def handle_pagination(page, label=None):
+    """Ensure all rows are visible by selecting 'All' in pagination dropdown."""
+    try:
+        close_popups(page)
+        select_selector = ".Pagination_pageDropdown__KgjBU select"
+        if page.is_visible(select_selector):
+            select_element = page.locator(select_selector)
+            is_disabled = select_element.get_attribute("disabled")
+            if is_disabled is None:
+                select_element.scroll_into_view_if_needed()
+                page.select_option(select_selector, value="-1", timeout=10000)
+                page.wait_for_timeout(2500)
+                print(f"      ✓ Pagination set to 'All'")
+            else:
+                print(f"      ⚠️  Pagination disabled (low-data day)")
+    except Exception as e:
+        print(f"      ⚠️  Pagination Error (Non-Critical): {e}")
+
+
 def scrape_table(page, label):
     """Extract table data with centralized retry logic."""
     print(f"      Scanning {label} table...")
-    
-    # Use centralized smart wait (handles OneTrust/Popups automatically)
+
+    # Clear popups and simulate human behavior
+    close_popups(page)
+    simulate_human_interaction(page)
+
+    # Wait for table using existing utility function
     table_selector = "table.Crom_table__p1iZz tbody tr"
-    if not smart_wait_for_selector(page, table_selector, timeout=30000):
+    if not wait_for_selector_safe(page, table_selector, timeout=30000, message=label):
         print(f"      ⚠️  Table not found for {label} (or no data).")
         return []
-    
-    # Handle pagination using centralized utility
-    pagination_selector = ".Pagination_pageDropdown__KgjBU select"
-    if page.is_visible(pagination_selector):
-        handle_pagination_dropdown(page, pagination_selector)
-        # Extra wait for table reload after pagination
-        page.wait_for_timeout(2500)
+
+    # Handle pagination to show all rows
+    handle_pagination(page, label)
 
     # Headers
     headers = page.evaluate('''() => {
@@ -320,9 +335,42 @@ def run_wowy_backfill(start_date, end_date, headless=False):
         # Force visible browser on self-hosted to bypass WAF
         is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'
         headless_mode = False if is_self_hosted else headless
-        
-        # Use centralized browser launcher (handles stealth args, User-Agents, Viewport)
-        browser, context, page = get_playwright_browser(p, headless=headless_mode)
+
+        # Inline browser setup with stealth configuration
+        browser = p.chromium.launch(
+            headless=headless_mode,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-infobars',
+                '--window-position=0,0',
+                '--ignore-certificate-errors',
+                '--ignore-ssl-errors',
+                '--disable-extensions',
+                '--disable-popup-blocking',
+                '--disable-http2'
+            ]
+        )
+
+        context = browser.new_context(
+            user_agent=random.choice(USER_AGENTS),
+            viewport={'width': 1920, 'height': 1080},
+            ignore_https_errors=True,
+            java_script_enabled=True,
+            locale='en-US',
+            timezone_id='America/New_York'
+        )
+
+        # Inject stealth scripts to bypass bot detection
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+            window.chrome = { runtime: {} };
+        """)
+
+        page = context.new_page()
 
         total_lineups = 0
         total_on_off = 0
