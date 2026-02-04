@@ -90,6 +90,11 @@ jobs:
           conn.close()
           "
 
+      - name: Validate Canonical IDs
+        timeout-minutes: 2
+        run: |
+          python3 scripts/validate_canonical_ids.py --warn-threshold 100 -v
+
       - name: Learn Daily Referee Trends
         timeout-minutes: 5
         env:

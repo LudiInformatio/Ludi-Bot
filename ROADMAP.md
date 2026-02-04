@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 5:30 PM EST
+**Last Updated:** February 3, 2026 @ 8:00 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
-**Active Work:** Phase 6.5d (Canonical ID System Audit)
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE (Steps 1-6: Sync Fixes + Direct SQLite + Canonical IDs + JSON Cleanup)** + **Phase 6.5c COMPLETE (All 3 Phases: Timeout + Caching + Resume)**
+**Active Work:** Phase 6.5 (Forward CLV Capture) - Ready to Start
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE** + **Phase 6.5c COMPLETE** + **Phase 6.5d COMPLETE (Canonical ID Audit)**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -183,8 +183,30 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] Incomplete syncs resume gracefully across workflow runs ✅ (Step 4)
 - [x] JSON migration step removed from workflow ✅ (Step 5)
 - [x] `ludi_history_db.json` removed from git and deleted locally ✅ (Step 6)
-- [ ] No missing dates in database (audit passes) ⏳ (Next verification)
+- [x] No missing dates in database (audit passes) ✅ (Phase 6.5d)
 - [ ] Health monitor shows tables updated within 24h ⏳ (Next workflow run)
+
+**Phase 6.5d: Canonical ID System Audit** ✅ COMPLETE (Feb 3, 2026 @ 8:00 PM)
+**Goal:** Audit all modules for PlayerIDResolver compliance, fix remaining dirty IDs, add CI validation
+**Priority:** HIGH (data quality infrastructure)
+
+**Completed Steps:**
+- [x] Step 1: Module compliance audit (9 modules reviewed) ✅
+- [x] Step 2: Added Tank01 aliases for 4 NBA players (AJ Lawson, etc.) ✅
+- [x] Step 3: Added 13 G-League players to `player_canonical_ids` ✅
+- [x] Step 4: Created `docs/CANONICAL_ID_GUIDELINES.md` (enforcement documentation) ✅
+- [x] Step 5: Created `scripts/validate_canonical_ids.py` (CI validation) ✅
+- [x] Step 6: Added validation step to `data_sync.yml` workflow ✅
+
+**Results:**
+- Data Quality: 99.84% clean IDs (was 99.75%)
+- Unresolvable IDs: 0 (was 17)
+- Canonical Players: 520 (was 507)
+- CI Validation: Automated
+
+**Documentation:** `docs/PHASE_6_5D_COMPLETION_REPORT.md`
+
+---
 
 **Phase 6.6: API Audit & Optimization**
 - [ ] Document all Tank01 endpoints in use vs available
