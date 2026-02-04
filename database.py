@@ -537,6 +537,8 @@ class LudiHistorian:
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_date ON referee_daily_stats(sync_date)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_referee_daily_ref ON referee_daily_stats(referee_id)')
+        # UNIQUE constraint for ON CONFLICT upsert support (Phase 6.5b - Feb 3, 2026)
+        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
 
         # 11. Referee Player Bias Table (Module G Phase 4 - Jan 15, 2026)
         c.execute('''

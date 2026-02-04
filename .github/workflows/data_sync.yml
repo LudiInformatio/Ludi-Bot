@@ -49,10 +49,7 @@ jobs:
         run: |
           python3 module_h_historian.py
 
-      - name: Migrate JSON to SQLite
-        timeout-minutes: 5
-        run: |
-          python3 migrate_json_to_sqlite.py
+      # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
 
       - name: Sync PBP Stats Season Totals
         timeout-minutes: 15

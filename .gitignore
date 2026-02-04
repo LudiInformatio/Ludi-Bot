@@ -65,3 +65,4 @@ perplexity-ext/
 
 # Cache files
 cache/pbp_stats/*.json
+ludi_history_db.json
