@@ -1,121 +1,194 @@
-# Ludi Lens v2.0 - Day 1 Quick Start
+# Ludi Informatio v2.0
 
-## Database Setup
+**NBA Player Props Analytics Platform**
 
-The database (`ludi.db`) is generated locally and **NOT tracked in git** to prevent merge conflicts.
+A production-grade betting analytics engine that generates player prop recommendations using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
 
-### First-Time Setup
+[![Daily Data Sync](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/data_sync.yml/badge.svg)](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/data_sync.yml)
+[![Daily Production Pipeline](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/daily_simulation_pipeline.yml/badge.svg)](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/daily_simulation_pipeline.yml)
 
-**Option 1: Initialize fresh database**
+---
+
+## Overview
+
+| Component | Description |
+|-----------|-------------|
+| **Product** | Ludi Lens v2.0 (The Front Office War Room) |
+| **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 25K Runs \| Usage Vacuum) |
+| **Stack** | Python 3.11 + SQLite + GitHub Actions |
+| **Status** | Production (Phase 6 - Full Data Integration) |
+
+### Key Features
+
+- **Monte Carlo Simulations** - 25,000 iterations per player with Poisson/Normal hybrid distributions
+- **Usage Vacuum Theory** - Automatic usage redistribution when star players are OUT
+- **16-Archetype Matchup System** - Player style vs defensive scheme analysis
+- **Line Shopping** - NC Legal book integration with CLV tracking
+- **Real-time Injury Intelligence** - 15-minute refresh via Tank01 + RotoWire RSS
+- **Referee Impact Modeling** - Pace, whistle tendency, and star bias factors
+
+---
+
+## Architecture
+
+```
+Module Pipeline:
+A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrator ─→ F: Alchemist
+     │                                                                      │
+     └── G: Zebras (Referees)                                              │
+     └── H: Historian (Historical Data)                                    │
+     └── X: Scenario Builder (Usage Vacuum)         [Daily Recommendations] ◄─┘
+```
+
+| Module | Purpose |
+|--------|---------|
+| **A: Gatekeeper** | Odds ingestion from The-Odds-API |
+| **B: Engine** | Historical analysis (L5, L10, season trends) |
+| **C: Oracle** | Monte Carlo simulation engine (25K iterations) |
+| **D: Yak** | Injury intelligence (Tank01 + RotoWire + DuckDuckGo) |
+| **E: Calibrator** | Matchup adjustments (archetype vs defense) |
+| **F: Alchemist** | Edge calculation, devigging, bet sizing |
+| **G: Zebras** | Referee impact modeling |
+| **H: Historian** | Historical data sync (Tank01 API) |
+| **X: Scenario** | "What-if" injury scenarios |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- API Keys: The-Odds-API (paid), Tank01 (paid)
+- Optional: Telegram bot for notifications
+
+### Installation
+
 ```bash
+# Clone repository
+git clone https://github.com/LudiInformatio/Ludi-Bot.git
+cd Ludi-Bot
+
+# Create virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.template .env
+# Edit .env with your API keys
+
+# Initialize database
 python database.py
 ```
 
-**Option 2: Restore from backup**
+### Running the Pipeline
+
 ```bash
-bash scripts/restore_database.sh archives/data/ludi.db.backup_<latest>.gz
+# Activate environment
+source .venv/bin/activate
+
+# Run full pipeline
+python main.py
+
+# Run integration test
+python test_pipeline.py
 ```
 
-### Database Management
+---
 
-**Create backup:**
+## Database
+
+The database (`ludi.db`) is managed locally with automated backups. **Not tracked in git.**
+
 ```bash
+# Create backup
 bash scripts/backup_database.sh
-```
 
-**Restore backup:**
-```bash
-bash scripts/restore_database.sh <backup_file>
-```
+# Restore from backup
+bash scripts/restore_database.sh archives/data/ludi.db.backup_<timestamp>.gz
 
-> **Warning:** Never commit `ludi.db` to git. Use backup/restore workflow instead.
-
----
-
-## What You Have Right Now
-
-### 1. `prototype_engine.py` - The Math Validator
-**What it does**: Simulates NBA player scoring using Poisson distributions and demonstrates the "Usage Vacuum" effect when a star player is OUT.
-
-**How to run**:
-```bash
-cd /home/mnprice86/ludi_bot
-./venv/bin/python prototype_engine.py
-```
-
-**What you'll see**:
-- Damian Lillard's projection with Giannis HEALTHY
-- Damian Lillard's projection with Giannis OUT (watch his usage % increase!)
-- Probability of 30+ point games in each scenario
-
-### 2. `database.py` - The Memory System
-**What it does**: Creates and manages the SQLite database (`ludi.db`) that will store all your player data, odds, and simulation results.
-
-**How to test**:
-```bash
-./venv/bin/python database.py
-```
-
-**What you'll see**:
-- Database file created at `/home/mnprice86/ludi_bot/ludi.db`
-- Test player (Giannis) inserted successfully
-
----
-
-## Next Steps (After Dependencies Install)
-
-1. **Verify the Math** - Run `prototype_engine.py` and confirm the Usage Vacuum logic makes sense
-2. **Check the Database** - Run `database.py` and use SQLite Viewer to see the tables
-3. **Build the Ingestor** - Create `ingest_gameline.py` to pull real odds from The-Odds-API
-
----
-
-## Your Current Stack
-
-- **Language**: Python 3.11
-- **Environment**: Virtual environment (`venv/`)
-- **Database**: SQLite (`ludi.db`)
-- **Math Engine**: NumPy + SciPy (Poisson distributions)
-- **Version Control**: Git (initialized)
-
----
-
-## Files Created So Far
-
-```
-ludi_bot/
-├── .git/                    # Version control
-├── .gitignore              # Protects API keys
-├── venv/                   # Python environment
-├── prototype_engine.py     # ✅ Day 1 Testing
-├── database.py            # ✅ Data persistence
-├── ludi.db                # (Created when you run database.py)
-└── README.md              # This file
+# List backups
+ls -lht archives/data/ludi.db.backup_*.gz | head -10
 ```
 
 ---
 
-## The Hybrid Plan
+## Automated Workflows
 
-**Phase 1 (This Week)**:
-- [x] Git repository initialized
-- [x] Virtual environment created
-- [x] Prototype simulation engine built
-- [x] Database schema designed
-- [ ] Dependencies installed (in progress...)
-- [ ] Run first simulation test
-- [ ] Verify database creation
-
-**Phase 2 (Next Week)**:
-- [ ] Connect to The-Odds-API
-- [ ] Pull real game lines
-- [ ] Store odds in database
-- [ ] Run simulations on real data
+| Workflow | Schedule (EST) | Purpose |
+|----------|---------------|---------|
+| Daily Data Sync | 3:00 AM | Fetch game logs, update player stats |
+| Daily Referee Sync | 4:30 AM | Scrape referee assignments |
+| Morning Briefing | 6:00 AM | Generate visual betting cards |
+| Production Pipeline | 11:00 AM | Run simulations, output recommendations |
+| Evening Slate Lock | 6:00 PM | Final pre-game updates |
+| Nightly Debrief | 10:30 PM | Settlement + PM Bot summary |
+| Claude QA Check | 6:00 AM | Automated failure detection |
 
 ---
 
-## Questions?
+## Project Status
 
-The prototype is **intentionally simple** - it uses hardcoded player stats to prove the math works. Once we verify the logic, we'll connect it to real APIs and automate everything.
+**Current Phase:** Phase 6 - Full Data Integration
 
-**This is the "crawl before you walk" approach.**
+**Recent Completions:**
+- Phase 6.5e: Workflow infrastructure fixes
+- Phase 6.5d: Canonical ID system audit (99.84% data quality)
+- Phase 6.5c: PBP Stats API fixes (19.4x performance improvement)
+- Phase 6.5b: Direct SQLite writes, JSON cleanup
+
+**Performance (Jan 7-29, 2026):**
+- Total Bets: 9,605 logged, 6,344 settled
+- Win Rate: 55.7%
+- Profit: +292 units
+- CLV: Positive across all edge buckets
+
+See [ROADMAP.md](ROADMAP.md) for detailed progress tracking.
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [ROADMAP.md](ROADMAP.md) | Current tasks and priorities |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and module reference |
+| [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | Betting edge calculations |
+| [docs/PRODUCTION_HANDBOOK.md](docs/PRODUCTION_HANDBOOK.md) | Deployment and operations guide |
+| [CLAUDE.md](CLAUDE.md) | AI assistant instructions |
+
+---
+
+## API Integrations
+
+| API | Tier | Purpose |
+|-----|------|---------|
+| The-Odds-API | Paid (20K/mo) | Game lines, player props |
+| Tank01 | Paid (1K/day) | Rosters, injuries, box scores |
+| PBP Stats | Free | Shot quality, WOWY data |
+| NBA.com | Scraped | Referee assignments, tracking data |
+
+---
+
+## Tech Stack
+
+- **Language:** Python 3.11
+- **Database:** SQLite with WAL mode
+- **Automation:** GitHub Actions (self-hosted runner)
+- **Notifications:** Telegram Bot API
+- **Browser Automation:** Playwright (Ghost Protocol scraping)
+
+---
+
+## License
+
+Private repository - All rights reserved.
+
+---
+
+## Contact
+
+For questions or issues, open a GitHub issue or contact the repository owner.
