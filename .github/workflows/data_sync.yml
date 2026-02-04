@@ -35,6 +35,24 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
+      - name: Initialize database if needed
+        run: |
+          if [ ! -f ludi.db ]; then
+            echo "⚠️ Database not found, initializing..."
+            python3 database.py
+            echo "✅ Database initialized"
+          else
+            INTEGRITY=$(sqlite3 ludi.db "PRAGMA integrity_check;" 2>&1)
+            if [ "$INTEGRITY" != "ok" ]; then
+              echo "⚠️ Database corrupted, reinitializing..."
+              mv ludi.db ludi.db.corrupted.$(date +%Y%m%d_%H%M%S)
+              python3 database.py
+              echo "✅ Database reinitialized"
+            else
+              echo "✅ Database exists and is healthy"
+            fi
+          fi
+
       - name: Ensure database indexes exist
         run: |
           python3 -c "

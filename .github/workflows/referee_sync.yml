@@ -32,6 +32,19 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
+      - name: Ensure database indexes exist
+        run: |
+          python3 -c "
+          import sqlite3
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
+          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
+          conn.commit()
+          print('✅ Database indexes verified')
+          conn.close()
+          "
+
       - name: Sync Daily Referee Assignments
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

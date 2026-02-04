@@ -90,6 +90,7 @@ jobs:
           fi
           
       - name: Run System Health Monitor
+        continue-on-error: true  # Health alerts sent via Telegram; don't fail workflow
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
