@@ -83,8 +83,49 @@ jobs:
 
             Keep the report concise and actionable.
 
-      - name: No failures - skip
+      - name: Send Telegram notification (failures found)
+        if: steps.failures.outputs.fail_count != '0'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FAIL_COUNT: ${{ steps.failures.outputs.fail_count }}
+          FAILURES: ${{ steps.failures.outputs.failures }}
+          REPO: ${{ github.repository }}
+        run: |
+          MESSAGE=$(cat <<EOF
+          🤖 *Claude QA Report*
+
+          ⚠️ *${FAIL_COUNT} workflow failure(s) detected*
+
+          Failed: ${FAILURES}
+
+          Claude is analyzing and will create a GitHub issue.
+
+          [View Actions](https://github.com/${REPO}/actions)
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="Markdown" \
+            -d text="${MESSAGE}" || echo "Telegram notification failed"
+
+      - name: No failures - send success notification
         if: steps.failures.outputs.fail_count == '0' && github.event.inputs.scope != 'full'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPO: ${{ github.repository }}
         run: |
           echo "✅ No workflow failures in last 24 hours. Skipping QA check."
-          echo "To run a full check, trigger manually with scope='full'"
+          MESSAGE=$(cat <<EOF
+          🤖 *Claude QA Report*
+
+          ✅ All workflows healthy - no failures in last 24 hours.
+
+          [View Actions](https://github.com/${REPO}/actions)
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="Markdown" \
+            -d text="${MESSAGE}" || echo "Telegram notification failed"
