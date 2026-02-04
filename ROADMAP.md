@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 4, 2026 @ 11:30 AM EST
+**Last Updated:** February 4, 2026 @ 5:00 PM EST
 **Current Phase:** Phase 6 - Full Data Integration
 **Active Work:** Phase 6.5 (Forward CLV Capture) - Ready to Start
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE** + **Phase 6.5c COMPLETE** + **Phase 6.5d COMPLETE** + **Phase 6.5e COMPLETE (Workflow Fixes)**
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE** + **Phase 6.5c COMPLETE** + **Phase 6.5d COMPLETE** + **Phase 6.5e COMPLETE** + **Phase 6.5f COMPLETE (Missing Index Fix)**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -242,6 +242,47 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 
 **Commits:** `a0053a4` (Phase 1), `17fbf81` + `7c21a2a` (Future-proofing), `76afa8b` (Phase 2)
 **Documentation:** `WORKFLOW_FIX_REPORT.md`
+
+**Phase 6.5f: Database Schema Missing Index Fix** ✅ COMPLETE (Feb 4, 2026 @ 5:00 PM)
+**Goal:** Fix Module H upsert failures due to missing unique index
+**Priority:** CRITICAL (data_sync.yml failing, production pipeline at risk)
+
+**Root Cause:**
+- `database.py` never created `idx_player_game_logs_unique` on (game_id, player_id)
+- Module H line 174 uses `ON CONFLICT(game_id, player_id)` which REQUIRES this index
+- Module H tries to create index dynamically but fails silently if duplicates exist
+- Runner database had duplicates preventing index creation
+- All INSERT operations failed: "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"
+
+**Investigation Results:**
+- Canceled workflow showed 40+ failed player inserts
+- Error: `UNIQUE constraint failed: player_game_logs.game_id, player_game_logs.player_id`
+- Deduplication step ran AFTER Module H (line 105) instead of BEFORE (line 56)
+- 5 workflows affected: data_sync, daily_simulation_pipeline, wowy_sync, weekly_referee_sync, referee_sync
+
+**Fixes Applied:**
+- [x] `database.py` line 91-92: Added unique index creation (permanent fix for new databases) ✅
+- [x] `data_sync.yml`: Enhanced index step with deduplication FIRST + unique index ✅
+- [x] `data_sync.yml`: Removed duplicate deduplication step (line 129) ✅
+- [x] `daily_simulation_pipeline.yml`: Added database initialization step (new step) ✅
+- [x] `wowy_sync.yml`: Enhanced index step with deduplication + unique index ✅
+- [x] `weekly_referee_sync.yml`: Enhanced index step with deduplication + unique index ✅
+- [x] `referee_sync.yml`: Enhanced index step with deduplication + unique index ✅
+
+**Standardized Database Initialization Block:**
+```yaml
+- Deduplicate player_game_logs (GROUP BY game_id, player_id)
+- Create idx_player_game_logs_unique (UNIQUE)
+- Create idx_referee_daily_unique (UNIQUE)
+- Create 4 query performance indexes
+```
+
+**Results:**
+- All 5 YAML files validated
+- Local database schema correct (5 indexes on player_game_logs)
+- Commit 295752b deployed
+
+**Next Run (Feb 5):** All workflows expected to pass with index in place
 
 ---
 
