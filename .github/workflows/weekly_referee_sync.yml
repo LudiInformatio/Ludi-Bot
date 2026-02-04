@@ -37,6 +37,20 @@ jobs:
       - name: Install Playwright browsers
         run: python3 -m playwright install chromium
 
+      - name: Ensure database indexes exist
+        run: |
+          python3 -c "
+          import sqlite3
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          # Ensure all critical indexes exist (future-proofing)
+          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
+          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
+          conn.commit()
+          print('✅ Database indexes verified')
+          conn.close()
+          "
+
       - name: Scrape Covers + OddsShark
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

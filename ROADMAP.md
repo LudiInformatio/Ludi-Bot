@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 3, 2026 @ 8:00 PM EST
+**Last Updated:** February 4, 2026 @ 10:45 AM EST
 **Current Phase:** Phase 6 - Full Data Integration
 **Active Work:** Phase 6.5 (Forward CLV Capture) - Ready to Start
-**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE** + **Phase 6.5c COMPLETE** + **Phase 6.5d COMPLETE (Canonical ID Audit)**
+**Completed:** Phase 5.5 Phases 0-2 + Database Sync Redesign + Feb 2 Calibration + Performance Analysis + CLV Backfill + **Phase 6.1 Depth Charts** + **Phase 6.2 BENEFICIARY Pipeline** + **Phase 6.3 WOWY Enhancement** + **Phase 6.4 System Refinements** + **Referee Backfill** + **Phase 6.5b COMPLETE** + **Phase 6.5c COMPLETE** + **Phase 6.5d COMPLETE** + **Phase 6.5e COMPLETE (Workflow Fixes)**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -184,7 +184,8 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - [x] JSON migration step removed from workflow ✅ (Step 5)
 - [x] `ludi_history_db.json` removed from git and deleted locally ✅ (Step 6)
 - [x] No missing dates in database (audit passes) ✅ (Phase 6.5d)
-- [ ] Health monitor shows tables updated within 24h ⏳ (Next workflow run)
+- [x] Health monitor shows tables updated within 24h ✅ (Phase 6.5e - workflows fixed)
+- [x] Claude QA cron job active for automated failure detection ✅ (Phase 6.5e)
 
 **Phase 6.5d: Canonical ID System Audit** ✅ COMPLETE (Feb 3, 2026 @ 8:00 PM)
 **Goal:** Audit all modules for PlayerIDResolver compliance, fix remaining dirty IDs, add CI validation
@@ -205,6 +206,34 @@ The Feb 2 performance analysis revealed that despite having profitable results (
 - CI Validation: Automated
 
 **Documentation:** `docs/PHASE_6_5D_COMPLETION_REPORT.md`
+
+**Phase 6.5e: Workflow Infrastructure Fixes** ✅ COMPLETE (Feb 4, 2026 @ 10:45 AM)
+**Goal:** Fix overnight GitHub Actions failures and add future-proofing
+**Priority:** HIGH (5 workflows failing)
+
+**Root Causes Identified:**
+1. `sync_wowy_backfill.py` importing non-existent functions from `browser_utils.py`
+2. Runner database missing `idx_referee_daily_unique` index (created before index was added)
+3. `bet_logger.py` null division error when `profit_loss` is NULL
+4. `weekly_validation.yml` filename mismatch and missing log file fallback
+
+**Fixes Applied:**
+- [x] Fix 1: Updated `sync_wowy_backfill.py` imports + inlined Playwright setup ✅
+- [x] Fix 2: Added index migration step to `data_sync.yml` ✅
+- [x] Fix 3: Added null-safe ROI calculation in `bet_logger.py` ✅
+- [x] Fix 4: Fixed filename + added fallback in `weekly_validation.yml` ✅
+
+**Future-Proofing Added:**
+- [x] Added database index check to `wowy_sync.yml` ✅
+- [x] Added database index check to `weekly_referee_sync.yml` ✅
+- [x] Created `claude-qa-check.yml` - Daily Claude QA cron job (6 AM EST) ✅
+
+**Results:**
+- All 4 failed workflows now pass validation
+- Database indexes verified across all key workflows
+- Automated Claude QA for failure detection
+
+**Documentation:** `WORKFLOW_FIX_REPORT.md`
 
 ---
 

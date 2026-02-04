@@ -1,0 +1,90 @@
+name: Claude QA & Debug Check
+
+on:
+  schedule:
+    # Run daily at 6 AM EST (11 AM UTC) - after data_sync completes
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Scope of QA check'
+        required: true
+        default: 'workflows'
+        type: choice
+        options:
+          - workflows
+          - full
+          - debug-failures
+
+jobs:
+  claude-qa:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+      actions: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get recent workflow failures
+        id: failures
+        run: |
+          # Get failed workflows from last 24 hours
+          FAILURES=$(gh run list --limit 20 --json name,conclusion,startedAt,databaseId \
+            --jq '[.[] | select(.conclusion == "failure")] | map("\(.name) (ID: \(.databaseId))") | join(", ")' || echo "none")
+          echo "failures=$FAILURES" >> $GITHUB_OUTPUT
+
+          # Count failures
+          FAIL_COUNT=$(gh run list --limit 20 --json conclusion \
+            --jq '[.[] | select(.conclusion == "failure")] | length' || echo "0")
+          echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Claude QA Check
+        if: steps.failures.outputs.fail_count != '0' || github.event.inputs.scope == 'full'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
+          prompt: |
+            You are a QA engineer for the Ludi-Bot NBA analytics platform.
+
+            ## Context
+            - Repository: ${{ github.repository }}
+            - Recent workflow failures: ${{ steps.failures.outputs.failures }}
+            - Failure count: ${{ steps.failures.outputs.fail_count }}
+            - Scope: ${{ github.event.inputs.scope || 'workflows' }}
+
+            ## Your Task
+            1. If there are workflow failures:
+               - Analyze the failure logs using `gh run view <ID> --log-failed`
+               - Identify root causes
+               - Check if the issue is in the code or infrastructure
+               - Create a GitHub issue summarizing findings if the failure is non-trivial
+
+            2. For 'full' scope:
+               - Run `python scripts/validate_schema.py --verbose` to check database health
+               - Run `python scripts/validate_canonical_ids.py -v` to check data quality
+               - Review recent commits for potential issues
+
+            3. Create a summary issue titled "Daily QA Report - $(date +%Y-%m-%d)" with:
+               - Workflow status summary
+               - Any failures and their likely causes
+               - Recommended fixes (if any)
+               - Health check results
+
+            Keep the report concise and actionable.
+
+      - name: No failures - skip
+        if: steps.failures.outputs.fail_count == '0' && github.event.inputs.scope != 'full'
+        run: |
+          echo "✅ No workflow failures in last 24 hours. Skipping QA check."
+          echo "To run a full check, trigger manually with scope='full'"
