@@ -107,6 +107,47 @@ def send_photo(photo_path: str, caption: str = None, parse_mode: str = None) -> 
         return False
 
 
+def send_document(document_path: str, caption: str = None, parse_mode: str = None) -> bool:
+    """
+    Send a document/file via Telegram bot.
+    
+    Args:
+        document_path: Absolute path to the file
+        caption: Optional text caption
+        parse_mode: formatting mode (Markdown/HTML/None)
+        
+    Returns:
+        True if sent successfully
+    """
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("❌ Telegram credentials not configured")
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
+    
+    try:
+        with open(document_path, 'rb') as f:
+            files = {'document': f}
+            data = {'chat_id': TELEGRAM_CHAT_ID}
+            if caption:
+                data['caption'] = caption
+                if parse_mode:
+                    data['parse_mode'] = parse_mode
+            
+            response = requests.post(url, files=files, data=data, timeout=30)
+            response.raise_for_status()
+            
+            if response.json().get("ok"):
+                print("✅ Telegram document sent successfully")
+                return True
+            else:
+                print(f"❌ Telegram API error: {response.json().get('description')}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Failed to send Telegram document: {e}")
+        return False
+
 
 def send_alert(title: str, message: str) -> bool:
     """

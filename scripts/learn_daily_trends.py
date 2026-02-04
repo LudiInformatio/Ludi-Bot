@@ -346,11 +346,22 @@ def run_daily_learning(target_date: str = None, dry_run: bool = False):
         
         print(f"\n   📅 Found {len(games)} games to process\n")
         
-        # Process each game
+        # Process each game (with error handling per game)
         results = []
         for game in games:
-            result = process_game(conn, game, dry_run)
-            results.append(result)
+            try:
+                result = process_game(conn, game, dry_run)
+                results.append(result)
+            except Exception as e:
+                print(f"   ❌ Error processing {game.get('game_id', 'unknown')}: {e}")
+                results.append({
+                    'game_id': game.get('game_id', 'unknown'),
+                    'matchup': f"{game.get('away_team', '?')} @ {game.get('home_team', '?')}",
+                    'refs_processed': 0,
+                    'deviation': 0.0,
+                    'skipped': True,
+                    'skip_reason': f'Error: {e}'
+                })
         
         # Summary
         print("\n" + "=" * 60)
