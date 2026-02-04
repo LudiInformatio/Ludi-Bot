@@ -89,6 +89,9 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_game_date ON player_game_logs(game_date)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
 
+        # CRITICAL: Unique index for Module H upsert operations (ON CONFLICT requires this)
+        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(game_id, player_id)')
+
         # 4. Odds Table (The Market)
         c.execute('''
             CREATE TABLE IF NOT EXISTS odds (
