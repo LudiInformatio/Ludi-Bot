@@ -1,0 +1,356 @@
+diff --git a/app.py b/app.py
+index 9913bb7..32c9146 100644
+--- a/app.py
++++ b/app.py
+@@ -291,6 +291,187 @@ def get_api_key(key_name: str) -> Optional[str]:
+     return None
+ 
+ 
++def fetch_player_props(game_id: str) -> dict:
++    """
++    Fetch player props for a specific game from The-Odds-API.
++    Includes main lines, combo props (PRA, PA, PR, AR), and double/triple-double.
++
++    Args:
++        game_id: The-Odds-API game ID
++
++    Returns:
++        Dictionary with player props by market type
++    """
++    api_key = get_api_key("ODDS_API_KEY")
++    if not api_key or not game_id:
++        return {}
++
++    try:
++        url = f"https://api.the-odds-api.com/v4/sports/basketball_nba/events/{game_id}/odds"
++        # Include all main prop markets + combos + specials
++        # Ludi-Bot uses: player_points, player_rebounds, player_assists, player_threes,
++        # player_steals, player_blocks, player_turnovers, player_double_double, player_triple_double
++        # Plus combo markets: player_points_rebounds_assists (PRA), player_points_assists (PA),
++        # player_points_rebounds (PR), player_assists_rebounds (AR)
++        markets = ",".join([
++            "player_points",
++            "player_rebounds",
++            "player_assists",
++            "player_threes",
++            "player_steals",
++            "player_blocks",
++            "player_points_rebounds_assists",  # PRA combo
++            "player_points_assists",           # PA combo
++            "player_points_rebounds",          # PR combo
++            "player_assists_rebounds",         # AR combo
++            "player_double_double",            # DD
++            "player_triple_double"             # TD
++        ])
++        params = {
++            "apiKey": api_key,
++            "regions": "us",
++            "markets": markets,
++            "oddsFormat": "american",
++            "bookmakers": "fanduel,draftkings"
++        }
++        response = requests.get(url, params=params, timeout=15)
++        if response.status_code == 200:
++            data = response.json()
++            props = {
++                "points": [], "rebounds": [], "assists": [], "threes": [],
++                "steals": [], "blocks": [],
++                "pra": [], "pa": [], "pr": [], "ar": [],  # Combos
++                "double_double": [], "triple_double": []  # Specials
++            }
++
++            # Market key to props dict key mapping
++            market_map = {
++                "player_points": "points",
++                "player_rebounds": "rebounds",
++                "player_assists": "assists",
++                "player_threes": "threes",
++                "player_steals": "steals",
++                "player_blocks": "blocks",
++                "player_points_rebounds_assists": "pra",
++                "player_points_assists": "pa",
++                "player_points_rebounds": "pr",
++                "player_assists_rebounds": "ar",
++                "player_double_double": "double_double",
++                "player_triple_double": "triple_double"
++            }
++
++            for book in data.get("bookmakers", []):
++                book_name = book.get("key", "")
++                for market in book.get("markets", []):
++                    market_key = market.get("key", "")
++                    prop_key = market_map.get(market_key)
++                    if not prop_key:
++                        continue
++
++                    for outcome in market.get("outcomes", []):
++                        prop = {
++                            "player": outcome.get("description", ""),
++                            "line": outcome.get("point"),
++                            "odds": outcome.get("price"),
++                            "type": outcome.get("name"),  # Over/Under or Yes/No for DD/TD
++                            "book": book_name
++                        }
++                        # Skip alt lines - main lines typically don't have alternates in standard markets
++                        # The-Odds-API separates alt lines into different market keys
++                        if prop not in props[prop_key]:
++                            props[prop_key].append(prop)
++
++            return props
++    except Exception as e:
++        st.warning(f"Player props fetch error: {e}")
++    return {}
++
++
++def format_props_context(props: dict, max_players: int = 5) -> str:
++    """
++    Format player props into context string for AI analysis.
++    Includes main lines, combos (PRA, PA, etc.), and DD/TD.
++
++    Args:
++        props: Dictionary from fetch_player_props()
++        max_players: Maximum players to include per category
++
++    Returns:
++        Formatted string with prop lines
++    """
++    if not props:
++        return ""
++
++    context = "\n=== PLAYER PROP LINES (The-Odds-API) ===\n"
++
++    # Main stat categories
++    main_categories = [
++        ("points", "PTS"),
++        ("rebounds", "REB"),
++        ("assists", "AST"),
++        ("threes", "3PM"),
++        ("steals", "STL"),
++        ("blocks", "BLK")
++    ]
++
++    # Combo categories
++    combo_categories = [
++        ("pra", "PTS+REB+AST"),
++        ("pa", "PTS+AST"),
++        ("pr", "PTS+REB"),
++        ("ar", "AST+REB")
++    ]
++
++    # Special categories (Yes/No instead of Over/Under)
++    special_categories = [
++        ("double_double", "Double-Double"),
++        ("triple_double", "Triple-Double")
++    ]
++
++    # Process main stats
++    context += "\n**Main Lines:**\n"
++    for category, label in main_categories:
++        players_seen = set()
++        lines = []
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and player not in players_seen and prop.get("type") == "Over":
++                players_seen.add(player)
++                line = prop.get("line", "N/A")
++                odds = prop.get("odds", "N/A")
++                lines.append(f"{player}: {line} ({odds:+d})" if isinstance(odds, int) else f"{player}: {line}")
++
++        if lines:
++            context += f"  {label}: " + " | ".join(lines[:max_players]) + "\n"
++
++    # Process combos (compact format)
++    combo_lines = []
++    for category, label in combo_categories:
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and prop.get("type") == "Over":
++                line = prop.get("line", "N/A")
++                combo_lines.append(f"{player} {label}: {line}")
++                break  # Just first player per combo for brevity
++
++    if combo_lines:
++        context += f"\n**Combos:** " + " | ".join(combo_lines[:4]) + "\n"
++
++    # Process DD/TD (compact)
++    special_lines = []
++    for category, label in special_categories:
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and prop.get("type") == "Yes":
++                odds = prop.get("odds", "N/A")
++                special_lines.append(f"{player} {label} ({odds:+d})" if isinstance(odds, int) else f"{player} {label}")
++
++    if special_lines:
++        context += f"**Specials:** " + " | ".join(special_lines[:3]) + "\n"
++
++    return context
++
++
+ def fetch_todays_games() -> list:
+     """Fetch today's NBA games from The-Odds-API"""
+     api_key = get_api_key("ODDS_API_KEY")
+@@ -302,7 +483,7 @@ def fetch_todays_games() -> list:
+         params = {
+             "apiKey": api_key,
+             "regions": "us",
+-            "markets": "spreads,totals",
++            "markets": "spreads,totals,h2h",  # Added h2h (moneyline)
+             "oddsFormat": "american",
+             "bookmakers": "fanduel,draftkings"
+         }
+@@ -318,9 +499,11 @@ def fetch_todays_games() -> list:
+                 away = normalize_team(away_full)
+                 home = normalize_team(home_full)
+ 
+-                # Get spread and total from first bookmaker
++                # Get spread, total, and moneyline from first bookmaker
+                 spread = None
+                 total = None
++                home_ml = None
++                away_ml = None
+                 for book in game.get("bookmakers", []):
+                     for market in book.get("markets", []):
+                         if market["key"] == "spreads" and not spread:
+@@ -331,6 +514,12 @@ def fetch_todays_games() -> list:
+                             for outcome in market["outcomes"]:
+                                 if outcome["name"] == "Over":
+                                     total = outcome["point"]
++                        if market["key"] == "h2h" and not home_ml:
++                            for outcome in market["outcomes"]:
++                                if outcome["name"] == home_full:
++                                    home_ml = outcome["price"]
++                                elif outcome["name"] == away_full:
++                                    away_ml = outcome["price"]
+ 
+                 # Parse time
+                 commence = game.get("commence_time", "")
+@@ -349,6 +538,8 @@ def fetch_todays_games() -> list:
+                     "home_full": home_full or "Home",
+                     "spread": spread,
+                     "total": total,
++                    "home_ml": home_ml,  # Moneyline
++                    "away_ml": away_ml,  # Moneyline
+                     "time": time_str
+                 })
+             return parsed
+@@ -766,10 +957,25 @@ def main():
+         # Get live roster/injury context for BOTH analysis modes
+         live_context = get_game_specific_context(selected_game['home'], selected_game['away'])
+ 
++        # Fetch player props for this game (The-Odds-API)
++        props_context = ""
++        game_id = selected_game.get('id')
++        if game_id:
++            props = fetch_player_props(game_id)
++            if props:
++                props_context = format_props_context(props, max_players=8)
++
++        # Format moneyline if available
++        home_ml = selected_game.get('home_ml')
++        away_ml = selected_game.get('away_ml')
++        ml_str = ""
++        if home_ml and away_ml:
++            ml_str = f"\nMONEYLINE: {selected_game['away']} {away_ml:+d} / {selected_game['home']} {home_ml:+d}" if isinstance(home_ml, int) else ""
++
+         analysis_input = f"""
+ GAME: {selected_game['away']} @ {selected_game['home']}
+ SPREAD: {selected_game['home']} {spread_str}
+-TOTAL: {selected_game.get('total') or 'TBD'}
++TOTAL: {selected_game.get('total') or 'TBD'}{ml_str}
+ TIME: {selected_game.get('time') or 'TBD'}
+ 
+ {selected_game['away']} Defense: {get_defense_scheme(selected_game['away'])}
+@@ -778,6 +984,7 @@ TIME: {selected_game.get('time') or 'TBD'}
+ {selected_game['home']} Offense: {get_offense_scheme(selected_game['home'])}
+ 
+ {live_context}
++{props_context}
+ """
+ 
+     elif query and (analyze_both or analyze_ludi):
+diff --git a/tank01_client.py b/tank01_client.py
+index f40dcea..1e41e7d 100644
+--- a/tank01_client.py
++++ b/tank01_client.py
+@@ -267,6 +267,71 @@ def format_game_context(home_team: str, away_team: str) -> str:
+     return context
+ 
+ 
++@st.cache_data(ttl=300)  # Cache for 5 minutes
++def get_box_score(game_id: str) -> Optional[Dict[str, Any]]:
++    """
++    Get box score for a specific game.
++
++    Args:
++        game_id: Tank01 game ID
++
++    Returns:
++        Box score dictionary with player stats, or None
++    """
++    data = _make_request("getNBABoxScore", {"gameID": game_id})
++    if not data or "body" not in data:
++        return None
++    return data["body"]
++
++
++@st.cache_data(ttl=600)  # Cache for 10 minutes (historical data changes less)
++def get_player_recent_games(player_name: str, num_games: int = 5) -> List[Dict[str, Any]]:
++    """
++    Get a player's recent game stats using box score lookups.
++
++    Args:
++        player_name: Player name (partial match supported)
++        num_games: Number of recent games to fetch (default 5)
++
++    Returns:
++        List of game stat dictionaries with pts, reb, ast, etc.
++    """
++    # First find the player's team
++    team = find_player_team(player_name)
++    if not team:
++        return []
++
++    # Get recent games for this team
++    recent_games = []
++
++    # Check if we can get games from getNBAGamesForDate for past dates
++    # For now, return empty - this would need historical date iteration
++    # In production, you'd iterate back through dates until you have num_games
++
++    return recent_games
++
++
++@st.cache_data(ttl=300)
++def get_team_recent_record(team_abbr: str, num_games: int = 5) -> Dict[str, Any]:
++    """
++    Get a team's recent win/loss record.
++
++    Args:
++        team_abbr: Team abbreviation
++        num_games: Number of recent games to check
++
++    Returns:
++        Dictionary with wins, losses, and streak info
++    """
++    # This would require iterating through recent dates
++    # Placeholder for now - in production would use getNBAGamesForDate
++    return {
++        "team": team_abbr,
++        "record": "N/A",
++        "streak": "N/A"
++    }
++
++
+ def format_player_context(player_name: str) -> str:
+     """
+     Format player-specific context for prop analysis.
+@@ -317,7 +382,7 @@ def format_player_context(player_name: str) -> str:
+         context += ", ".join(stat_parts) + "\n"
+ 
+     # Teammates who are out (usage vacuum opportunity)
+-    out_teammates = [inj["name"] for inj in injuries if inj["designation"] in ["Out", "Doubtful"]]
++    out_teammates = [inj["name"] for inj in injuries if inj["designation"] in ["Out", "Doubtful", "Suspended"]]
+     if out_teammates:
+         context += f"Teammates OUT: {', '.join(out_teammates)} (potential usage boost)\n"
+ 
