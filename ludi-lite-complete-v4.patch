@@ -1,0 +1,794 @@
+diff --git a/README.md b/README.md
+index 89a3acd..3df5fc8 100644
+--- a/README.md
++++ b/README.md
+@@ -58,8 +58,15 @@ streamlit run app.py
+    - Click "Secrets"
+    - Add your API keys:
+      ```toml
++     # Required
+      ANTHROPIC_API_KEY = "sk-ant-api03-..."
+-     ODDS_API_KEY = "your-key-here"  # Optional
++
++     # Recommended (live data)
++     TANK01_KEY = "your-rapidapi-key"      # Rosters, injuries, depth charts
++     ODDS_API_KEY = "your-odds-api-key"    # Game lines, player props
++
++     # Optional (enhanced Freestyle)
++     PERPLEXITY_API_KEY = "pplx-..."       # Real-time web search
+      ```
+ 
+ 4. **Done!** Your app will be live at `https://your-app.streamlit.app`
+@@ -106,12 +113,48 @@ Analysis confidence varies by time:
+ | PRE-GAME | 30min-2hr | High |
+ | LOCK TIME | <30 min | Highest |
+ 
++## Data Sources & APIs
++
++### AI
++- **Claude API (Anthropic)** - claude-sonnet-4 for analysis
++- **Perplexity API** (Optional) - Real-time web search for Freestyle mode
++
++### Tank01 API (RapidAPI)
++| Endpoint | Purpose |
++|----------|---------|
++| `getNBATeamRoster` | Current rosters with stats |
++| `getNBAInjuryList` | Live injury/suspension status |
++| `getNBATeams` | All 30 teams with rosters |
++| `getNBAGamesForDate` | Today's games |
++| `getNBADepthCharts` | Starters vs backups |
++| `getNBABoxScore` | Historical game stats |
++
++### The-Odds-API
++| Market | Type |
++|--------|------|
++| `spreads` | Point spreads |
++| `totals` | Over/under |
++| `h2h` | Moneyline |
++| `player_points` | PTS props |
++| `player_rebounds` | REB props |
++| `player_assists` | AST props |
++| `player_threes` | 3PM props |
++| `player_steals` | STL props |
++| `player_blocks` | BLK props |
++| `player_points_rebounds_assists` | PRA combo |
++| `player_points_assists` | PA combo |
++| `player_points_rebounds` | PR combo |
++| `player_assists_rebounds` | AR combo |
++| `player_double_double` | DD Yes/No |
++| `player_triple_double` | TD Yes/No |
++
+ ## Tech Stack
+ 
+ - **Frontend**: Streamlit
+-- **AI**: Claude API (Anthropic)
+-- **Live Data**: Tank01 API (rosters, injuries, depth charts)
+-- **Odds**: The-Odds-API (game lines, props)
++- **AI**: Claude API (Anthropic) + Perplexity (optional)
++- **Live Data**: Tank01 API (rosters, injuries, depth charts, box scores)
++- **Odds**: The-Odds-API (game lines, 12+ player prop markets)
++- **Team Mapping**: Normalized across API naming conventions
+ - **Hosting**: Streamlit Cloud
+ - **CI/CD**: GitHub Actions with Claude Code
+ 
+@@ -121,8 +164,10 @@ Analysis confidence varies by time:
+ ludi-lite/
+ ├── app.py              # Main Streamlit application
+ ├── prompts.py          # Freestyle + Methodology prompts
+-├── season_context.py   # 2025-26 rosters, schemes, trades
+-├── tank01_client.py    # Tank01 API client for live NBA data
++├── season_context.py   # 2025-26 rosters, schemes, injuries
++├── tank01_client.py    # Tank01 API client (6 endpoints)
++├── perplexity_client.py # Perplexity real-time search
++├── team_mapping.py     # Cross-API team name normalization
+ ├── components.py       # UI card components
+ ├── requirements.txt    # Python dependencies
+ ├── setup.sh            # Automated setup script
+diff --git a/app.py b/app.py
+index 9913bb7..969c758 100644
+--- a/app.py
++++ b/app.py
+@@ -28,12 +28,13 @@ from season_context import (
+ )
+ # Optional Perplexity integration for Freestyle
+ try:
+-    from perplexity_client import search_game_context, search_player_context, is_perplexity_available
++    from perplexity_client import search_game_context, search_player_context, search_late_news, is_perplexity_available
+     PERPLEXITY_ENABLED = is_perplexity_available()
+ except ImportError:
+     PERPLEXITY_ENABLED = False
+-    def search_game_context(*args): return ""
+-    def search_player_context(*args): return ""
++    def search_game_context(*args, **kwargs): return ""
++    def search_player_context(*args, **kwargs): return ""
++    def search_late_news(*args): return ""
+ 
+ # Team name normalization (handles Odds-API vs Tank01 naming differences)
+ from team_mapping import normalize_team, get_full_name
+@@ -291,6 +292,187 @@ def get_api_key(key_name: str) -> Optional[str]:
+     return None
+ 
+ 
++def fetch_player_props(game_id: str) -> dict:
++    """
++    Fetch player props for a specific game from The-Odds-API.
++    Includes main lines, combo props (PRA, PA, PR, AR), and double/triple-double.
++
++    Args:
++        game_id: The-Odds-API game ID
++
++    Returns:
++        Dictionary with player props by market type
++    """
++    api_key = get_api_key("ODDS_API_KEY")
++    if not api_key or not game_id:
++        return {}
++
++    try:
++        url = f"https://api.the-odds-api.com/v4/sports/basketball_nba/events/{game_id}/odds"
++        # Include all main prop markets + combos + specials
++        # Ludi-Bot uses: player_points, player_rebounds, player_assists, player_threes,
++        # player_steals, player_blocks, player_turnovers, player_double_double, player_triple_double
++        # Plus combo markets: player_points_rebounds_assists (PRA), player_points_assists (PA),
++        # player_points_rebounds (PR), player_assists_rebounds (AR)
++        markets = ",".join([
++            "player_points",
++            "player_rebounds",
++            "player_assists",
++            "player_threes",
++            "player_steals",
++            "player_blocks",
++            "player_points_rebounds_assists",  # PRA combo
++            "player_points_assists",           # PA combo
++            "player_points_rebounds",          # PR combo
++            "player_assists_rebounds",         # AR combo
++            "player_double_double",            # DD
++            "player_triple_double"             # TD
++        ])
++        params = {
++            "apiKey": api_key,
++            "regions": "us",
++            "markets": markets,
++            "oddsFormat": "american",
++            "bookmakers": "fanduel,draftkings"
++        }
++        response = requests.get(url, params=params, timeout=15)
++        if response.status_code == 200:
++            data = response.json()
++            props = {
++                "points": [], "rebounds": [], "assists": [], "threes": [],
++                "steals": [], "blocks": [],
++                "pra": [], "pa": [], "pr": [], "ar": [],  # Combos
++                "double_double": [], "triple_double": []  # Specials
++            }
++
++            # Market key to props dict key mapping
++            market_map = {
++                "player_points": "points",
++                "player_rebounds": "rebounds",
++                "player_assists": "assists",
++                "player_threes": "threes",
++                "player_steals": "steals",
++                "player_blocks": "blocks",
++                "player_points_rebounds_assists": "pra",
++                "player_points_assists": "pa",
++                "player_points_rebounds": "pr",
++                "player_assists_rebounds": "ar",
++                "player_double_double": "double_double",
++                "player_triple_double": "triple_double"
++            }
++
++            for book in data.get("bookmakers", []):
++                book_name = book.get("key", "")
++                for market in book.get("markets", []):
++                    market_key = market.get("key", "")
++                    prop_key = market_map.get(market_key)
++                    if not prop_key:
++                        continue
++
++                    for outcome in market.get("outcomes", []):
++                        prop = {
++                            "player": outcome.get("description", ""),
++                            "line": outcome.get("point"),
++                            "odds": outcome.get("price"),
++                            "type": outcome.get("name"),  # Over/Under or Yes/No for DD/TD
++                            "book": book_name
++                        }
++                        # Skip alt lines - main lines typically don't have alternates in standard markets
++                        # The-Odds-API separates alt lines into different market keys
++                        if prop not in props[prop_key]:
++                            props[prop_key].append(prop)
++
++            return props
++    except Exception as e:
++        st.warning(f"Player props fetch error: {e}")
++    return {}
++
++
++def format_props_context(props: dict, max_players: int = 5) -> str:
++    """
++    Format player props into context string for AI analysis.
++    Includes main lines, combos (PRA, PA, etc.), and DD/TD.
++
++    Args:
++        props: Dictionary from fetch_player_props()
++        max_players: Maximum players to include per category
++
++    Returns:
++        Formatted string with prop lines
++    """
++    if not props:
++        return ""
++
++    context = "\n=== PLAYER PROP LINES (The-Odds-API) ===\n"
++
++    # Main stat categories
++    main_categories = [
++        ("points", "PTS"),
++        ("rebounds", "REB"),
++        ("assists", "AST"),
++        ("threes", "3PM"),
++        ("steals", "STL"),
++        ("blocks", "BLK")
++    ]
++
++    # Combo categories
++    combo_categories = [
++        ("pra", "PTS+REB+AST"),
++        ("pa", "PTS+AST"),
++        ("pr", "PTS+REB"),
++        ("ar", "AST+REB")
++    ]
++
++    # Special categories (Yes/No instead of Over/Under)
++    special_categories = [
++        ("double_double", "Double-Double"),
++        ("triple_double", "Triple-Double")
++    ]
++
++    # Process main stats
++    context += "\n**Main Lines:**\n"
++    for category, label in main_categories:
++        players_seen = set()
++        lines = []
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and player not in players_seen and prop.get("type") == "Over":
++                players_seen.add(player)
++                line = prop.get("line", "N/A")
++                odds = prop.get("odds", "N/A")
++                lines.append(f"{player}: {line} ({odds:+d})" if isinstance(odds, int) else f"{player}: {line}")
++
++        if lines:
++            context += f"  {label}: " + " | ".join(lines[:max_players]) + "\n"
++
++    # Process combos (compact format)
++    combo_lines = []
++    for category, label in combo_categories:
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and prop.get("type") == "Over":
++                line = prop.get("line", "N/A")
++                combo_lines.append(f"{player} {label}: {line}")
++                break  # Just first player per combo for brevity
++
++    if combo_lines:
++        context += f"\n**Combos:** " + " | ".join(combo_lines[:4]) + "\n"
++
++    # Process DD/TD (compact)
++    special_lines = []
++    for category, label in special_categories:
++        for prop in props.get(category, []):
++            player = prop.get("player", "")
++            if player and prop.get("type") == "Yes":
++                odds = prop.get("odds", "N/A")
++                special_lines.append(f"{player} {label} ({odds:+d})" if isinstance(odds, int) else f"{player} {label}")
++
++    if special_lines:
++        context += f"**Specials:** " + " | ".join(special_lines[:3]) + "\n"
++
++    return context
++
++
+ def fetch_todays_games() -> list:
+     """Fetch today's NBA games from The-Odds-API"""
+     api_key = get_api_key("ODDS_API_KEY")
+@@ -302,7 +484,7 @@ def fetch_todays_games() -> list:
+         params = {
+             "apiKey": api_key,
+             "regions": "us",
+-            "markets": "spreads,totals",
++            "markets": "spreads,totals,h2h",  # Added h2h (moneyline)
+             "oddsFormat": "american",
+             "bookmakers": "fanduel,draftkings"
+         }
+@@ -318,9 +500,11 @@ def fetch_todays_games() -> list:
+                 away = normalize_team(away_full)
+                 home = normalize_team(home_full)
+ 
+-                # Get spread and total from first bookmaker
++                # Get spread, total, and moneyline from first bookmaker
+                 spread = None
+                 total = None
++                home_ml = None
++                away_ml = None
+                 for book in game.get("bookmakers", []):
+                     for market in book.get("markets", []):
+                         if market["key"] == "spreads" and not spread:
+@@ -331,6 +515,12 @@ def fetch_todays_games() -> list:
+                             for outcome in market["outcomes"]:
+                                 if outcome["name"] == "Over":
+                                     total = outcome["point"]
++                        if market["key"] == "h2h" and not home_ml:
++                            for outcome in market["outcomes"]:
++                                if outcome["name"] == home_full:
++                                    home_ml = outcome["price"]
++                                elif outcome["name"] == away_full:
++                                    away_ml = outcome["price"]
+ 
+                 # Parse time
+                 commence = game.get("commence_time", "")
+@@ -349,6 +539,8 @@ def fetch_todays_games() -> list:
+                     "home_full": home_full or "Home",
+                     "spread": spread,
+                     "total": total,
++                    "home_ml": home_ml,  # Moneyline
++                    "away_ml": away_ml,  # Moneyline
+                     "time": time_str
+                 })
+             return parsed
+@@ -766,10 +958,25 @@ def main():
+         # Get live roster/injury context for BOTH analysis modes
+         live_context = get_game_specific_context(selected_game['home'], selected_game['away'])
+ 
++        # Fetch player props for this game (The-Odds-API)
++        props_context = ""
++        game_id = selected_game.get('id')
++        if game_id:
++            props = fetch_player_props(game_id)
++            if props:
++                props_context = format_props_context(props, max_players=8)
++
++        # Format moneyline if available
++        home_ml = selected_game.get('home_ml')
++        away_ml = selected_game.get('away_ml')
++        ml_str = ""
++        if home_ml and away_ml:
++            ml_str = f"\nMONEYLINE: {selected_game['away']} {away_ml:+d} / {selected_game['home']} {home_ml:+d}" if isinstance(home_ml, int) else ""
++
+         analysis_input = f"""
+ GAME: {selected_game['away']} @ {selected_game['home']}
+ SPREAD: {selected_game['home']} {spread_str}
+-TOTAL: {selected_game.get('total') or 'TBD'}
++TOTAL: {selected_game.get('total') or 'TBD'}{ml_str}
+ TIME: {selected_game.get('time') or 'TBD'}
+ 
+ {selected_game['away']} Defense: {get_defense_scheme(selected_game['away'])}
+@@ -778,6 +985,7 @@ TIME: {selected_game.get('time') or 'TBD'}
+ {selected_game['home']} Offense: {get_offense_scheme(selected_game['home'])}
+ 
+ {live_context}
++{props_context}
+ """
+ 
+     elif query and (analyze_both or analyze_ludi):
+@@ -858,21 +1066,46 @@ CONTEXT: {manual_params.get('context', 'None')}
+         model = "claude-sonnet-4-20250514"
+ 
+         # Enhance Freestyle with Perplexity real-time search (if available)
++        # Uses time-based recency filtering per industry best practices
+         freestyle_input = analysis_input
+         perplexity_used = False
+         if PERPLEXITY_ENABLED and (analyze_both or selected_game):
+             with st.spinner("🔍 Searching real-time data..."):
++                # Calculate hours to game for dynamic recency filtering
++                hours_to_game = 12  # Default
++                if selected_game and selected_game.get('time'):
++                    try:
++                        game_time_str = selected_game['time']
++                        now = datetime.now(ET)
++                        game_time = datetime.strptime(game_time_str, "%I:%M %p").replace(
++                            year=now.year, month=now.month, day=now.day,
++                            tzinfo=ET
++                        )
++                        hours_to_game = max(0, (game_time - now).total_seconds() / 3600)
++                    except Exception:
++                        hours_to_game = 12
++
+                 if query_type == "game" and selected_game:
+                     pplx_context = search_game_context(
+                         selected_game.get('away_full', selected_game['away']),
+-                        selected_game.get('home_full', selected_game['home'])
++                        selected_game.get('home_full', selected_game['home']),
++                        hours_to_game=int(hours_to_game)
+                     )
++                    # Add late news if close to tipoff
++                    if hours_to_game <= 2:
++                        late = search_late_news(selected_game['home'])
++                        late += search_late_news(selected_game['away'])
++                        pplx_context = (pplx_context or "") + late
++
+                     if pplx_context:
+                         freestyle_input = analysis_input + pplx_context
+                         perplexity_used = True
+                 elif query_type == "player":
+                     # Extract player name from analysis_input
+-                    pplx_context = search_player_context(query.split()[0] if query else "")
++                    pplx_context = search_player_context(
++                        query.split()[0] if query else "",
++                        hours_to_game=int(hours_to_game)
++                    )
+                     if pplx_context:
+                         freestyle_input = analysis_input + pplx_context
+                         perplexity_used = True
+@@ -898,11 +1131,30 @@ CONTEXT: {manual_params.get('context', 'None')}
+ 
+             render_analysis_output("", methodology, show_both=False)
+ 
+-    # Footer
++    # Footer with data sources
+     st.markdown("---")
++
++    # Data source badges
++    st.markdown("""
++    <div style="text-align: center; margin-bottom: 10px;">
++        <span style="background: #3B82F620; border: 1px solid #3B82F6; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 10px; color: #60A5FA;">Claude AI</span>
++        <span style="background: #10B98120; border: 1px solid #10B981; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 10px; color: #34D399;">Tank01 API</span>
++        <span style="background: #F59E0B20; border: 1px solid #F59E0B; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 10px; color: #FBBF24;">The-Odds-API</span>
++    </div>
++    """, unsafe_allow_html=True)
++
++    # Perplexity badge if enabled
++    if PERPLEXITY_ENABLED:
++        st.markdown("""
++        <div style="text-align: center; margin-bottom: 10px;">
++            <span style="background: #8B5CF620; border: 1px solid #8B5CF6; border-radius: 4px; padding: 2px 8px; font-size: 10px; color: #A78BFA;">+ Perplexity Search</span>
++        </div>
++        """, unsafe_allow_html=True)
++
+     st.markdown("""
+     <p style="color: #64748B; font-size: 11px; text-align: center;">
+-        Ludi Lite | Research Assistant | Not betting advice
++        Ludi Lite | Research Assistant | Not betting advice<br/>
++        <span style="font-size: 9px;">12 prop markets | 6 Tank01 endpoints | Live injuries & rosters</span>
+     </p>
+     """, unsafe_allow_html=True)
+ 
+diff --git a/perplexity_client.py b/perplexity_client.py
+index 592989d..4252dc4 100644
+--- a/perplexity_client.py
++++ b/perplexity_client.py
+@@ -2,11 +2,18 @@
+ Perplexity API Client for Ludi Lite
+ Provides real-time web search to enhance Claude Freestyle analysis.
+ API Docs: https://docs.perplexity.ai/
++
++Uses search_recency_filter for time-bounded searches:
++- "hour": Last 60 minutes (pre-game, late scratches)
++- "day": Last 24 hours (game day news)
++- "week": Last 7 days (trends, matchup history)
+ """
+ 
+ import requests
+ import streamlit as st
+ from typing import Optional
++from datetime import datetime
++import pytz
+ 
+ 
+ def _get_api_key() -> Optional[str]:
+@@ -18,13 +25,38 @@ def _get_api_key() -> Optional[str]:
+         return os.getenv("PERPLEXITY_API_KEY")
+ 
+ 
+-def search_game_context(away_team: str, home_team: str) -> str:
++def _get_recency_filter(hours_to_game: int = 24) -> str:
++    """
++    Determine appropriate recency filter based on time to tipoff.
++
++    Industry best practice (per Parlay Savant, Action Network):
++    - Close to game: Need latest injury/lineup news
++    - Day of game: Focus on today's updates
++    - Far from game: Can include weekly trends
++
++    Args:
++        hours_to_game: Hours until game starts
++
++    Returns:
++        Perplexity recency filter: "hour", "day", "week"
++    """
++    if hours_to_game <= 2:
++        return "hour"   # Pre-game: late scratches, lineup changes
++    elif hours_to_game <= 12:
++        return "day"    # Game day: today's injury reports
++    else:
++        return "week"   # Advance look: trends, matchup history
++
++
++def search_game_context(away_team: str, home_team: str, hours_to_game: int = 12) -> str:
+     """
+     Search for real-time context about a game matchup.
++    Uses Perplexity's search_recency_filter for time-bounded results.
+ 
+     Args:
+         away_team: Away team name or abbreviation
+         home_team: Home team name or abbreviation
++        hours_to_game: Hours until tipoff (affects recency filter)
+ 
+     Returns:
+         Formatted context string with recent news, injuries, and insights
+@@ -33,27 +65,26 @@ def search_game_context(away_team: str, home_team: str) -> str:
+     if not api_key:
+         return ""  # Silently skip if no API key
+ 
+-    # Time-limited search with specific status keywords (Ludi-Bot best practices)
++    recency = _get_recency_filter(hours_to_game)
++
++    # Focused query - let API handle time filtering
+     # Sources: @underdognba on Twitter/X for late-breaking player info
+     query = f"""
+-    NBA {away_team} vs {home_team} game tonight - last 24 hours only.
++    NBA {away_team} vs {home_team} game.
+ 
+     TRUSTED SOURCES: @underdognba Twitter, ESPN injury report, official team accounts
+ 
+-    STATUS KEYWORDS TO LOOK FOR:
+-    - OUT: "ruled out", "won't play", "sidelined", "suspended", "inactive"
+-    - DOUBTFUL: "doubtful", "unlikely to play"
++    STATUS KEYWORDS:
++    - OUT: "ruled out", "won't play", "suspended", "inactive"
+     - GTD: "questionable", "game-time decision", "day-to-day"
+-    - ACTIVE: "cleared", "will play", "probable", "available"
+-    - REST: "load management", "rest day"
++    - ACTIVE: "cleared", "will play", "probable"
+ 
+     Return ONLY:
+-    1. Players OUT/DOUBTFUL/SUSPENDED tonight (name + status)
+-    2. Last 3 games each team (just W/L)
+-    3. Late-breaking news (last 6 hours)
++    1. Players OUT/DOUBTFUL/SUSPENDED (name + status)
++    2. Recent team form (last 3 games W/L)
++    3. Breaking news
+ 
+-    IGNORE: Old news, recaps, fantasy, trade rumors.
+-    Max 100 words. Bullets only.
++    Max 100 words. Bullets only. No old recaps.
+     """
+ 
+     try:
+@@ -69,7 +100,9 @@ def search_game_context(away_team: str, home_team: str) -> str:
+                     {"role": "user", "content": query}
+                 ],
+                 "max_tokens": 500,
+-                "temperature": 0.2
++                "temperature": 0.2,
++                # API-level time filtering (more reliable than prompt)
++                "search_recency_filter": recency
+             },
+             timeout=15
+         )
+@@ -78,7 +111,8 @@ def search_game_context(away_team: str, home_team: str) -> str:
+             data = response.json()
+             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+             if content:
+-                return f"\n=== REAL-TIME CONTEXT (Perplexity Search) ===\n{content}\n"
++                recency_label = {"hour": "Last Hour", "day": "Last 24h", "week": "Last 7 Days"}
++                return f"\n=== REAL-TIME CONTEXT (Perplexity - {recency_label.get(recency, recency)}) ===\n{content}\n"
+ 
+         return ""
+ 
+@@ -86,13 +120,15 @@ def search_game_context(away_team: str, home_team: str) -> str:
+         return ""  # Silently fail - don't break the app
+ 
+ 
+-def search_player_context(player_name: str, opponent: str = "") -> str:
++def search_player_context(player_name: str, opponent: str = "", hours_to_game: int = 12) -> str:
+     """
+     Search for real-time context about a specific player.
++    Uses Perplexity's search_recency_filter for time-bounded results.
+ 
+     Args:
+         player_name: Player's name
+         opponent: Optional opponent team
++        hours_to_game: Hours until tipoff (affects recency filter)
+ 
+     Returns:
+         Formatted context string with recent performance and news
+@@ -101,24 +137,25 @@ def search_player_context(player_name: str, opponent: str = "") -> str:
+     if not api_key:
+         return ""
+ 
++    recency = _get_recency_filter(hours_to_game)
+     opp_text = f"vs {opponent}" if opponent else ""
+-    # Time-limited search with status keywords (Ludi-Bot best practices)
+-    # Sources: @underdognba Twitter for late-breaking info
++
++    # Focused query - let API handle time filtering
+     query = f"""
+-    NBA {player_name} {opp_text} tonight - last 24 hours only.
++    NBA {player_name} {opp_text}.
+ 
+     TRUSTED SOURCES: @underdognba Twitter, team injury report
+ 
+-    CHECK STATUS:
+-    - OUT/SUSPENDED/DOUBTFUL/GTD/PROBABLE/ACTIVE?
++    CHECK:
++    - Status: OUT/SUSPENDED/DOUBTFUL/GTD/PROBABLE/ACTIVE?
+     - Minutes restriction?
++    - Last 3 games stats
+ 
+     Return ONLY:
+-    1. Current status for TONIGHT (OUT/GTD/ACTIVE)
+-    2. Last 3 games: PTS/AST/REB per game
+-    3. Late news (last 6 hours)
++    1. Current status (OUT/GTD/ACTIVE)
++    2. Last 3 games: PTS/AST/REB
++    3. Any news
+ 
+-    IGNORE: Old news, fantasy advice, career stats.
+     Max 80 words. Bullets only.
+     """
+ 
+@@ -135,7 +172,9 @@ def search_player_context(player_name: str, opponent: str = "") -> str:
+                     {"role": "user", "content": query}
+                 ],
+                 "max_tokens": 400,
+-                "temperature": 0.2
++                "temperature": 0.2,
++                # API-level time filtering
++                "search_recency_filter": recency
+             },
+             timeout=15
+         )
+@@ -144,7 +183,65 @@ def search_player_context(player_name: str, opponent: str = "") -> str:
+             data = response.json()
+             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+             if content:
+-                return f"\n=== REAL-TIME PLAYER INFO (Perplexity Search) ===\n{content}\n"
++                recency_label = {"hour": "Last Hour", "day": "Last 24h", "week": "Last 7 Days"}
++                return f"\n=== REAL-TIME PLAYER INFO (Perplexity - {recency_label.get(recency, recency)}) ===\n{content}\n"
++
++        return ""
++
++    except Exception:
++        return ""
++
++
++def search_late_news(team_abbr: str) -> str:
++    """
++    Search for ONLY the most recent news (last hour) for late-breaking info.
++    Use this close to tipoff for lineup changes and late scratches.
++
++    Args:
++        team_abbr: Team abbreviation
++
++    Returns:
++        Formatted string with late-breaking news only
++    """
++    api_key = _get_api_key()
++    if not api_key:
++        return ""
++
++    query = f"""
++    NBA {team_abbr} breaking news RIGHT NOW.
++
++    ONLY return:
++    - Lineup changes
++    - Late scratches
++    - Game-time decisions resolved
++
++    Max 50 words. If nothing new, say "No late updates."
++    """
++
++    try:
++        response = requests.post(
++            "https://api.perplexity.ai/chat/completions",
++            headers={
++                "Authorization": f"Bearer {api_key}",
++                "Content-Type": "application/json"
++            },
++            json={
++                "model": "llama-3.1-sonar-small-128k-online",
++                "messages": [
++                    {"role": "user", "content": query}
++                ],
++                "max_tokens": 200,
++                "temperature": 0.1,
++                "search_recency_filter": "hour"  # ONLY last hour
++            },
++            timeout=10
++        )
++
++        if response.status_code == 200:
++            data = response.json()
++            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
++            if content and "no late" not in content.lower():
++                return f"\n⚡ LATE NEWS: {content}\n"
+ 
+         return ""
+ 
+diff --git a/tank01_client.py b/tank01_client.py
+index f40dcea..1e41e7d 100644
+--- a/tank01_client.py
++++ b/tank01_client.py
+@@ -267,6 +267,71 @@ def format_game_context(home_team: str, away_team: str) -> str:
+     return context
+ 
+ 
++@st.cache_data(ttl=300)  # Cache for 5 minutes
++def get_box_score(game_id: str) -> Optional[Dict[str, Any]]:
++    """
++    Get box score for a specific game.
++
++    Args:
++        game_id: Tank01 game ID
++
++    Returns:
++        Box score dictionary with player stats, or None
++    """
++    data = _make_request("getNBABoxScore", {"gameID": game_id})
++    if not data or "body" not in data:
++        return None
++    return data["body"]
++
++
++@st.cache_data(ttl=600)  # Cache for 10 minutes (historical data changes less)
++def get_player_recent_games(player_name: str, num_games: int = 5) -> List[Dict[str, Any]]:
++    """
++    Get a player's recent game stats using box score lookups.
++
++    Args:
++        player_name: Player name (partial match supported)
++        num_games: Number of recent games to fetch (default 5)
++
++    Returns:
++        List of game stat dictionaries with pts, reb, ast, etc.
++    """
++    # First find the player's team
++    team = find_player_team(player_name)
++    if not team:
++        return []
++
++    # Get recent games for this team
++    recent_games = []
++
++    # Check if we can get games from getNBAGamesForDate for past dates
++    # For now, return empty - this would need historical date iteration
++    # In production, you'd iterate back through dates until you have num_games
++
++    return recent_games
++
++
++@st.cache_data(ttl=300)
++def get_team_recent_record(team_abbr: str, num_games: int = 5) -> Dict[str, Any]:
++    """
++    Get a team's recent win/loss record.
++
++    Args:
++        team_abbr: Team abbreviation
++        num_games: Number of recent games to check
++
++    Returns:
++        Dictionary with wins, losses, and streak info
++    """
++    # This would require iterating through recent dates
++    # Placeholder for now - in production would use getNBAGamesForDate
++    return {
++        "team": team_abbr,
++        "record": "N/A",
++        "streak": "N/A"
++    }
++
++
+ def format_player_context(player_name: str) -> str:
+     """
+     Format player-specific context for prop analysis.
+@@ -317,7 +382,7 @@ def format_player_context(player_name: str) -> str:
+         context += ", ".join(stat_parts) + "\n"
+ 
+     # Teammates who are out (usage vacuum opportunity)
+-    out_teammates = [inj["name"] for inj in injuries if inj["designation"] in ["Out", "Doubtful"]]
++    out_teammates = [inj["name"] for inj in injuries if inj["designation"] in ["Out", "Doubtful", "Suspended"]]
+     if out_teammates:
+         context += f"Teammates OUT: {', '.join(out_teammates)} (potential usage boost)\n"
+ 
