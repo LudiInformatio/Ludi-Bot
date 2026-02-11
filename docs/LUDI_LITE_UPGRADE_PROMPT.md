@@ -27,6 +27,12 @@ System instructions like "ROSTER VERIFICATION" and "BEFORE listing any player" a
 ### Phase 3: Future Session Documentation
 Document planned future enhancements for reference.
 
+### Phase 4: API Caching (CRITICAL Priority)
+Multiple APIs are being called WITHOUT caching, burning through credits rapidly:
+- **The-Odds-API**: 0% cache coverage (costs 1-10 credits per call)
+- **Perplexity API**: 0% cache coverage
+- **Claude API**: 0% cache coverage
+
 ---
 
 ## SUB-AGENT ASSIGNMENTS
@@ -316,6 +322,31 @@ They are documented here for future implementation when priorities allow.
 
 ---
 
+## API Strategy & Fallbacks
+
+### Current APIs
+| API | Tier | Usage | Monthly Limit |
+|-----|------|-------|---------------|
+| The-Odds-API | PAID | Game lines, player props | 20K credits |
+| Tank01 | PAID | Rosters, injuries, box scores | 1K/day |
+| Perplexity | PAID | Real-time search/context | Unlimited |
+| Claude API | PAID | AI analysis | Token-based |
+
+### Future Fallback: Ball Don't Lie API
+**Status:** Not yet implemented
+**Tier:** FREE
+**Limit:** 60 requests/minute
+**Use Cases:**
+- Player stats (season averages, recent games)
+- Team stats
+- Game schedules
+- Reduce dependency on paid APIs
+
+**Documentation:** https://docs.balldontlie.io/
+**Implementation Priority:** HIGH (All-Star break project)
+
+---
+
 ## Current 2025-26 Season Context
 
 When implementing any features, remember:
@@ -387,16 +418,220 @@ git push origin main
 
 ---
 
+### Sub-Agent 6: API Caching (CRITICAL)
+**Task:** Add Streamlit caching to ALL uncached API calls to prevent credit burn
+
+**Context:**
+- Current cache coverage: 40% (only Tank01 is cached)
+- The-Odds-API: 0% cached (costs 1-10 credits per call)
+- Perplexity: 0% cached
+- Claude API: 0% cached
+- Every page refresh/button click = new API calls = wasted credits
+
+---
+
+#### File 1: `api_clients.py`
+
+**Add cache to `fetch_todays_games()` (around line 243):**
+```python
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache
+def fetch_todays_games() -> list:
+    """
+    Fetch today's NBA games with spreads and totals.
+    Cached for 5 minutes to prevent credit burn.
+    """
+    # ... existing code unchanged
+```
+
+**Add cache to `fetch_player_props()` (around line 62):**
+```python
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache
+def fetch_player_props(game_id: str) -> dict:
+    """
+    Fetch player props for a specific game.
+    Cached for 5 minutes - costs 10 credits per uncached call!
+    """
+    # ... existing code unchanged
+```
+
+**Add cache to `get_claude_analysis()` (around line 156):**
+```python
+import hashlib
+
+def _hash_prompt(prompt: str) -> str:
+    """Create deterministic hash for prompt caching."""
+    return hashlib.md5(prompt.encode()).hexdigest()[:16]
+
+@st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
+def get_claude_analysis(
+    system_prompt: str,
+    user_prompt: str,
+    _prompt_hash: str = None  # Underscore prefix = not part of cache key
+) -> str:
+    """
+    Get analysis from Claude API.
+    Cached for 30 minutes with prompt hash for identical queries.
+    """
+    # ... existing code unchanged
+```
+
+**Update the call site for Claude** (where `get_claude_analysis` is called):
+```python
+# Before calling get_claude_analysis, generate hash
+prompt_hash = _hash_prompt(system_prompt + user_prompt)
+result = get_claude_analysis(system_prompt, user_prompt, _prompt_hash=prompt_hash)
+```
+
+---
+
+#### File 2: `perplexity_client.py`
+
+**Add cache to `search_game_context()` (around line 15):**
+```python
+import streamlit as st
+
+@st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
+def search_game_context(
+    home_team: str,
+    away_team: str,
+    recency_filter: str = "day"
+) -> str:
+    """
+    Search for game context via Perplexity.
+    Cached for 30 minutes - same game context rarely changes.
+    """
+    # ... existing code unchanged
+```
+
+**Add cache to `search_player_context()` (around line 45):**
+```python
+@st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
+def search_player_context(
+    player_name: str,
+    team: str,
+    recency_filter: str = "day"
+) -> str:
+    """
+    Search for player-specific context via Perplexity.
+    Cached for 30 minutes.
+    """
+    # ... existing code unchanged
+```
+
+**Add cache to `search_late_news()` (around line 75):**
+```python
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache (shorter for late news)
+def search_late_news(team: str) -> str:
+    """
+    Search for late-breaking news close to tipoff.
+    Cached for 5 minutes only - needs to stay fresh.
+    """
+    # ... existing code unchanged
+```
+
+---
+
+#### File 3: `injury_verification.py`
+
+**Add cache to `get_official_nba_injuries()` (if implemented):**
+```python
+@st.cache_data(ttl=900, show_spinner=False)  # 15 minute cache
+def get_official_nba_injuries(game_date: str = None) -> list:
+    """
+    Fetch official NBA injury report.
+    Cached for 15 minutes to align with NBA reporting window.
+    """
+    # ... existing code unchanged
+```
+
+---
+
+#### Verification Steps:
+
+1. **Confirm imports exist:**
+```python
+# At top of api_clients.py
+import streamlit as st
+import hashlib
+
+# At top of perplexity_client.py
+import streamlit as st
+```
+
+2. **Test caching works:**
+```python
+# In Python REPL or test script
+import streamlit as st
+
+# Mock streamlit cache for testing outside Streamlit
+if not hasattr(st, 'cache_data'):
+    st.cache_data = lambda **kwargs: lambda f: f
+
+# Import and verify decorators applied
+from api_clients import fetch_todays_games, fetch_player_props
+print(hasattr(fetch_todays_games, '__wrapped__'))  # Should be True with cache
+```
+
+3. **Log cache hits (optional debugging):**
+```python
+# Add to any cached function for debugging
+import logging
+logger = logging.getLogger(__name__)
+
+@st.cache_data(ttl=300)
+def fetch_todays_games() -> list:
+    logger.info("CACHE MISS: fetch_todays_games called")
+    # ... rest of function
+```
+
+---
+
+#### Cache TTL Strategy:
+
+| Function | TTL | Rationale |
+|----------|-----|-----------|
+| `fetch_todays_games()` | 300s (5 min) | Game schedules rarely change intraday |
+| `fetch_player_props()` | 300s (5 min) | Props refresh frequently but not every second |
+| `get_claude_analysis()` | 1800s (30 min) | Same prompt = same analysis |
+| `search_game_context()` | 1800s (30 min) | Game narrative changes slowly |
+| `search_player_context()` | 1800s (30 min) | Player context changes slowly |
+| `search_late_news()` | 300s (5 min) | Late news needs freshness |
+| `get_official_nba_injuries()` | 900s (15 min) | Aligns with NBA 15-min reporting rule |
+
+---
+
+#### Expected Credit Savings:
+
+**Before (no caching):**
+- Page load: 1 credit
+- Click game: 10 credits
+- 10 clicks in session: 101 credits
+
+**After (with caching):**
+- Page load: 1 credit (first only, then cached)
+- Click game: 10 credits (first only per game)
+- 10 clicks same game: 10 credits total (90% savings)
+- Session savings: ~80-90% credit reduction
+
+**Report back:**
+- Confirm all 7 functions have `@st.cache_data` decorators
+- Confirm imports added to each file
+- Confirm TTL values match strategy table
+- Confirm no syntax errors
+
+---
+
 ## PM AGENT ORCHESTRATION
 
 Execute sub-agents in this order:
 
 1. **Clone/pull latest** from Ludi-Lite repo
-2. **Sub-Agent 1** (Response Cleaner) → Wait for report
-3. **Sub-Agent 2** (Game Sorting) → Wait for report
-4. **Sub-Agent 3** (Date Headers) → Wait for report
-5. **Sub-Agent 4** (Documentation) → Wait for report
-6. **Sub-Agent 5** (Verification & Commit) → Wait for report
+2. **Sub-Agent 6** (API Caching) → **FIRST - prevents credit burn during testing**
+3. **Sub-Agent 1** (Response Cleaner) → Wait for report
+4. **Sub-Agent 2** (Game Sorting) → Wait for report
+5. **Sub-Agent 3** (Date Headers) → Wait for report
+6. **Sub-Agent 4** (Documentation) → Wait for report
+7. **Sub-Agent 5** (Verification & Commit) → Wait for report
 
 After all sub-agents report success, provide a final summary:
 
@@ -404,11 +639,25 @@ After all sub-agents report success, provide a final summary:
 ## IMPLEMENTATION COMPLETE
 
 ### Changes Made:
+
+**API Caching (CRITICAL):**
+- [ ] @st.cache_data added to fetch_todays_games() - TTL 300s
+- [ ] @st.cache_data added to fetch_player_props() - TTL 300s
+- [ ] @st.cache_data added to get_claude_analysis() - TTL 1800s
+- [ ] @st.cache_data added to search_game_context() - TTL 1800s
+- [ ] @st.cache_data added to search_player_context() - TTL 1800s
+- [ ] @st.cache_data added to search_late_news() - TTL 300s
+
+**Bug Fixes:**
 - [ ] clean_ai_response() added to ui_components.py
 - [ ] render_analysis_output() updated to use cleaner
 - [ ] commence_time added to game parsing
 - [ ] Games sorted chronologically
+
+**UX Improvements:**
 - [ ] TODAY/TOMORROW headers added
+
+**Documentation:**
 - [ ] FUTURE_ENHANCEMENTS.md created
 
 ### Commit: [hash]
@@ -418,6 +667,11 @@ After all sub-agents report success, provide a final summary:
 - Syntax: PASS/FAIL
 - Imports: PASS/FAIL
 - Function Test: PASS/FAIL
+- Cache Decorators: PASS/FAIL
+
+### Expected Impact:
+- API Credit Savings: ~80-90% reduction
+- No more Telegram quota alerts
 ```
 
 ---
@@ -428,6 +682,8 @@ After all sub-agents report success, provide a final summary:
 2. **Preserve existing functionality** - Don't break Perplexity integration, props display, etc.
 3. **Test before commit** - All verification steps must pass
 4. **Use correct 2025-26 context** - No PG13 on Clippers, Luka on Lakers, etc.
+5. **API Caching is CRITICAL** - Do Sub-Agent 6 FIRST to prevent credit burn during testing
+6. **Ball Don't Lie API** - Future fallback option (free tier, 60 req/min) - document in FUTURE_ENHANCEMENTS.md
 
 ---
 
