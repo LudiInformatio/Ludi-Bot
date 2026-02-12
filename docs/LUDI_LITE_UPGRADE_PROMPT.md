@@ -392,17 +392,20 @@ print('clean_ai_response: PASS')
 **Commit and Push:**
 ```bash
 git add -A
-git commit -m "feat: Fix prompt leakage + add chronological sorting + date headers
+git commit -m "feat: Add API caching + fix prompt leakage + UX improvements
 
-Phase 1: Add clean_ai_response() to strip leaked system instructions
-Phase 2.1: Sort games by commence_time (earliest first)
-Phase 2.2: Add TODAY/TOMORROW section headers
-Phase 3: Document future enhancements
+CRITICAL: Add @st.cache_data to prevent API credit burn
+- app.py: Cache fetch_todays_games (1 credit/call)
+- app.py: Cache fetch_player_props (10 credits/call!)
+- app.py: Cache get_claude_analysis (cost savings)
+- perplexity_client.py: Cache all 3 search functions
 
-Fixes:
-- ROSTER_RULES no longer appears in AI output
-- Games sorted by tipoff time, not alphabetically
-- Clear date grouping for multi-day slates
+Bug Fixes:
+- clean_ai_response() strips leaked ROSTER_RULES
+- Games sorted by commence_time (chronological)
+- TODAY/TOMORROW section headers added
+
+Expected savings: 80-90% API credit reduction
 
 https://claude.ai/code"
 
@@ -428,196 +431,180 @@ git push origin main
 - Claude API: 0% cached
 - Every page refresh/button click = new API calls = wasted credits
 
+**CREDIT BURN BREAKDOWN:**
+| Action | API Calls | Credits Burned |
+|--------|-----------|----------------|
+| Page load | `fetch_todays_games()` | 1 credit |
+| Click game | `fetch_player_props()` | **10 credits** |
+| Analysis | `get_claude_analysis()` x2 | ~$0.006 |
+| Search | `search_game_context()` + `search_late_news()` x2 | Perplexity usage |
+| **Total per analysis** | | **~11 credits + API calls** |
+
 ---
 
-#### File 1: `api_clients.py`
+#### File 1: `app.py` (The-Odds-API + Claude)
 
-**Add cache to `fetch_todays_games()` (around line 243):**
+**Add cache to `fetch_todays_games()` (line 477):**
 ```python
-@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache - saves 1 credit per refresh
 def fetch_todays_games() -> list:
-    """
-    Fetch today's NBA games with spreads and totals.
-    Cached for 5 minutes to prevent credit burn.
-    """
-    # ... existing code unchanged
+    """Fetch today's NBA games from The-Odds-API"""
+    # ... existing code unchanged (lines 478-550)
 ```
 
-**Add cache to `fetch_player_props()` (around line 62):**
+**Add cache to `fetch_player_props()` (line 296):**
 ```python
-@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache - saves 10 credits per click!
 def fetch_player_props(game_id: str) -> dict:
     """
-    Fetch player props for a specific game.
-    Cached for 5 minutes - costs 10 credits per uncached call!
+    Fetch player props for a specific game from The-Odds-API.
+    CRITICAL: This costs 10 credits per uncached call!
     """
-    # ... existing code unchanged
+    # ... existing code unchanged (lines 297-389)
 ```
 
-**Add cache to `get_claude_analysis()` (around line 156):**
+**Add cache to `get_claude_analysis()` (line 553):**
 ```python
-import hashlib
-
-def _hash_prompt(prompt: str) -> str:
-    """Create deterministic hash for prompt caching."""
-    return hashlib.md5(prompt.encode()).hexdigest()[:16]
-
-@st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
-def get_claude_analysis(
-    system_prompt: str,
-    user_prompt: str,
-    _prompt_hash: str = None  # Underscore prefix = not part of cache key
-) -> str:
-    """
-    Get analysis from Claude API.
-    Cached for 30 minutes with prompt hash for identical queries.
-    """
-    # ... existing code unchanged
-```
-
-**Update the call site for Claude** (where `get_claude_analysis` is called):
-```python
-# Before calling get_claude_analysis, generate hash
-prompt_hash = _hash_prompt(system_prompt + user_prompt)
-result = get_claude_analysis(system_prompt, user_prompt, _prompt_hash=prompt_hash)
+@st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache for identical prompts
+def get_claude_analysis(prompt: str, user_input: str, model: str = "claude-sonnet-4-20250514") -> str:
+    """Get analysis from Claude API - cached to prevent duplicate calls"""
+    # ... existing code unchanged (lines 554-570)
 ```
 
 ---
 
 #### File 2: `perplexity_client.py`
 
-**Add cache to `search_game_context()` (around line 15):**
-```python
-import streamlit as st
+**NOTE:** This file already has `import streamlit as st` at line 3, so no new import needed.
 
+**Add cache to `search_game_context()` (line 51):**
+```python
 @st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
-def search_game_context(
-    home_team: str,
-    away_team: str,
-    recency_filter: str = "day"
-) -> str:
+def search_game_context(away_team: str, home_team: str, hours_to_game: int = 12) -> str:
     """
-    Search for game context via Perplexity.
-    Cached for 30 minutes - same game context rarely changes.
+    Search for real-time context about a game matchup.
+    Cached for 30 minutes - game context doesn't change rapidly.
     """
-    # ... existing code unchanged
+    # ... existing code unchanged (lines 52-120)
 ```
 
-**Add cache to `search_player_context()` (around line 45):**
+**Add cache to `search_player_context()` (line 123):**
 ```python
 @st.cache_data(ttl=1800, show_spinner=False)  # 30 minute cache
-def search_player_context(
-    player_name: str,
-    team: str,
-    recency_filter: str = "day"
-) -> str:
+def search_player_context(player_name: str, opponent: str = "", hours_to_game: int = 12) -> str:
     """
-    Search for player-specific context via Perplexity.
+    Search for real-time context about a specific player.
     Cached for 30 minutes.
     """
-    # ... existing code unchanged
+    # ... existing code unchanged (lines 124-192)
 ```
 
-**Add cache to `search_late_news()` (around line 75):**
+**Add cache to `search_late_news()` (line 195):**
 ```python
-@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache (shorter for late news)
-def search_late_news(team: str) -> str:
+@st.cache_data(ttl=300, show_spinner=False)  # 5 minute cache - needs freshness
+def search_late_news(team_abbr: str) -> str:
     """
-    Search for late-breaking news close to tipoff.
-    Cached for 5 minutes only - needs to stay fresh.
+    Search for ONLY the most recent news (last hour) for late-breaking info.
+    Shorter cache (5 min) because this is time-sensitive.
     """
-    # ... existing code unchanged
+    # ... existing code unchanged (lines 196-249)
 ```
 
 ---
 
-#### File 3: `injury_verification.py`
+#### Already Cached (No Changes Needed):
 
-**Add cache to `get_official_nba_injuries()` (if implemented):**
-```python
-@st.cache_data(ttl=900, show_spinner=False)  # 15 minute cache
-def get_official_nba_injuries(game_date: str = None) -> list:
-    """
-    Fetch official NBA injury report.
-    Cached for 15 minutes to align with NBA reporting window.
-    """
-    # ... existing code unchanged
-```
-
+**`tank01_client.py`** - All 8 functions already have `@st.cache_data`:
+- `get_team_roster()` - TTL 300s ✅
+- `get_injury_list()` - TTL 300s ✅
+- `get_all_teams_with_rosters()` - TTL 300s ✅
+- `get_todays_games()` - TTL 60s ✅
+- `get_depth_chart()` - TTL 300s ✅
+- `get_box_score()` - TTL 300s ✅
+- `get_player_recent_games()` - TTL 600s ✅
+- `get_team_recent_record()` - TTL 300s ✅
 ---
 
 #### Verification Steps:
 
-1. **Confirm imports exist:**
-```python
-# At top of api_clients.py
-import streamlit as st
-import hashlib
+1. **Confirm decorators added:**
+```bash
+# Check app.py has cache decorators
+grep -n "@st.cache_data" app.py
 
-# At top of perplexity_client.py
-import streamlit as st
+# Expected output:
+# 296:@st.cache_data(ttl=300, show_spinner=False)
+# 477:@st.cache_data(ttl=300, show_spinner=False)
+# 553:@st.cache_data(ttl=1800, show_spinner=False)
 ```
 
-2. **Test caching works:**
-```python
-# In Python REPL or test script
-import streamlit as st
+2. **Check perplexity_client.py:**
+```bash
+grep -n "@st.cache_data" perplexity_client.py
 
-# Mock streamlit cache for testing outside Streamlit
-if not hasattr(st, 'cache_data'):
-    st.cache_data = lambda **kwargs: lambda f: f
-
-# Import and verify decorators applied
-from api_clients import fetch_todays_games, fetch_player_props
-print(hasattr(fetch_todays_games, '__wrapped__'))  # Should be True with cache
+# Expected output:
+# 51:@st.cache_data(ttl=1800, show_spinner=False)
+# 123:@st.cache_data(ttl=1800, show_spinner=False)
+# 195:@st.cache_data(ttl=300, show_spinner=False)
 ```
 
-3. **Log cache hits (optional debugging):**
-```python
-# Add to any cached function for debugging
-import logging
-logger = logging.getLogger(__name__)
+3. **Syntax check:**
+```bash
+python -m py_compile app.py
+python -m py_compile perplexity_client.py
+echo "Syntax OK"
+```
 
-@st.cache_data(ttl=300)
-def fetch_todays_games() -> list:
-    logger.info("CACHE MISS: fetch_todays_games called")
-    # ... rest of function
+4. **Test app runs:**
+```bash
+streamlit run app.py --server.headless true &
+sleep 5
+curl -s http://localhost:8501 | head -20
+pkill -f streamlit
 ```
 
 ---
 
 #### Cache TTL Strategy:
 
-| Function | TTL | Rationale |
-|----------|-----|-----------|
-| `fetch_todays_games()` | 300s (5 min) | Game schedules rarely change intraday |
-| `fetch_player_props()` | 300s (5 min) | Props refresh frequently but not every second |
-| `get_claude_analysis()` | 1800s (30 min) | Same prompt = same analysis |
-| `search_game_context()` | 1800s (30 min) | Game narrative changes slowly |
-| `search_player_context()` | 1800s (30 min) | Player context changes slowly |
-| `search_late_news()` | 300s (5 min) | Late news needs freshness |
-| `get_official_nba_injuries()` | 900s (15 min) | Aligns with NBA 15-min reporting rule |
+| File | Function | TTL | Credits Saved |
+|------|----------|-----|---------------|
+| `app.py` | `fetch_todays_games()` | 300s (5 min) | 1 credit/refresh |
+| `app.py` | `fetch_player_props()` | 300s (5 min) | **10 credits/click** |
+| `app.py` | `get_claude_analysis()` | 1800s (30 min) | ~$0.003/call |
+| `perplexity_client.py` | `search_game_context()` | 1800s (30 min) | API usage |
+| `perplexity_client.py` | `search_player_context()` | 1800s (30 min) | API usage |
+| `perplexity_client.py` | `search_late_news()` | 300s (5 min) | API usage |
 
 ---
 
 #### Expected Credit Savings:
 
 **Before (no caching):**
-- Page load: 1 credit
-- Click game: 10 credits
-- 10 clicks in session: 101 credits
+```
+Page load:     1 credit
+Click game:    10 credits + Perplexity + Claude
+Click same:    10 credits + Perplexity + Claude (AGAIN!)
+10 clicks:     101+ credits burned
+```
 
 **After (with caching):**
-- Page load: 1 credit (first only, then cached)
-- Click game: 10 credits (first only per game)
-- 10 clicks same game: 10 credits total (90% savings)
-- Session savings: ~80-90% credit reduction
+```
+Page load:     1 credit (cached for 5 min)
+Click game:    10 credits (cached per game_id)
+Click same:    0 credits (served from cache!)
+10 clicks:     ~11 credits total (90% savings)
+```
+
+**Monthly Impact:**
+- 20K credit limit → Without caching: burned in days
+- With caching: ~2-3K credits/month actual usage
 
 **Report back:**
-- Confirm all 7 functions have `@st.cache_data` decorators
-- Confirm imports added to each file
-- Confirm TTL values match strategy table
-- Confirm no syntax errors
+- Confirm 6 functions have `@st.cache_data` decorators
+- Confirm grep output matches expected
+- Confirm syntax checks pass
+- Confirm no runtime errors
 
 ---
 
