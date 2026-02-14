@@ -46,7 +46,7 @@ APISPORTS_HOST = "v2.nba.api-sports.io"
 
 # BALLDONTLIE (Props Validation + Injuries + Play-by-Play)
 # Source: https://docs.balldontlie.io
-# Pricing: $40/mo for NBA tier
+# Pricing: GOAT tier $39.99/mo (600 req/min)
 BALLDONTLIE_KEY = os.getenv('BALLDONTLIE_KEY')
 BALLDONTLIE_HOST = "api.balldontlie.io"
 
@@ -90,7 +90,8 @@ DEBUG_LOG = False  # Set to True for verbose calibration logs
 # Tier detection (free vs paid)
 ODDS_API_TIER = os.getenv('ODDS_API_TIER', 'free')
 TANK01_TIER = os.getenv('TANK01_TIER', 'free')
-BALLDONTLIE_TIER = os.getenv('BALLDONTLIE_TIER', 'paid')  # Default to paid (GOAT tier)
+BALLDONTLIE_TIER = os.getenv('BALLDONTLIE_TIER', os.getenv('BDL_TIER', 'goat'))
+BDL_TIER = BALLDONTLIE_TIER  # Alias for convenience
 
 # Tier limits (requests/month for odds_api, requests/day for tank01)
 TIER_LIMITS = {
@@ -103,8 +104,9 @@ TIER_LIMITS = {
         'paid': 1000      # per DAY (30,000/month)
     },
     'balldontlie': {
-        'free': 30,       # per minute
-        'paid': 600       # per minute
+        'free': 5,        # per minute
+        'allstar': 60,    # per minute
+        'goat': 600       # per minute
     }
 }
 
@@ -163,9 +165,9 @@ def validate_config():
         print(f"⚠️  Invalid TANK01_TIER: {TANK01_TIER}, defaulting to 'free'")
         TANK01_TIER = 'free'
 
-    if BALLDONTLIE_TIER not in ['free', 'paid']:
-        print(f"⚠️  Invalid BALLDONTLIE_TIER: {BALLDONTLIE_TIER}, defaulting to 'paid'")
-        BALLDONTLIE_TIER = 'paid'
+    if BALLDONTLIE_TIER not in ['free', 'allstar', 'goat']:
+        print(f"⚠️  Invalid BALLDONTLIE_TIER: {BALLDONTLIE_TIER}, defaulting to 'goat'")
+        BALLDONTLIE_TIER = 'goat'
 
     # Display tier info
     print(f"✅ The-Odds-API tier: {ODDS_API_TIER.upper()} "

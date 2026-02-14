@@ -110,45 +110,53 @@ class LudiYak:
 
         # FALLBACK SOURCE: BallDontLie
         if not tank_success:
-            print(f"   [YAK] 🔄 Attempting Fallback: BallDontLie...")
-            try:
-                # Check if BDL key exists
-                if not self.bdl.api_key:
-                    print("   [YAK] ❌ No BDL Key found. Aborting fallback.")
-                    return False
+            return self._refresh_injuries_bdl()
 
-                # Note: BDL 'injuries' endpoint might require pagination in real usage,
-                # but for fallback we grab the first page/batch.
-                injuries = self.bdl.get_active_injuries()
-                
-                if injuries:
-                    self.official_injuries = {} # Reset if we are switching sources
-                    count = 0
-                    for item in injuries:
-                        # BDL structure check required (assuming standard response)
-                        # Docs: player object inside item
-                        player = item.get('player', {})
-                        p_name = f"{player.get('first_name', '')} {player.get('last_name', '')}".strip()
-                        if not p_name: continue
-                        
-                        clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
-                        # Map BDL status to Ludi status
-                        # BDL often just gives description, we might need to parse
-                        # or use 'status' field if available.
-                        # For now, we assume any presence here implies some injury status
-                        self.official_injuries[clean_name] = "OUT" # Default to strict if unknown
-                        count += 1
-                    
-                    self.last_official_refresh = datetime.now()
-                    print(f"   [YAK] ✅ Fallback Successful: {count} injuries loaded from BallDontLie.")
-                    return True
-                else:
-                    print("   [YAK] ⚠️ BallDontLie returned 0 injuries.")
-            
-            except Exception as e:
-                print(f"   [YAK] ❌ Fallback Failed: {e}")
-        
         return tank_success
+
+    def _refresh_injuries_bdl(self):
+        """BDL fallback for injury data with proper status mapping."""
+        print(f"   [YAK] 🔄 Attempting Fallback: BallDontLie...")
+        try:
+            if not self.bdl.api_key:
+                print("   [YAK] ❌ No BDL Key found. Aborting fallback.")
+                return False
+
+            injuries = self.bdl.get_active_injuries()
+
+            if not injuries:
+                print("   [YAK] ⚠️ BallDontLie returned 0 injuries.")
+                return False
+
+            # BDL status -> Ludi status mapping
+            status_map = {
+                'Out': 'Out',
+                'Day-To-Day': 'Questionable',
+                'Questionable': 'Questionable',
+                'Doubtful': 'Doubtful',
+                'Probable': 'Probable',
+            }
+
+            self.official_injuries = {}
+            count = 0
+            for item in injuries:
+                player = item.get('player', {})
+                p_name = f"{player.get('first_name', '')} {player.get('last_name', '')}".strip()
+                if not p_name:
+                    continue
+
+                clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
+                bdl_status = item.get('status', 'Out')
+                self.official_injuries[clean_name] = status_map.get(bdl_status, 'Out')
+                count += 1
+
+            self.last_official_refresh = datetime.now()
+            print(f"   [YAK] ✅ Fallback Successful: {count} injuries loaded from BallDontLie.")
+            return True
+
+        except Exception as e:
+            print(f"   [YAK] ❌ Fallback Failed: {e}")
+            return False
 
     def classify_headline(self, text):
         """[PHASE 3] Classify news text using taxonomy."""
