@@ -126,6 +126,26 @@ jobs:
         run: |
           python3 scripts/sync_pbp_wowy.py --top 10 --verbose --resume
 
+      - name: Sync Depth Charts
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          python3 scripts/sync_depth_charts.py
+
+      - name: Sync PBP Shot Quality
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          python3 scripts/sync_pbp_shot_quality.py
+
       - name: Deduplicate games table
         timeout-minutes: 5
         run: |
