@@ -1,7 +1,10 @@
-# Future Data Sources Roadmap 🔮
+# Future Data Sources Roadmap
 
-**Discovered:** January 20, 2026  
+**Discovered:** January 20, 2026
+**Last Audited:** February 14, 2026
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
+
+**Status:** ~60% implemented. Remaining items folded into `ROADMAP.md` under "Dormant Data Activation", "Missing PBP Stats Endpoints", and "Data Pipeline Improvements". This document is now a reference — see ROADMAP.md for actionable tasks.
 
 The following endpoints were discovered in the unofficial NBA Sense documentation and represent high-value opportunities for enhancing other Ludi-Bot modules.
 
