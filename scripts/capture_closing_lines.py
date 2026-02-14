@@ -196,8 +196,8 @@ def match_closing_lines(bet: Dict, closing_data: Dict) -> Tuple[Optional[int], O
     return None, None
 
 
-def process_game(game_id: str, bets: List[Dict], dry_run: bool = False,
-                 verbose: bool = False) -> Dict:
+def process_game(conn: sqlite3.Connection, game_id: str, bets: List[Dict],
+                 dry_run: bool = False, verbose: bool = False) -> Dict:
     """Process closing lines for a single game."""
     closing_data = fetch_closing_lines(game_id)
     
@@ -230,7 +230,7 @@ def process_game(game_id: str, bets: List[Dict], dry_run: bool = False,
         
         if not dry_run:
             update_bet_with_closing_lines(
-                bet['id'], closing_over, closing_under, clv, closing_time
+                conn, bet['id'], closing_over, closing_under, clv, closing_time
             )
         
         updated += 1
@@ -308,7 +308,7 @@ def main():
     
     for game_id, bets in by_game.items():
         print(f"\nProcessing game {game_id}...")
-        result = process_game(game_id, bets, dry_run=args.dry_run, verbose=args.verbose)
+        result = process_game(conn, game_id, bets, dry_run=args.dry_run, verbose=args.verbose)
         total_updated += result['updated']
         total_skipped += result['skipped']
     

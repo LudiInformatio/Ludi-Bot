@@ -2,7 +2,7 @@
 
 **Last Updated:** February 14, 2026
 **Current Phase:** Phase 7 - All-Star Break Sprint
-**Active Work:** Phase 7.4 (Backend Completion)
+**Active Work:** Phase 5/6 Cleanup + Feb 19 Validation
 **Completed:** Phases 5.5, 6.0-6.5f (see docs/archive/ for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -42,10 +42,10 @@ This is the single source of truth for project tasks and priorities.
 - [x] Module D fallback (injuries)
 - [x] API audit document (`docs/API_USAGE_AUDIT.md`)
 
-**Phase 7.4: Backend Completion** 🔄 IN PROGRESS
-- [ ] Forward CLV capture (`scripts/capture_closing_lines.py`)
-- [ ] Integrate unused PBP Stats data (shot_quality, advanced stats)
-- [ ] Close Phase 5 gaps (log cleanup, IS_PRODUCTION flag)
+**Phase 7.4: Backend Completion** ✅ COMPLETE (Feb 14, 2026)
+- [x] Forward CLV capture (`scripts/capture_closing_lines.py`)
+- [x] Integrate unused PBP Stats data (leverage/clutch tagging, WOWY activation)
+- [x] Close Phase 5 gaps (log cleanup, IS_PRODUCTION flag)
 - [ ] Validate all workflows on Feb 19 (first game day back)
 
 **Phase 7.5: Ludi Lens Scaffold (stretch)**
@@ -107,13 +107,13 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 
 ### Phase 5: Production Deployment & Automation (remaining items)
 
-- [ ] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger)
+- [x] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger) ✅
 - [x] `scripts/monitor_system_health.py` ✅ FIXED (Feb 3)
 - [x] Referee backfill (60-day, 452 games) ✅
-- [ ] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST)
-- [ ] Implement automated weekly backtests with drift alerts
-- [ ] Create `scripts/cleanup_old_logs.py` (30-day retention)
-- [ ] Add `IS_PRODUCTION` flag handling in `config.py`
+- [x] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST) ✅
+- [x] Implement automated weekly backtests with drift alerts ✅
+- [x] Create `scripts/cleanup_old_logs.py` (30-day retention) ✅
+- [x] Add `IS_PRODUCTION` flag handling in `config.py` ✅ (Phase 7.4)
 - [ ] Verify all workflows via manual trigger
 
 ---
@@ -148,7 +148,7 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 
 ### CLV Tracking Enhancement
 - [x] Historical CLV backfill (Jan 7-29, 2026) - 63.5% of bets updated ✅
-- [ ] Forward CLV capture → **Moved to Phase 7.4**
+- [x] Forward CLV capture → **COMPLETE in Phase 7.4** ✅
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
 
