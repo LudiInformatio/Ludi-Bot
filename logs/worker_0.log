@@ -1,0 +1,2068 @@
+2026-01-16 01:00:03,101 [Worker 0] Starting Worker 0/2
+2026-01-16 01:00:03,101 [Worker 0] Starting Worker 0/2
+2026-01-16 01:00:03,101 [Worker 0] Season: 2025-26, Range: 2025-11-14 to 2026-01-14
+2026-01-16 01:00:03,101 [Worker 0] Season: 2025-26, Range: 2025-11-14 to 2026-01-14
+2026-01-16 01:00:03,167 [Worker 0] Total players: 520, My chunk: 260
+2026-01-16 01:00:03,167 [Worker 0] Total players: 520, My chunk: 260
+2026-01-16 01:00:03,168 [Worker 0] Already synced globally: 588
+2026-01-16 01:00:03,168 [Worker 0] Already synced globally: 588
+2026-01-16 01:00:03,182 [Worker 0] [1/260] A.J. Lawson - 3 games
+2026-01-16 01:00:03,182 [Worker 0] [1/260] A.J. Lawson - 3 games
+2026-01-16 01:01:39,875 [Worker 0]    [1/3] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:01:39,875 [Worker 0]    [1/3] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:03:36,607 [Worker 0]    [2/3] 2025-12-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:03:36,607 [Worker 0]    [2/3] 2025-12-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:05:33,138 [Worker 0]    [3/3] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:05:33,138 [Worker 0]    [3/3] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:05:53,167 [Worker 0] [2/260] AJ Johnson - 15 games
+2026-01-16 01:05:53,167 [Worker 0] [2/260] AJ Johnson - 15 games
+2026-01-16 01:07:29,676 [Worker 0]    [1/15] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:07:29,676 [Worker 0]    [1/15] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:09:26,444 [Worker 0]    [2/15] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:09:26,444 [Worker 0]    [2/15] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:11:23,265 [Worker 0]    [3/15] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:11:23,265 [Worker 0]    [3/15] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:13:20,089 [Worker 0]    [4/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:13:20,089 [Worker 0]    [4/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:15:16,986 [Worker 0]    [5/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:15:16,986 [Worker 0]    [5/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:17:13,802 [Worker 0]    [6/15] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:17:13,802 [Worker 0]    [6/15] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:19:10,749 [Worker 0]    [7/15] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:19:10,749 [Worker 0]    [7/15] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:21:07,280 [Worker 0]    [8/15] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:21:07,280 [Worker 0]    [8/15] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:23:04,125 [Worker 0]    [9/15] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:23:04,125 [Worker 0]    [9/15] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:25:01,020 [Worker 0]    [10/15] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:25:01,020 [Worker 0]    [10/15] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:26:57,817 [Worker 0]    [11/15] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:26:57,817 [Worker 0]    [11/15] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:28:54,918 [Worker 0]    [12/15] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:28:54,918 [Worker 0]    [12/15] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:30:51,468 [Worker 0]    [13/15] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:30:51,468 [Worker 0]    [13/15] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:32:48,428 [Worker 0]    [14/15] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:32:48,428 [Worker 0]    [14/15] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:34:45,290 [Worker 0]    [15/15] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:34:45,290 [Worker 0]    [15/15] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:35:05,348 [Worker 0] [3/260] Aaron Gordon - 9 games
+2026-01-16 01:35:05,348 [Worker 0] [3/260] Aaron Gordon - 9 games
+2026-01-16 01:36:42,070 [Worker 0]    [1/9] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:36:42,070 [Worker 0]    [1/9] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:38:39,283 [Worker 0]    [2/9] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:38:39,283 [Worker 0]    [2/9] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:40:36,156 [Worker 0]    [3/9] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:40:36,156 [Worker 0]    [3/9] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:42:33,129 [Worker 0]    [4/9] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:42:33,129 [Worker 0]    [4/9] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:44:29,863 [Worker 0]    [5/9] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:44:29,863 [Worker 0]    [5/9] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:46:26,586 [Worker 0]    [6/9] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:46:26,586 [Worker 0]    [6/9] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:48:23,311 [Worker 0]    [7/9] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:48:23,311 [Worker 0]    [7/9] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:50:20,218 [Worker 0]    [8/9] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:50:20,218 [Worker 0]    [8/9] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:52:16,918 [Worker 0]    [9/9] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:52:16,918 [Worker 0]    [9/9] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:52:36,974 [Worker 0] [4/260] Aaron Nesmith - 10 games
+2026-01-16 01:52:36,974 [Worker 0] [4/260] Aaron Nesmith - 10 games
+2026-01-16 01:54:13,759 [Worker 0]    [1/10] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:54:13,759 [Worker 0]    [1/10] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:56:10,699 [Worker 0]    [2/10] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:56:10,699 [Worker 0]    [2/10] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:58:07,319 [Worker 0]    [3/10] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:58:07,319 [Worker 0]    [3/10] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:00:03,824 [Worker 0]    [4/10] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:00:03,824 [Worker 0]    [4/10] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:02:00,567 [Worker 0]    [5/10] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:02:00,567 [Worker 0]    [5/10] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:03:57,803 [Worker 0]    [6/10] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:03:57,803 [Worker 0]    [6/10] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:05:54,311 [Worker 0]    [7/10] 2026-01-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:05:54,311 [Worker 0]    [7/10] 2026-01-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:07:51,121 [Worker 0]    [8/10] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:07:51,121 [Worker 0]    [8/10] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:09:47,858 [Worker 0]    [9/10] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:09:47,858 [Worker 0]    [9/10] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:11:44,613 [Worker 0]    [10/10] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:11:44,613 [Worker 0]    [10/10] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:12:04,671 [Worker 0] [5/260] Ace Bailey - 21 games
+2026-01-16 02:12:04,671 [Worker 0] [5/260] Ace Bailey - 21 games
+2026-01-16 02:13:41,483 [Worker 0]    [1/21] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:13:41,483 [Worker 0]    [1/21] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:15:38,286 [Worker 0]    [2/21] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:15:38,286 [Worker 0]    [2/21] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:17:35,123 [Worker 0]    [3/21] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:17:35,123 [Worker 0]    [3/21] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:19:32,370 [Worker 0]    [4/21] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:19:32,370 [Worker 0]    [4/21] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:21:28,826 [Worker 0]    [5/21] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:21:28,826 [Worker 0]    [5/21] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:23:25,328 [Worker 0]    [6/21] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:23:25,328 [Worker 0]    [6/21] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:25:21,955 [Worker 0]    [7/21] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:25:21,955 [Worker 0]    [7/21] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:27:18,591 [Worker 0]    [8/21] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:27:18,591 [Worker 0]    [8/21] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:29:15,326 [Worker 0]    [9/21] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:29:15,326 [Worker 0]    [9/21] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:31:12,073 [Worker 0]    [10/21] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:31:12,073 [Worker 0]    [10/21] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:33:08,931 [Worker 0]    [11/21] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:33:08,931 [Worker 0]    [11/21] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:35:06,140 [Worker 0]    [12/21] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:35:06,140 [Worker 0]    [12/21] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:37:02,623 [Worker 0]    [13/21] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:37:02,623 [Worker 0]    [13/21] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:38:59,102 [Worker 0]    [14/21] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:38:59,102 [Worker 0]    [14/21] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:40:55,981 [Worker 0]    [15/21] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:40:55,981 [Worker 0]    [15/21] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:42:52,765 [Worker 0]    [16/21] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:42:52,765 [Worker 0]    [16/21] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:44:49,627 [Worker 0]    [17/21] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:44:49,627 [Worker 0]    [17/21] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:46:46,344 [Worker 0]    [18/21] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:46:46,344 [Worker 0]    [18/21] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:48:43,146 [Worker 0]    [19/21] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:48:43,146 [Worker 0]    [19/21] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:50:40,204 [Worker 0]    [20/21] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:50:40,204 [Worker 0]    [20/21] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:52:36,693 [Worker 0]    [21/21] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:52:36,693 [Worker 0]    [21/21] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:52:56,920 [Worker 0] [6/260] Adou Thiero - 15 games
+2026-01-16 02:52:56,920 [Worker 0] [6/260] Adou Thiero - 15 games
+2026-01-16 02:54:33,478 [Worker 0]    [1/15] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:54:33,478 [Worker 0]    [1/15] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:56:30,170 [Worker 0]    [2/15] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:56:30,170 [Worker 0]    [2/15] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:58:26,914 [Worker 0]    [3/15] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:58:26,914 [Worker 0]    [3/15] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:00:23,842 [Worker 0]    [4/15] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:00:23,842 [Worker 0]    [4/15] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:02:20,670 [Worker 0]    [5/15] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:02:20,670 [Worker 0]    [5/15] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:04:17,443 [Worker 0]    [6/15] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:04:17,443 [Worker 0]    [6/15] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:06:13,928 [Worker 0]    [7/15] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:06:13,928 [Worker 0]    [7/15] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:08:10,780 [Worker 0]    [8/15] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:08:10,780 [Worker 0]    [8/15] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:10:07,456 [Worker 0]    [9/15] 2025-12-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:10:07,456 [Worker 0]    [9/15] 2025-12-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:12:04,301 [Worker 0]    [10/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:12:04,301 [Worker 0]    [10/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:14:01,215 [Worker 0]    [11/15] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:14:01,215 [Worker 0]    [11/15] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:15:57,716 [Worker 0]    [12/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:15:57,716 [Worker 0]    [12/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:17:54,538 [Worker 0]    [13/15] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:17:54,538 [Worker 0]    [13/15] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:19:51,338 [Worker 0]    [14/15] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:19:51,338 [Worker 0]    [14/15] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:21:48,043 [Worker 0]    [15/15] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:21:48,043 [Worker 0]    [15/15] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:22:08,062 [Worker 0] [7/260] Al Horford - 14 games
+2026-01-16 03:22:08,062 [Worker 0] [7/260] Al Horford - 14 games
+2026-01-16 03:23:44,738 [Worker 0]    [1/14] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:23:44,738 [Worker 0]    [1/14] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:25:41,531 [Worker 0]    [2/14] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:25:41,531 [Worker 0]    [2/14] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:27:38,154 [Worker 0]    [3/14] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:27:38,154 [Worker 0]    [3/14] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:29:34,647 [Worker 0]    [4/14] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:29:34,647 [Worker 0]    [4/14] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:31:31,310 [Worker 0]    [5/14] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:31:31,310 [Worker 0]    [5/14] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:33:28,123 [Worker 0]    [6/14] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:33:28,123 [Worker 0]    [6/14] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:35:24,984 [Worker 0]    [7/14] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:35:24,984 [Worker 0]    [7/14] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:37:21,709 [Worker 0]    [8/14] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:37:21,709 [Worker 0]    [8/14] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:39:18,381 [Worker 0]    [9/14] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:39:18,381 [Worker 0]    [9/14] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:41:15,073 [Worker 0]    [10/14] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:41:15,073 [Worker 0]    [10/14] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:43:11,571 [Worker 0]    [11/14] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:43:11,571 [Worker 0]    [11/14] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:45:08,336 [Worker 0]    [12/14] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:45:08,336 [Worker 0]    [12/14] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:47:05,260 [Worker 0]    [13/14] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:47:05,260 [Worker 0]    [13/14] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:49:01,787 [Worker 0]    [14/14] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:49:01,787 [Worker 0]    [14/14] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:49:21,830 [Worker 0] [8/260] Alex Sarr - 18 games
+2026-01-16 03:49:21,830 [Worker 0] [8/260] Alex Sarr - 18 games
+2026-01-16 03:50:58,306 [Worker 0]    [1/18] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:50:58,306 [Worker 0]    [1/18] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:52:55,051 [Worker 0]    [2/18] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:52:55,051 [Worker 0]    [2/18] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:54:51,977 [Worker 0]    [3/18] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:54:51,977 [Worker 0]    [3/18] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:56:48,717 [Worker 0]    [4/18] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:56:48,717 [Worker 0]    [4/18] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:58:45,393 [Worker 0]    [5/18] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:58:45,393 [Worker 0]    [5/18] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:00:42,028 [Worker 0]    [6/18] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:00:42,028 [Worker 0]    [6/18] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:02:39,193 [Worker 0]    [7/18] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:02:39,193 [Worker 0]    [7/18] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:04:35,714 [Worker 0]    [8/18] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:04:35,714 [Worker 0]    [8/18] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:06:32,687 [Worker 0]    [9/18] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:06:32,687 [Worker 0]    [9/18] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:08:29,529 [Worker 0]    [10/18] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:08:29,529 [Worker 0]    [10/18] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:10:26,269 [Worker 0]    [11/18] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:10:26,269 [Worker 0]    [11/18] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:12:23,001 [Worker 0]    [12/18] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:12:23,001 [Worker 0]    [12/18] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:14:19,526 [Worker 0]    [13/18] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:14:19,526 [Worker 0]    [13/18] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:16:16,266 [Worker 0]    [14/18] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:16:16,266 [Worker 0]    [14/18] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:18:12,995 [Worker 0]    [15/18] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:18:12,995 [Worker 0]    [15/18] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:20:09,537 [Worker 0]    [16/18] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:20:09,537 [Worker 0]    [16/18] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:22:06,195 [Worker 0]    [17/18] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:22:06,195 [Worker 0]    [17/18] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:24:02,798 [Worker 0]    [18/18] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:24:02,798 [Worker 0]    [18/18] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:24:22,871 [Worker 0] [9/260] Alperen Sengun - 20 games
+2026-01-16 04:24:22,871 [Worker 0] [9/260] Alperen Sengun - 20 games
+2026-01-16 04:26:00,748 [Worker 0]    [1/20] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:26:00,748 [Worker 0]    [1/20] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:27:58,099 [Worker 0]    [2/20] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:27:58,099 [Worker 0]    [2/20] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:29:54,507 [Worker 0]    [3/20] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:29:54,507 [Worker 0]    [3/20] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:31:51,239 [Worker 0]    [4/20] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:31:51,239 [Worker 0]    [4/20] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:33:47,890 [Worker 0]    [5/20] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:33:47,890 [Worker 0]    [5/20] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:35:44,583 [Worker 0]    [6/20] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:35:44,583 [Worker 0]    [6/20] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:37:41,250 [Worker 0]    [7/20] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:37:41,250 [Worker 0]    [7/20] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:39:38,013 [Worker 0]    [8/20] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:39:38,013 [Worker 0]    [8/20] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:41:34,895 [Worker 0]    [9/20] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:41:34,895 [Worker 0]    [9/20] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:43:32,180 [Worker 0]    [10/20] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:43:32,180 [Worker 0]    [10/20] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:45:28,680 [Worker 0]    [11/20] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:45:28,680 [Worker 0]    [11/20] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:47:25,308 [Worker 0]    [12/20] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:47:25,308 [Worker 0]    [12/20] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:49:22,052 [Worker 0]    [13/20] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:49:22,052 [Worker 0]    [13/20] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:51:18,768 [Worker 0]    [14/20] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:51:18,768 [Worker 0]    [14/20] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:53:15,529 [Worker 0]    [15/20] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:53:15,529 [Worker 0]    [15/20] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:55:12,422 [Worker 0]    [16/20] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:55:12,422 [Worker 0]    [16/20] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:57:09,167 [Worker 0]    [17/20] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:57:09,167 [Worker 0]    [17/20] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:59:06,239 [Worker 0]    [18/20] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:59:06,239 [Worker 0]    [18/20] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:01:02,719 [Worker 0]    [19/20] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:01:02,719 [Worker 0]    [19/20] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:02:59,244 [Worker 0]    [20/20] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:02:59,244 [Worker 0]    [20/20] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:03:19,310 [Worker 0] [10/260] Amen Thompson - 27 games
+2026-01-16 05:03:19,310 [Worker 0] [10/260] Amen Thompson - 27 games
+2026-01-16 05:04:56,115 [Worker 0]    [1/27] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:04:56,115 [Worker 0]    [1/27] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:06:53,013 [Worker 0]    [2/27] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:06:53,013 [Worker 0]    [2/27] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:08:49,536 [Worker 0]    [3/27] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:08:49,536 [Worker 0]    [3/27] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:10:46,302 [Worker 0]    [4/27] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:10:46,302 [Worker 0]    [4/27] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:12:43,008 [Worker 0]    [5/27] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:12:43,008 [Worker 0]    [5/27] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:14:40,171 [Worker 0]    [6/27] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:14:40,171 [Worker 0]    [6/27] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:16:36,672 [Worker 0]    [7/27] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:16:36,672 [Worker 0]    [7/27] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:18:33,642 [Worker 0]    [8/27] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:18:33,642 [Worker 0]    [8/27] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:20:30,291 [Worker 0]    [9/27] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:20:30,291 [Worker 0]    [9/27] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:22:27,025 [Worker 0]    [10/27] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:22:27,025 [Worker 0]    [10/27] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:24:23,763 [Worker 0]    [11/27] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:24:23,763 [Worker 0]    [11/27] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:26:20,266 [Worker 0]    [12/27] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:26:20,266 [Worker 0]    [12/27] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:28:17,073 [Worker 0]    [13/27] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:28:17,073 [Worker 0]    [13/27] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:30:14,003 [Worker 0]    [14/27] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:30:14,003 [Worker 0]    [14/27] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:32:10,570 [Worker 0]    [15/27] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:32:10,570 [Worker 0]    [15/27] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:34:07,331 [Worker 0]    [16/27] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:34:07,331 [Worker 0]    [16/27] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:36:03,934 [Worker 0]    [17/27] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:36:03,934 [Worker 0]    [17/27] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:38:00,553 [Worker 0]    [18/27] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:38:00,553 [Worker 0]    [18/27] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:39:57,156 [Worker 0]    [19/27] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:39:57,156 [Worker 0]    [19/27] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:41:53,729 [Worker 0]    [20/27] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:41:53,729 [Worker 0]    [20/27] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:43:50,475 [Worker 0]    [21/27] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:43:50,475 [Worker 0]    [21/27] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:45:47,255 [Worker 0]    [22/27] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:45:47,255 [Worker 0]    [22/27] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:47:43,914 [Worker 0]    [23/27] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:47:43,914 [Worker 0]    [23/27] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:49:40,641 [Worker 0]    [24/27] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:49:40,641 [Worker 0]    [24/27] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:51:37,155 [Worker 0]    [25/27] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:51:37,155 [Worker 0]    [25/27] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:53:33,763 [Worker 0]    [26/27] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:53:33,763 [Worker 0]    [26/27] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:55:30,628 [Worker 0]    [27/27] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:55:30,628 [Worker 0]    [27/27] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:55:50,707 [Worker 0] [11/260] Andre Drummond - 24 games
+2026-01-16 05:55:50,707 [Worker 0] [11/260] Andre Drummond - 24 games
+2026-01-16 05:57:27,618 [Worker 0]    [1/24] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:57:27,618 [Worker 0]    [1/24] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:59:24,343 [Worker 0]    [2/24] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:59:24,343 [Worker 0]    [2/24] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:01:20,839 [Worker 0]    [3/24] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:01:20,839 [Worker 0]    [3/24] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:03:17,342 [Worker 0]    [4/24] 2025-11-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:03:17,342 [Worker 0]    [4/24] 2025-11-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:05:14,089 [Worker 0]    [5/24] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:05:14,089 [Worker 0]    [5/24] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:07:10,880 [Worker 0]    [6/24] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:07:10,880 [Worker 0]    [6/24] 2025-11-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:09:07,617 [Worker 0]    [7/24] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:09:07,617 [Worker 0]    [7/24] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:11:04,060 [Worker 0]    [8/24] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:11:04,060 [Worker 0]    [8/24] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:13:01,069 [Worker 0]    [9/24] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:13:01,069 [Worker 0]    [9/24] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:14:58,039 [Worker 0]    [10/24] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:14:58,039 [Worker 0]    [10/24] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:16:54,524 [Worker 0]    [11/24] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:16:54,524 [Worker 0]    [11/24] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:18:51,472 [Worker 0]    [12/24] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:18:51,472 [Worker 0]    [12/24] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:20:48,263 [Worker 0]    [13/24] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:20:48,263 [Worker 0]    [13/24] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:22:44,887 [Worker 0]    [14/24] 2025-12-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:22:44,887 [Worker 0]    [14/24] 2025-12-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:24:41,626 [Worker 0]    [15/24] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:24:41,626 [Worker 0]    [15/24] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:26:38,156 [Worker 0]    [16/24] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:26:38,156 [Worker 0]    [16/24] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:28:34,898 [Worker 0]    [17/24] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:28:34,898 [Worker 0]    [17/24] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:30:31,615 [Worker 0]    [18/24] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:30:31,615 [Worker 0]    [18/24] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:32:28,037 [Worker 0]    [19/24] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:32:28,037 [Worker 0]    [19/24] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:34:24,958 [Worker 0]    [20/24] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:34:24,958 [Worker 0]    [20/24] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:36:21,730 [Worker 0]    [21/24] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:36:21,730 [Worker 0]    [21/24] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:38:18,544 [Worker 0]    [22/24] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:38:18,544 [Worker 0]    [22/24] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:40:15,278 [Worker 0]    [23/24] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:40:15,278 [Worker 0]    [23/24] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:42:12,070 [Worker 0]    [24/24] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:42:12,070 [Worker 0]    [24/24] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:42:32,127 [Worker 0] [12/260] Andrew Nembhard - 27 games
+2026-01-16 06:42:32,127 [Worker 0] [12/260] Andrew Nembhard - 27 games
+2026-01-16 06:44:08,612 [Worker 0]    [1/27] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:44:08,612 [Worker 0]    [1/27] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+
+========================================
+LUDI INFORMATIO: NBA API CLIENT ONLINE
+   >>> Rate Limit: 1 req/sec
+   >>> Cache TTL: 24 hours
+========================================
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630639...
+   [NBA-API] Shooting splits failed for player 1630639: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642358...
+   [NBA-API] Shooting splits failed for player 1642358: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203932...
+   [NBA-API] Shooting splits failed for player 203932: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630174...
+   [NBA-API] Shooting splits failed for player 1630174: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642846...
+   [NBA-API] Shooting splits failed for player 1642846: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642876...
+   [NBA-API] Shooting splits failed for player 1642876: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 201143...
+   [NBA-API] Shooting splits failed for player 201143: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1642259...
+   [NBA-API] Shooting splits failed for player 1642259: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1630578...
+   [NBA-API] Shooting splits failed for player 1630578: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 1641708...
+   [NBA-API] Shooting splits failed for player 1641708: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 4.0s (2/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 8.0s (3/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+      ⏱️ TIMEOUT: Retrying in 2.0s (1/3)
+   [NBA-API] Fetching shooting splits for player 203083...
+   [NBA-API] Shooting splits failed for player 203083: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)2026-01-16 06:46:05,600 [Worker 0]    [2/27] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:46:05,600 [Worker 0]    [2/27] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:48:02,095 [Worker 0]    [3/27] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:48:02,095 [Worker 0]    [3/27] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:49:58,853 [Worker 0]    [4/27] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:49:58,853 [Worker 0]    [4/27] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:51:55,603 [Worker 0]    [5/27] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:51:55,603 [Worker 0]    [5/27] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:53:52,378 [Worker 0]    [6/27] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:53:52,378 [Worker 0]    [6/27] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:55:48,891 [Worker 0]    [7/27] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:55:48,891 [Worker 0]    [7/27] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:57:45,413 [Worker 0]    [8/27] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:57:45,413 [Worker 0]    [8/27] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:59:42,168 [Worker 0]    [9/27] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:59:42,168 [Worker 0]    [9/27] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:01:38,747 [Worker 0]    [10/27] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:01:38,747 [Worker 0]    [10/27] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:03:35,552 [Worker 0]    [11/27] 2025-12-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:03:35,552 [Worker 0]    [11/27] 2025-12-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:05:32,194 [Worker 0]    [12/27] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:05:32,194 [Worker 0]    [12/27] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:07:28,755 [Worker 0]    [13/27] 2025-12-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:07:28,755 [Worker 0]    [13/27] 2025-12-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:09:25,521 [Worker 0]    [14/27] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:09:25,521 [Worker 0]    [14/27] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:11:22,281 [Worker 0]    [15/27] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:11:22,281 [Worker 0]    [15/27] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:13:18,986 [Worker 0]    [16/27] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:13:18,986 [Worker 0]    [16/27] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:15:15,593 [Worker 0]    [17/27] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:15:15,593 [Worker 0]    [17/27] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:17:12,324 [Worker 0]    [18/27] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:17:12,324 [Worker 0]    [18/27] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:19:09,037 [Worker 0]    [19/27] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:19:09,037 [Worker 0]    [19/27] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:21:05,789 [Worker 0]    [20/27] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:21:05,789 [Worker 0]    [20/27] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:23:02,482 [Worker 0]    [21/27] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:23:02,482 [Worker 0]    [21/27] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:24:59,193 [Worker 0]    [22/27] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:24:59,193 [Worker 0]    [22/27] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:26:55,709 [Worker 0]    [23/27] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:26:55,709 [Worker 0]    [23/27] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:28:52,222 [Worker 0]    [24/27] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:28:52,222 [Worker 0]    [24/27] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:30:48,866 [Worker 0]    [25/27] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:30:48,866 [Worker 0]    [25/27] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:32:45,507 [Worker 0]    [26/27] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:32:45,507 [Worker 0]    [26/27] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:34:42,194 [Worker 0]    [27/27] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:34:42,194 [Worker 0]    [27/27] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:35:02,273 [Worker 0] [13/260] Anfernee Simons - 26 games
+2026-01-16 07:35:02,273 [Worker 0] [13/260] Anfernee Simons - 26 games
+2026-01-16 07:36:38,716 [Worker 0]    [1/26] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:36:38,716 [Worker 0]    [1/26] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:38:35,367 [Worker 0]    [2/26] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:38:35,367 [Worker 0]    [2/26] 2025-11-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:40:31,966 [Worker 0]    [3/26] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:40:31,966 [Worker 0]    [3/26] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:42:28,806 [Worker 0]    [4/26] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:42:28,806 [Worker 0]    [4/26] 2025-11-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:44:25,643 [Worker 0]    [5/26] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:44:25,643 [Worker 0]    [5/26] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:46:22,418 [Worker 0]    [6/26] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:46:22,418 [Worker 0]    [6/26] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:48:19,436 [Worker 0]    [7/26] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:48:19,436 [Worker 0]    [7/26] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:50:16,399 [Worker 0]    [8/26] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:50:16,399 [Worker 0]    [8/26] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:52:12,927 [Worker 0]    [9/26] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:52:12,927 [Worker 0]    [9/26] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:54:09,747 [Worker 0]    [10/26] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:54:09,747 [Worker 0]    [10/26] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:56:06,547 [Worker 0]    [11/26] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:56:06,547 [Worker 0]    [11/26] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:58:03,322 [Worker 0]    [12/26] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:58:03,322 [Worker 0]    [12/26] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:00:00,098 [Worker 0]    [13/26] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:00:00,098 [Worker 0]    [13/26] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:01:56,554 [Worker 0]    [14/26] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:01:56,554 [Worker 0]    [14/26] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:03:53,333 [Worker 0]    [15/26] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:03:53,333 [Worker 0]    [15/26] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:05:50,289 [Worker 0]    [16/26] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:05:50,289 [Worker 0]    [16/26] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:07:46,775 [Worker 0]    [17/26] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:07:46,775 [Worker 0]    [17/26] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:09:43,249 [Worker 0]    [18/26] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:09:43,249 [Worker 0]    [18/26] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:11:39,978 [Worker 0]    [19/26] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:11:39,978 [Worker 0]    [19/26] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:13:36,479 [Worker 0]    [20/26] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:13:36,479 [Worker 0]    [20/26] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:15:33,369 [Worker 0]    [21/26] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:15:33,369 [Worker 0]    [21/26] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:17:30,174 [Worker 0]    [22/26] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:17:30,174 [Worker 0]    [22/26] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:19:26,942 [Worker 0]    [23/26] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:19:26,942 [Worker 0]    [23/26] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:21:23,625 [Worker 0]    [24/26] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:21:23,625 [Worker 0]    [24/26] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:23:20,833 [Worker 0]    [25/26] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:23:20,833 [Worker 0]    [25/26] 2026-01-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:25:17,458 [Worker 0]    [26/26] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:25:17,458 [Worker 0]    [26/26] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:25:37,522 [Worker 0] [14/260] Anthony Davis - 15 games
+2026-01-16 08:25:37,522 [Worker 0] [14/260] Anthony Davis - 15 games
+2026-01-16 08:27:14,267 [Worker 0]    [1/15] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:27:14,267 [Worker 0]    [1/15] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:29:11,058 [Worker 0]    [2/15] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:29:11,058 [Worker 0]    [2/15] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:31:07,744 [Worker 0]    [3/15] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:31:07,744 [Worker 0]    [3/15] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:33:04,434 [Worker 0]    [4/15] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:33:04,434 [Worker 0]    [4/15] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:35:01,451 [Worker 0]    [5/15] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:35:01,451 [Worker 0]    [5/15] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:36:58,072 [Worker 0]    [6/15] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:36:58,072 [Worker 0]    [6/15] 2025-12-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:38:54,908 [Worker 0]    [7/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:38:54,908 [Worker 0]    [7/15] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:40:51,463 [Worker 0]    [8/15] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:40:51,463 [Worker 0]    [8/15] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:42:48,184 [Worker 0]    [9/15] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:42:48,184 [Worker 0]    [9/15] 2025-12-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:44:44,999 [Worker 0]    [10/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:44:44,999 [Worker 0]    [10/15] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:46:41,498 [Worker 0]    [11/15] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:46:41,498 [Worker 0]    [11/15] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:48:38,311 [Worker 0]    [12/15] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:48:38,311 [Worker 0]    [12/15] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:50:35,070 [Worker 0]    [13/15] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:50:35,070 [Worker 0]    [13/15] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:52:31,659 [Worker 0]    [14/15] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:52:31,659 [Worker 0]    [14/15] 2026-01-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:54:28,494 [Worker 0]    [15/15] 2026-01-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:54:28,494 [Worker 0]    [15/15] 2026-01-08 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:54:48,562 [Worker 0] [15/260] Anthony Gill - 13 games
+2026-01-16 08:54:48,562 [Worker 0] [15/260] Anthony Gill - 13 games
+2026-01-16 08:56:25,043 [Worker 0]    [1/13] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:56:25,043 [Worker 0]    [1/13] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:58:21,869 [Worker 0]    [2/13] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:58:21,869 [Worker 0]    [2/13] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:00:18,604 [Worker 0]    [3/13] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:00:18,604 [Worker 0]    [3/13] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:02:15,149 [Worker 0]    [4/13] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:02:15,149 [Worker 0]    [4/13] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:04:11,955 [Worker 0]    [5/13] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:04:11,955 [Worker 0]    [5/13] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:06:08,814 [Worker 0]    [6/13] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:06:08,814 [Worker 0]    [6/13] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:08:05,511 [Worker 0]    [7/13] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:08:05,511 [Worker 0]    [7/13] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:10:02,052 [Worker 0]    [8/13] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:10:02,052 [Worker 0]    [8/13] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:11:58,901 [Worker 0]    [9/13] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:11:58,901 [Worker 0]    [9/13] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:13:55,801 [Worker 0]    [10/13] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:13:55,801 [Worker 0]    [10/13] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:15:52,708 [Worker 0]    [11/13] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:15:52,708 [Worker 0]    [11/13] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:17:49,207 [Worker 0]    [12/13] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:17:49,207 [Worker 0]    [12/13] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:19:46,126 [Worker 0]    [13/13] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:19:46,126 [Worker 0]    [13/13] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:20:06,216 [Worker 0] [16/260] Ariel Hukporti - 19 games
+2026-01-16 09:20:06,216 [Worker 0] [16/260] Ariel Hukporti - 19 games
+2026-01-16 09:21:42,727 [Worker 0]    [1/19] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:21:42,727 [Worker 0]    [1/19] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:23:39,939 [Worker 0]    [2/19] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:23:39,939 [Worker 0]    [2/19] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:25:37,089 [Worker 0]    [3/19] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:25:37,089 [Worker 0]    [3/19] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:27:33,675 [Worker 0]    [4/19] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:27:33,675 [Worker 0]    [4/19] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:29:30,344 [Worker 0]    [5/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:29:30,344 [Worker 0]    [5/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.

@@ -15,6 +15,9 @@ import pytz
 from utils.api_monitor import get_monitor
 from utils.api_helpers import retry_with_backoff
 
+# [NEW] BallDontLie Client
+from utils.bdl_client import BDLClient
+
 # ==========================================
 # LUDI INFORMATIO | MODULE D: THE YAK
 # V3.5 - FULL STATUS SPECTRUM (2025-26)
@@ -42,6 +45,9 @@ class LudiYak:
 
         # [PAID TIER] Initialize API Monitor
         self.monitor = get_monitor()
+        
+        # [NEW] Initialize BDL Client
+        self.bdl = BDLClient()
         
         # [PHASE 3] Load Keyword Taxonomy
         self.keywords_config = self._load_keyword_config()
@@ -75,17 +81,15 @@ class LudiYak:
             if elapsed < timedelta(minutes=15):
                 return True
 
-        url = f"https://{self.TANK_HOST}/getNBAInjuryList"
-        headers = {"X-RapidAPI-Key": self.TANK_KEY, "X-RapidAPI-Host": self.TANK_HOST}
-
+        # PRIMARY SOURCE: Tank01
+        tank_success = False
         try:
+            url = f"https://{self.TANK_HOST}/getNBAInjuryList"
+            headers = {"X-RapidAPI-Key": self.TANK_KEY, "X-RapidAPI-Host": self.TANK_HOST}
+            
             r = requests.get(url, headers=headers, timeout=10)
-
-            # [PAID TIER] Log API usage
             self.monitor.log_request('tank01', 'injury_list', r.headers)
-
-            # Enhanced error handling
-            r.raise_for_status()  # Raise for 4xx/5xx
+            r.raise_for_status()
             data = r.json()
 
             if r.status_code == 200 and 'body' in data:
@@ -95,30 +99,56 @@ class LudiYak:
                     clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
                     # Designation handles: Out, Doubtful, Questionable, Probable, Available
                     self.official_injuries[clean_name] = item.get('designation', 'Available')
-
+                
+                tank_success = True
                 self.last_official_refresh = datetime.now()
-                print(f"   [YAK] 📋 Heartbeat: NBA Official Feed Synced.")
-                return True
-
-        except requests.exceptions.HTTPError as e:
-            if e.response and e.response.status_code == 429:
-                print(f"   [YAK] ⚠️ Rate limit - extending cache...")
-                return False  # Use cached data
-            else:
-                error_msg = f"HTTP Error {e.response.status_code if e.response else 'Unknown'}"
-                print(f"   [YAK] ❌ {error_msg}")
-                self.monitor.log_failed_request('tank01', 'injury_list', error_msg)
-                raise
+                print(f"   [YAK] 📋 Heartbeat: NBA Official Feed Synced (Tank01).")
 
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"   [YAK] ❌ Error: {error_msg}")
-            self.monitor.log_failed_request('tank01', 'injury_list', error_msg)
-            raise
+            print(f"   [YAK] ⚠️ Tank01 Sync Failed: {e}")
+            self.monitor.log_failed_request('tank01', 'injury_list', str(e))
 
+        # FALLBACK SOURCE: BallDontLie
+        if not tank_success:
+            print(f"   [YAK] 🔄 Attempting Fallback: BallDontLie...")
+            try:
+                # Check if BDL key exists
+                if not self.bdl.api_key:
+                    print("   [YAK] ❌ No BDL Key found. Aborting fallback.")
+                    return False
 
-
-            print(f"   [YAK] ⚠️ BDL Refresh Error: {e}")
+                # Note: BDL 'injuries' endpoint might require pagination in real usage,
+                # but for fallback we grab the first page/batch.
+                injuries = self.bdl.get_active_injuries()
+                
+                if injuries:
+                    self.official_injuries = {} # Reset if we are switching sources
+                    count = 0
+                    for item in injuries:
+                        # BDL structure check required (assuming standard response)
+                        # Docs: player object inside item
+                        player = item.get('player', {})
+                        p_name = f"{player.get('first_name', '')} {player.get('last_name', '')}".strip()
+                        if not p_name: continue
+                        
+                        clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
+                        # Map BDL status to Ludi status
+                        # BDL often just gives description, we might need to parse
+                        # or use 'status' field if available.
+                        # For now, we assume any presence here implies some injury status
+                        self.official_injuries[clean_name] = "OUT" # Default to strict if unknown
+                        count += 1
+                    
+                    self.last_official_refresh = datetime.now()
+                    print(f"   [YAK] ✅ Fallback Successful: {count} injuries loaded from BallDontLie.")
+                    return True
+                else:
+                    print("   [YAK] ⚠️ BallDontLie returned 0 injuries.")
+            
+            except Exception as e:
+                print(f"   [YAK] ❌ Fallback Failed: {e}")
+        
+        return tank_success
 
     def classify_headline(self, text):
         """[PHASE 3] Classify news text using taxonomy."""

@@ -1,0 +1,90 @@
+{
+  "timestamp": "2026-02-02T20:07:24.809567",
+  "checks": {
+    "data_integrity": {
+      "Synergy Playtypes": {
+        "status": "\u274c ERROR",
+        "error": "no such column: created_at"
+      },
+      "Tracking Stats": {
+        "status": "\u274c ERROR",
+        "error": "no such column: created_at"
+      },
+      "Shot Quality": {
+        "status": "\u274c ERROR",
+        "error": "no such column: created_at"
+      },
+      "WOWY Lineups": {
+        "status": "\u274c ERROR",
+        "error": "no such column: updated_at"
+      },
+      "Referee Data": {
+        "status": "\u274c ERROR",
+        "error": "no such column: created_at"
+      },
+      "Game Data": {
+        "status": "\u274c ERROR",
+        "error": "no such column: created_at"
+      }
+    },
+    "model_drift": {
+      "status": "\u274c ERROR",
+      "error": "no such column: proj_value"
+    },
+    "module_output": {
+      "log_file": {
+        "status": "\ud83d\udcc4 MISSING",
+        "file": "logs/production/pipeline_20260202.log"
+      }
+    },
+    "api_health": {
+      "status": "\u274c ERROR",
+      "error": "'list' object has no attribute 'get'"
+    },
+    "pf_coverage": {
+      "status": "\ud83d\udfe1 MONITOR",
+      "recent_7d": {
+        "coverage": "76.5%",
+        "with_pf": 822,
+        "total": 1075,
+        "date_range": "2026-01-27 to 2026-02-01"
+      },
+      "full_season": {
+        "coverage": "79.2%",
+        "with_pf": 21328,
+        "total": 26937
+      }
+    },
+    "wowy_coverage": {
+      "status": "\u2705 OK",
+      "player_wowy": {
+        "players": 284,
+        "teams": "30/30",
+        "with_data": 284,
+        "coverage": "100.0%",
+        "last_sync": "2026-02-02T18:43:56.408229"
+      },
+      "lineup_fallback": {
+        "lineups": 599,
+        "teams": "30/30",
+        "max_possessions": 524
+      }
+    }
+  },
+  "summary": {
+    "total_alerts": 9,
+    "critical_alerts": 2,
+    "warning_alerts": 0,
+    "alerts": [
+      "\u274c Synergy Playtypes: no such column: created_at",
+      "\u274c Tracking Stats: no such column: created_at",
+      "\u274c Shot Quality: no such column: created_at",
+      "\u274c WOWY Lineups: no such column: updated_at",
+      "\u274c Referee Data: no such column: created_at",
+      "\u274c Game Data: no such column: created_at",
+      "\ud83d\udea8 Model drift check failed: no such column: proj_value",
+      "\ud83d\udcc4 Today's log file not found: logs/production/pipeline_20260202.log",
+      "\ud83d\udea8 API health check failed: 'list' object has no attribute 'get'"
+    ]
+  }
+}

@@ -12,6 +12,9 @@ from module_g import LudiRefEngine
 from utils.api_monitor import get_monitor
 from utils.api_helpers import retry_with_backoff
 
+# [NEW] BallDontLie Client
+from utils.bdl_client import BDLClient
+
 class Gatekeeper:
     def __init__(self):
         print("========================================")
@@ -29,6 +32,10 @@ class Gatekeeper:
 
         # [PAID TIER] Initialize API Monitor
         self.monitor = get_monitor()
+
+        # [NEW] Initialize BDL Client
+        self.bdl = BDLClient()
+
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -370,21 +377,47 @@ class Gatekeeper:
 
     def fetch_props_balldontlie(self, game_id, limit=50):
         """ [3b] BALLDONTLIE BACKUP/VALIDATION """
-        bdl_key = getattr(config, 'BALLDONTLIE_KEY', None)
-        if not bdl_key:
-            return  # checking if key is present
+        # Skip if no API key
+        if not self.bdl.api_key:
+            return
 
         print(f"      > [BDL] Cross-referencing with BallDontLie...")
-        url = f"https://{config.BALLDONTLIE_HOST}/v2/odds/player_props"
-        headers = {"Authorization": bdl_key}
-        params = {"game_id": game_id} # BDL uses their own IDs, mapping required in real prod
+        
+        try:
+            # 1. Resolve BDL Game ID
+            g_data = self.games[game_id]
+            date_str = g_data['start_time'].strftime('%Y-%m-%d')
+            home_team = g_data['home']
+            away_team = g_data['away']
+            
+            # Fetch games for this date
+            resp = self.bdl.get_games(date=date_str)
+            bdl_game_id = None
+            
+            for bg in resp.get('data', []):
+                # BDL uses "Visitor" instead of "Away" sometimes, or "visitor_team"
+                # Check structure: 'home_team': {'full_name': '...'}, 'visitor_team': ...
+                h_name = bg.get('home_team', {}).get('full_name')
+                v_name = bg.get('visitor_team', {}).get('full_name')
+                
+                # Check for match (The-Odds-API uses full names usually matching BDL)
+                if h_name == home_team and v_name == away_team:
+                    bdl_game_id = bg['id']
+                    break
+            
+            if not bdl_game_id:
+                print(f"      ⚠️ [BDL] Match not found: {away_team} @ {home_team}")
+                return
 
-        try: 
-            # Note: In a real scenario, we'd need to map The-Odds-API GameID to BDL GameID.
-            # For this placeholder implementation, we just show the structure.
-            # r = self.session.get(url, headers=headers, params=params)
-            # data = r.json()
-            pass 
+            # 2. Fetch Props
+            props = self.bdl.get_player_props(bdl_game_id)
+            
+            if props:
+                print(f"      ✅ [BDL] Retrieved {len(props)} props")
+                self.games[game_id]['bdl_props'] = props
+            else:
+                print(f"      ⚠️ [BDL] No props available")
+
         except Exception as e:
             print(f"      ⚠️ [BDL] Error: {e}")
 

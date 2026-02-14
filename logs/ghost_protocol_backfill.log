@@ -1,0 +1,1468 @@
+
+==================================================
+👻 LUDI GHOST PROTOCOL v2.0 | FULL SPECTRUM
+📅 Range: 2025-11-15 00:00:00 -> 2026-01-16 00:00:00
+==================================================
+
+[2025-11-15] Processing...
+      Scanning Drives table...
+   ✓ Drives: 110 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 110 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    27 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-16] Processing...
+      Scanning Drives table...
+   ✓ Drives: 168 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 168 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 168 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-17] Processing...
+      Scanning Drives table...
+   ✓ Drives: 171 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-18] Processing...
+      Scanning Drives table...
+   ✓ Drives: 132 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 132 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 132 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    36 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-19] Processing...
+      Scanning Drives table...
+   ✓ Drives: 180 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 180 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-20] Processing...
+      Scanning Drives table...
+   ✓ Drives: 87 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 87 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    51 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-21] Processing...
+      Scanning Drives table...
+   ✓ Drives: 199 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-22] Processing...
+      Scanning Drives table...
+   ✓ Drives: 158 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    38 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-23] Processing...
+      Scanning Drives table...
+   ✓ Drives: 171 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 171 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    45 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-24] Processing...
+      Scanning Drives table...
+   ✓ Drives: 217 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-25] Processing...
+      Scanning Drives table...
+   ✓ Drives: 74 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 74 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-26] Processing...
+      Scanning Drives table...
+   ✓ Drives: 168 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 187 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 187 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-27] Processing...
+      Scanning Drives table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Drives: 0 records
+      Scanning Catch & Shoot table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Catch & Shoot: 0 records
+      Scanning Pull Up Shooting table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Pull Up Shooting: 0 records
+      Scanning Speed & Distance table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-28] Processing...
+      Scanning Drives table...
+   ✓ Drives: 225 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 225 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-29] Processing...
+      Scanning Drives table...
+   ✓ Drives: 149 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 168 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 168 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-11-30] Processing...
+      Scanning Drives table...
+   ✓ Drives: 172 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 172 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 172 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-01] Processing...
+      Scanning Drives table...
+   ✓ Drives: 192 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 192 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-02] Processing...
+      Scanning Drives table...
+   ✓ Drives: 127 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 127 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 127 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-03] Processing...
+      Scanning Drives table...
+   ✓ Drives: 196 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+   ❌ Clutch Traditional Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/clutch-traditional?DateFrom=12/03/2025&DateTo=12/03/2025&PerMode=Totals", waiting until "load"
+
+
+[2025-12-04] Processing...
+      Scanning Drives table...
+   ✓ Drives: 110 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 110 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    47 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-05] Processing...
+      Scanning Drives table...
+   ✓ Drives: 269 records
+   ❌ Catch & Shoot Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/catch-shoot?DateFrom=12/05/2025&DateTo=12/05/2025", waiting until "load"
+
+   ❌ Pull Up Shooting Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/pullup?DateFrom=12/05/2025&DateTo=12/05/2025", waiting until "load"
+
+   ❌ Speed & Distance Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/speed-distance?DateFrom=12/05/2025&DateTo=12/05/2025", waiting until "load"
+
+   ❌ Advanced Stats Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/advanced?DateFrom=12/05/2025&DateTo=12/05/2025", waiting until "load"
+
+   ❌ Clutch Traditional Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/clutch-traditional?DateFrom=12/05/2025&DateTo=12/05/2025&PerMode=Totals", waiting until "load"
+
+
+[2025-12-06] Processing...
+   ❌ Drives Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/drives?DateFrom=12/06/2025&DateTo=12/06/2025", waiting until "load"
+
+   ❌ Catch & Shoot Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/catch-shoot?DateFrom=12/06/2025&DateTo=12/06/2025", waiting until "load"
+
+   ❌ Pull Up Shooting Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/pullup?DateFrom=12/06/2025&DateTo=12/06/2025", waiting until "load"
+
+   ❌ Speed & Distance Error: Page.goto: Navigation to "https://www.nba.com/stats/players/speed-distance?DateFrom=12/06/2025&DateTo=12/06/2025" is interrupted by another navigation to "https://www.nba.com/stats/players/pullup?DateFrom=12/05/2025&DateTo=12/05/2025"
+Call log:
+  - navigating to "https://www.nba.com/stats/players/speed-distance?DateFrom=12/06/2025&DateTo=12/06/2025", waiting until "load"
+
+   ❌ Advanced Stats Error: Page.goto: Navigation to "https://www.nba.com/stats/players/advanced?DateFrom=12/06/2025&DateTo=12/06/2025" is interrupted by another navigation to "https://www.nba.com/stats/players/clutch-traditional?DateFrom=12/05/2025&DateTo=12/05/2025&PerMode=Totals"
+Call log:
+  - navigating to "https://www.nba.com/stats/players/advanced?DateFrom=12/06/2025&DateTo=12/06/2025", waiting until "load"
+
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    22 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-07] Processing...
+   ❌ Drives Error: Page.goto: Timeout 45000ms exceeded.
+Call log:
+  - navigating to "https://www.nba.com/stats/players/drives?DateFrom=12/07/2025&DateTo=12/07/2025", waiting until "load"
+
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 154 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 154 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-08] Processing...
+      Scanning Drives table...
+   ✓ Drives: 62 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 62 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-09] Processing...
+      Scanning Drives table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    43 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Drives: 46 records
+      Scanning Catch & Shoot table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    49 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Catch & Shoot: 46 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 46 records
+      Scanning Speed & Distance table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    47 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    38 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-10] Processing...
+      Scanning Drives table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    44 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Drives: 49 records
+      Scanning Catch & Shoot table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    44 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Catch & Shoot: 49 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 49 records
+      Scanning Speed & Distance table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    50 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    50 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-11] Processing...
+      Scanning Drives table...
+   ✓ Drives: 85 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 85 records
+      Scanning Speed & Distance table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-12] Processing...
+      Scanning Drives table...
+   ✓ Drives: 142 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 142 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-13] Processing...
+      Scanning Drives table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    50 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Drives: 39 records
+      Scanning Catch & Shoot table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    52 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Catch & Shoot: 39 records
+      Scanning Pull Up Shooting table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    54 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Pull Up Shooting: 39 records
+      Scanning Speed & Distance table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    51 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    48 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-14] Processing...
+      Scanning Drives table...
+   ✓ Drives: 167 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-15] Processing...
+      Scanning Drives table...
+   ✓ Drives: 101 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 101 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-16] Processing...
+      Scanning Drives table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Drives: 0 records
+      Scanning Catch & Shoot table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Catch & Shoot: 0 records
+      Scanning Pull Up Shooting table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Pull Up Shooting: 0 records
+      Scanning Speed & Distance table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-17] Processing...
+      Scanning Drives table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    54 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Drives: 41 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 41 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 41 records
+      Scanning Speed & Distance table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    54 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-18] Processing...
+      Scanning Drives table...
+   ✓ Drives: 50 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-19] Processing...
+      Scanning Drives table...
+   ✓ Drives: 104 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-20] Processing...
+      Scanning Drives table...
+   ✓ Drives: 211 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-21] Processing...
+      Scanning Drives table...
+   ✓ Drives: 118 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 118 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-22] Processing...
+      Scanning Drives table...
+   ✓ Drives: 156 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-23] Processing...
+      Scanning Drives table...
+   ✓ Drives: 316 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-24] Processing...
+      Scanning Drives table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Drives: 0 records
+      Scanning Catch & Shoot table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Catch & Shoot: 0 records
+      Scanning Pull Up Shooting table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Pull Up Shooting: 0 records
+      Scanning Speed & Distance table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-25] Processing...
+      Scanning Drives table...
+   ✓ Drives: 114 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    57 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-26] Processing...
+      Scanning Drives table...
+   ✓ Drives: 201 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-27] Processing...
+      Scanning Drives table...
+   ✓ Drives: 197 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-28] Processing...
+      Scanning Drives table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Drives: 0 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    56 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-29] Processing...
+      Scanning Drives table...
+   ✓ Drives: 250 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-30] Processing...
+      Scanning Drives table...
+   ✓ Drives: 87 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 87 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 87 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    56 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2025-12-31] Processing...
+      Scanning Drives table...
+   ✓ Drives: 196 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-01] Processing...
+      Scanning Drives table...
+   ✓ Drives: 103 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 103 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 103 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    55 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-02] Processing...
+      Scanning Drives table...
+   ✓ Drives: 209 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 209 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-03] Processing...
+      Scanning Drives table...
+   ✓ Drives: 167 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-04] Processing...
+      Scanning Drives table...
+   ✓ Drives: 171 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 171 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-05] Processing...
+      Scanning Drives table...
+   ✓ Drives: 169 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 169 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-06] Processing...
+      Scanning Drives table...
+   ✓ Drives: 129 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 129 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-07] Processing...
+      Scanning Drives table...
+   ✓ Drives: 260 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-08] Processing...
+      Scanning Drives table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    56 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Drives: 23 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    51 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-09] Processing...
+      Scanning Drives table...
+   ✓ Drives: 208 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-10] Processing...
+      Scanning Drives table...
+   ✓ Drives: 50 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-11] Processing...
+      Scanning Drives table...
+   ✓ Drives: 50 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-12] Processing...
+      Scanning Drives table...
+   ✓ Drives: 128 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 128 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 128 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-13] Processing...
+      Scanning Drives table...
+   ✓ Drives: 155 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 155 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 155 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-14] Processing...
+      Scanning Drives table...
+   ✓ Drives: 50 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 152 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 152 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Pagination Error (Non-Critical): Page.select_option: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator(".Pagination_pageDropdown__KgjBU select")
+    - locator resolved to <select name="" disabled class="DropDown_select__4pIg9">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - element is not enabled
+    - retrying select option action
+      - waiting 100ms
+    58 × waiting for element to be visible and enabled
+       - element is not enabled
+     - retrying select option action
+       - waiting 500ms
+
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-15] Processing...
+      Scanning Drives table...
+   ✓ Drives: 85 records
+      Scanning Catch & Shoot table...
+   ✓ Catch & Shoot: 50 records
+      Scanning Pull Up Shooting table...
+   ✓ Pull Up Shooting: 50 records
+      Scanning Speed & Distance table...
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+   ✓ Clutch Traditional: 0 records
+
+[2026-01-16] Processing...
+      Scanning Drives table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Drives: 0 records
+      Scanning Catch & Shoot table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Catch & Shoot: 0 records
+      Scanning Pull Up Shooting table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Pull Up Shooting: 0 records
+      Scanning Speed & Distance table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Speed & Distance: 0 records
+      Scanning Advanced Stats table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Advanced Stats: 0 records
+      Scanning Clutch Traditional table...
+      ⚠️  Table not found (or no games this day).
+   ✓ Clutch Traditional: 0 records
+
+✅ Ghost Protocol Complete.

@@ -1,0 +1,202 @@
+2026-01-16 01:00:03,101 [Worker 1] Starting Worker 1/2
+2026-01-16 01:00:03,101 [Worker 1] Starting Worker 1/2
+2026-01-16 01:00:03,101 [Worker 1] Season: 2025-26, Range: 2025-11-14 to 2026-01-14
+2026-01-16 01:00:03,101 [Worker 1] Season: 2025-26, Range: 2025-11-14 to 2026-01-14
+2026-01-16 01:00:03,168 [Worker 1] Total players: 520, My chunk: 260
+2026-01-16 01:00:03,168 [Worker 1] Total players: 520, My chunk: 260
+2026-01-16 01:00:03,169 [Worker 1] Already synced globally: 588
+2026-01-16 01:00:03,169 [Worker 1] Already synced globally: 588
+2026-01-16 01:00:03,182 [Worker 1] [1/260] AJ Green - 25 games
+2026-01-16 01:00:03,182 [Worker 1] [1/260] AJ Green - 25 games
+2026-01-16 01:01:39,883 [Worker 1]    [1/25] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:01:39,883 [Worker 1]    [1/25] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:07:16,564 [Worker 1]    [2/25] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:07:16,564 [Worker 1]    [2/25] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:12:53,182 [Worker 1]    [3/25] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:12:53,182 [Worker 1]    [3/25] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:18:29,882 [Worker 1]    [4/25] 2025-11-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:18:29,882 [Worker 1]    [4/25] 2025-11-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:24:06,416 [Worker 1]    [5/25] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:24:06,416 [Worker 1]    [5/25] 2025-11-22 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:29:43,101 [Worker 1]    [6/25] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:29:43,101 [Worker 1]    [6/25] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:35:19,626 [Worker 1]    [7/25] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:35:19,626 [Worker 1]    [7/25] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:40:56,356 [Worker 1]    [8/25] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:40:56,356 [Worker 1]    [8/25] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:46:33,004 [Worker 1]    [9/25] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:46:33,004 [Worker 1]    [9/25] 2025-11-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:52:09,804 [Worker 1]    [10/25] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:52:09,804 [Worker 1]    [10/25] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:57:46,576 [Worker 1]    [11/25] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 01:57:46,576 [Worker 1]    [11/25] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:03:23,280 [Worker 1]    [12/25] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:03:23,280 [Worker 1]    [12/25] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:08:59,707 [Worker 1]    [13/25] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:08:59,707 [Worker 1]    [13/25] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:14:36,275 [Worker 1]    [14/25] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:14:36,275 [Worker 1]    [14/25] 2025-12-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:20:12,891 [Worker 1]    [15/25] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:20:12,891 [Worker 1]    [15/25] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:25:49,649 [Worker 1]    [16/25] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:25:49,649 [Worker 1]    [16/25] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:31:26,346 [Worker 1]    [17/25] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:31:26,346 [Worker 1]    [17/25] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:37:02,693 [Worker 1]    [18/25] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:37:02,693 [Worker 1]    [18/25] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:42:39,402 [Worker 1]    [19/25] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:42:39,402 [Worker 1]    [19/25] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:48:16,165 [Worker 1]    [20/25] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:48:16,165 [Worker 1]    [20/25] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:53:52,698 [Worker 1]    [21/25] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:53:52,698 [Worker 1]    [21/25] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:59:29,502 [Worker 1]    [22/25] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 02:59:29,502 [Worker 1]    [22/25] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:05:05,990 [Worker 1]    [23/25] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:05:05,990 [Worker 1]    [23/25] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:10:42,551 [Worker 1]    [24/25] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:10:42,551 [Worker 1]    [24/25] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:16:19,130 [Worker 1]    [25/25] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:16:19,130 [Worker 1]    [25/25] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:20:19,136 [Worker 1] [2/260] AJ Lawson - No NBA ID found
+2026-01-16 03:20:19,136 [Worker 1] [2/260] AJ Lawson - No NBA ID found
+2026-01-16 03:20:19,186 [Worker 1] [3/260] Aaron Holiday - 24 games
+2026-01-16 03:20:19,186 [Worker 1] [3/260] Aaron Holiday - 24 games
+2026-01-16 03:21:55,636 [Worker 1]    [1/24] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:21:55,636 [Worker 1]    [1/24] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:27:32,310 [Worker 1]    [2/24] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:27:32,310 [Worker 1]    [2/24] 2025-11-16 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:33:09,028 [Worker 1]    [3/24] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:33:09,028 [Worker 1]    [3/24] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:38:45,634 [Worker 1]    [4/24] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:38:45,634 [Worker 1]    [4/24] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:44:22,061 [Worker 1]    [5/24] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:44:22,061 [Worker 1]    [5/24] 2025-11-24 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:49:58,591 [Worker 1]    [6/24] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:49:58,591 [Worker 1]    [6/24] 2025-11-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:55:35,164 [Worker 1]    [7/24] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 03:55:35,164 [Worker 1]    [7/24] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:01:11,964 [Worker 1]    [8/24] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:01:11,964 [Worker 1]    [8/24] 2025-12-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:06:48,670 [Worker 1]    [9/24] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:06:48,670 [Worker 1]    [9/24] 2025-12-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:12:25,178 [Worker 1]    [10/24] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:12:25,178 [Worker 1]    [10/24] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:18:02,011 [Worker 1]    [11/24] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:18:02,011 [Worker 1]    [11/24] 2025-12-06 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:23:38,568 [Worker 1]    [12/24] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:23:38,568 [Worker 1]    [12/24] 2025-12-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:29:15,221 [Worker 1]    [13/24] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:29:15,221 [Worker 1]    [13/24] 2025-12-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:34:51,828 [Worker 1]    [14/24] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:34:51,828 [Worker 1]    [14/24] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:40:28,467 [Worker 1]    [15/24] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:40:28,467 [Worker 1]    [15/24] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:46:05,367 [Worker 1]    [16/24] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:46:05,367 [Worker 1]    [16/24] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:51:41,945 [Worker 1]    [17/24] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:51:41,945 [Worker 1]    [17/24] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:57:18,399 [Worker 1]    [18/24] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 04:57:18,399 [Worker 1]    [18/24] 2025-12-27 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:02:55,064 [Worker 1]    [19/24] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:02:55,064 [Worker 1]    [19/24] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:08:32,794 [Worker 1]    [20/24] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:08:32,794 [Worker 1]    [20/24] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:14:09,522 [Worker 1]    [21/24] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:14:09,522 [Worker 1]    [21/24] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:19:46,657 [Worker 1]    [22/24] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:19:46,657 [Worker 1]    [22/24] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:25:23,495 [Worker 1]    [23/24] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:25:23,495 [Worker 1]    [23/24] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:30:59,951 [Worker 1]    [24/24] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:30:59,951 [Worker 1]    [24/24] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:35:00,021 [Worker 1] [4/260] Aaron Wiggins - 19 games
+2026-01-16 05:35:00,021 [Worker 1] [4/260] Aaron Wiggins - 19 games
+2026-01-16 05:36:36,796 [Worker 1]    [1/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:36:36,796 [Worker 1]    [1/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:42:13,493 [Worker 1]    [2/19] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:42:13,493 [Worker 1]    [2/19] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:47:50,024 [Worker 1]    [3/19] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:47:50,024 [Worker 1]    [3/19] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:53:26,768 [Worker 1]    [4/19] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:53:26,768 [Worker 1]    [4/19] 2025-12-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:59:03,281 [Worker 1]    [5/19] 2025-12-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 05:59:03,281 [Worker 1]    [5/19] 2025-12-10 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:04:40,032 [Worker 1]    [6/19] 2025-12-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:04:40,032 [Worker 1]    [6/19] 2025-12-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:10:16,734 [Worker 1]    [7/19] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:10:16,734 [Worker 1]    [7/19] 2025-12-18 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:15:53,549 [Worker 1]    [8/19] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:15:53,549 [Worker 1]    [8/19] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:21:30,321 [Worker 1]    [9/19] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:21:30,321 [Worker 1]    [9/19] 2025-12-25 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:27:06,815 [Worker 1]    [10/19] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:27:06,815 [Worker 1]    [10/19] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:32:43,336 [Worker 1]    [11/19] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:32:43,336 [Worker 1]    [11/19] 2025-12-29 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:38:19,906 [Worker 1]    [12/19] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:38:19,906 [Worker 1]    [12/19] 2025-12-31 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:43:56,657 [Worker 1]    [13/19] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:43:56,657 [Worker 1]    [13/19] 2026-01-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:49:33,332 [Worker 1]    [14/19] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:49:33,332 [Worker 1]    [14/19] 2026-01-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:55:10,076 [Worker 1]    [15/19] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 06:55:10,076 [Worker 1]    [15/19] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:00:46,584 [Worker 1]    [16/19] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:00:46,584 [Worker 1]    [16/19] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:06:23,247 [Worker 1]    [17/19] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:06:23,247 [Worker 1]    [17/19] 2026-01-09 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:11:59,695 [Worker 1]    [18/19] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:11:59,695 [Worker 1]    [18/19] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:17:36,385 [Worker 1]    [19/19] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:17:36,385 [Worker 1]    [19/19] 2026-01-13 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:21:36,450 [Worker 1] [5/260] Adem Bona - 19 games
+2026-01-16 07:21:36,450 [Worker 1] [5/260] Adem Bona - 19 games
+2026-01-16 07:23:13,012 [Worker 1]    [1/19] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:23:13,012 [Worker 1]    [1/19] 2025-11-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:28:49,840 [Worker 1]    [2/19] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:28:49,840 [Worker 1]    [2/19] 2025-11-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:34:26,358 [Worker 1]    [3/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:34:26,358 [Worker 1]    [3/19] 2025-11-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:40:02,797 [Worker 1]    [4/19] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:40:02,797 [Worker 1]    [4/19] 2025-12-02 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:45:39,574 [Worker 1]    [5/19] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:45:39,574 [Worker 1]    [5/19] 2025-12-04 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:51:16,037 [Worker 1]    [6/19] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:51:16,037 [Worker 1]    [6/19] 2025-12-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:56:52,559 [Worker 1]    [7/19] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 07:56:52,559 [Worker 1]    [7/19] 2025-12-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:02:29,309 [Worker 1]    [8/19] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:02:29,309 [Worker 1]    [8/19] 2025-12-20 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:08:05,891 [Worker 1]    [9/19] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:08:05,891 [Worker 1]    [9/19] 2025-12-23 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:13:42,284 [Worker 1]    [10/19] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:13:42,284 [Worker 1]    [10/19] 2025-12-26 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:19:19,145 [Worker 1]    [11/19] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:19:19,145 [Worker 1]    [11/19] 2025-12-28 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:24:55,869 [Worker 1]    [12/19] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:24:55,869 [Worker 1]    [12/19] 2025-12-30 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:30:32,613 [Worker 1]    [13/19] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:30:32,613 [Worker 1]    [13/19] 2026-01-01 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:36:09,443 [Worker 1]    [14/19] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:36:09,443 [Worker 1]    [14/19] 2026-01-03 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:41:46,065 [Worker 1]    [15/19] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:41:46,065 [Worker 1]    [15/19] 2026-01-05 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:47:22,731 [Worker 1]    [16/19] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:47:22,731 [Worker 1]    [16/19] 2026-01-07 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:52:59,455 [Worker 1]    [17/19] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:52:59,455 [Worker 1]    [17/19] 2026-01-11 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:58:36,059 [Worker 1]    [18/19] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 08:58:36,059 [Worker 1]    [18/19] 2026-01-12 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:04:12,573 [Worker 1]    [19/19] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:04:12,573 [Worker 1]    [19/19] 2026-01-14 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:08:12,598 [Worker 1] [6/260] Ajay Mitchell - 26 games
+2026-01-16 09:08:12,598 [Worker 1] [6/260] Ajay Mitchell - 26 games
+2026-01-16 09:09:49,369 [Worker 1]    [1/26] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:09:49,369 [Worker 1]    [1/26] 2025-11-15 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:15:26,016 [Worker 1]    [2/26] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:15:26,016 [Worker 1]    [2/26] 2025-11-17 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:21:02,896 [Worker 1]    [3/26] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:21:02,896 [Worker 1]    [3/26] 2025-11-19 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:26:39,911 [Worker 1]    [4/26] 2025-11-21 - ERROR: Request timed out after 3 attempts.
+2026-01-16 09:26:39,911 [Worker 1]    [4/26] 2025-11-21 - ERROR: Request timed out after 3 attempts.

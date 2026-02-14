@@ -90,6 +90,7 @@ DEBUG_LOG = False  # Set to True for verbose calibration logs
 # Tier detection (free vs paid)
 ODDS_API_TIER = os.getenv('ODDS_API_TIER', 'free')
 TANK01_TIER = os.getenv('TANK01_TIER', 'free')
+BALLDONTLIE_TIER = os.getenv('BALLDONTLIE_TIER', 'paid')  # Default to paid (GOAT tier)
 
 # Tier limits (requests/month for odds_api, requests/day for tank01)
 TIER_LIMITS = {
@@ -100,6 +101,10 @@ TIER_LIMITS = {
     'tank01': {
         'free': 1000,     # per month
         'paid': 1000      # per DAY (30,000/month)
+    },
+    'balldontlie': {
+        'free': 30,       # per minute
+        'paid': 600       # per minute
     }
 }
 
@@ -148,7 +153,7 @@ def validate_config():
     print("✅ Core API keys loaded (ODDS_API_KEY, TANK01_KEY)")
 
     # Tier validation (use global to modify module-level variables)
-    global ODDS_API_TIER, TANK01_TIER
+    global ODDS_API_TIER, TANK01_TIER, BALLDONTLIE_TIER
 
     if ODDS_API_TIER not in ['free', 'paid']:
         print(f"⚠️  Invalid ODDS_API_TIER: {ODDS_API_TIER}, defaulting to 'free'")
@@ -158,11 +163,17 @@ def validate_config():
         print(f"⚠️  Invalid TANK01_TIER: {TANK01_TIER}, defaulting to 'free'")
         TANK01_TIER = 'free'
 
+    if BALLDONTLIE_TIER not in ['free', 'paid']:
+        print(f"⚠️  Invalid BALLDONTLIE_TIER: {BALLDONTLIE_TIER}, defaulting to 'paid'")
+        BALLDONTLIE_TIER = 'paid'
+
     # Display tier info
     print(f"✅ The-Odds-API tier: {ODDS_API_TIER.upper()} "
           f"(limit: {TIER_LIMITS['odds_api'][ODDS_API_TIER]:,} requests/month)")
     print(f"✅ Tank01 tier: {TANK01_TIER.upper()} "
           f"(limit: {TIER_LIMITS['tank01'][TANK01_TIER]:,} requests/{'day' if TANK01_TIER == 'paid' else 'month'})")
+    print(f"✅ BallDontLie tier: {BALLDONTLIE_TIER.upper()} "
+          f"(limit: {TIER_LIMITS['balldontlie'][BALLDONTLIE_TIER]:,} requests/minute)")
 
     if missing_optional:
         print(f"⚠️  Optional keys not set: {', '.join(missing_optional)}")
