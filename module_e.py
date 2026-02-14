@@ -5,6 +5,12 @@ from pathlib import Path
 from utils.player_id_resolver import PlayerIDResolver
 from utils.team_offensive_classifier import TEAM_OFFENSIVE_TYPES
 
+try:
+    from utils.pbp_stats_client import get_team_leverage_summary
+    PBP_STATS_AVAILABLE = True
+except ImportError:
+    PBP_STATS_AVAILABLE = False
+
 # ==========================================
 # LUDI INFORMATIO | MODULE E: THE CALIBRATOR
 # V7.0 - SECONDARY PLAYTYPE SYSTEM (Week 2 Integration)
@@ -30,6 +36,11 @@ class LudiCalibrator:
             self.logger.info("=== Module E Debug Logging Initialized ===")
         
         self.id_resolver = PlayerIDResolver()
+        
+        # Phase 7.4: Load clutch/leverage data for close game boosts
+        self.clutch_teams = {}  # {team_abbr: {'clutch_ortg': float, 'overall_ortg': float, 'is_clutch': bool}}
+        if PBP_STATS_AVAILABLE:
+            self._load_clutch_data()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -860,6 +871,15 @@ class LudiCalibrator:
         # Extracted to separate method for Phase 3 implementation
         # Phase 6.3: Pass wowy_confidence for BENEFICIARY weighting
         self._apply_secondary_playtype_matchups(calibrated, def_style, wowy_confidence)
+
+        # 6b. CLUTCH PERFORMER BOOST (Phase 7.4)
+        # Apply +3% PTS boost for players on clutch-strong teams in close games
+        spread = calibrated.get('spread', 10.0)
+        try:
+            spread = float(spread)
+        except (ValueError, TypeError):
+            spread = 10.0
+        self._apply_clutch_boost(calibrated, spread)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -1936,6 +1956,59 @@ class LudiCalibrator:
     def _zero_out(self, d):
         keys = ['proj_pts', 'proj_ast', 'proj_reb', 'proj_3pm', 'proj_min', 'proj_fga', 'proj_3pa', 'proj_fta', 'proj_oreb', 'proj_dreb', 'proj_stl', 'proj_blk']
         for k in keys: d[k] = 0.0
+
+    def _load_clutch_data(self):
+        """
+        Load team clutch performance data from PBP Stats.
+        Teams with clutch ORtg 15%+ higher than overall areCH_PERFORMER tagged as CLUT.
+        """
+        if not PBP_STATS_AVAILABLE:
+            print("[Module E] PBP Stats not available, skipping clutch data")
+            return
+        
+        try:
+            from utils.pbp_stats_client import get_team_leverage_summary
+            data = get_team_leverage_summary("2025-26", "VeryHigh")
+            if not data or 'results' not in data:
+                print("[Module E] No leverage data available")
+                return
+            
+            for row in data.get('results', []):
+                team = row.get('team')
+                overall_ortg = row.get('offRating', {}).get('overall', 0) or 0
+                clutch_ortg = row.get('offRating', {}).get('veryHigh', 0) or 0
+                
+                if overall_ortg and clutch_ortg:
+                    clutch_diff_pct = ((clutch_ortg - overall_ortg) / overall_ortg) * 100
+                    is_clutch = clutch_diff_pct >= 15.0
+                    self.clutch_teams[team] = {
+                        'clutch_ortg': clutch_ortg,
+                        'overall_ortg': overall_ortg,
+                        'is_clutch': is_clutch,
+                        'diff_pct': clutch_diff_pct
+                    }
+            
+            clutch_count = sum(1 for t in self.clutch_teams.values() if t['is_clutch'])
+            print(f"[Module E] Loaded clutch data for {len(self.clutch_teams)} teams, {clutch_count} CLUTCH_PERFORMERs")
+        except Exception as e:
+            print(f"[Module E] Error loading clutch data: {e}")
+            self.clutch_teams = {}
+
+    def _apply_clutch_boost(self, calibrated: dict, spread: float):
+        """
+        Apply +3% PTS boost for players on CLUTCH_PERFORMER teams in close games (spread < 5.0).
+        """
+        if not self.clutch_teams:
+            return
+        
+        team = calibrated.get('team') or calibrated.get('TEAM_ABBREVIATION')
+        if not team or spread >= 5.0:
+            return
+        
+        clutch_data = self.clutch_teams.get(team)
+        if clutch_data and clutch_data.get('is_clutch'):
+            self._boost_stat(calibrated, 'proj_pts', 1.03)
+            calibrated['notes'] += f" | CLUTCH_PERFORMER (+3%)"
 
     # ============================================================================
     # PHASE 6.1: DEPTH CHART INTEGRATION (Feb 2, 2026)

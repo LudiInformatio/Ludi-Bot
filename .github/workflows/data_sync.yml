@@ -203,6 +203,11 @@ jobs:
             git push
           fi
 
+      - name: Cleanup old logs
+        if: github.event.schedule == '0 8 * * 0' || github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/cleanup_old_logs.py --verbose
+
       - name: Notify on failure
         if: failure()
         env:

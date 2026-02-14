@@ -83,6 +83,9 @@ ENABLE_TELEGRAM_ALERTS = True
 RUN_SEASON_INIT = False
 DEBUG_LOG = False  # Set to True for verbose calibration logs
 
+# Phase 7.4: Production flag (controls Telegram sends, debug behavior)
+IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'false').lower() == 'true'
+
 # ====================================================
 # 5b. API TIER CONFIGURATION
 # ====================================================

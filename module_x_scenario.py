@@ -158,10 +158,16 @@ class ScenarioBuilder:
         V3.8 UPGRADE: Uses WOWY data when available (350+ poss confidence),
         falls back to heuristic 60/30 split for insufficient samples.
         
+        Phase 7.4: Also sets wowy_confidence for all players in the game
+        by querying player_season_wowy table.
+        
         Returns:
             dict with 'matrix' (name:absorption_rate) and 'confidence' (high/medium/low/None)
         """
         team_abbr = starter_out.get('TEAM_ABBREVIATION')
+        
+        # Phase 7.4: Set wowy_confidence for all players in game
+        self._set_wowy_confidence_for_players(all_players)
         
         # TRY WOWY FIRST (real lineup data)
         try:
@@ -209,6 +215,50 @@ class ScenarioBuilder:
         
         print(f"[Module X] Using heuristic backup matrix (WOWY unavailable)")
         return {'matrix': matrix, 'confidence': None}
+
+    def _set_wowy_confidence_for_players(self, players):
+        """
+        Phase 7.4: Query player_season_wowy table to set wowy_confidence
+        for all players in the game.
+        
+        Uses on_off_diff to set confidence:
+        - HIGH if on_off_diff > 5.0
+        - MEDIUM if on_off_diff > 2.5
+        - LOW otherwise
+        """
+        import sqlite3
+        
+        try:
+            conn = sqlite3.connect('ludi.db')
+            c = conn.cursor()
+            
+            for player in players:
+                player_name = player.get('PLAYER_NAME', '')
+                if not player_name:
+                    continue
+                
+                c.execute('''
+                    SELECT on_off_diff 
+                    FROM player_season_wowy 
+                    WHERE player_name = ? AND season = '2025-26'
+                    LIMIT 1
+                ''', (player_name,))
+                
+                row = c.fetchone()
+                if row and row[0] is not None:
+                    on_off_diff = float(row[0])
+                    if on_off_diff > 5.0:
+                        player['wowy_confidence'] = 'HIGH'
+                    elif on_off_diff > 2.5:
+                        player['wowy_confidence'] = 'MEDIUM'
+                    else:
+                        player['wowy_confidence'] = 'LOW'
+                else:
+                    player['wowy_confidence'] = None
+            
+            conn.close()
+        except Exception as e:
+            pass
 
     def _apply_vegas_guardrail(self, players, odds):
         spread = odds.get('spread', 0)

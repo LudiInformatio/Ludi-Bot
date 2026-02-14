@@ -1,0 +1,42 @@
+name: Capture Closing Lines
+
+on:
+  schedule:
+    - cron: '30 23,0,1,2,3 * * *'  # 7:30 PM, 8 PM, 9 PM, 10 PM, 11 PM EST on game nights
+  workflow_dispatch:
+    inputs:
+      game_date:
+        description: 'Game date to process (YYYY-MM-DD)'
+        required: false
+        type: string
+
+jobs:
+  capture-clv:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    env:
+      IS_SELF_HOSTED: 'true'
+      PYTHONPATH: ${{ github.workspace }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Capture closing lines
+        continue-on-error: true
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_TIER: paid
+        run: |
+          if [ -n "${{ github.event.inputs.game_date }}" ]; then
+            python3 scripts/capture_closing_lines.py --verbose --game-date "${{ github.event.inputs.game_date }}"
+          else
+            python3 scripts/capture_closing_lines.py --verbose
+          fi
+
+      - name: Report results
+        if: success()
+        run: |
+          echo "✅ CLV capture completed"

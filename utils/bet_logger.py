@@ -117,6 +117,13 @@ class BetLogger:
                 actual_result REAL,
                 profit_loss REAL,
                 clv REAL,
+
+                -- CLV Capture (Phase 7.4)
+                closing_odds_over INTEGER,
+                closing_odds_under INTEGER,
+                clv_cents REAL,
+                closing_time TEXT,
+
                 settled_at TIMESTAMP,
 
                 -- Metadata

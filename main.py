@@ -47,8 +47,17 @@ class LudiOrchestrator:
         self.target_teams = target_teams # List of team abbrs (e.g. ['CLE', 'SAC'])
         self.send_telegram = send_telegram
 
+        # Phase 7.4: Respect IS_PRODUCTION flag
+        # Only send Telegram if explicitly enabled AND in production
+        import config
+        production_mode = getattr(config, 'IS_PRODUCTION', False)
+        self._telegram_enabled = send_telegram and production_mode
+
         # 1. INITIALIZE ALL SYSTEMS
         debug_mode = os.getenv('DEBUG_LOG', 'false').lower() == 'true'
+        # In production, default DEBUG_LOG to False
+        if production_mode and not os.getenv('DEBUG_LOG'):
+            debug_mode = False
         self.gate = Gatekeeper()
         self.historian = LudiHistorian()
         self.sim = LudiOracle()
@@ -416,7 +425,7 @@ class LudiOrchestrator:
         print("\n✅ Saved to daily_briefing.txt")
         print(f"✅ Visual Card saved to: {image_path}")
         
-        if self.send_telegram:
+        if self._telegram_enabled:
             print("[step 6] Sending Telegram Briefing...")
             send_message(f"🚨 **LUDI EVENING LOCK** 🚨\n\n{briefing}")
 
