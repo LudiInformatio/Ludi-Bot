@@ -2,7 +2,7 @@ name: Daily Database Backup
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # 4 AM EST (9 AM UTC) daily
+    - cron: '0 6 * * *'  # 1 AM EST (6 AM UTC) — runs before data_sync (3 AM) to avoid SQLite lock
   workflow_dispatch:
     inputs:
       description:
@@ -69,3 +69,12 @@ jobs:
           BACKUP_COUNT=$(ls -1 archives/data/ludi.db.backup_*.gz 2>/dev/null | wc -l | tr -d ' ')
           echo "✅ Backup complete"
           echo "📊 Total backups: $BACKUP_COUNT"
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"

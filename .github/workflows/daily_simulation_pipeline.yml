@@ -53,43 +53,6 @@ jobs:
           mkdir -p logs/health
           mkdir -p assets/generated
 
-      - name: Ensure database indexes and data integrity
-        run: |
-          source .venv/bin/activate
-          python3 -c "
-          import sqlite3
-          conn = sqlite3.connect('ludi.db')
-          c = conn.cursor()
-
-          # CRITICAL: Deduplicate FIRST (enables unique index creation)
-          c.execute('''
-              DELETE FROM player_game_logs
-              WHERE rowid NOT IN (
-                  SELECT MIN(rowid)
-                  FROM player_game_logs
-                  GROUP BY game_id, player_id
-              )
-          ''')
-          deduped = c.rowcount
-          print(f'✅ Deduped {deduped} player_game_logs records')
-
-          # Create UNIQUE index (required for Module H upserts)
-          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(game_id, player_id)')
-
-          # Create referee unique index
-          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
-
-          # Create query performance indexes
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_game_date ON player_game_logs(game_date)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_id ON player_game_logs(player_id)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_game_id ON player_game_logs(game_id)')
-
-          conn.commit()
-          print('✅ Database indexes and integrity verified')
-          conn.close()
-          "
-
       - name: Run Daily Simulation Pipeline
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
