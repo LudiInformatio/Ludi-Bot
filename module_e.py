@@ -49,6 +49,14 @@ class LudiCalibrator:
         # Sprint 2: Load touches data for usage refinement
         self.touches_data = {}  # {player_name: {touches_per_game, avg_sec_per_touch, ...}}
         self._load_touches_data()
+
+        # Sprint 3: Load team leverage profiles for game state intelligence
+        self.leverage_profiles = {}  # {team_abbr: {vh_pace, l_pace, pace_variance, ...}}
+        self._load_leverage_profiles()
+
+        # Sprint 3: Load player leverage usage for crunch time identification
+        self.player_leverage = {}  # {player_name: {clutch_usage_rate, vh_possessions}}
+        self._load_player_leverage_usage()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -896,6 +904,10 @@ class LudiCalibrator:
         # 6d. TOUCHES CONTEXT (Sprint 2 - Dormant Data Activation)
         # Quick decision-makers, paint presence, post-ups, efficient scorers
         self._apply_touches_context(calibrated, def_style)
+
+        # 6e. LEVERAGE GAME STATE CONTEXT (Sprint 3)
+        # Pace by game state, crunch time usage, OREB adjustments
+        self._apply_leverage_context(calibrated, spread)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -2025,6 +2037,130 @@ class LudiCalibrator:
         if clutch_data and clutch_data.get('is_clutch'):
             self._boost_stat(calibrated, 'proj_pts', 1.03)
             calibrated['notes'] += f" | CLUTCH_PERFORMER (+3%)"
+
+    # ============================================================================
+    # SPRINT 3: LEVERAGE GAME STATE INTELLIGENCE
+    # ============================================================================
+
+    def _load_leverage_profiles(self):
+        """Load team leverage profiles from team_leverage_profiles table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            c.execute("""
+                SELECT team_abbr, vh_pace, h_pace, l_pace, overall_pace,
+                       vh_efg_pct, l_efg_pct, overall_efg_pct,
+                       vh_oreb_pct, l_oreb_pct, overall_oreb_pct,
+                       garbage_time_boost, clutch_factor, pace_variance
+                FROM team_leverage_profiles
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+
+            for row in rows:
+                self.leverage_profiles[row[0]] = {
+                    'vh_pace': row[1],
+                    'h_pace': row[2],
+                    'l_pace': row[3],
+                    'overall_pace': row[4],
+                    'vh_efg_pct': row[5],
+                    'l_efg_pct': row[6],
+                    'overall_efg_pct': row[7],
+                    'vh_oreb_pct': row[8],
+                    'l_oreb_pct': row[9],
+                    'overall_oreb_pct': row[10],
+                    'garbage_time_boost': row[11],
+                    'clutch_factor': row[12],
+                    'pace_variance': row[13]
+                }
+
+            conn.close()
+            print(f"[Module E] Leverage profiles loaded: {len(self.leverage_profiles)} teams")
+        except Exception as e:
+            print(f"[Module E] Leverage profiles unavailable: {e}")
+            self.leverage_profiles = {}
+
+    def _load_player_leverage_usage(self):
+        """Load player leverage usage from player_leverage_usage table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            c.execute("""
+                SELECT player_name, clutch_usage_rate, vh_possessions
+                FROM player_leverage_usage
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+
+            for row in rows:
+                self.player_leverage[row[0]] = {
+                    'clutch_usage_rate': row[1],
+                    'vh_possessions': row[2]
+                }
+
+            conn.close()
+            print(f"[Module E] Player leverage usage loaded: {len(self.player_leverage)} players")
+        except Exception as e:
+            print(f"[Module E] Player leverage usage unavailable: {e}")
+            self.player_leverage = {}
+
+    def _apply_leverage_context(self, calibrated: dict, spread: float):
+        """
+        Apply game-state intelligence based on leverage profiles.
+
+        Uses team leverage data + player leverage usage to:
+        1. Adjust pace factor based on expected game state
+        2. Boost crunch-time scorers in close games
+        3. Adjust REB projections using OREB by leverage
+        4. Validate/refine blowout expectations
+        """
+        team = calibrated.get('team') or calibrated.get('TEAM_ABBREVIATION')
+        player_name = calibrated.get('name', '')
+
+        if not team or team not in self.leverage_profiles:
+            return
+
+        profile = self.leverage_profiles[team]
+        player_lev = self.player_leverage.get(player_name, {})
+        abs_spread = abs(spread) if spread else 0
+
+        # 1. PACE ADJUSTMENT by expected game state
+        if abs_spread < 5.0 and profile.get('vh_pace') and profile.get('overall_pace'):
+            pace_ratio = profile['vh_pace'] / profile['overall_pace']
+            pace_mod = max(0.95, min(1.05, pace_ratio))
+            if pace_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_pts', pace_mod)
+                self._boost_stat(calibrated, 'proj_ast', pace_mod)
+                self._boost_stat(calibrated, 'proj_reb', pace_mod)
+                calibrated['notes'] += f" | Clutch Pace ({pace_mod:.2f})"
+
+        elif abs_spread >= 10.0 and profile.get('l_pace') and profile.get('overall_pace'):
+            pace_ratio = profile['l_pace'] / profile['overall_pace']
+            pace_mod = max(0.95, min(1.05, pace_ratio))
+            if pace_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_pts', pace_mod)
+                self._boost_stat(calibrated, 'proj_ast', pace_mod)
+                self._boost_stat(calibrated, 'proj_reb', pace_mod)
+                calibrated['notes'] += f" | Blowout Pace ({pace_mod:.2f})"
+
+        # 2. CRUNCH TIME USAGE BOOST
+        clutch_rate = player_lev.get('clutch_usage_rate', 0) or 0
+        vh_poss = player_lev.get('vh_possessions', 0) or 0
+        if abs_spread < 5.0 and clutch_rate > 0.12 and vh_poss >= 30:
+            boost = 1.0 + min((clutch_rate - 0.10) * 0.15, 0.03)
+            self._boost_stat(calibrated, 'proj_pts', boost)
+            calibrated['notes'] += f" | Crunch Time ({clutch_rate:.0%})"
+
+        # 3. OREB BY GAME STATE
+        if abs_spread >= 10.0 and profile.get('l_oreb_pct') and profile.get('overall_oreb_pct'):
+            oreb_ratio = profile['l_oreb_pct'] / profile['overall_oreb_pct']
+            oreb_mod = max(0.95, min(1.05, oreb_ratio))
+            if oreb_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_reb', oreb_mod)
+                self._boost_stat(calibrated, 'proj_oreb', oreb_mod)
+                calibrated['notes'] += f" | Blowout REB ({oreb_mod:.2f})"
 
     # ============================================================================
     # SPRINT 1: SPEED/FATIGUE CONTEXT (Dormant Data Activation)

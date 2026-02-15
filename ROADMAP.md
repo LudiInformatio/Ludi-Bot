@@ -2,7 +2,7 @@
 
 **Last Updated:** February 14, 2026
 **Current Phase:** Phase 7 - All-Star Break Sprint
-**Active Work:** All-Star Break Sprint Prep
+**Active Work:** Sprint 3 (Four-Factor WOWY + Leverage) + Post-Trade Deadline Roster Cleanup
 **Completed:** Phases 5.5, 6.0-6.5f (see docs/archive/ for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -51,6 +51,18 @@ This is the single source of truth for project tasks and priorities.
 **Phase 7.5: Ludi Lens Scaffold (stretch)**
 - [ ] Streamlit app scaffold (`app.py`)
 - [ ] War Room theme (Dark Navy + Gold + Emerald)
+
+**Phase 7.6: Post-Trade Deadline Roster Verification** ⚠️ PRIORITY
+- [ ] Clean `players` table (1005 active → ~450-510, remove duplicates/stale entries)
+- [ ] Re-sync depth charts (last synced Feb 2, pre-deadline)
+- [ ] Re-sync WOWY data (last synced Feb 3, pre-deadline)
+- [ ] Update `player_canonical_ids` for traded players (new team mappings)
+- [ ] Verify traded players' stats split correctly (pre-trade vs post-trade team)
+- [ ] Flag players traded but not yet debuted for new team (DNP/injured)
+- [ ] Fix "XXX" team assignment (1 player with invalid team)
+- [ ] Fix IND inflated roster (40 active players, should be ~15-17)
+- [ ] Re-run assist_combos sync post-deadline (team chemistry changed)
+- [ ] Validate all downstream tables reflect correct team assignments
 
 ---
 
@@ -164,8 +176,8 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 
 ### Missing PBP Stats Endpoints
 - [x] Implement `get_assist_combo_summary` — fixes BENEFICIARY (currently 99.9% NULL) ✅
-- [ ] Implement `get_four_factor_on_off` — better WOWY (4 dimensions vs 1)
-- [ ] Implement `get_possessions` — clutch detection, blowout tax validation
+- [x] Implement `get_four_factor_on_off` — better WOWY (4 dimensions vs 1) ✅ (Sprint 3)
+- [x] Implement `get_possessions` — clutch detection, blowout tax validation ✅ (Sprint 3)
 
 ### Data Pipeline Improvements
 - [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)

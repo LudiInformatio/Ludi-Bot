@@ -504,6 +504,96 @@ class WOWYCalculator:
         
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_four_factor_impact(self, player_name: str, team: str,
+                                min_possessions: float = 100) -> Optional[Dict]:
+        """
+        Get player's four-factor impact from player_season_wowy table.
+
+        Args:
+            player_name: Player's full name
+            team: 3-letter team abbreviation
+            min_possessions: Minimum possessions required (default: 100)
+
+        Returns:
+            Dict with four-factor profile or None if insufficient data
+        """
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                on_efg_pct, off_efg_pct,
+                on_tov_pct, off_tov_pct,
+                on_oreb_pct, off_oreb_pct,
+                on_ft_rate, off_ft_rate,
+                on_pace, off_pace,
+                on_possessions
+            FROM player_season_wowy
+            WHERE player_name = ? AND team_abbr = ? AND season = '2025-26'
+        """, (player_name, team))
+
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        on_efg = row['on_efg_pct'] or 0
+        off_efg = row['off_efg_pct'] or 0
+        on_tov = row['on_tov_pct'] or 0
+        off_tov = row['off_tov_pct'] or 0
+        on_oreb = row['on_oreb_pct'] or 0
+        off_oreb = row['off_oreb_pct'] or 0
+        on_ft = row['on_ft_rate'] or 0
+        off_ft = row['off_ft_rate'] or 0
+        on_pace = row['on_pace'] or 0
+        off_pace = row['off_pace'] or 0
+
+        if (row['on_possessions'] or 0) < min_possessions:
+            return None
+
+        efg_diff = on_efg - off_efg
+        tov_diff = on_tov - off_tov
+        oreb_diff = on_oreb - off_oreb
+        ft_diff = on_ft - off_ft
+        pace_diff = on_pace - off_pace
+
+        factors = {
+            'efg_diff': efg_diff,
+            'tov_diff': tov_diff,
+            'oreb_diff': oreb_diff,
+            'ft_rate_diff': ft_diff,
+            'pace_diff': pace_diff
+        }
+
+        profile = 'GENERAL_IMPACT'
+        if efg_diff > 3.0:
+            profile = 'SHOOTING_CATALYST'
+        elif tov_diff < -2.0:
+            profile = 'BALL_SECURITY'
+        elif oreb_diff > 2.0:
+            profile = 'BOARD_CRASHER'
+        elif pace_diff > 2.0:
+            profile = 'PACE_PUSHER'
+
+        return {
+            'player': player_name,
+            'team': team,
+            'factors': factors,
+            'profile': profile,
+            'on': {
+                'efg_pct': on_efg,
+                'tov_pct': on_tov,
+                'oreb_pct': on_oreb,
+                'ft_rate': on_ft,
+                'pace': on_pace
+            },
+            'without': {
+                'efg_pct': off_efg,
+                'tov_pct': off_tov,
+                'oreb_pct': off_oreb,
+                'ft_rate': off_ft,
+                'pace': off_pace
+            }
+        }
+
 
 def main():
     """CLI entry point for testing and demonstration."""
