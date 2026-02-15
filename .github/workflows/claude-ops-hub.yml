@@ -1,0 +1,203 @@
+name: Claude Ops Hub
+
+# Reactive failure diagnosis — triggers when any monitored workflow fails.
+# Claude analyzes logs, identifies root cause, creates a GitHub issue, and notifies via Telegram.
+# Keeps claude-qa-check.yml as the proactive daily scan; this is the reactive layer.
+
+on:
+  workflow_run:
+    workflows:
+      - "Daily Data Sync"
+      - "Daily Production Pipeline"
+      - "Daily WOWY Sync"
+      - "Daily Morning Briefing"
+      - "Nightly Debrief"
+      - "Evening Slate Lock (6PM EST)"
+      - "Daily Referee Sync"
+      - "Ghost Protocol Tracking Sync"
+      - "Daily Database Backup"
+      - "Weekly Referee Intelligence Sync"
+      - "Capture Closing Lines"
+      - "Weekly Validation"
+      - "Daily Reports"
+    types:
+      - completed
+
+jobs:
+  diagnose-failure:
+    # Only run when a workflow FAILS (not on success)
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Fetch failure logs
+        id: logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching logs for run ${{ github.event.workflow_run.id }}..."
+
+          # Get the failed step logs
+          gh run view ${{ github.event.workflow_run.id }} --log-failed 2>&1 | tail -300 > /tmp/failure_log.txt || echo "Could not fetch detailed logs" > /tmp/failure_log.txt
+
+          # Also get the run summary
+          gh run view ${{ github.event.workflow_run.id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "\(.name): \(.conclusion) — \(.steps[] | select(.conclusion == "failure") | .name)"' > /tmp/failed_steps.txt 2>/dev/null || echo "unknown step" > /tmp/failed_steps.txt
+
+          FAILED_STEPS=$(cat /tmp/failed_steps.txt)
+          echo "Failed steps: $FAILED_STEPS"
+
+          # Store truncated log as output for the prompt
+          LOG_PREVIEW=$(head -50 /tmp/failure_log.txt)
+          echo "log_preview<<LOGEOF" >> $GITHUB_OUTPUT
+          echo "$LOG_PREVIEW" >> $GITHUB_OUTPUT
+          echo "LOGEOF" >> $GITHUB_OUTPUT
+
+          echo "failed_steps<<STEPSEOF" >> $GITHUB_OUTPUT
+          echo "$FAILED_STEPS" >> $GITHUB_OUTPUT
+          echo "STEPSEOF" >> $GITHUB_OUTPUT
+
+      - name: Claude Ops Diagnosis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
+          prompt: |
+            # Claude Ops Hub — Workflow Failure Diagnosis
+
+            ## Failed Workflow
+            - **Name:** ${{ github.event.workflow_run.name }}
+            - **Run ID:** ${{ github.event.workflow_run.id }}
+            - **Branch:** ${{ github.event.workflow_run.head_branch }}
+            - **Triggered:** ${{ github.event.workflow_run.created_at }}
+            - **Failed Steps:** ${{ steps.logs.outputs.failed_steps }}
+
+            ## Log Preview
+            ```
+            ${{ steps.logs.outputs.log_preview }}
+            ```
+
+            For the full log, run: `cat /tmp/failure_log.txt`
+
+            ## Your Task
+            1. Read the full failure log at `/tmp/failure_log.txt`
+            2. Identify the root cause using the domain context below
+            3. Create a GitHub issue with:
+               - **Title:** `[OpsHub] ${{ github.event.workflow_run.name }} — <brief cause>`
+               - **Labels:** `ops-hub`, `bug` (create `ops-hub` label if it doesn't exist)
+               - **Body:**
+                 - Root Cause: What specifically failed and why
+                 - Failed Step: Which workflow step failed
+                 - Recommended Fix: Actionable steps to resolve
+                 - Severity: Critical (data loss/pipeline down) / Warning (degraded) / Transient (retry likely fixes)
+                 - Log excerpt: Key error lines
+
+            ## Domain Context
+
+            Use the section below that matches "${{ github.event.workflow_run.name }}".
+
+            ### Data Sync Domain
+            **Matches:** Daily Data Sync, Daily WOWY Sync, Ghost Protocol Tracking Sync, Weekly Referee Intelligence Sync
+
+            **Key Scripts & Tables:**
+            - `scripts/sync_wowy_hybrid.py` → team_lineups, four_factor_wowy (NBA Stats API, PBP Stats fallback)
+            - `scripts/sync_bdl_tracking.py` → player_defense, player_drives, player_touches, player_speed, player_synergy_playtypes (BDL API)
+            - `scripts/sync_four_factor_wowy.py` → four_factor_wowy (PBP Stats)
+            - `scripts/sync_team_leverage_profiles.py` → team_leverage_profiles (PBP Stats)
+            - `scripts/sync_bdl_clutch_usage.py` → bdl_clutch_usage (BDL API)
+            - `scripts/sync_assist_combos.py` → assist_combos (PBP Stats)
+            - `scripts/sync_browser_backfill.py` → player_game_tracking (NBA.com via Playwright)
+            - `scripts/sync_synergy_playtypes.py` → player_synergy_playtypes (NBA.com via Playwright)
+            - `scripts/sync_external_intelligence.py` → external_intelligence (Covers/OddsShark via Playwright)
+            - Module H (`module_h_historian.py`) → player_game_logs (Tank01 API)
+
+            **Common Failures:**
+            - NBA Stats API 403/timeout → Ghost Protocol fallback should activate (check sync_wowy_backfill.py import)
+            - BDL API 429 rate limit (600 req/min) → retry with backoff
+            - PBP Stats 429 → cached responses at cache/ should serve
+            - SQLite BUSY → WAL mode conflict, likely concurrent workflow (check schedule)
+            - Playwright browser not installed → missing `python3 -m playwright install chromium` step
+            - ImportError → check PYTHONPATH is set to $PWD
+            - `continue-on-error: true` steps won't cause workflow failure — look at non-optional steps
+
+            ### Pipeline Domain
+            **Matches:** Daily Production Pipeline, Daily Morning Briefing, Evening Slate Lock (6PM EST), Nightly Debrief, Daily Reports
+
+            **Pipeline Flow:** Module A (odds) → B (history) → C (simulation) → D (injuries) → E (calibration) → F (edge calc) → Telegram
+            **Module Classes:** Gatekeeper, print_sharp_box_score, LudiOracle, LudiYak, LudiCalibrator, LudiReporter, LudiRefEngine, LudiHistorian, ScenarioBuilder
+
+            **Common Failures:**
+            - No games today → should exit gracefully, not fail
+            - Odds API quota exceeded (20K/mo) → check API dashboard
+            - Tank01 daily limit (1K/day) → BDL fallback should activate
+            - Telegram send error → verify TELEGRAM_TOKEN + TELEGRAM_CHAT_ID secrets
+            - .venv not found → `python3.11 -m venv .venv` step should recreate
+            - Missing BALLDONTLIE_KEY or GEMINI_API_KEY → check repository secrets
+
+            ### Database Domain
+            **Matches:** Daily Database Backup
+
+            **Script:** `scripts/backup_database.sh`
+            **Output:** `archives/data/ludi.db.backup_YYYYMMDD_HHMMSS.gz`
+
+            **Common Failures:**
+            - ludi.db not found → self-hosted runner may have restarted or working directory changed
+            - Disk space → check available space on runner
+            - Permissions → backup script needs write access to archives/data/
+
+            ### Settlement Domain
+            **Matches:** Capture Closing Lines
+
+            **Script:** `scripts/capture_closing_lines.py`
+            **Tables:** bet_recommendations (columns: closing_odds_over, closing_odds_under, clv_cents, closing_time)
+            **Schema Note:** Column is `bet_side` (not bet_direction), `team` exists directly
+
+            **Common Failures:**
+            - No bets to capture → not a real failure, may need graceful exit
+            - Odds API empty response → games may not have started yet (timing issue)
+            - SQLite lock → concurrent write from another workflow
+
+            ### Validation Domain
+            **Matches:** Weekly Validation
+
+            **Scripts:** `scripts/validate_schema.py`, `scripts/validate_canonical_ids.py`
+
+            **Common Failures:**
+            - Schema drift → new columns added by sync scripts but not in expected schema
+            - Orphaned canonical IDs → players traded/waived but ID mapping not updated
+            - Backtest drift > ±3.0 pts → model may need recalibration (check Module F V5.2 settings)
+
+      - name: Notify via Telegram
+        if: always()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          MESSAGE=$(cat <<EOF
+          🤖 *Claude Ops Hub*
+
+          🔧 Failure detected: *${WORKFLOW_NAME}*
+
+          Claude analyzed the logs and created a diagnosis issue.
+
+          [View Failed Run](https://github.com/${REPO}/actions/runs/${RUN_ID})
+          [View OpsHub Issues](https://github.com/${REPO}/issues?q=is%3Aissue+label%3Aops-hub)
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="Markdown" \
+            -d text="${MESSAGE}" || echo "Telegram notification failed"
