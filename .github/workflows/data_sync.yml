@@ -181,6 +181,61 @@ jobs:
         run: |
           python3 scripts/sync_bdl_tracking.py --all
 
+      - name: Validate data freshness
+        run: |
+          python3 -c "
+          import sqlite3
+          from datetime import date, timedelta
+
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          yesterday = (date.today() - timedelta(days=1)).isoformat()
+
+          # Were there NBA games yesterday?
+          c.execute('SELECT COUNT(*) FROM games WHERE date = ?', (yesterday,))
+          games_yesterday = c.fetchone()[0]
+
+          if games_yesterday == 0:
+              print(f'✅ No games on {yesterday} — stale data expected, skipping freshness check')
+              conn.close()
+              exit(0)
+
+          # Games existed — verify we got game log data
+          c.execute('SELECT COUNT(*) FROM player_game_logs WHERE game_date = ?', (yesterday,))
+          logs_count = c.fetchone()[0]
+
+          if logs_count == 0:
+              print(f'❌ CRITICAL: {games_yesterday} games on {yesterday} but 0 player_game_logs synced')
+              print('Module H (Historian) may have failed silently')
+              conn.close()
+              exit(1)
+
+          # Check enrichment table freshness (warn only, don't fail)
+          enrichment = {
+              'team_lineups': 'SELECT COUNT(*) FROM team_lineups',
+              'four_factor_wowy': 'SELECT COUNT(*) FROM four_factor_wowy',
+              'player_defense': 'SELECT COUNT(*) FROM player_defense',
+          }
+          stale = []
+          for table, query in enrichment.items():
+              try:
+                  c.execute(query)
+                  count = c.fetchone()[0]
+                  if count == 0:
+                      stale.append(table)
+              except Exception:
+                  stale.append(f'{table} (missing)')
+
+          if stale:
+              print(f'⚠️ WARNING: Empty enrichment tables: {stale}')
+              print('Individual sync steps may have failed — check logs above')
+          else:
+              print(f'✅ All enrichment tables populated')
+
+          print(f'✅ Freshness check passed: {logs_count} game logs for {yesterday} ({games_yesterday} games)')
+          conn.close()
+          "
+
       - name: Deduplicate games table
         timeout-minutes: 5
         run: |

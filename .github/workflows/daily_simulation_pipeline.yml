@@ -53,6 +53,44 @@ jobs:
           mkdir -p logs/health
           mkdir -p assets/generated
 
+      - name: Verify data freshness before simulation
+        run: |
+          source .venv/bin/activate
+          python3 -c "
+          import sqlite3
+          from datetime import date, timedelta
+
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+
+          # Check: do we have game log data from the last 48 hours?
+          two_days_ago = (date.today() - timedelta(days=2)).isoformat()
+          c.execute('SELECT COUNT(*), MAX(game_date) FROM player_game_logs WHERE game_date >= ?', (two_days_ago,))
+          count, latest = c.fetchone()
+
+          if count > 0:
+              print(f'✅ Data is fresh: {count} game logs since {two_days_ago} (latest: {latest})')
+              conn.close()
+              exit(0)
+
+          # No recent data — check if there were games (could be All-Star break)
+          c.execute('SELECT COUNT(*) FROM games WHERE date >= ?', (two_days_ago,))
+          recent_games = c.fetchone()[0]
+
+          if recent_games == 0:
+              print(f'✅ No NBA games in last 48h — stale data expected (All-Star break / off day)')
+              conn.close()
+              exit(0)
+
+          # Games existed but no fresh logs — data_sync may have failed
+          c.execute('SELECT MAX(game_date) FROM player_game_logs')
+          last_log = c.fetchone()[0]
+          print(f'❌ STALE DATA: {recent_games} games in last 48h but latest game log is {last_log}')
+          print('data_sync.yml may have failed — check workflow history')
+          conn.close()
+          exit(1)
+          "
+
       - name: Run Daily Simulation Pipeline
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -92,7 +130,7 @@ jobs:
           fi
           
       - name: Run System Health Monitor
-        continue-on-error: true  # Health alerts sent via Telegram; don't fail workflow
+        # Health monitor is the early warning for model drift — must fail loudly so Ops Hub catches it
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
