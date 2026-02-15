@@ -303,11 +303,11 @@ class ScenarioBuilder:
                 if row and row[0] is not None:
                     on_off_diff = float(row[0])
                     if on_off_diff > 5.0:
-                        player['wowy_confidence'] = 'HIGH'
+                        player['wowy_confidence'] = 'high'
                     elif on_off_diff > 2.5:
-                        player['wowy_confidence'] = 'MEDIUM'
+                        player['wowy_confidence'] = 'medium'
                     else:
-                        player['wowy_confidence'] = 'LOW'
+                        player['wowy_confidence'] = 'low'
                 else:
                     player['wowy_confidence'] = None
             
