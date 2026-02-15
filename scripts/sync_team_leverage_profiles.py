@@ -17,13 +17,12 @@ import json
 import os
 import sqlite3
 import sys
-from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List, Optional
 
 sys.path.insert(0, '.')
 
-from utils.pbp_stats_client import get_team_leverage_summary, get_possessions
+from utils.pbp_stats_client import get_team_leverage_summary
 
 TEAM_IDS = {
     'ATL': '1610612737', 'BOS': '1610612738', 'BKN': '1610612751',
@@ -86,112 +85,83 @@ def get_db_connection(db_path: str = "ludi.db") -> sqlite3.Connection:
     return conn
 
 
-def fetch_leverage_summary(team_id: str, verbose: bool = False) -> Optional[Dict]:
-    """Fetch team leverage summary from PBP Stats API."""
-    try:
-        response = get_team_leverage_summary(CURRENT_SEASON)
-        if not response:
-            return None
+def fetch_leverage_summary(team_abbr: str, verbose: bool = False) -> Optional[Dict]:
+    """
+    Fetch team leverage summary from PBP Stats API.
 
-        results = response.get('results', [])
-        if not results:
-            return None
+    IMPORTANT: The Leverage parameter is effectively required — omitting it
+    causes a 500 error. We call per-bucket and aggregate results.
 
-        leverage_data = {}
-        for row in results:
-            team = row.get('Team', row.get('team', ''))
-            if team != team_id:
+    API response fields: team, off_poss, off_rtg, efg, oreb_pct,
+    fta_per_fga, seconds_per_poss_off (no direct Pace field).
+    """
+    leverage_data = {}
+
+    for bucket in ['VeryHigh', 'High', 'Medium', 'Low']:
+        try:
+            response = get_team_leverage_summary(CURRENT_SEASON, leverage=bucket)
+            if not response:
+                if verbose:
+                    print(f"   ⚠️ No data for {bucket} leverage")
                 continue
 
-            lev = row.get('Leverage', row.get('leverage', ''))
-            if not lev:
+            results = response.get('results', [])
+            if not results:
                 continue
 
-            leverage_data[lev] = {
-                'possessions': row.get('Possessions', row.get('possessions', 0)),
-                'ortg': row.get('Pts Per 100 Possessions', row.get('ortg', row.get('OffRtg', 0))),
-                'efg_pct': row.get('Effective FG%', row.get('eFG%', row.get('efg_pct', 0))),
-                'pace': row.get('Pace', row.get('pace', 0)),
-                'oreb_pct': row.get('Offensive Rebound%', row.get('OREB%', row.get('oreb_pct', 0))),
-                'ft_rate': row.get('FT Rate', row.get('ft_rate', row.get('FTRate', 0))),
-            }
+            for row in results:
+                if row.get('team', '') != team_abbr:
+                    continue
 
-        if verbose:
-            print(f"   Found leverage data: {list(leverage_data.keys())}")
+                # Derive pace from seconds_per_poss_off
+                # NBA pace = possessions per 48 min per team ≈ 1440 / sec_per_poss
+                # (2880s game / 2 teams = 1440s per team's offensive time)
+                sec_per_poss = row.get('seconds_per_poss_off', 0)
+                pace = round(1440 / sec_per_poss, 1) if sec_per_poss > 0 else 0
 
-        return leverage_data
+                leverage_data[bucket] = {
+                    'possessions': row.get('off_poss', 0),
+                    'ortg': row.get('off_rtg', 0),
+                    'efg_pct': row.get('efg', 0),
+                    'pace': pace,
+                    'oreb_pct': row.get('oreb_pct', 0),
+                    'ft_rate': row.get('fta_per_fga', 0),
+                }
+                break
 
-    except Exception as e:
-        if verbose:
-            print(f"   ❌ Error: {e}")
-        return None
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️ Error fetching {bucket}: {e}")
+
+    # Build "Overall" by combining Medium (largest sample, closest to baseline)
+    # Medium has 4000+ possessions vs VeryHigh's 20-50
+    if 'Medium' in leverage_data:
+        leverage_data['Overall'] = leverage_data['Medium'].copy()
+
+    if verbose:
+        print(f"   Found leverage data: {list(leverage_data.keys())}")
+
+    return leverage_data if leverage_data else None
 
 
 def fetch_player_leverage_usage(team_id: str, verbose: bool = False) -> Dict[str, Dict]:
-    """Fetch player usage in VeryHigh leverage situations."""
-    try:
-        response = get_possessions(team_id, off_def="Offense", leverage='VeryHigh')
-        if not response:
-            return {}
+    """
+    Fetch player usage in VeryHigh leverage situations.
 
-        player_stats = defaultdict(lambda: {'vh_poss': 0, 'vh_shots': 0})
+    NOTE: PBP Stats get_possessions endpoint returns 500 for 2025-26 season
+    (server-side bug). Player leverage usage is now populated from BDL clutch
+    stats instead (see scripts/sync_bdl_clutch_usage.py).
 
-        data = response.get('multi_row_table_data', [])
-        if not data:
-            results = response.get('results', [])
-            if results:
-                data = results
-
-        for row in data:
-            player = row.get('Player', row.get('player', ''))
-            if not player:
-                continue
-
-            player_stats[player]['vh_poss'] += 1
-            if row.get('Shot', row.get('shot', row.get('ShotAttempted', 0))):
-                player_stats[player]['vh_shots'] += 1
-
-        if verbose:
-            print(f"   Found {len(player_stats)} players in VeryHigh leverage")
-
-        return dict(player_stats)
-
-    except Exception as e:
-        if verbose:
-            print(f"   ❌ Error fetching possessions: {e}")
-        return {}
+    This function is kept for future use when PBP Stats fixes the endpoint.
+    """
+    if verbose:
+        print("   ⚠️ get_possessions broken for 2025-26 — use sync_bdl_clutch_usage.py instead")
+    return {}
 
 
 def fetch_overall_usage(team_id: str, verbose: bool = False) -> Dict[str, Dict]:
-    """Fetch overall player usage (all leverage situations)."""
-    try:
-        response = get_possessions(team_id, off_def="Offense")
-        if not response:
-            return {}
-
-        player_stats = defaultdict(lambda: {'total_poss': 0, 'total_shots': 0})
-
-        data = response.get('multi_row_table_data', [])
-        if not data:
-            results = response.get('results', [])
-            if results:
-                data = results
-
-        for row in data:
-            player = row.get('Player', row.get('player', ''))
-            if not player:
-                continue
-
-            player_stats[player]['total_poss'] += 1
-            if row.get('Shot', row.get('shot', row.get('ShotAttempted', 0))):
-                player_stats[player]['total_shots'] += 1
-
-        return dict(player_stats)
-
-    except Exception as e:
-        if verbose:
-            print(f"   ❌ Error: {e}")
-        return {}
+    """Placeholder — see fetch_player_leverage_usage note."""
+    return {}
 
 
 def save_team_leverage(conn: sqlite3.Connection, team_abbr: str, team_id: str,
@@ -311,7 +281,7 @@ def sync_team(conn: sqlite3.Connection, team_abbr: str,
 
     print(f"\n[Leverage] {team_abbr}: Syncing...")
 
-    leverage_data = fetch_leverage_summary(team_id, verbose=verbose)
+    leverage_data = fetch_leverage_summary(team_abbr, verbose=verbose)
     if not leverage_data:
         print(f"   ❌ No leverage data for {team_abbr}")
         return {'success': False, 'players': 0}

@@ -24,7 +24,7 @@ from typing import Dict, List, Optional
 
 sys.path.insert(0, '.')
 
-from utils.pbp_stats_client import get_four_factor_on_off
+from utils.pbp_stats_client import get_four_factor_on_off, get_on_off
 
 TEAM_IDS = {
     'ATL': '1610612737', 'BOS': '1610612738', 'BKN': '1610612751',
@@ -107,7 +107,10 @@ def get_players_with_wowy(conn: sqlite3.Connection, team_abbr: str) -> List[Dict
 def fetch_four_factor(player_id: str, team_id: str,
                       verbose: bool = False) -> Optional[Dict]:
     """
-    Fetch four-factor on/off data from PBP Stats API.
+    Fetch four-factor on/off data + Pace from PBP Stats API.
+
+    The four-factor endpoint returns eFG%, TOV%, OREB%, FTr (Dean Oliver's 4 factors).
+    Pace is NOT in the four-factor response — we pull it from get_on_off() separately.
 
     Returns:
         Dict with on_efg, off_efg, on_tov_pct, off_tov_pct, on_oreb_pct, off_oreb_pct,
@@ -153,6 +156,29 @@ def fetch_four_factor(player_id: str, team_id: str,
             'on_pace': 0,
             'off_pace': 0,
         }
+
+        # Pull Pace from get_on_off() (four-factor endpoint doesn't include it)
+        # Response format: results = {stat_name: [player_rows...]}, where each row
+        # has On/Off values for that stat. SecondsPerPossOff gives team pace context.
+        # We derive pace as 1440 / seconds_per_poss for standard NBA pace units.
+        try:
+            on_off_resp = get_on_off(team_id, player_id, season=CURRENT_SEASON)
+            if on_off_resp:
+                results = on_off_resp.get('results', {})
+                sec_per_poss = results.get('SecondsPerPossOff', [])
+                # Find the team-level row (first row with valid minutes)
+                for row in sec_per_poss:
+                    on_val = float(row.get('On', 0) or 0)
+                    off_val = float(row.get('Off', 0) or 0)
+                    mins_on = row.get('MinutesOn', 0) or 0
+                    if mins_on > 100 and on_val > 0 and off_val > 0:
+                        # Convert seconds_per_poss to pace (possessions per 48 min)
+                        ff['on_pace'] = round(1440 / on_val, 1)
+                        ff['off_pace'] = round(1440 / off_val, 1)
+                        break
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️ Pace fetch failed (non-critical): {e}")
 
         if verbose:
             print(f"   ✅ eFG%: {ff['on_efg_pct']:.1%} / {ff['off_efg_pct']:.1%}")

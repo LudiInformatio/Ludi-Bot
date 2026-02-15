@@ -64,6 +64,15 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Re-run assist_combos sync post-deadline (team chemistry changed)
 - [ ] Validate all downstream tables reflect correct team assignments
 
+**Phase 7.7: Full Integration Audit** (after 7.6)
+- [ ] Verify every sync script → table → module consumer path end-to-end
+- [ ] Test API fallback chains (BDL fires when Tank01/PBP Stats fail)
+- [ ] Validate schema consistency across scripts (column names, types)
+- [ ] Confirm daily workflow runs syncs in correct dependency order
+- [ ] Check no table is stale (>24h on game days)
+- [ ] Run full pipeline dry run with all new data sources active
+- [ ] Backtest with clean rosters + Sprint 3 data (target: 20%+ edge WR >58%)
+
 ---
 
 ### Phase 6: Full Data Integration ✅ COMPLETE (Feb 2-4, 2026)
