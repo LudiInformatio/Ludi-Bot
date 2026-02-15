@@ -45,6 +45,10 @@ class LudiCalibrator:
         # Sprint 1: Load speed/fatigue data for hustle and fatigue context
         self.speed_data = {}  # {player_name: {speed, distance, speed_recent}}
         self._load_speed_fatigue_data()
+
+        # Sprint 2: Load touches data for usage refinement
+        self.touches_data = {}  # {player_name: {touches_per_game, avg_sec_per_touch, ...}}
+        self._load_touches_data()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -888,6 +892,10 @@ class LudiCalibrator:
         # 6c. SPEED/FATIGUE CONTEXT (Sprint 1 - Dormant Data Activation)
         # Guards with high speed get hustle boosts; declining speed signals fatigue
         self._apply_speed_fatigue_context(calibrated)
+
+        # 6d. TOUCHES CONTEXT (Sprint 2 - Dormant Data Activation)
+        # Quick decision-makers, paint presence, post-ups, efficient scorers
+        self._apply_touches_context(calibrated, def_style)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -2114,6 +2122,83 @@ class LudiCalibrator:
         if is_big and distance > 2.0:
             self._boost_stat(calibrated, 'proj_reb', 1.02)
             calibrated['notes'] += " | Active Big"
+
+    # ============================================================================
+    # SPRINT 2: TOUCHES CONTEXT (Dormant Data Activation)
+    # ============================================================================
+
+    def _load_touches_data(self):
+        """Load touches data for usage refinement from player_touches table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                SELECT player_name, touches_per_game, avg_sec_per_touch,
+                       paint_touches_per_game, post_ups_per_game, pts_per_touch
+                FROM player_touches
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+            conn.close()
+
+            self.touches_data = {
+                row[0]: {
+                    'touches_per_game': row[1],
+                    'avg_sec_per_touch': row[2],
+                    'paint_touches_per_game': row[3],
+                    'post_ups_per_game': row[4],
+                    'pts_per_touch': row[5]
+                }
+                for row in rows
+            }
+            print(f"[Module E] Touches data loaded: {len(self.touches_data)} players")
+        except Exception as e:
+            print(f"[Module E] Touches data unavailable: {e}")
+            self.touches_data = {}
+
+    def _apply_touches_context(self, calibrated: dict, def_style: str = "NEUTRAL"):
+        """
+        Apply touches-based modifiers for usage refinement.
+        - Quick decision makers (low sec/touch): +3% AST
+        - Paint presence (high paint touches): +3% REB, +2% FTA
+        - Post players in favorable matchups: +3% PTS
+        - Efficient scorers (high pts/touch): +2% PTS
+        All modifiers capped at ±5%.
+        """
+        if not self.touches_data:
+            return
+
+        player_name = calibrated.get('name', '')
+        data = self.touches_data.get(player_name)
+        if not data:
+            return
+
+        touches = data.get('touches_per_game', 0) or 0
+        sec_per_touch = data.get('avg_sec_per_touch', 99) or 99
+        paint_touches = data.get('paint_touches_per_game', 0) or 0
+        post_ups = data.get('post_ups_per_game', 0) or 0
+        pts_per_touch = data.get('pts_per_touch', 0) or 0
+
+        # Quick decision maker: high touches + low time per touch
+        if touches > 40 and sec_per_touch < 2.0:
+            self._boost_stat(calibrated, 'proj_ast', 1.03)
+            calibrated['notes'] += " | Quick Touch"
+
+        # Inside presence: high paint touches
+        if paint_touches > 3.0:
+            self._boost_stat(calibrated, 'proj_reb', 1.03)
+            self._boost_stat(calibrated, 'proj_fta', 1.02)
+            calibrated['notes'] += " | Paint Presence"
+
+        # Post player in favorable matchup (FUNNEL or PERIMETER defenses)
+        if post_ups > 2.0 and def_style in ('FUNNEL', 'PERIMETER'):
+            self._boost_stat(calibrated, 'proj_pts', 1.03)
+            calibrated['notes'] += " | Post Mismatch"
+
+        # Efficient scorer: high points per touch
+        if pts_per_touch > 0.4:
+            self._boost_stat(calibrated, 'proj_pts', 1.02)
+            calibrated['notes'] += " | Efficient Touch"
 
     # ============================================================================
     # PHASE 6.1: DEPTH CHART INTEGRATION (Feb 2, 2026)

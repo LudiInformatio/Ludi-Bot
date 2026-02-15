@@ -391,6 +391,29 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
     return None
 
 
+def get_assist_combo_summary(season: str = CURRENT_SEASON,
+                             season_type: str = "Regular Season") -> Optional[Dict]:
+    """Get all passer-to-scorer assist combinations for the season."""
+    cache_path = _get_cache_path("assist_combo_summary", {"season": season, "season_type": season_type})
+    cached = _read_cache(cache_path)
+    if cached:
+        return cached
+
+    try:
+        response = _session.get(
+            f"{BASE_URL}/get-assist-combo-summary/nba",
+            params={"Season": season, "SeasonType": season_type},
+            timeout=120
+        )
+        response.raise_for_status()
+        data = response.json()
+        _write_cache(cache_path, data)
+        return data
+    except Exception as e:
+        print(f"[PBP_STATS] Error fetching assist combos: {e}")
+        return None
+
+
 def get_shots(entity_id: str, entity_type: str = "Player",
               season: str = CURRENT_SEASON, season_type: str = "Regular Season") -> Optional[Dict]:
     """

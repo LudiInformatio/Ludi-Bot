@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sqlite3
 import config
 
 # ==========================================
@@ -189,9 +190,28 @@ class ScenarioBuilder:
         except Exception as e:
             print(f"[Module X] WOWY lookup failed: {e}. Using heuristic.")
         
-        # FALLBACK: Heuristic 60/30 split (original logic)
+        # SECOND FALLBACK: Assist combo data (who receives the star's passes)
+        star_name = starter_out.get('PLAYER_NAME', '')
+        teammate_names = [
+            p['PLAYER_NAME'] for p in all_players
+            if p.get('TEAM_ABBREVIATION') == team_abbr and p['PLAYER_ID'] != starter_out['PLAYER_ID']
+        ]
+        assist_shares = self._get_assist_share(star_name, teammate_names)
+
+        if assist_shares:
+            # Convert assist shares to absorption rates (share × 0.15 = PTS boost factor)
+            # Top beneficiaries by assist share get proportional minutes
+            sorted_shares = sorted(assist_shares.items(), key=lambda x: x[1], reverse=True)
+            matrix = {}
+            for name, share in sorted_shares[:3]:  # Top 3 beneficiaries
+                # Scale: highest share teammate gets ~60% absorption, others proportional
+                matrix[name] = round(share * 0.60 / sorted_shares[0][1], 2) if sorted_shares[0][1] > 0 else 0
+            print(f"[Module X] Using assist combo data for {star_name} beneficiaries ({len(matrix)} teammates)")
+            return {'matrix': matrix, 'confidence': 'medium'}
+
+        # LAST RESORT: Heuristic 60/30 split (original logic)
         bench_candidates = []
-        
+
         for p in all_players:
             # Must be same team, different player
             if p.get('TEAM_ABBREVIATION') == team_abbr and p['PLAYER_ID'] != starter_out['PLAYER_ID']:
@@ -199,22 +219,57 @@ class ScenarioBuilder:
                 p_min = p.get('base_min', 0)
                 if 10.0 < p_min < 28.0:
                     bench_candidates.append(p)
-        
+
         if not bench_candidates:
             return {'matrix': {}, 'confidence': None}
-            
+
         # Sort candidates by Usage Rate (Best proxy for "Sixth Man")
         bench_candidates.sort(key=lambda x: x.get('base_usg', 0), reverse=True)
-        
+
         # The primary backup gets 60% of minutes, secondary gets 30%
         matrix = {}
         if len(bench_candidates) >= 1:
             matrix[bench_candidates[0]['PLAYER_NAME']] = 0.60
         if len(bench_candidates) >= 2:
             matrix[bench_candidates[1]['PLAYER_NAME']] = 0.30
-        
-        print(f"[Module X] Using heuristic backup matrix (WOWY unavailable)")
+
+        print(f"[Module X] Using heuristic backup matrix (WOWY + assist combos unavailable)")
         return {'matrix': matrix, 'confidence': None}
+
+    def _get_assist_share(self, star_name, teammates):
+        """
+        Query assist_combos table for assists from the star to each teammate.
+        Returns dict of {teammate_name: share_pct} or empty dict if unavailable.
+        """
+        try:
+            conn = sqlite3.connect('ludi.db')
+            c = conn.cursor()
+            c.execute("""
+                SELECT scorer_name, assist_count
+                FROM assist_combos
+                WHERE passer_name = ? AND season = '2025-26'
+            """, (star_name,))
+            rows = c.fetchall()
+            conn.close()
+
+            if not rows:
+                return {}
+
+            # Filter to only teammates in this game
+            teammate_set = set(teammates)
+            relevant = {row[0]: row[1] for row in rows if row[0] in teammate_set}
+
+            if not relevant:
+                return {}
+
+            # Calculate share percentages
+            total_assists = sum(relevant.values())
+            if total_assists == 0:
+                return {}
+
+            return {name: count / total_assists for name, count in relevant.items()}
+        except Exception as e:
+            return {}
 
     def _set_wowy_confidence_for_players(self, players):
         """
