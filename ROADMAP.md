@@ -52,17 +52,21 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Streamlit app scaffold (`app.py`)
 - [ ] War Room theme (Dark Navy + Gold + Emerald)
 
-**Phase 7.6: Post-Trade Deadline Roster Verification** ⚠️ PRIORITY
-- [ ] Clean `players` table (1005 active → ~450-510, remove duplicates/stale entries)
-- [ ] Re-sync depth charts (last synced Feb 2, pre-deadline)
-- [ ] Re-sync WOWY data (last synced Feb 3, pre-deadline)
-- [ ] Update `player_canonical_ids` for traded players (new team mappings)
-- [ ] Verify traded players' stats split correctly (pre-trade vs post-trade team)
-- [ ] Flag players traded but not yet debuted for new team (DNP/injured)
-- [ ] Fix "XXX" team assignment (1 player with invalid team)
-- [ ] Fix IND inflated roster (40 active players, should be ~15-17)
-- [ ] Re-run assist_combos sync post-deadline (team chemistry changed)
-- [ ] Validate all downstream tables reflect correct team assignments
+**Phase 7.6: Post-Trade Deadline Roster Verification** ✅ COMPLETE (Feb 15, 2026)
+- [x] Clean `players` table (1005 active → 503, removed 502 composite duplicates + stale entries)
+- [x] Re-sync depth charts (722 entries, 150 starters, 30 teams)
+- [x] Re-sync WOWY data (base: 357 records, four-factor: 292 players)
+- [x] Update `player_canonical_ids` for traded players (60 team assignments updated)
+- [x] Verify traded players' stats split correctly (pre-trade vs post-trade team)
+- [x] Flag players traded but not yet debuted for new team (DNP/injured)
+- [x] Fix "XXX" team assignment (1 placeholder deleted)
+- [x] Fix IND inflated roster (40 → 17 active players)
+- [-] Re-run assist_combos sync post-deadline → skipped (already refreshed Feb 14)
+- [x] Validate all downstream tables reflect correct team assignments
+- [x] Fix non-standard abbreviations (GS→GSW, NO→NOP, NY→NYK, PHO→PHX, SA→SAS)
+- [x] RosterValidator applied 229 changes (134 trades, 32 signings, 63 waivers)
+- [x] Resolved 16 diacritical name mismatches (Jokić→Jokic, Dončić→Doncic, etc.)
+- [x] Module E smoke test passed
 
 **Phase 7.7: Full Integration Audit** (after 7.6)
 - [ ] Verify every sync script → table → module consumer path end-to-end
@@ -203,6 +207,29 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 - [x] Depth Chart Authority modeling → **COMPLETE in Phase 6.1** ✅
 - [ ] Shooting Luck Deviation signals
 - [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
+
+---
+
+## Future Phases (Ideas / Not Scoped)
+
+### Phase 8: AI-Enhanced Pipeline (Claude Integration)
+
+**Goal:** Add Claude as an analytical layer in the pipeline for reasoning tasks that raw code can't do well.
+
+**Potential Use Cases:**
+- [ ] Bet narrative analysis (parse injury context, news, "between the lines" signals)
+- [ ] Odds anomaly detection (flag stale/miscalibrated lines given data context)
+- [ ] Projection sanity checks (catch unrealistic outputs before they become recs)
+- [ ] Daily briefing generation (analytical Telegram summaries vs templates)
+- [ ] MCP server integration — audit which APIs (BDL, The-Odds-API, Tank01) offer MCP/AI integration docs
+- [ ] Replace or enhance `utils/` client wrappers with MCP tools where available
+
+**Ground Rules:**
+- Claude handles reasoning/analysis ONLY — never factual NBA data (enforced by CLAUDE.md Critical Data Rules)
+- Raw math stays deterministic (Poisson sims, devigging, Kelly sizing)
+- All Claude outputs must be auditable/reproducible
+
+**Status:** 💡 IDEA — needs research & scoping
 
 ---
 
