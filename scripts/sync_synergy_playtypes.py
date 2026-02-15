@@ -18,11 +18,12 @@ import re
 import sys
 import os
 from datetime import datetime
+
+# Add project root to path FIRST
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from playwright.async_api import async_playwright
 from utils.browser_utils_async import close_popups_async, simulate_human_interaction_async
-
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.player_id_resolver import normalize_player_name
 
 # Playtype configurations
@@ -329,14 +330,29 @@ def save_to_database(players: list):
             
             else:
                 # Default: Synergy Playtype
+                # HYBRID UPSERT: Preserve BDL core stats (ppp, poss_per_game, fg_pct, efg_pct, fgm, fga)
+                # Only update Playwright-provided fields (ft_freq_pct, tov_freq_pct, sf_freq_pct,
+                # and_one_freq_pct, score_freq_pct, percentile)
                 cursor.execute("""
-                    INSERT OR REPLACE INTO player_synergy_playtypes (
+                    INSERT INTO player_synergy_playtypes (
                         player_name, team_abbr, season, playtype,
                         games_played, poss_per_game, freq_pct, ppp, pts_per_game,
                         fgm, fga, fg_pct, efg_pct,
                         ft_freq_pct, tov_freq_pct, sf_freq_pct, and_one_freq_pct,
                         score_freq_pct, percentile, synced_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(player_name, season, playtype) DO UPDATE SET
+                        team_abbr=excluded.team_abbr,
+                        games_played=excluded.games_played,
+                        ft_freq_pct=excluded.ft_freq_pct,
+                        tov_freq_pct=excluded.tov_freq_pct,
+                        sf_freq_pct=excluded.sf_freq_pct,
+                        and_one_freq_pct=excluded.and_one_freq_pct,
+                        score_freq_pct=excluded.score_freq_pct,
+                        percentile=excluded.percentile,
+                        synced_at=excluded.synced_at
+                        -- DO NOT UPDATE: ppp, poss_per_game, freq_pct, pts_per_game,
+                        --                fgm, fga, fg_pct, efg_pct (preserve BDL core stats)
                 """, (
                     p['player_name'], p['team_abbr'], p['season'], p['playtype'],
                     p['games_played'], p['poss_per_game'], p['freq_pct'], p['ppp'], p['pts_per_game'],

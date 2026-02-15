@@ -16,8 +16,16 @@ except ImportError:
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
-# V5.1 - CALIBRATION UPDATE | FEB 2026
+# V5.2 - CONFIDENCE TIER SYSTEM | FEB 2026
 # ==============================================================================
+# CHANGELOG V5.2 (Feb 2026):
+# - Fixed negative edge leak (abs(edge) → edge in sharp filter)
+# - Added edge dampening for 20%+ edges (diminishing returns)
+# - Implemented composite confidence tier (edge + gold combos)
+# - Switched to tier-based unit sizing (DIAMOND=1.0, BLUE CHIP=0.75, etc.)
+# - Gold combos: BLK/3PM/TOV/STL UNDER (+1 tier)
+# - Archetype modifiers DISABLED (audit needed first)
+#
 # CHANGELOG V5.1 (Feb 2, 2026):
 # - Added REB OVER filter (skip until calibration - was -198u leak)
 # - Added 3PM OVER filter for low-volume shooters (<5 3PA)
@@ -33,7 +41,7 @@ except ImportError:
 class LudiReporter:
     def __init__(self):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE F (V5.1) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE F (V5.2) ONLINE")
         print(f"   >>> DETERMINISTIC REPORTING | NO SPECULATION")
         print(f"   >>> BET LOGGING ENABLED")
         print(f"{'='*40}")
@@ -176,11 +184,19 @@ class LudiReporter:
                             }
                             edge = round(edge * wowy_edge_multipliers.get(wowy_confidence, 0.75), 1)
 
+                        # --- V5.2: EDGE DAMPENING (Feb 2026 Calibration) ---
+                        # 20%+ edge bets are overconfident by ~10% (backtest Jan 7-29)
+                        # Apply diminishing returns above 20% to align with actual win rates
+                        if edge >= 20.0:
+                            excess = edge - 20.0
+                            edge = round(20.0 + (excess * 0.5), 1)  # Half-credit above 20%
+                        # --- END EDGE DAMPENING ---
+
                         # Store fair probability for reporting
                         fair_prob = get_fair_probability(odds_over, odds_under, bet_direction)
 
                         # --- 2. THE SHARP FILTER (5% Minimum Edge) ---
-                        if abs(edge) >= 5.0:
+                        if edge >= 5.0:
                             # V4.6: Use real model probability (removed 0.51-0.75 clamp)
                             win_prob = model_prob
 
@@ -201,9 +217,22 @@ class LudiReporter:
                             elif ev > 15:
                                 ev_flag = "📊 EXCEPTIONAL"
 
-                            # Bankroll Unit Sizing (0.25u to 1.0u) - V5.1 Conservative during calibration
-                            # Reduced from 1.5u max to 1.0u max per Feb 2026 analysis
-                            units = min(max(round(ev / 10.0, 2), 0.25), 1.0) if ev >= 1.0 else 0
+                            # V5.2: Composite confidence tier (edge + gold combos)
+                            confidence_tier = self._calculate_confidence_tier(
+                                edge=edge,
+                                archetype=p.get('archetype', ''),
+                                stat_key=stat_key,
+                                bet_direction=bet_direction
+                            )
+
+                            # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
+                            TIER_UNITS = {
+                                'DIAMOND': 1.0,
+                                'BLUE CHIP': 0.75,
+                                'CORE ASSET': 0.5,
+                                'THE STEAL': 0.25,
+                            }
+                            units = TIER_UNITS.get(confidence_tier, 0.25)
 
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
@@ -317,7 +346,7 @@ class LudiReporter:
                                         'true_edge': edge,
                                         'ev': ev,
                                         'units': units,
-                                        'confidence_tier': 'DIAMOND',  # TODO: tiering logic
+                                        'confidence_tier': confidence_tier,
                                         'note': " | ".join(note_elements),
                                         'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
                                         'referee_impact': game.get('ref_impact', 1.0),
@@ -435,6 +464,50 @@ class LudiReporter:
             'defensive_rebounds': 'proj_dreb'
         }
         return p.get(m.get(key.lower(), ''), 0)
+
+    def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction=''):
+        """
+        Composite confidence tier using edge + historical performance signals.
+
+        Factors:
+        1. True edge % (primary — determines base tier)
+        2. Stat-direction performance (±1 tier for "gold combos")
+
+        Data source: Jan 7-29, 2026 backtest (6,344 bets, +292u, 55.7% WR)
+        See: reports/CALIBRATION_RECOMMENDATIONS_FEB2.md
+        """
+        # --- Base tier from edge (matches docs/METHODOLOGY.md) ---
+        if edge >= 15.0:
+            tier_score = 3     # DIAMOND zone
+        elif edge >= 10.0:
+            tier_score = 2     # BLUE CHIP zone
+        elif edge >= 7.0:
+            tier_score = 1     # CORE ASSET zone
+        else:
+            tier_score = 0     # THE STEAL zone
+
+        # --- Archetype modifier (DISABLED until archetype audit complete) ---
+        # KNOWN ISSUE: 3 inconsistent archetype systems exist in codebase.
+        # Misclassifications found: Turner/Lopez/Porzingis → TWO_WAY_WING,
+        # Westbrook → STRETCH_BIG, etc. Position-agnostic thresholds cause this.
+        # DO NOT enable until classification is fixed.
+
+        # --- Stat-direction modifier (gold combos from backtest) ---
+        GOLD_COMBOS = {
+            'BLK_UNDER',   # +122.6u, 71.9% WR
+            '3PM_UNDER',   # +151.1u, 68.1% WR
+            'TOV_UNDER',   # +79.8u, 71.1% WR
+            'STL_UNDER',   # +114.5u, 53.4% WR
+        }
+        stat_dir = f"{stat_key}_{bet_direction}".upper()
+        if stat_dir in GOLD_COMBOS:
+            tier_score += 1
+
+        # Clamp to valid range [0, 3]
+        tier_score = max(0, min(3, tier_score))
+
+        TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
+        return TIER_NAMES[tier_score]
 
     def _estimate_over_probability(self, projection: float, line: float, stat_key: str) -> float:
         """

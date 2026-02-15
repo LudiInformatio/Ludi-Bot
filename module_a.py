@@ -36,6 +36,9 @@ class Gatekeeper:
         # [NEW] Initialize BDL Client
         self.bdl = BDLClient()
 
+        # [BDL FALLBACK] Flag for when The-Odds-API quota is exhausted
+        self._using_bdl_fallback = False
+
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -53,7 +56,7 @@ class Gatekeeper:
 
     @retry_with_backoff(max_attempts=3, backoff=2.0)
     def fetch_live_slate(self, sport='basketball_nba'):
-        """ [1] GET SCHEDULE & LINES (With Ref Impact + Date Sorting) """
+        """ [EDULE & LINES (With Ref Impact1] GET SCH + Date Sorting) """
         print(f"[1] 📡 Fetching Slate & Live Odds...")
 
         # Build Ref Database
@@ -66,6 +69,7 @@ class Gatekeeper:
             'markets': 'h2h,spreads,totals',
             'oddsFormat': 'american'
         }
+        
         try:
             response = self.session.get(url, params=params)
 
@@ -75,6 +79,10 @@ class Gatekeeper:
 
             response.raise_for_status()
             data = response.json()
+
+            # Check for empty response (quota exhaustion)
+            if not data:
+                raise ValueError("The-Odds-API returned empty data (possible quota exhaustion)")
             
             print(f"   ✅ Found {len(data)} Games.")
             
@@ -174,7 +182,155 @@ class Gatekeeper:
             print("   ----------------------------------------")
                 
         except Exception as e:
-            print(f"   ❌ Error: {e}")
+            print(f"   ⚠️  The-Odds-API Failed: {e}")
+            print(f"   📡 Falling back to BallDontLie for game lines...")
+            self._using_bdl_fallback = True
+            self.fetch_game_lines_balldontlie()
+
+    def fetch_game_lines_balldontlie(self, date_str: str = None):
+        """ [1b] BALLDONTLIE FALLBACK: Fetch game schedule + lines when The-Odds-API fails """
+        from datetime import datetime
+        
+        print(f"   📡 [BDL] Fetching game lines from BallDontLie...")
+        
+        if date_str is None:
+            today = datetime.now(self.est_tz)
+            date_str = today.strftime('%Y-%m-%d')
+        else:
+            today = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=self.est_tz)
+        
+        # 1. Fetch games from BDL
+        games_resp = self.bdl.get_games(date=date_str)
+        bdl_games = games_resp.get('data', [])
+        
+        if not bdl_games:
+            print(f"   ⚠️  [BDL] No games found for {date_str}")
+            return
+        
+        print(f"   ✅ [BDL] Found {len(bdl_games)} games")
+        
+        # 2. Fetch odds from BDL
+        odds_resp = self.bdl.get_odds(date=date_str)
+        
+        # Group odds by game_id, prefer FanDuel > DraftKings > BetMGM > Caesars > others
+        vendor_priority = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'bovada', 'pinnacle', 'polymarket', 'kalshi']
+        
+        game_odds = {}
+        for odd in odds_resp:
+            game_id = odd.get('game_id')
+            if not game_id:
+                continue
+            vendor = odd.get('vendor', '').lower()
+            if game_id not in game_odds:
+                game_odds[game_id] = odd  # First vendor
+            else:
+                # Check if current vendor has higher priority
+                current_vendor = game_odds[game_id].get('vendor', '').lower()
+                current_idx = vendor_priority.index(current_vendor) if current_vendor in vendor_priority else 999
+                new_idx = vendor_priority.index(vendor) if vendor in vendor_priority else 999
+                if new_idx < current_idx:
+                    game_odds[game_id] = odd
+        
+        # 3. Process each game
+        display_list = []
+        
+        # Get set of game_ids that have odds
+        games_with_odds = set(game_odds.keys())
+        
+        for bdl_game in bdl_games:
+            # Skip postponed games - but include any game that has odds (including completed)
+            status = bdl_game.get('status', '')
+            game_id = bdl_game['id']
+            
+            if status == 'Postponed':
+                continue
+            
+            # Skip if no odds available for this game (and it's not scheduled)
+            if status != 'Scheduled' and status != 'Pre-Game' and status != '' and game_id not in games_with_odds:
+                continue
+            
+            game_id = bdl_game['id']
+            home_team = bdl_game.get('home_team', {})
+            visitor_team = bdl_game.get('visitor_team', {})
+            
+            home_full = home_team.get('full_name', '')
+            away_full = visitor_team.get('full_name', '')
+            home_abbr = home_team.get('abbreviation', self._get_abbr(home_full) or '')
+            
+            # Parse game time from BDL datetime
+            bdl_datetime = bdl_game.get('datetime')
+            if bdl_datetime:
+                try:
+                    utc_time = datetime.fromisoformat(bdl_datetime.replace('Z', '+00:00'))
+                    est_time = utc_time.astimezone(self.est_tz)
+                except:
+                    est_time = today  # Fallback to today
+            else:
+                est_time = today
+            
+            # Get ref data
+            ref_data = self.zebras.get_game_impact(home_abbr)
+            
+            # Get odds for this game
+            odds = game_odds.get(game_id, {})
+            
+            # Map BDL odds to our vegas dict
+            vegas = {
+                'spread': float(odds.get('spread_home_value', 0)) if odds.get('spread_home_value') else 'N/A',
+                'total': float(odds.get('total_value', 0)) if odds.get('total_value') else 'N/A',
+                'moneyline_home': odds.get('moneyline_home_odds', 'N/A'),
+                'moneyline_away': odds.get('moneyline_away_odds', 'N/A'),
+            }
+            
+            # Store in self.games
+            self.games[game_id] = {
+                'matchup': f"{away_full} @ {home_full}",
+                'home': home_full,
+                'away': away_full,
+                'start_time': est_time,
+                'vegas': vegas,
+                'props': {},
+                'archetypes': {
+                    'ref_data': ref_data,
+                    'home_pace': 0,
+                    'home_def_rtg': 0
+                },
+                'player_stats': {}
+            }
+            
+            # Add to display list
+            display_list.append({
+                'date': est_time.strftime('%Y-%m-%d'),
+                'time_str': est_time.strftime('%I:%M %p ET'),
+                'matchup': f"{away_full} @ {home_full}",
+                'spread': vegas['spread'],
+                'total': vegas['total'],
+                'ref_data': ref_data,
+                'sort_key': est_time
+            })
+        
+        # Display games
+        display_list.sort(key=lambda x: x['sort_key'])
+        
+        current_header = None
+        today_str = datetime.now(self.est_tz).strftime('%Y-%m-%d')
+        
+        for g in display_list:
+            if g['date'] != current_header:
+                current_header = g['date']
+                label = "(TONIGHT)" if current_header == today_str else "(TOMORROW)" if current_header > today_str else "(COMPLETED)"
+                print(f"   ----------------------------------------")
+                print(f"   === {current_header} {label} ===")
+            
+            print(f"   🏀 {g['matchup']}")
+            ref_d = g.get('ref_data', {})
+            pace_x = ref_d.get('pace_impact', 1.0) if isinstance(ref_d, dict) else 1.0
+            whistle_x = ref_d.get('whistle_impact', 1.0) if isinstance(ref_d, dict) else 1.0
+            conf_pct = ref_d.get('confidence', 0.0) * 100 if isinstance(ref_d, dict) else 0
+            print(f"      > Time: {g['time_str']} | Line: {g['spread']} | Total: {g['total']} | Pace: {pace_x}x | Whistle: {whistle_x}x ({conf_pct:.0f}% conf)")
+        
+        print("   ----------------------------------------")
+        print(f"   ✅ [BDL] Loaded {len(self.games)} games with lines")
 
     def fetch_team_archetypes(self):
         """ [2] GET TEAM ARCHETYPES (Same as before) """
@@ -185,6 +341,14 @@ class Gatekeeper:
 
     def fetch_comprehensive_props(self, sport='basketball_nba', limit_games=2):
         """ [3] GET TARGETS (NC LEGAL + SHARPS + DFS) """
+        
+        # If using BDL fallback, props must also use BDL since we don't have Odds-API game IDs
+        if getattr(self, '_using_bdl_fallback', False):
+            print(f"   📡 [BDL] Using BallDontLie for props (fallback mode)...")
+            for g_id in list(self.games.keys())[:limit_games]:
+                self.fetch_props_balldontlie(g_id)
+            return
+        
         print(f"[3] 📡 Fetching Prop Targets (Limit: {limit_games})...")
         target_ids = list(self.games.keys())[:limit_games]
         

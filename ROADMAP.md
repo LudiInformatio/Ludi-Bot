@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 14, 2026
+**Last Updated:** February 15, 2026
 **Current Phase:** Phase 7 - All-Star Break Sprint
-**Active Work:** Sprint 3 (Four-Factor WOWY + Leverage) + Post-Trade Deadline Roster Cleanup
+**Active Work:** Phase 7.7 Integration Audit (Task 8: Pipeline Dry Run pending Feb 19)
 **Completed:** Phases 5.5, 6.0-6.5f (see docs/archive/ for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -68,13 +68,15 @@ This is the single source of truth for project tasks and priorities.
 - [x] Resolved 16 diacritical name mismatches (Jokić→Jokic, Dončić→Doncic, etc.)
 - [x] Module E smoke test passed
 
-**Phase 7.7: Full Integration Audit** (after 7.6)
-- [ ] Verify every sync script → table → module consumer path end-to-end
-- [ ] Test API fallback chains (BDL fires when Tank01/PBP Stats fail)
-- [ ] Validate schema consistency across scripts (column names, types)
-- [ ] Confirm daily workflow runs syncs in correct dependency order
-- [ ] Check no table is stale (>24h on game days)
-- [ ] Run full pipeline dry run with all new data sources active
+**Phase 7.7: Full Integration Audit + BDL Fallback** ✅ MOSTLY COMPLETE (Feb 15, 2026)
+- [x] BDL game lines fallback (Module A + CLV capture)
+- [x] GitHub Actions updated with BALLDONTLIE_KEY
+- [x] Refresh stale PBP Stats data (11,189 records, 8 tables, BDL migration for 5 tables)
+- [x] Module F V5.2: negative edge fix, edge dampening, composite tiers, tier-based sizing
+- [x] Settle/void 436 unsettled bets (241 NO_GAME, 195 DNP)
+- [x] End-to-end integration audit (WOWY import fix, BDL tracking wired, schedule collision fixed)
+- [x] Verify sync script → table → module consumer paths
+- [ ] Run full pipeline dry run with all new data sources active (Feb 19)
 - [ ] Backtest with clean rosters + Sprint 3 data (target: 20%+ edge WR >58%)
 
 ---

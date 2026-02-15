@@ -26,13 +26,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
 from nba_api.stats.endpoints import leaguedashlineups
-from scripts.sync_wowy_backfill import run_wowy_backfill as run_ghost_protocol
+from scripts.sync_wowy_backfill import run_wowy_backfill
 from utils.api_helpers import retry_with_backoff
 
-# Configuration
-API_RATE_LIMIT = 1.0  # Seconds between API calls
+# Configuration (Updated per community best practices - Feb 15, 2026)
+API_RATE_LIMIT = 2.0  # Seconds between API calls (Community recommends 2s to avoid Cloudflare rate limit)
 MAX_API_RETRIES = 3
 GHOST_THRESHOLD_DAYS = 14  # Use Ghost automatically if > 14 days requested
+REQUEST_TIMEOUT = 180  # 3 minutes per request (increased from 120s)
 
 # Standard headers required for NBA.com (Copied from utils/nba_api_client.py)
 HEADERS = {
@@ -60,11 +61,13 @@ def sync_via_api(target_date: datetime) -> int:
     """
     nba_date_str = target_date.strftime("%m/%d/%Y")
     db_date_str = target_date.strftime("%Y-%m-%d")
-    
-    print(f"   📡 API Request for {nba_date_str}...")
-    
+
+    print(f"   📡 API Request for {nba_date_str}...", flush=True)
+    print(f"   [DEBUG] Creating LeagueDashLineups object...", flush=True)
+
     try:
         # Fetch Advanced Stats (Ratings, Pace, etc)
+        print(f"   [DEBUG] Calling NBA API endpoint...", flush=True)
         lineups = leaguedashlineups.LeagueDashLineups(
             season='2025-26',
             season_type_all_star='Regular Season',
@@ -73,13 +76,16 @@ def sync_via_api(target_date: datetime) -> int:
             date_from_nullable=nba_date_str,
             date_to_nullable=nba_date_str,
             headers=HEADERS,
-            timeout=120
+            timeout=REQUEST_TIMEOUT  # Using community-recommended 180s timeout
         )
-        
+        print(f"   [DEBUG] API object created, waiting {API_RATE_LIMIT}s...", flush=True)
+
         # Rate limit
         time.sleep(API_RATE_LIMIT)
-        
+
+        print(f"   [DEBUG] Fetching data frames...", flush=True)
         df = lineups.get_data_frames()[0]
+        print(f"   [DEBUG] Data frame received, shape: {df.shape}", flush=True)
         
         if df.empty:
             print(f"      ⚠️  No data found for {db_date_str}")
@@ -94,26 +100,28 @@ def sync_via_api(target_date: datetime) -> int:
 
 def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
     """Maps API dataframe columns to SQLite schema and inserts/upserts."""
+    print(f"   [DEBUG] Saving data to DB for {game_date}...", flush=True)
     conn = get_db_connection()
     c = conn.cursor()
     count = 0
-    
+
     # Ensure columns exist in DataFrame (sometimes missing if no data)
-    required_cols = ['GROUP_NAME', 'TEAM_ABBREVIATION', 'GP', 'MIN', 
-                     'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'PACE', 
+    required_cols = ['GROUP_NAME', 'TEAM_ABBREVIATION', 'GP', 'MIN',
+                     'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'PACE',
                      'TS_PCT', 'EFG_PCT']
-                     
+
+    print(f"   [DEBUG] Checking required columns...", flush=True)
     if not all(col in df.columns for col in required_cols):
-        print("      ⚠️  DataFrame missing required columns")
+        print("      ⚠️  DataFrame missing required columns", flush=True)
         return 0
 
+    print(f"   [DEBUG] Processing {len(df)} rows...", flush=True)
     for _, row in df.iterrows():
         try:
-            # Map API -> DB
+            # Map API -> DB (columns must match team_lineups schema)
             vals = {
                 'game_date': game_date,
                 'lineup_players': row['GROUP_NAME'],
-                'team_id': str(row.get('TEAM_ID', '')),
                 'team_abbreviation': row['TEAM_ABBREVIATION'],
                 'games_played': int(row['GP']),
                 'minutes': float(row['MIN']),
@@ -123,16 +131,12 @@ def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
                 'pace': float(row['PACE']),
                 'ts_pct': float(row['TS_PCT']),
                 'efg_pct': float(row['EFG_PCT']),
-                'plus_minus': 0.0, # Will be calculated
-                'possessions': 0 # Will be calculated
+                'possessions': 0
             }
-            
-            # Calculate possessions immediately
+
+            # Calculate possessions from pace and minutes
             if vals['pace'] > 0 and vals['minutes'] > 0:
                 vals['possessions'] = int(round(vals['pace'] * vals['minutes'] / 48.0))
-                # Derive Plus/Minus from Net Rating columns
-                # NetRtg = (Pts - OppPts) / Poss * 100  ->  PlusMinus = NetRtg * Poss / 100
-                vals['plus_minus'] = round(vals['net_rating'] * vals['possessions'] / 100.0, 1)
 
             # UPSERT Logic
             columns = ', '.join(vals.keys())
@@ -145,10 +149,14 @@ def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
             count += 1
             
         except Exception as e:
+            print(f"      ⚠️  Row error: {e}", flush=True)
             continue
-            
+
+    print(f"   [DEBUG] Committing {count} records to database...", flush=True)
     conn.commit()
+    print(f"   [DEBUG] Commit successful, closing connection...", flush=True)
     conn.close()
+    print(f"   [DEBUG] Database operations complete for {game_date}", flush=True)
     return count
 
 def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool = False):
@@ -194,7 +202,7 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
         print("👻 Engaging Ghost Protocol (Browser Mode)...")
         # FORCE VISIBLE MODE for Self-Hosted (Headless is blocked by WAF)
         is_headless = False if os.environ.get('IS_SELF_HOSTED') else is_ci
-        run_ghost_protocol(start_date, end_date, headless=is_headless)
+        run_wowy_backfill(start_date, end_date, headless=is_headless)
         return
 
     # TIER 1: API EXECUTION
@@ -212,7 +220,7 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
         for attempt in range(MAX_API_RETRIES):
             try:
                 count = sync_via_api(current_date)
-                print(f"   ✓ Synced {count} lineup records")
+                print(f"   ✅ Synced {count} lineup records (committed to database)")
                 total_records += count
                 success = True
                 break
@@ -233,7 +241,7 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
                 print("   👉 Switching to Tier 2: Ghost Protocol for remaining dates...")
                 # FORCE VISIBLE MODE for Self-Hosted (Headless is blocked by WAF)
                 is_headless = False if os.environ.get('IS_SELF_HOSTED') else is_ci
-                run_ghost_protocol(current_date, end_date, headless=is_headless)
+                run_wowy_backfill(current_date, end_date, headless=is_headless)
                 return
 
         current_date += timedelta(days=1)

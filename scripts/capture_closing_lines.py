@@ -49,7 +49,8 @@ def calculate_clv(bet_decimal: float, closing_decimal: float) -> float:
 
 
 def fetch_today_games() -> List[Dict]:
-    """Fetch today's games from The-Odds-API /scores endpoint."""
+    """Fetch today's games. Primary: The-Odds-API. Fallback: BDL."""
+    # Try The-Odds-API first
     url = "https://api.the-odds-api.com/v4/sports/basketball_nba/scores"
     params = {
         'api_key': config.ODDS_API_KEY,
@@ -75,14 +76,40 @@ def fetch_today_games() -> List[Dict]:
                 'home_team': game.get('home_team'),
                 'away_team': game.get('away_team'),
             })
-        return games
+        
+        if games:
+            return games
     except Exception as e:
-        print(f"Error fetching today's games: {e}")
+        print(f"The-Odds-API failed: {e}")
+    
+    # Fallback: BDL
+    print("Falling back to BDL for today's games...")
+    try:
+        from utils.bdl_client import BDLClient
+        bdl = BDLClient()
+        today = datetime.now(EST).strftime('%Y-%m-%d')
+        resp = bdl.get_games(date=today)
+        games = []
+        for g in resp.get('data', []):
+            # Skip non-scheduled games
+            status = g.get('status', '')
+            if status not in ['Scheduled', 'Pre-Game', '']:
+                continue
+            games.append({
+                'game_id': str(g['id']),  # Convert to string for consistency
+                'commence_time': datetime.fromisoformat(g.get('datetime', today).replace('Z', '+00:00')).astimezone(EST) if g.get('datetime') else datetime.now(EST),
+                'home_team': g.get('home_team', {}).get('full_name'),
+                'away_team': g.get('visitor_team', {}).get('full_name'),
+            })
+        return games
+    except Exception as e2:
+        print(f"BDL fallback also failed: {e2}")
         return []
 
 
 def fetch_closing_lines(game_id: str) -> Dict:
-    """Fetch closing odds for a specific game."""
+    """Fetch closing odds for a specific game. Primary: The-Odds-API. Fallback: BDL."""
+    # Try The-Odds-API first
     url = f"https://api.the-odds-api.com/v4/sports/basketball_nba/events/{game_id}/odds"
     params = {
         'api_key': config.ODDS_API_KEY,
@@ -96,7 +123,45 @@ def fetch_closing_lines(game_id: str) -> Dict:
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"Error fetching closing lines for {game_id}: {e}")
+        print(f"The-Odds-API closing lines failed: {e}")
+    
+    # Fallback: BDL odds
+    print(f"Falling back to BDL for closing lines on game {game_id}...")
+    try:
+        from utils.bdl_client import BDLClient
+        bdl = BDLClient()
+        today = datetime.now(EST).strftime('%Y-%m-%d')
+        odds = bdl.get_odds(date=today)
+        
+        # Transform BDL odds format to match The-Odds-API structure for match_closing_lines() compatibility
+        # BDL odds are game-level, not event-level, so we need to find matching game
+        for odd in odds:
+            if str(odd.get('game_id')) == str(game_id):
+                # Convert BDL format to a The-Odds-API-like structure
+                return {
+                    'bookmakers': [{
+                        'key': odd.get('vendor', 'bdl'),
+                        'markets': [
+                            {
+                                'key': 'player_points',
+                                'outcomes': []  # BDL doesn't have player props in odds endpoint
+                            },
+                            {
+                                'key': 'player_rebounds',
+                                'outcomes': []
+                            },
+                            {
+                                'key': 'player_assists',
+                                'outcomes': []
+                            }
+                        ]
+                    }],
+                    'home_team': '',  # Not available in BDL odds
+                    'away_team': '',
+                }
+        return {}
+    except Exception as e2:
+        print(f"BDL closing lines fallback failed: {e2}")
         return {}
 
 

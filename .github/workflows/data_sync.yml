@@ -98,6 +98,7 @@ jobs:
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
@@ -145,6 +146,40 @@ jobs:
           TANK01_TIER: paid
         run: |
           python3 scripts/sync_pbp_shot_quality.py
+
+      - name: Sync Four-Factor WOWY
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          python3 scripts/sync_four_factor_wowy.py
+
+      - name: Sync Team Leverage Profiles
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          python3 scripts/sync_team_leverage_profiles.py
+
+      - name: Sync BDL Clutch Usage
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          python3 scripts/sync_bdl_clutch_usage.py
+
+      - name: Sync Assist Combos
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          python3 scripts/sync_assist_combos.py
+
+      - name: Sync BDL Tracking Data
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          python3 scripts/sync_bdl_tracking.py --all
 
       - name: Deduplicate games table
         timeout-minutes: 5
