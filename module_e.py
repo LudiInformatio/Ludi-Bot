@@ -41,6 +41,10 @@ class LudiCalibrator:
         self.clutch_teams = {}  # {team_abbr: {'clutch_ortg': float, 'overall_ortg': float, 'is_clutch': bool}}
         if PBP_STATS_AVAILABLE:
             self._load_clutch_data()
+
+        # Sprint 1: Load speed/fatigue data for hustle and fatigue context
+        self.speed_data = {}  # {player_name: {speed, distance, speed_recent}}
+        self._load_speed_fatigue_data()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -880,6 +884,10 @@ class LudiCalibrator:
         except (ValueError, TypeError):
             spread = 10.0
         self._apply_clutch_boost(calibrated, spread)
+
+        # 6c. SPEED/FATIGUE CONTEXT (Sprint 1 - Dormant Data Activation)
+        # Guards with high speed get hustle boosts; declining speed signals fatigue
+        self._apply_speed_fatigue_context(calibrated)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -2009,6 +2017,103 @@ class LudiCalibrator:
         if clutch_data and clutch_data.get('is_clutch'):
             self._boost_stat(calibrated, 'proj_pts', 1.03)
             calibrated['notes'] += f" | CLUTCH_PERFORMER (+3%)"
+
+    # ============================================================================
+    # SPRINT 1: SPEED/FATIGUE CONTEXT (Dormant Data Activation)
+    # ============================================================================
+
+    def _load_speed_fatigue_data(self):
+        """Load speed/distance data for fatigue context from player_game_tracking."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            # 30-day rolling speed/distance (baseline)
+            c.execute("""
+                SELECT player_name, AVG(avg_speed_off) as speed, AVG(dist_miles_off) as distance
+                FROM player_game_tracking
+                WHERE game_date >= date('now', '-30 days')
+                  AND avg_speed_off IS NOT NULL AND dist_miles_off IS NOT NULL
+                GROUP BY player_name
+                HAVING COUNT(*) >= 5
+            """)
+            rows = c.fetchall()
+
+            # Also load recent 5-game speed for trend detection
+            c.execute("""
+                SELECT player_name, AVG(avg_speed_off) as speed_recent
+                FROM (
+                    SELECT player_name, avg_speed_off,
+                           ROW_NUMBER() OVER (PARTITION BY player_name ORDER BY game_date DESC) as rn
+                    FROM player_game_tracking
+                    WHERE avg_speed_off IS NOT NULL
+                )
+                WHERE rn <= 5
+                GROUP BY player_name
+                HAVING COUNT(*) >= 3
+            """)
+            recent_rows = c.fetchall()
+            conn.close()
+
+            recent_map = {row[0]: row[1] for row in recent_rows}
+
+            self.speed_data = {}
+            for row in rows:
+                name = row[0]
+                self.speed_data[name] = {
+                    'speed': row[1],
+                    'distance': row[2],
+                    'speed_recent': recent_map.get(name)  # None if no recent data
+                }
+
+            print(f"[Module E] Speed/fatigue data loaded: {len(self.speed_data)} players")
+        except Exception as e:
+            print(f"[Module E] Speed/fatigue data unavailable: {e}")
+            self.speed_data = {}
+
+    def _apply_speed_fatigue_context(self, calibrated: dict):
+        """
+        Apply speed/fatigue modifiers based on tracking data.
+        - Fast guards: +3% AST, +2% STL (hustle plays)
+        - Declining speed trend: -3% across stats (fatigue flag)
+        - Active bigs with high distance: +2% REB (active positioning)
+        """
+        if not self.speed_data:
+            return
+
+        player_name = calibrated.get('name', '')
+        data = self.speed_data.get(player_name)
+        if not data:
+            return
+
+        position = calibrated.get('position', '')
+        speed = data.get('speed', 0)
+        distance = data.get('distance', 0)
+        speed_recent = data.get('speed_recent')
+
+        is_guard = position in ('PG', 'SG', 'G', 'G-F')
+        is_big = position in ('C', 'PF', 'F-C')
+
+        # Guards with high offensive speed (>4.5 mph) = hustle plays
+        if is_guard and speed > 4.5:
+            self._boost_stat(calibrated, 'proj_ast', 1.03)
+            self._boost_stat(calibrated, 'proj_stl', 1.02)
+            calibrated['notes'] += " | Speed Hustle"
+
+        # Declining speed trend: last 5 games slower than 30-day avg by >5%
+        if speed_recent is not None and speed > 0:
+            speed_decline = (speed - speed_recent) / speed
+            if speed_decline > 0.05:
+                # Fatigue flag: -3% across all stats
+                self._boost_stat(calibrated, 'proj_pts', 0.97)
+                self._boost_stat(calibrated, 'proj_ast', 0.97)
+                self._boost_stat(calibrated, 'proj_reb', 0.97)
+                calibrated['notes'] += " | Fatigue Flag"
+
+        # Active bigs with high offensive distance (>2.0 miles) = active positioning
+        if is_big and distance > 2.0:
+            self._boost_stat(calibrated, 'proj_reb', 1.02)
+            calibrated['notes'] += " | Active Big"
 
     # ============================================================================
     # PHASE 6.1: DEPTH CHART INTEGRATION (Feb 2, 2026)

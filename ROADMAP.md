@@ -155,12 +155,12 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 - [ ] 30-day rolling CLV metrics
 
 ### Dormant Data Activation (synced daily but unused in pipeline)
-- [ ] Integrate `shot_quality_avg` into Module C FG% simulation adjustment (499 players synced)
-- [ ] Use rolling TS%, eFG% from `player_game_advanced` in Module C (12,179 records synced)
+- [x] Integrate `shot_quality_avg` into Module C FG% simulation adjustment (499 players synced) ✅
+- [x] Use rolling TS%, eFG% from `player_game_advanced` in Module C (12,179 records synced) ✅
 - [ ] Activate `player_defense` in Module G for matchup-based defensive adjustments (509 players)
 - [ ] Integrate `player_touches` into Module E usage refinement (505 players synced)
-- [ ] Add drives/assists boost in Module C using `player_drives` data (currently archetype-only)
-- [ ] Add speed/fatigue context in Module E using `player_speed` data (currently archetype-only)
+- [x] Add drives/assists boost in Module C using `player_drives` data (currently archetype-only) ✅
+- [x] Add speed/fatigue context in Module E using `player_speed` data (currently archetype-only) ✅
 
 ### Missing PBP Stats Endpoints
 - [ ] Implement `get_assist_combo_summary` — fixes BENEFICIARY (currently 99.9% NULL)

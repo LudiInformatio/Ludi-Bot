@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import os
+import sqlite3
 
 # =========================================================
 # LUDI INFORMATIO | MODULE C: THE ORACLE 
@@ -34,12 +35,113 @@ class LudiOracle:
         
         self.sim_count = sim_count
         self.brain = LudiRLAgent()
+        self.db_path = 'ludi.db'
         self.STAT_MAP = {
             'points': 'PTS', 'rebounds': 'REB', 'assists': 'AST',
             'threes': 'FG3M', 'blocks': 'BLK', 'steals': 'STL',
             'turnovers': 'TOV', 'fga': 'FGA', 'fta': 'FTA',
             'offensive_rebounds': 'OREB', 'defensive_rebounds': 'DREB'
         }
+
+        # Dormant data activation: load efficiency + drives context
+        self.shot_quality_data = {}   # {player_id: shot_quality_avg}
+        self.rolling_ts_data = {}     # {player_name: avg_ts_pct}
+        self.drives_data = {}         # {player_name: {pass_pct, drives_pts}}
+        self._load_shot_quality_data()
+        self._load_rolling_ts_data()
+        self._load_drives_data()
+
+    def _load_shot_quality_data(self):
+        """Load shot quality averages from PBP Stats (player_shot_quality table)."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT player_id, shot_quality_avg FROM player_shot_quality WHERE season = '2025-26'")
+            rows = c.fetchall()
+            conn.close()
+            self.shot_quality_data = {row[0]: row[1] for row in rows if row[1] is not None}
+            print(f"   >>> Shot quality data loaded: {len(self.shot_quality_data)} players")
+        except Exception as e:
+            print(f"   >>> Shot quality data unavailable: {e}")
+            self.shot_quality_data = {}
+
+    def _load_rolling_ts_data(self):
+        """Load rolling TS% from player_game_advanced (last 30 days, min 5 games)."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            # TS% stored as 0-100 scale in DB (league avg ~60.4)
+            c.execute("""
+                SELECT player_name, AVG(ts_pct) as avg_ts
+                FROM player_game_advanced
+                WHERE game_date >= date('now', '-30 days') AND ts_pct IS NOT NULL AND ts_pct > 0
+                GROUP BY player_name
+                HAVING COUNT(*) >= 5
+            """)
+            rows = c.fetchall()
+            conn.close()
+            self.rolling_ts_data = {row[0]: row[1] for row in rows}
+            print(f"   >>> Rolling TS% data loaded: {len(self.rolling_ts_data)} players")
+        except Exception as e:
+            print(f"   >>> Rolling TS% data unavailable: {e}")
+            self.rolling_ts_data = {}
+
+    def _load_drives_data(self):
+        """Load drives context from player_game_tracking (last 30 days, min 5 games)."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                SELECT player_name, AVG(drives_pass_pct) as avg_pass_pct, AVG(drives_pts) as avg_drives_pts
+                FROM player_game_tracking
+                WHERE game_date >= date('now', '-30 days')
+                  AND drives_pass_pct IS NOT NULL AND drives_pts IS NOT NULL
+                GROUP BY player_name
+                HAVING COUNT(*) >= 5
+            """)
+            rows = c.fetchall()
+            conn.close()
+            self.drives_data = {row[0]: {'pass_pct': row[1], 'drives_pts': row[2]} for row in rows}
+            print(f"   >>> Drives context data loaded: {len(self.drives_data)} players")
+        except Exception as e:
+            print(f"   >>> Drives context data unavailable: {e}")
+            self.drives_data = {}
+
+    def _calculate_efficiency_modifier(self, player):
+        """
+        Blend shot quality + rolling TS% into a single FG% efficiency modifier.
+        - Shot quality signal: does this player take good shots? (PBP Stats)
+        - Rolling TS% signal: is this player shooting well recently? (game-level advanced)
+        Returns modifier centered at 1.0, capped at ±8%.
+        """
+        player_id = str(player.get('player_id', ''))
+        player_name = player.get('PLAYER_NAME', '')
+
+        # Shot quality modifier: league avg ~0.55 eFG for shot quality metric
+        sq_mod = 1.0
+        sq = self.shot_quality_data.get(player_id)
+        if sq is not None:
+            # Ratio vs league avg, capped at ±5%
+            sq_mod = max(0.95, min(1.05, sq / 0.55))
+
+        # Rolling TS% modifier: league avg ~60.4 on 0-100 scale
+        ts_mod = 1.0
+        ts = self.rolling_ts_data.get(player_name)
+        if ts is not None:
+            ts_mod = max(0.95, min(1.05, ts / 60.4))
+
+        # Blend 50/50 when both available, use whichever is available otherwise
+        if sq is not None and ts is not None:
+            combined = (sq_mod * 0.5) + (ts_mod * 0.5)
+        elif sq is not None:
+            combined = sq_mod
+        elif ts is not None:
+            combined = ts_mod
+        else:
+            combined = 1.0
+
+        # Final cap at ±8% to prevent overcalibration
+        return max(0.92, min(1.08, combined))
 
     def run_simulation_batch(self, scenarios_list):
         simulated_results = []
@@ -123,6 +225,12 @@ class LudiOracle:
         fg_pct = player.get('FG_PCT', 0.45) * mods['def_rtg'] * mods['fatigue']
         fg3_pct = player.get('FG3_PCT', 0.35) * mods['fatigue']
         ft_pct = player.get('FT_PCT', 0.75)
+
+        # DORMANT DATA: Shot quality + rolling TS% efficiency modifier
+        # Blends two signals: shot selection quality (PBP Stats) and recent shooting efficiency (TS%)
+        efficiency_mod = self._calculate_efficiency_modifier(player)
+        fg_pct *= efficiency_mod
+        fg3_pct *= efficiency_mod
         
         # Field goals - use distribution
         fgm_dist = vol_dist['FGA'] * fg_pct
@@ -134,11 +242,9 @@ class LudiOracle:
         distributions['FG3M'] = fg3m_dist
         distributions['FTM'] = ftm_dist
         
-        # SCORING - full distribution
+        # SCORING - full distribution (PTS assigned after drives boost below)
         pts_dist = ((fgm_dist - fg3m_dist) * 2) + (fg3m_dist * 3) + ftm_dist
-        distributions['PTS'] = pts_dist
-        out['PTS'] = round(np.mean(pts_dist), 1)
-        
+
         # Store volume means
         out['FGA'] = round(np.mean(vol_dist['FGA']), 1)
         out['FG3A'] = round(np.mean(vol_dist['FG3A']), 1)
@@ -147,10 +253,34 @@ class LudiOracle:
         out['FG3M'] = round(np.mean(fg3m_dist), 1)
         out['FTM'] = round(np.mean(ftm_dist), 1)
         
+        # DORMANT DATA: Drives context boost for PTS (rim pressure from drives)
+        player_name = player.get('PLAYER_NAME', '')
+        drives = self.drives_data.get(player_name, {})
+        drives_pts_boost = 1.0
+        drives_ast_boost = 1.0
+        if drives:
+            # High drives_pass_pct (>40%) = playmaker who creates for others -> AST boost
+            if drives.get('pass_pct', 0) > 40:
+                drives_ast_boost = 1.05 + min((drives['pass_pct'] - 40) / 200, 0.05)  # +5-10% AST
+            # High drives_pts (>6 per game) = rim pressure scorer -> PTS boost
+            if drives.get('drives_pts', 0) > 6:
+                drives_pts_boost = 1.03 + min((drives['drives_pts'] - 6) / 100, 0.02)  # +3-5% PTS
+
+        # Apply drives PTS boost to scoring distribution
+        if drives_pts_boost > 1.0:
+            pts_dist = pts_dist * drives_pts_boost
+
+        distributions['PTS'] = pts_dist
+        out['PTS'] = round(np.mean(pts_dist), 1)
+
         # POSSESSION-BASED STATS - keep distributions
         for stat in ['AST', 'REB', 'OREB', 'DREB', 'STL', 'BLK', 'TOV']:
             base = player.get(stat, 0.0) * mods['pace']
-            
+
+            # DORMANT DATA: Apply drives AST boost
+            if stat == 'AST' and drives_ast_boost > 1.0:
+                base *= drives_ast_boost
+
             if stat in ['STL', 'BLK']:
                 # POISSON for Rare Events
                 res = np.random.poisson(max(base, 0.1), self.sim_count)
@@ -158,7 +288,7 @@ class LudiOracle:
                 # NORMAL for High-Volume stats
                 # Variance 0.40 matches volume variance (conservative)
                 res = np.maximum(np.random.normal(base, base * 0.40, self.sim_count), 0)
-            
+
             distributions[stat] = res
             out[stat] = round(np.mean(res), 1)
         
