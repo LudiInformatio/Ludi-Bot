@@ -87,6 +87,18 @@ DEBUG_LOG = False  # Set to True for verbose calibration logs
 IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'false').lower() == 'true'
 
 # ====================================================
+# 5c. SIMULATION SETTINGS (MODULE C)
+# ====================================================
+SIM_COUNT = 5000
+SIM_VARIANCE = 0.35
+SIM_POISSON_THRESHOLD = 3.0
+LEAGUE_AVG_TOTAL = 224.5
+LEAGUE_AVG_FG_PCT = 0.465
+LEAGUE_AVG_TS_PCT = 60.4
+FATIGUE_B2B_TAX = 0.965
+FATIGUE_RUST_TAX = 0.985
+
+# ====================================================
 # 5b. API TIER CONFIGURATION
 # ====================================================
 

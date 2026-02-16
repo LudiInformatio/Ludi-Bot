@@ -83,7 +83,10 @@ class LudiOrchestrator:
                    AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta), 
                    AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk), 
                    AVG(pgl.tov), AVG(pgl.minutes), 
-                   MAX(psq.shot_quality_avg), MAX(psq.at_rim_frequency), MAX(psq.corner3_frequency)
+                   MAX(psq.shot_quality_avg), MAX(psq.at_rim_frequency), MAX(psq.corner3_frequency),
+                   CASE WHEN SUM(pgl.fga) > 0 THEN ROUND(1.0 * SUM(pgl.fgm) / SUM(pgl.fga), 4) ELSE 0.45 END,
+                   CASE WHEN SUM(pgl.fg3a) > 0 THEN ROUND(1.0 * SUM(pgl.fg3m) / SUM(pgl.fg3a), 4) ELSE 0.35 END,
+                   CASE WHEN SUM(pgl.fta) > 0 THEN ROUND(1.0 * SUM(pgl.ftm) / SUM(pgl.fta), 4) ELSE 0.75 END
             FROM player_game_logs pgl
             LEFT JOIN player_season_quality psq ON pgl.player_id = psq.player_id AND psq.season = '2025-26'
             WHERE pgl.team_abbreviation = ? AND pgl.game_date >= date('now', '-30 days')
@@ -112,6 +115,7 @@ class LudiOrchestrator:
                 'OREB': round(row[9] or 0, 1), 'DREB': round(row[10] or 0, 1),
                 'STL': round(row[11] or 0, 1), 'BLK': round(row[12] or 0, 1), 'TOV': round(tov, 1),
                 'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1),
+                'FG_PCT': row[18], 'FG3_PCT': row[19], 'FT_PCT': row[20],
                 'pbp_shot_quality': round(shot_quality, 3),
                 'pbp_rim_freq': round(at_rim_freq, 3),
                 'pbp_corner3_freq': round(corner3_freq, 3)
@@ -146,6 +150,30 @@ class LudiOrchestrator:
     def fetch_props_for_game(self, game_id: str) -> Dict[str, Dict]:
         return self.gate.games.get(game_id, {}).get('props', {})
 
+    def _get_days_rest(self, team_abbr: str, game_date: str) -> int:
+        """Return days since last recorded game for a team abbreviation."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT MAX(date) FROM games
+                WHERE (home_team = ? OR away_team = ?) AND date < ?
+                """,
+                (team_abbr, team_abbr, game_date)
+            )
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[0]:
+                last_game = datetime.strptime(row[0], '%Y-%m-%d').date()
+                target_date = datetime.strptime(game_date, '%Y-%m-%d').date()
+                return (target_date - last_game).days
+        except Exception as e:
+            print(f"⚠️  Rest lookup failed for {team_abbr} on {game_date}: {e}")
+
+        return 2
+
     def match_props_to_roster(self, props_data: Dict, roster: List[Dict]) -> List[Dict]:
         matched = []
         for p in roster:
@@ -160,11 +188,38 @@ class LudiOrchestrator:
         ref_data = game_data.get('archetypes', {}).get('ref_data', {
             'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0
         })
+        vegas_total = game_data.get('vegas', {}).get('total', config.LEAGUE_AVG_TOTAL)
+        if isinstance(vegas_total, (int, float)) and vegas_total > 0:
+            pace_factor = vegas_total / config.LEAGUE_AVG_TOTAL
+            pace_factor = max(0.90, min(1.10, pace_factor))
+        else:
+            pace_factor = 1.0
+
+        home_team = home_roster[0].get('TEAM_ABBREVIATION', '') if home_roster else ''
+        away_team = away_roster[0].get('TEAM_ABBREVIATION', '') if away_roster else ''
+        game_date = game_data.get('date', get_est_today())
+        home_days_rest = self._get_days_rest(home_team, game_date) if home_team else 2
+        away_days_rest = self._get_days_rest(away_team, game_date) if away_team else 2
+
+        players = []
+        for p in home_roster:
+            pc = p.copy()
+            pc['days_rest'] = home_days_rest
+            players.append(pc)
+        for p in away_roster:
+            pc = p.copy()
+            pc['days_rest'] = away_days_rest
+            players.append(pc)
+
         return {
             'scenario_name': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_').replace(' ', '_'),
             'ref_data': ref_data,  # Pass full dict for pace AND whistle impact
-            'pace_factor': 1.0, 'def_factor': 1.0, 'days_rest': 1,
-            'players': home_roster + away_roster
+            'pace_factor': pace_factor,
+            'def_factor': 1.0,
+            'days_rest': min(home_days_rest, away_days_rest),
+            'home_team': home_team,
+            'away_team': away_team,
+            'players': players
         }
 
     def build_reporter_input(self, sim_results: List[Dict], game_data: Dict, props_data: Dict) -> List[Dict]:
