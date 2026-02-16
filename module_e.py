@@ -41,6 +41,22 @@ class LudiCalibrator:
         self.clutch_teams = {}  # {team_abbr: {'clutch_ortg': float, 'overall_ortg': float, 'is_clutch': bool}}
         if PBP_STATS_AVAILABLE:
             self._load_clutch_data()
+
+        # Sprint 1: Load speed/fatigue data for hustle and fatigue context
+        self.speed_data = {}  # {player_name: {speed, distance, speed_recent}}
+        self._load_speed_fatigue_data()
+
+        # Sprint 2: Load touches data for usage refinement
+        self.touches_data = {}  # {player_name: {touches_per_game, avg_sec_per_touch, ...}}
+        self._load_touches_data()
+
+        # Sprint 3: Load team leverage profiles for game state intelligence
+        self.leverage_profiles = {}  # {team_abbr: {vh_pace, l_pace, pace_variance, ...}}
+        self._load_leverage_profiles()
+
+        # Sprint 3: Load player leverage usage for crunch time identification
+        self.player_leverage = {}  # {player_name: {clutch_usage_rate, vh_possessions}}
+        self._load_player_leverage_usage()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -53,76 +69,50 @@ class LudiCalibrator:
         self.DEFENSIVE_STYLES = {
             # ELITE PAINT_PACK - Proven rim protectors with excellent DefRtg
             "OKC": "PAINT_PACK",   # 96.0 recent DefRtg (elite)
-            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)  
+            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)
             "DET": "PAINT_PACK",   # 87.5 recent DefRtg (TOP 3)
+            "MIN": "PAINT_PACK",   # Gobert rim protection
+            "SAS": "PAINT_PACK",   # Wembanyama rim protection
+            "ORL": "PAINT_PACK",   # Carter/Wagner twin towers
+
+            # BLITZ - Aggressive pressure defenses
             "PHX": "BLITZ",       # 91.3 recent DefRtg (elite pressure)
-            
-            # SOLID DEFENSES - Maintaining elite standards
-            "PHI": "PAINT_PACK",   # 106.1 stable, still effective
             "HOU": "BLITZ",       # 102.0 improving, pressure working
             "TOR": "BLITZ",       # Solid pressure defense
             "MIA": "BLITZ",       # Consistently elite
             "BKN": "BLITZ",       # 99.1 DefRtg (excellent)
-            
+
             # FUNNEL DEFENSES - Balanced schemes
             "WAS": "FUNNEL",       # High variance but stable identity
             "ATL": "FUNNEL",       # 102.7 improving
             "CHI": "FUNNEL",       # 99.9 improving
             "SAC": "FUNNEL",       # Consistently solid
             "DEN": "FUNNEL",       # 107.3 improving
-            
-            # NEUTRAL - Teams that failed elite checks or are in transition
-            "MIN": "NEUTRAL",     # Failed rim protection (diff% +0.6)
-            "SAS": "NEUTRAL",     # Failed rim protection (diff% +0.5)
-            "ORL": "NEUTRAL",     # Failed rim protection (diff% +2.9)
-            "LAL": "NEUTRAL",     # Failed rim protection, 112.3 DefRtg
-            "CLE": "NEUTRAL",     # Failed rim protection (diff% +1.5)
-            "MEM": "NEUTRAL",     # Failed rim protection (diff% +0.9)
-            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
-            "NYK": "NEUTRAL",     # Failed perimeter denial, 112.5 DefRtg
-            "DAL": "NEUTRAL",     # Failed perimeter denial, 113.0 DefRtg
-            "NOP": "NEUTRAL",     # 111.8 DefRtg, failed perimeter checks
-            "LAC": "NEUTRAL",     # Failed perimeter denial checks
-            "GSW": "NEUTRAL",     # Failed perimeter denial (51.7% opp dfg)
             "UTA": "FUNNEL",       # High variance (120.3) but scheme identity
-            
+
+            # PERIMETER - Perimeter-oriented defenses (FIX: was all NEUTRAL, 16 dead branches)
+            "GSW": "PERIMETER",    # Switch-everything, perimeter pressure
+            "DAL": "PERIMETER",    # Perimeter focus, limit 3s
+            "NYK": "PERIMETER",    # Thibs' perimeter denial system
+
             # HACKERS - Foul-heavy defenses remain unchanged
-            "IND": "HACKERS", 
-            "CHA": "HACKERS", 
-            "POR": "HACKERS"
+            "IND": "HACKERS",
+            "CHA": "HACKERS",
+            "POR": "HACKERS",
+
+            # NEUTRAL - Teams without strong defensive identity
+            "LAL": "NEUTRAL",     # 112.3 DefRtg, no clear scheme
+            "CLE": "NEUTRAL",     # 115.1 DefRtg, inconsistent
+            "MEM": "NEUTRAL",     # Rebuilding defensive identity
+            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
+            "NOP": "NEUTRAL",     # 111.8 DefRtg, scheme in flux
+            "LAC": "NEUTRAL",     # Transitional year
+            "PHI": "NEUTRAL"      # Personnel changes mid-season
         }
 
-        # 2025-26 TEAM OFFENSIVE STYLES (VERIFIED JAN 21, 2026)
-        # Based on Basketball-Reference/StatMuse pace + ORtg data
-        self.OFFENSIVE_STYLES = {
-            # MOTION - High ball movement, assist-heavy
-            "GSW": "MOTION", "BOS": "MOTION", "DEN": "MOTION", 
-            "ATL": "MOTION", "IND": "MOTION", "OKC": "MOTION",  # OKC moved from PACE_PUSH
-            
-            # ISO_HEAVY - Star-driven isolation (REDUCED from 5 to 3 teams)
-            "MIA": "ISO_HEAVY", "HOU": "ISO_HEAVY", "CLE": "ISO_HEAVY",
-            # Removed: DAL (post-Luka), PHX (now PACE_PUSH)
-            
-            # PACE_PUSH - Fast break focused (>100 pace)
-            "UTA": "PACE_PUSH",   # 101.8 (#1 fastest)
-            "CHI": "PACE_PUSH",   # 101.5 (#2 fastest)
-            "WAS": "PACE_PUSH",   # 101.1 (#3 fastest)
-            "PHX": "PACE_PUSH",   # Booker-led uptempo (changed from ISO_HEAVY)
-            "SAC": "PACE_PUSH", "NYK": "PACE_PUSH",
-            
-            # HALF_COURT - Methodical, low pace (<97)
-            "MEM": "HALF_COURT",  # 95.4 (slowest)
-            "LAC": "HALF_COURT",  # 95.8 (#2 slowest)
-            "BOS": "HALF_COURT",  # 95.7 (slow but elite 122.1 ORtg)
-            "BKN": "HALF_COURT",  # 96.6
-            "PHI": "HALF_COURT",  # 96.6
-            "ORL": "HALF_COURT", "TOR": "HALF_COURT", "MIN": "HALF_COURT",
-            
-            # Default: NEUTRAL (only 8 teams now, was 13)
-            "LAL": "NEUTRAL", "MIL": "NEUTRAL", "DAL": "NEUTRAL",  # DAL changed from ISO_HEAVY
-            "CHA": "NEUTRAL", "DET": "NEUTRAL", "POR": "NEUTRAL", 
-            "SAS": "NEUTRAL", "NOP": "NEUTRAL"
-        }
+        # OFFENSIVE_STYLES dict removed (Feb 15, 2026)
+        # Now using utils/team_offensive_classifier.py via classify_team_offense() method
+        # Fixed name mismatch: classifier now returns MOTION/ISO_HEAVY/PACE_PUSH/HALF_COURT (not MOTION_OFFENSE/ISOLATION_HEAVY)
 
         # MANUAL OVERRIDES (The "Scout's Eye")
         self.MANUAL_OVERRIDES = {
@@ -344,28 +334,33 @@ class LudiCalibrator:
         """
         Get official Synergy playtypes from database.
         Returns list of (playtype_tag, freq_pct, ppp) sorted by frequency.
-        
+
         Args:
             player_name: Player name to lookup
             min_freq: Minimum frequency % to qualify (default 5%)
+
+        Note: Applies best practice filter: (poss_per_game * games_played) >= 75
+        to ensure statistical significance of playtype data.
         """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
+            # Apply Synergy best practices: minimum 75 total possessions
             cursor.execute("""
                 SELECT playtype, freq_pct, ppp, percentile
                 FROM player_synergy_playtypes
-                WHERE player_name = ? 
+                WHERE player_name = ?
                 AND season = '2025-26'
                 AND freq_pct >= ?
+                AND (poss_per_game * games_played) >= 75
                 ORDER BY freq_pct DESC
                 LIMIT 4
             """, (player_name, min_freq))
-            
+
             results = cursor.fetchall()
             conn.close()
-            
+
             # Convert Synergy tags to our format
             playtypes = []
             for row in results:
@@ -373,9 +368,9 @@ class LudiCalibrator:
                 our_tag = self.SYNERGY_TO_TAG.get(synergy_tag)
                 if our_tag:
                     playtypes.append((our_tag, freq, ppp, percentile))
-            
+
             return playtypes
-            
+
         except Exception as e:
             # print(f"⚠️ Synergy lookup error: {e}")
             return []
@@ -880,6 +875,18 @@ class LudiCalibrator:
         except (ValueError, TypeError):
             spread = 10.0
         self._apply_clutch_boost(calibrated, spread)
+
+        # 6c. SPEED/FATIGUE CONTEXT (Sprint 1 - Dormant Data Activation)
+        # Guards with high speed get hustle boosts; declining speed signals fatigue
+        self._apply_speed_fatigue_context(calibrated)
+
+        # 6d. TOUCHES CONTEXT (Sprint 2 - Dormant Data Activation)
+        # Quick decision-makers, paint presence, post-ups, efficient scorers
+        self._apply_touches_context(calibrated, def_style)
+
+        # 6e. LEVERAGE GAME STATE CONTEXT (Sprint 3)
+        # Pace by game state, crunch time usage, OREB adjustments
+        self._apply_leverage_context(calibrated, spread)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -2009,6 +2016,304 @@ class LudiCalibrator:
         if clutch_data and clutch_data.get('is_clutch'):
             self._boost_stat(calibrated, 'proj_pts', 1.03)
             calibrated['notes'] += f" | CLUTCH_PERFORMER (+3%)"
+
+    # ============================================================================
+    # SPRINT 3: LEVERAGE GAME STATE INTELLIGENCE
+    # ============================================================================
+
+    def _load_leverage_profiles(self):
+        """Load team leverage profiles from team_leverage_profiles table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            c.execute("""
+                SELECT team_abbr, vh_pace, h_pace, l_pace, overall_pace,
+                       vh_efg_pct, l_efg_pct, overall_efg_pct,
+                       vh_oreb_pct, l_oreb_pct, overall_oreb_pct,
+                       garbage_time_boost, clutch_factor, pace_variance
+                FROM team_leverage_profiles
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+
+            for row in rows:
+                self.leverage_profiles[row[0]] = {
+                    'vh_pace': row[1],
+                    'h_pace': row[2],
+                    'l_pace': row[3],
+                    'overall_pace': row[4],
+                    'vh_efg_pct': row[5],
+                    'l_efg_pct': row[6],
+                    'overall_efg_pct': row[7],
+                    'vh_oreb_pct': row[8],
+                    'l_oreb_pct': row[9],
+                    'overall_oreb_pct': row[10],
+                    'garbage_time_boost': row[11],
+                    'clutch_factor': row[12],
+                    'pace_variance': row[13]
+                }
+
+            conn.close()
+            print(f"[Module E] Leverage profiles loaded: {len(self.leverage_profiles)} teams")
+        except Exception as e:
+            print(f"[Module E] Leverage profiles unavailable: {e}")
+            self.leverage_profiles = {}
+
+    def _load_player_leverage_usage(self):
+        """Load player leverage usage from player_leverage_usage table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            c.execute("""
+                SELECT player_name, clutch_usage_rate, vh_possessions
+                FROM player_leverage_usage
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+
+            for row in rows:
+                self.player_leverage[row[0]] = {
+                    'clutch_usage_rate': row[1],
+                    'vh_possessions': row[2]
+                }
+
+            conn.close()
+            print(f"[Module E] Player leverage usage loaded: {len(self.player_leverage)} players")
+        except Exception as e:
+            print(f"[Module E] Player leverage usage unavailable: {e}")
+            self.player_leverage = {}
+
+    def _apply_leverage_context(self, calibrated: dict, spread: float):
+        """
+        Apply game-state intelligence based on leverage profiles.
+
+        Uses team leverage data + player leverage usage to:
+        1. Adjust pace factor based on expected game state
+        2. Boost crunch-time scorers in close games
+        3. Adjust REB projections using OREB by leverage
+        4. Validate/refine blowout expectations
+        """
+        team = calibrated.get('team') or calibrated.get('TEAM_ABBREVIATION')
+        player_name = calibrated.get('name', '')
+
+        if not team or team not in self.leverage_profiles:
+            return
+
+        profile = self.leverage_profiles[team]
+        player_lev = self.player_leverage.get(player_name, {})
+        abs_spread = abs(spread) if spread else 0
+
+        # 1. PACE ADJUSTMENT by expected game state
+        if abs_spread < 5.0 and profile.get('vh_pace') and profile.get('overall_pace'):
+            pace_ratio = profile['vh_pace'] / profile['overall_pace']
+            pace_mod = max(0.95, min(1.05, pace_ratio))
+            if pace_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_pts', pace_mod)
+                self._boost_stat(calibrated, 'proj_ast', pace_mod)
+                self._boost_stat(calibrated, 'proj_reb', pace_mod)
+                calibrated['notes'] += f" | Clutch Pace ({pace_mod:.2f})"
+
+        elif abs_spread >= 10.0 and profile.get('l_pace') and profile.get('overall_pace'):
+            pace_ratio = profile['l_pace'] / profile['overall_pace']
+            pace_mod = max(0.95, min(1.05, pace_ratio))
+            if pace_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_pts', pace_mod)
+                self._boost_stat(calibrated, 'proj_ast', pace_mod)
+                self._boost_stat(calibrated, 'proj_reb', pace_mod)
+                calibrated['notes'] += f" | Blowout Pace ({pace_mod:.2f})"
+
+        # 2. CRUNCH TIME USAGE BOOST
+        clutch_rate = player_lev.get('clutch_usage_rate', 0) or 0
+        vh_poss = player_lev.get('vh_possessions', 0) or 0
+        if abs_spread < 5.0 and clutch_rate > 0.12 and vh_poss >= 30:
+            boost = 1.0 + min((clutch_rate - 0.10) * 0.15, 0.03)
+            self._boost_stat(calibrated, 'proj_pts', boost)
+            calibrated['notes'] += f" | Crunch Time ({clutch_rate:.0%})"
+
+        # 3. OREB BY GAME STATE
+        if abs_spread >= 10.0 and profile.get('l_oreb_pct') and profile.get('overall_oreb_pct'):
+            oreb_ratio = profile['l_oreb_pct'] / profile['overall_oreb_pct']
+            oreb_mod = max(0.95, min(1.05, oreb_ratio))
+            if oreb_mod != 1.0:
+                self._boost_stat(calibrated, 'proj_reb', oreb_mod)
+                self._boost_stat(calibrated, 'proj_oreb', oreb_mod)
+                calibrated['notes'] += f" | Blowout REB ({oreb_mod:.2f})"
+
+    # ============================================================================
+    # SPRINT 1: SPEED/FATIGUE CONTEXT (Dormant Data Activation)
+    # ============================================================================
+
+    def _load_speed_fatigue_data(self):
+        """Load speed/distance data for fatigue context from player_game_tracking."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            # 30-day rolling speed/distance (baseline)
+            c.execute("""
+                SELECT player_name, AVG(avg_speed_off) as speed, AVG(dist_miles_off) as distance
+                FROM player_game_tracking
+                WHERE game_date >= date('now', '-30 days')
+                  AND avg_speed_off IS NOT NULL AND dist_miles_off IS NOT NULL
+                GROUP BY player_name
+                HAVING COUNT(*) >= 5
+            """)
+            rows = c.fetchall()
+
+            # Also load recent 5-game speed for trend detection
+            c.execute("""
+                SELECT player_name, AVG(avg_speed_off) as speed_recent
+                FROM (
+                    SELECT player_name, avg_speed_off,
+                           ROW_NUMBER() OVER (PARTITION BY player_name ORDER BY game_date DESC) as rn
+                    FROM player_game_tracking
+                    WHERE avg_speed_off IS NOT NULL
+                )
+                WHERE rn <= 5
+                GROUP BY player_name
+                HAVING COUNT(*) >= 3
+            """)
+            recent_rows = c.fetchall()
+            conn.close()
+
+            recent_map = {row[0]: row[1] for row in recent_rows}
+
+            self.speed_data = {}
+            for row in rows:
+                name = row[0]
+                self.speed_data[name] = {
+                    'speed': row[1],
+                    'distance': row[2],
+                    'speed_recent': recent_map.get(name)  # None if no recent data
+                }
+
+            print(f"[Module E] Speed/fatigue data loaded: {len(self.speed_data)} players")
+        except Exception as e:
+            print(f"[Module E] Speed/fatigue data unavailable: {e}")
+            self.speed_data = {}
+
+    def _apply_speed_fatigue_context(self, calibrated: dict):
+        """
+        Apply speed/fatigue modifiers based on tracking data.
+        - Fast guards: +3% AST, +2% STL (hustle plays)
+        - Declining speed trend: -3% across stats (fatigue flag)
+        - Active bigs with high distance: +2% REB (active positioning)
+        """
+        if not self.speed_data:
+            return
+
+        player_name = calibrated.get('name', '')
+        data = self.speed_data.get(player_name)
+        if not data:
+            return
+
+        position = calibrated.get('position', '')
+        speed = data.get('speed', 0)
+        distance = data.get('distance', 0)
+        speed_recent = data.get('speed_recent')
+
+        is_guard = position in ('PG', 'SG', 'G', 'G-F')
+        is_big = position in ('C', 'PF', 'F-C')
+
+        # Guards with high offensive speed (>4.5 mph) = hustle plays
+        if is_guard and speed > 4.5:
+            self._boost_stat(calibrated, 'proj_ast', 1.03)
+            self._boost_stat(calibrated, 'proj_stl', 1.02)
+            calibrated['notes'] += " | Speed Hustle"
+
+        # Declining speed trend: last 5 games slower than 30-day avg by >5%
+        if speed_recent is not None and speed > 0:
+            speed_decline = (speed - speed_recent) / speed
+            if speed_decline > 0.05:
+                # Fatigue flag: -3% across all stats
+                self._boost_stat(calibrated, 'proj_pts', 0.97)
+                self._boost_stat(calibrated, 'proj_ast', 0.97)
+                self._boost_stat(calibrated, 'proj_reb', 0.97)
+                calibrated['notes'] += " | Fatigue Flag"
+
+        # Active bigs with high offensive distance (>2.0 miles) = active positioning
+        if is_big and distance > 2.0:
+            self._boost_stat(calibrated, 'proj_reb', 1.02)
+            calibrated['notes'] += " | Active Big"
+
+    # ============================================================================
+    # SPRINT 2: TOUCHES CONTEXT (Dormant Data Activation)
+    # ============================================================================
+
+    def _load_touches_data(self):
+        """Load touches data for usage refinement from player_touches table."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                SELECT player_name, touches_per_game, avg_sec_per_touch,
+                       paint_touches_per_game, post_ups_per_game, pts_per_touch
+                FROM player_touches
+                WHERE season = '2025-26'
+            """)
+            rows = c.fetchall()
+            conn.close()
+
+            self.touches_data = {
+                row[0]: {
+                    'touches_per_game': row[1],
+                    'avg_sec_per_touch': row[2],
+                    'paint_touches_per_game': row[3],
+                    'post_ups_per_game': row[4],
+                    'pts_per_touch': row[5]
+                }
+                for row in rows
+            }
+            print(f"[Module E] Touches data loaded: {len(self.touches_data)} players")
+        except Exception as e:
+            print(f"[Module E] Touches data unavailable: {e}")
+            self.touches_data = {}
+
+    def _apply_touches_context(self, calibrated: dict, def_style: str = "NEUTRAL"):
+        """
+        Apply touches-based modifiers for usage refinement.
+        - Quick decision makers (low sec/touch): +3% AST
+        - Paint presence (high paint touches): +3% REB, +2% FTA
+        - Post players in favorable matchups: +3% PTS
+        - Efficient scorers (high pts/touch): +2% PTS
+        All modifiers capped at ±5%.
+        """
+        if not self.touches_data:
+            return
+
+        player_name = calibrated.get('name', '')
+        data = self.touches_data.get(player_name)
+        if not data:
+            return
+
+        touches = data.get('touches_per_game', 0) or 0
+        sec_per_touch = data.get('avg_sec_per_touch', 99) or 99
+        paint_touches = data.get('paint_touches_per_game', 0) or 0
+        post_ups = data.get('post_ups_per_game', 0) or 0
+        pts_per_touch = data.get('pts_per_touch', 0) or 0
+
+        # Quick decision maker: high touches + low time per touch
+        if touches > 40 and sec_per_touch < 2.0:
+            self._boost_stat(calibrated, 'proj_ast', 1.03)
+            calibrated['notes'] += " | Quick Touch"
+
+        # Inside presence: high paint touches
+        if paint_touches > 3.0:
+            self._boost_stat(calibrated, 'proj_reb', 1.03)
+            self._boost_stat(calibrated, 'proj_fta', 1.02)
+            calibrated['notes'] += " | Paint Presence"
+
+        # Post player in favorable matchup (FUNNEL or PERIMETER defenses)
+        if post_ups > 2.0 and def_style in ('FUNNEL', 'PERIMETER'):
+            self._boost_stat(calibrated, 'proj_pts', 1.03)
+            calibrated['notes'] += " | Post Mismatch"
+
+        # Efficient scorer: high points per touch
+        if pts_per_touch > 0.4:
+            self._boost_stat(calibrated, 'proj_pts', 1.02)
+            calibrated['notes'] += " | Efficient Touch"
 
     # ============================================================================
     # PHASE 6.1: DEPTH CHART INTEGRATION (Feb 2, 2026)

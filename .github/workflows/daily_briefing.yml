@@ -2,9 +2,9 @@ name: Daily Morning Briefing
 
 on:
   schedule:
-    # 10:00 AM EST is 15:00 UTC (Standard Time)
+    # 9:00 AM EST is 14:00 UTC (offset from pipeline at 10 AM to avoid SQLite lock)
     # Note: GitHub Actions uses UTC.
-    - cron: '0 15 * * *'
+    - cron: '0 14 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -36,6 +36,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |

@@ -90,13 +90,15 @@
 | `get_player_totals` | Shot Quality | Season shooting stats |
 | `get_team_on_off` | WOWY | Lineup on/off data |
 | `get_player_on_off_impact` | WOWY | Player +/- impact |
+| `get_four_factor_on_off` (Sprint 3) | WOWY | Four-factor on/off (eFG%, TOV%, OREB%, FT Rate) |
+| `get_possessions` (Sprint 3) | Leverage | Player usage by leverage bucket |
+| `get_team_leverage_summary` (Sprint 3) | Leverage | Team stats by leverage bucket |
 
 ### Available but Unused
 
 | Endpoint | Potential Use |
 |----------|---------------|
 | `get_game_stats(Type="Lineup")` | Specific lineup combos for WOWY |
-| `get_team_leverage_summary` | Clutch/leverage performance |
 | `get_shot_chart_data` | Shot location heat maps |
 | `get_player_tracking` | Speed, distance, touches |
 

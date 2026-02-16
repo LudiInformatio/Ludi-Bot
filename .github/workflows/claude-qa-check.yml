@@ -36,13 +36,20 @@ jobs:
         id: failures
         run: |
           # Get failed workflows from last 24 hours
+          # NOTE: Do NOT mask gh failures with || echo — if this step can't query GitHub,
+          # the workflow should FAIL so Claude Ops Hub detects a broken QA layer.
           FAILURES=$(gh run list --limit 20 --json name,conclusion,startedAt,databaseId \
-            --jq '[.[] | select(.conclusion == "failure")] | map("\(.name) (ID: \(.databaseId))") | join(", ")' || echo "none")
+            --jq '[.[] | select(.conclusion == "failure")] | map("\(.name) (ID: \(.databaseId))") | join(", ")')
+
+          # Handle empty result (no failures = good)
+          if [ -z "$FAILURES" ]; then
+            FAILURES="none"
+          fi
           echo "failures=$FAILURES" >> $GITHUB_OUTPUT
 
           # Count failures
           FAIL_COUNT=$(gh run list --limit 20 --json conclusion \
-            --jq '[.[] | select(.conclusion == "failure")] | length' || echo "0")
+            --jq '[.[] | select(.conclusion == "failure")] | length')
           echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

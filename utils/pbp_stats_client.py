@@ -391,6 +391,29 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
     return None
 
 
+def get_assist_combo_summary(season: str = CURRENT_SEASON,
+                             season_type: str = "Regular Season") -> Optional[Dict]:
+    """Get all passer-to-scorer assist combinations for the season."""
+    cache_path = _get_cache_path("assist_combo_summary", {"season": season, "season_type": season_type})
+    cached = _read_cache(cache_path)
+    if cached:
+        return cached
+
+    try:
+        response = _session.get(
+            f"{BASE_URL}/get-assist-combo-summary/nba",
+            params={"Season": season, "SeasonType": season_type},
+            timeout=120
+        )
+        response.raise_for_status()
+        data = response.json()
+        _write_cache(cache_path, data)
+        return data
+    except Exception as e:
+        print(f"[PBP_STATS] Error fetching assist combos: {e}")
+        return None
+
+
 def get_shots(entity_id: str, entity_type: str = "Player",
               season: str = CURRENT_SEASON, season_type: str = "Regular Season") -> Optional[Dict]:
     """
@@ -465,6 +488,92 @@ def get_live_games() -> Optional[Dict]:
     except requests.RequestException as e:
         print(f"[PBP_STATS] Error fetching live games: {e}")
         return None
+
+
+def get_four_factor_on_off(team_id: str, player_id: str,
+                           season: str = CURRENT_SEASON,
+                           season_type: str = "Regular Season") -> Optional[Dict]:
+    """
+    Get four-factor on/off data for a player (eFG%, TOV%, OREB%, FT Rate, Pace).
+
+    Args:
+        team_id: NBA.com team ID
+        player_id: NBA.com player ID
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+
+    Returns:
+        Dict with on/off four factors: eFG%, TOV%, OREB%, FT Rate, Pace
+    """
+    cache_path = _get_cache_path("four_factor_on_off", {"team_id": team_id, "player_id": player_id, "season": season})
+    cached = _read_cache(cache_path)
+    if cached:
+        return cached
+    
+    for timeout in [120, 180]:
+        try:
+            response = _session.get(
+                f"{BASE_URL}/get-four-factor-on-off/nba",
+                params={"Season": season, "SeasonType": season_type, "TeamId": team_id, "PlayerId": player_id},
+                timeout=timeout
+            )
+            response.raise_for_status()
+            data = response.json()
+            _write_cache(cache_path, data)
+            return data
+        except Exception as e:
+            print(f"[PBP_STATS] Error fetching four factor on/off: {e}")
+            if timeout == 180:
+                return None
+
+
+def get_possessions(team_id: str, off_def: str = "Offense",
+                    season: str = CURRENT_SEASON,
+                    season_type: str = "Regular Season",
+                    leverage: str = None) -> Optional[Dict]:
+    """
+    Get possession data for a team, optionally filtered by leverage.
+
+    Args:
+        team_id: NBA.com team ID
+        off_def: "Offense" or "Defense" (REQUIRED)
+        season: Season string
+        season_type: "Regular Season" or "Playoffs"
+        leverage: Optional filter ("Low", "Medium", "High", "VeryHigh")
+
+    Returns:
+        Dict with possession data including player events
+    """
+    params = {
+        "Season": season,
+        "SeasonType": season_type,
+        "TeamId": team_id,
+        "OffDef": off_def
+    }
+    
+    if leverage:
+        params["Leverage"] = leverage
+    
+    cache_path = _get_cache_path("possessions", params)
+    cached = _read_cache(cache_path)
+    if cached:
+        return cached
+    
+    for timeout in [120, 180]:
+        try:
+            response = _session.get(
+                f"{BASE_URL}/get-possessions/nba",
+                params=params,
+                timeout=timeout
+            )
+            response.raise_for_status()
+            data = response.json()
+            _write_cache(cache_path, data)
+            return data
+        except Exception as e:
+            print(f"[PBP_STATS] Error fetching possessions: {e}")
+            if timeout == 180:
+                return None
 
 
 def get_all_players() -> Optional[Dict]:

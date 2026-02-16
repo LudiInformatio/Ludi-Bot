@@ -22,6 +22,28 @@ See @docs/STATUS_HISTORY.md for historical updates.
 
 ---
 
+## Critical Data Rules
+
+**NEVER use AI training data for NBA roster/player/trade knowledge.** The AI's training data is outdated and WILL produce incorrect results (wrong teams, missed trades, phantom transactions).
+
+Instead, ALWAYS use these sources for current-season truth:
+1. **`ludi.db` database** — `players` table (current rosters), `player_game_logs` (game-by-game team assignments), `player_canonical_ids` (ID mappings)
+2. **Live APIs** — Tank01 (`RosterValidator`), Ball Don't Lie (`BDLClient`), PBP Stats
+3. **`player_game_logs.team_abbreviation`** — Tracks which team a player played for on each game date (historical proof of trades)
+
+**Examples of what NOT to do:**
+- Do NOT assume which players were traded based on AI memory
+- Do NOT hardcode trade lists from general knowledge
+- Do NOT guess player team assignments — query the database or API
+
+**The correct process for roster/trade operations:**
+1. Query our database first (`players`, `player_game_logs`)
+2. If needed, fetch LIVE data from Tank01 or BDL APIs
+3. Compare API data vs database to detect changes
+4. Never fill gaps with AI assumptions
+
+---
+
 ## Quick Commands
 
 ```bash

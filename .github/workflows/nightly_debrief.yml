@@ -4,8 +4,6 @@ on:
   schedule:
     # 8:00 PM EST is 1:00 AM UTC (next day)
     - cron: '0 1 * * *'
-    # ONE-TIME TEST: 10:00 PM EST Jan 8, 2026 = 3:00 AM UTC Jan 9, 2026
-    - cron: '0 3 9 1 *'
   workflow_dispatch:
 
 jobs:
@@ -38,6 +36,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |

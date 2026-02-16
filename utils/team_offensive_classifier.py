@@ -111,13 +111,14 @@ class TeamOffensiveClassifier:
         """
         Classify single team using 2025-26 data-driven thresholds.
 
-        Types (based on NBA offensive identities):
-        - THREE_POINT_CENTRIC: High volume 3PT teams (BOS, CHA, POR)
-        - MOTION_OFFENSE: High ball movement (GSW, ATL, CHI, UTA)
+        Types (matching module_e boost function expectations):
+        - MOTION: High ball movement (GSW, ATL, CHI, UTA)
         - PACE_PUSH: Fast pace, transition heavy (OKC, PHX)
-        - PAINT_ATTACK: Drive-heavy, low 3PA (HOU, ORL)
-        - ISOLATION_HEAVY: Low assists, star-driven (MIA, CLE)
+        - ISO_HEAVY: Low assists, star-driven (MIA, CLE)
+        - HALF_COURT: Methodical, low pace (<97)
         - BALANCED: No strong identity
+
+        NOTE: module_e expects MOTION, ISO_HEAVY, PACE_PUSH, HALF_COURT (NOT MOTION_OFFENSE, ISOLATION_HEAVY, etc.)
         """
         # Extract stats with defaults
         ppg = stats.get('ppg', 115)
@@ -127,31 +128,27 @@ class TeamOffensiveClassifier:
         t3pa_rate = stats.get('3pa_rate', 0.40)
         ast_per_fgm = stats.get('ast_per_fgm', 0.62)
         stls = stats.get('steals', 7)
+        pace = stats.get('pace', 98)
 
-        # THREE_POINT_CENTRIC: Heavy 3PT volume (top quartile)
-        # Threshold: 3PA > 46 OR (3PM > 16 AND 3PA_rate > 0.45)
-        if t3pa > 46 or (t3pm > 16 and t3pa_rate > 0.45):
-            return "THREE_POINT_CENTRIC"
+        # MOTION: High ball movement (top quartile assists/FGM)
+        # Threshold: ast_per_fgm > 0.675 (top 20% based on 2025-26 quartiles)
+        if ast_per_fgm > 0.675:
+            return "MOTION"
 
-        # MOTION_OFFENSE: High ball movement (top quartile assists/FGM)
-        # Threshold: ast_per_fgm > 0.68 AND ast > 32
-        if ast_per_fgm > 0.68 and ast > 32:
-            return "MOTION_OFFENSE"
-
-        # PACE_PUSH: High scoring, transition-focused
-        # Threshold: ppg > 138 AND steals > 8 (leads to fast breaks)
-        if ppg > 138 and stls > 8:
+        # PACE_PUSH: High pace, transition-focused
+        # Threshold: pace > 100 OR ppg > 120 (fast-paced teams)
+        if pace > 100 or ppg > 120:
             return "PACE_PUSH"
 
-        # PAINT_ATTACK: Low 3PA, drive-heavy
-        # Threshold: 3PA < 38 AND ppg > 130
-        if t3pa < 38 and ppg > 130:
-            return "PAINT_ATTACK"
+        # ISO_HEAVY: Low ball movement, star-dependent
+        # Threshold: ast_per_fgm < 0.600 (bottom 20%, Q1 is 0.603)
+        if ast_per_fgm < 0.600:
+            return "ISO_HEAVY"
 
-        # ISOLATION_HEAVY: Low ball movement, star-dependent
-        # Threshold: ast_per_fgm < 0.60 AND ppg > 130
-        if ast_per_fgm < 0.60 and ppg > 130:
-            return "ISOLATION_HEAVY"
+        # HALF_COURT: Methodical, low pace
+        # Threshold: pace < 98 (slowest teams)
+        if pace < 98:
+            return "HALF_COURT"
 
         return "BALANCED"
     

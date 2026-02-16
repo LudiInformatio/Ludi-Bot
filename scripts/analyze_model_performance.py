@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """
-Model Performance Analysis Script
+Model Performance Analysis Script (Enhanced V2.0)
 
-Purpose: Analyze betting model performance across multiple dimensions to identify
-         profitable patterns and calibration opportunities.
+Purpose: Comprehensive betting model analysis across 10+ dimensions with dual-pool
+         support, calibration metrics, and actionable insights.
+
+Enhancements (Feb 15, 2026):
+    - VOID bet exclusion (actual_result < 0)
+    - Sample size filtering (100+ bet minimum for segments)
+    - Brier score calibration metrics
+    - Dual-pool analysis (morning vs evening runs)
+    - New dimensions: Spread buckets, Total buckets, Home/Away, Cross-cuts
+    - Fixed edge bucket expected win% (uses actual avg model_prob)
 
 Usage:
     python scripts/analyze_model_performance.py [--output markdown|console]
 
 Output:
-    - Six comprehensive analysis tables
-    - Summary statistics and actionable recommendations
-    - Optional markdown report file
+    - Console: Formatted tables with key insights
+    - Markdown: Comprehensive report at reports/performance_analysis_YYYY-MM-DD.md
 
 Author: Ludi Informatio
-Date: February 2, 2026
+Date: February 15, 2026
 """
 
 import os
@@ -29,6 +36,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 
 class ModelPerformanceAnalyzer:
+    """Enhanced betting model performance analyzer with comprehensive diagnostics."""
+
     def __init__(self, db_path='ludi.db'):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
@@ -38,8 +47,11 @@ class ModelPerformanceAnalyzer:
         self.settled_bets = []
         self.results = {}
 
+        # Minimum sample size for segment reporting
+        self.MIN_SAMPLE_SIZE = 100
+
     def load_settled_bets(self):
-        """Load all settled bets from database."""
+        """Load all settled bets from database, excluding VOIDs."""
         query = '''
             SELECT
                 id,
@@ -58,9 +70,19 @@ class ModelPerformanceAnalyzer:
                 bookmaker,
                 odds_over,
                 odds_under,
-                actual_result
+                actual_result,
+                model_prob,
+                fair_prob,
+                spread,
+                total,
+                team,
+                opponent,
+                home_team,
+                away_team,
+                timestamp
             FROM bet_recommendations
             WHERE outcome IS NOT NULL
+              AND actual_result >= 0  -- Exclude VOIDs (-999 = NO_GAME, -998 = DNP)
             ORDER BY game_date DESC
         '''
 
@@ -68,7 +90,7 @@ class ModelPerformanceAnalyzer:
         cursor.execute(query)
         self.settled_bets = [dict(row) for row in cursor.fetchall()]
 
-        print(f"✅ Loaded {len(self.settled_bets)} settled bets")
+        print(f"✅ Loaded {len(self.settled_bets)} settled bets (VOIDs excluded)")
         print(f"   Date range: {self.settled_bets[-1]['game_date']} to {self.settled_bets[0]['game_date']}")
         print()
 
@@ -90,10 +112,15 @@ class ModelPerformanceAnalyzer:
             elif bet['result'] == 'LOSS':
                 stats[stat]['losses'] += 1
 
-        # Build result table
+        # Build result table (only stats with 100+ bets)
         table = []
         for stat in sorted(stats.keys()):
             s = stats[stat]
+
+            # Sample size filter
+            if s['bets'] < self.MIN_SAMPLE_SIZE:
+                continue
+
             win_pct = (s['wins'] / s['bets'] * 100) if s['bets'] > 0 else 0
             roi = (s['profit'] / s['units_wagered'] * 100) if s['units_wagered'] > 0 else 0
 
@@ -126,7 +153,7 @@ class ModelPerformanceAnalyzer:
             if bet['result'] == 'WIN':
                 stats[stat][direction]['wins'] += 1
 
-        # Build result table
+        # Build result table (only segments with 100+ bets)
         table = []
         for stat in sorted(stats.keys()):
             for direction in ['OVER', 'UNDER']:
@@ -134,6 +161,11 @@ class ModelPerformanceAnalyzer:
                     continue
 
                 s = stats[stat][direction]
+
+                # Sample size filter
+                if s['bets'] < self.MIN_SAMPLE_SIZE:
+                    continue
+
                 win_pct = (s['wins'] / s['bets'] * 100) if s['bets'] > 0 else 0
 
                 # Recommendation logic
@@ -179,10 +211,15 @@ class ModelPerformanceAnalyzer:
                 positions[pos]['_total']['wins'] += 1
                 positions[pos][stat]['wins'] += 1
 
-        # Build result table
+        # Build result table (only positions with 100+ bets)
         table = []
         for pos in sorted(positions.keys(), key=lambda x: (x == 'UNK', x)):
             total = positions[pos]['_total']
+
+            # Sample size filter
+            if total['bets'] < self.MIN_SAMPLE_SIZE:
+                continue
+
             win_pct = (total['wins'] / total['bets'] * 100) if total['bets'] > 0 else 0
 
             # Find best and worst stats
@@ -191,7 +228,7 @@ class ModelPerformanceAnalyzer:
                 if stat == '_total':
                     continue
                 s = positions[pos][stat]
-                if s['bets'] >= 20:  # Minimum sample size
+                if s['bets'] >= 20:  # Lower threshold for sub-category
                     stat_performance.append((stat, s['profit']))
 
             stat_performance.sort(key=lambda x: x[1], reverse=True)
@@ -229,10 +266,15 @@ class ModelPerformanceAnalyzer:
             if bet['result'] == 'WIN':
                 archetypes[arch]['wins'] += 1
 
-        # Build result table
+        # Build result table (only archetypes with 100+ bets)
         table = []
         for arch in sorted(archetypes.keys()):
             a = archetypes[arch]
+
+            # Sample size filter
+            if a['bets'] < self.MIN_SAMPLE_SIZE:
+                continue
+
             win_pct = (a['wins'] / a['bets'] * 100) if a['bets'] > 0 else 0
             units_per_bet = (a['units_wagered'] / a['bets']) if a['bets'] > 0 else 0
 
@@ -250,13 +292,13 @@ class ModelPerformanceAnalyzer:
         self.results['archetype'] = table
 
     def analyze_edge_bucket_performance(self):
-        """Table 5: Performance by edge bucket (calibration check)."""
+        """Table 5: Performance by edge bucket with Brier score calibration."""
         buckets = {
-            '5-10%': {'range': (5, 10), 'bets': 0, 'wins': 0},
-            '10-15%': {'range': (10, 15), 'bets': 0, 'wins': 0},
-            '15-20%': {'range': (15, 20), 'bets': 0, 'wins': 0},
-            '20-25%': {'range': (20, 25), 'bets': 0, 'wins': 0},
-            '25%+': {'range': (25, 999), 'bets': 0, 'wins': 0}
+            '5-10%': {'range': (5, 10), 'bets': 0, 'wins': 0, 'model_probs': [], 'outcomes': []},
+            '10-15%': {'range': (10, 15), 'bets': 0, 'wins': 0, 'model_probs': [], 'outcomes': []},
+            '15-20%': {'range': (15, 20), 'bets': 0, 'wins': 0, 'model_probs': [], 'outcomes': []},
+            '20-25%': {'range': (20, 25), 'bets': 0, 'wins': 0, 'model_probs': [], 'outcomes': []},
+            '25%+': {'range': (25, 999), 'bets': 0, 'wins': 0, 'model_probs': [], 'outcomes': []}
         }
 
         for bet in self.settled_bets:
@@ -269,19 +311,33 @@ class ModelPerformanceAnalyzer:
                     bucket_data['bets'] += 1
                     if bet['result'] == 'WIN':
                         bucket_data['wins'] += 1
+
+                    # Store model_prob and outcome for Brier score
+                    model_prob = bet['model_prob'] or 0
+                    outcome = 1 if bet['result'] == 'WIN' else 0
+                    bucket_data['model_probs'].append(model_prob)
+                    bucket_data['outcomes'].append(outcome)
                     break
 
         # Build result table
         table = []
         for bucket_name in ['5-10%', '10-15%', '15-20%', '20-25%', '25%+']:
             b = buckets[bucket_name]
+
+            if b['bets'] == 0:
+                continue
+
             actual_win_pct = (b['wins'] / b['bets'] * 100) if b['bets'] > 0 else 0
 
-            # Expected win % is roughly 52.4% (break-even at -110) + (edge * 0.5)
-            # This is a simplified model
-            min_edge, max_edge = b['range']
-            mid_edge = (min_edge + max_edge) / 2 if max_edge < 999 else min_edge + 5
-            expected_win_pct = 52.4 + (mid_edge * 0.4)  # Rough approximation
+            # Expected win % = average model_prob for this bucket
+            avg_model_prob = (sum(b['model_probs']) / len(b['model_probs']) * 100) if b['model_probs'] else 0
+            expected_win_pct = avg_model_prob
+
+            # Brier score = mean of (predicted_prob - actual_outcome)^2
+            brier_score = 0.0
+            if b['model_probs']:
+                squared_errors = [(prob - outcome) ** 2 for prob, outcome in zip(b['model_probs'], b['outcomes'])]
+                brier_score = sum(squared_errors) / len(squared_errors)
 
             calibration_diff = actual_win_pct - expected_win_pct
 
@@ -300,10 +356,234 @@ class ModelPerformanceAnalyzer:
                 'Win%': f"{actual_win_pct:.1f}%",
                 'Expected Win%': f"{expected_win_pct:.1f}%",
                 'Calibration': f"{calibration_diff:+.1f}%",
+                'Brier Score': f"{brier_score:.4f}",
                 'Status': calibration_status
             })
 
         self.results['edge_bucket'] = table
+
+    def analyze_spread_bucket_performance(self):
+        """Table 7: Performance by spread bucket (game competitiveness)."""
+        buckets = {
+            'Heavy Fav (<-7)': {'range': (-999, -7), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Mod Fav (-7 to -3)': {'range': (-7, -3), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Toss-Up (-3 to +3)': {'range': (-3, 3), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Mod Dog (+3 to +7)': {'range': (3, 7), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Heavy Dog (>+7)': {'range': (7, 999), 'bets': 0, 'wins': 0, 'profit': 0.0}
+        }
+
+        for bet in self.settled_bets:
+            spread = bet['spread']
+            if spread is None:
+                continue
+
+            # Determine if team is favorite or underdog
+            is_home = (bet['team'] == bet['home_team'])
+            team_spread = spread if is_home else -spread
+
+            # Find appropriate bucket
+            for bucket_name, bucket_data in buckets.items():
+                min_spread, max_spread = bucket_data['range']
+                if min_spread < team_spread <= max_spread:
+                    bucket_data['bets'] += 1
+                    bucket_data['profit'] += bet['profit_loss'] or 0
+                    if bet['result'] == 'WIN':
+                        bucket_data['wins'] += 1
+                    break
+
+        # Build result table
+        table = []
+        for bucket_name in ['Heavy Fav (<-7)', 'Mod Fav (-7 to -3)', 'Toss-Up (-3 to +3)',
+                           'Mod Dog (+3 to +7)', 'Heavy Dog (>+7)']:
+            b = buckets[bucket_name]
+
+            if b['bets'] == 0:
+                continue
+
+            win_pct = (b['wins'] / b['bets'] * 100) if b['bets'] > 0 else 0
+
+            table.append({
+                'Spread Bucket': bucket_name,
+                'Bets': b['bets'],
+                'Win%': f"{win_pct:.1f}%",
+                'Profit': f"{b['profit']:+.1f}"
+            })
+
+        self.results['spread_bucket'] = table
+
+    def analyze_total_bucket_performance(self):
+        """Table 8: Performance by total bucket (pace/scoring environment)."""
+        buckets = {
+            'Low (<218)': {'range': (0, 218), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Normal (218-228)': {'range': (218, 228), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Moderate (228-238)': {'range': (228, 238), 'bets': 0, 'wins': 0, 'profit': 0.0},
+            'High (>238)': {'range': (238, 999), 'bets': 0, 'wins': 0, 'profit': 0.0}
+        }
+
+        for bet in self.settled_bets:
+            total = bet['total']
+            if total is None:
+                continue
+
+            # Find appropriate bucket
+            for bucket_name, bucket_data in buckets.items():
+                min_total, max_total = bucket_data['range']
+                if min_total <= total < max_total:
+                    bucket_data['bets'] += 1
+                    bucket_data['profit'] += bet['profit_loss'] or 0
+                    if bet['result'] == 'WIN':
+                        bucket_data['wins'] += 1
+                    break
+
+        # Build result table
+        table = []
+        for bucket_name in ['Low (<218)', 'Normal (218-228)', 'Moderate (228-238)', 'High (>238)']:
+            b = buckets[bucket_name]
+
+            if b['bets'] == 0:
+                continue
+
+            win_pct = (b['wins'] / b['bets'] * 100) if b['bets'] > 0 else 0
+
+            table.append({
+                'Total Bucket': bucket_name,
+                'Bets': b['bets'],
+                'Win%': f"{win_pct:.1f}%",
+                'Profit': f"{b['profit']:+.1f}"
+            })
+
+        self.results['total_bucket'] = table
+
+    def analyze_home_away_performance(self):
+        """Table 9: Performance by home vs away."""
+        home_away = {
+            'Home': {'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Away': {'bets': 0, 'wins': 0, 'profit': 0.0}
+        }
+
+        for bet in self.settled_bets:
+            is_home = (bet['team'] == bet['home_team'])
+            venue = 'Home' if is_home else 'Away'
+
+            home_away[venue]['bets'] += 1
+            home_away[venue]['profit'] += bet['profit_loss'] or 0
+            if bet['result'] == 'WIN':
+                home_away[venue]['wins'] += 1
+
+        # Build result table
+        table = []
+        for venue in ['Home', 'Away']:
+            ha = home_away[venue]
+
+            if ha['bets'] == 0:
+                continue
+
+            win_pct = (ha['wins'] / ha['bets'] * 100) if ha['bets'] > 0 else 0
+
+            table.append({
+                'Venue': venue,
+                'Bets': ha['bets'],
+                'Win%': f"{win_pct:.1f}%",
+                'Profit': f"{ha['profit']:+.1f}"
+            })
+
+        self.results['home_away'] = table
+
+    def analyze_archetype_stat_crosscuts(self):
+        """Table 10: Cross-cuts (archetype × stat_category) with 100+ bet minimum."""
+        crosscuts = defaultdict(lambda: {
+            'bets': 0, 'wins': 0, 'profit': 0.0
+        })
+
+        for bet in self.settled_bets:
+            arch = bet['archetype'] or 'UNKNOWN'
+            stat = bet['stat_category']
+            key = f"{arch} × {stat}"
+
+            crosscuts[key]['bets'] += 1
+            crosscuts[key]['profit'] += bet['profit_loss'] or 0
+            if bet['result'] == 'WIN':
+                crosscuts[key]['wins'] += 1
+
+        # Build result table (only cross-cuts with 100+ bets)
+        table = []
+        for key in sorted(crosscuts.keys()):
+            cc = crosscuts[key]
+
+            # Sample size filter
+            if cc['bets'] < self.MIN_SAMPLE_SIZE:
+                continue
+
+            win_pct = (cc['wins'] / cc['bets'] * 100) if cc['bets'] > 0 else 0
+
+            table.append({
+                'Archetype × Stat': key,
+                'Bets': cc['bets'],
+                'Win%': f"{win_pct:.1f}%",
+                'Profit': f"{cc['profit']:+.1f}"
+            })
+
+        # Sort by profit descending
+        table.sort(key=lambda x: float(x['Profit']), reverse=True)
+
+        self.results['crosscuts'] = table
+
+    def analyze_dual_pool_performance(self):
+        """Dual-pool analysis: Morning vs Evening pipeline runs."""
+        pools = {
+            'Morning (<20:00 UTC)': {'bets': 0, 'wins': 0, 'profit': 0.0},
+            'Evening (≥20:00 UTC)': {'bets': 0, 'wins': 0, 'profit': 0.0}
+        }
+
+        # Track dates with both pools for paired analysis
+        date_pools = defaultdict(set)
+
+        for bet in self.settled_bets:
+            # Parse timestamp to get hour (timestamps are UTC strings like '2026-02-12 14:23:45')
+            timestamp_str = bet['timestamp']
+            if not timestamp_str:
+                continue
+
+            try:
+                timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                hour = timestamp.hour
+                pool = 'Morning (<20:00 UTC)' if hour < 20 else 'Evening (≥20:00 UTC)'
+                game_date = bet['game_date']
+
+                pools[pool]['bets'] += 1
+                pools[pool]['profit'] += bet['profit_loss'] or 0
+                if bet['result'] == 'WIN':
+                    pools[pool]['wins'] += 1
+
+                date_pools[game_date].add(pool)
+            except:
+                continue
+
+        # Build result table
+        table = []
+        for pool in ['Morning (<20:00 UTC)', 'Evening (≥20:00 UTC)']:
+            p = pools[pool]
+
+            if p['bets'] == 0:
+                continue
+
+            win_pct = (p['wins'] / p['bets'] * 100) if p['bets'] > 0 else 0
+
+            table.append({
+                'Pool': pool,
+                'Bets': p['bets'],
+                'Win%': f"{win_pct:.1f}%",
+                'Profit': f"{p['profit']:+.1f}"
+            })
+
+        # Count paired dates (dates with both morning and evening runs)
+        paired_dates = [date for date, pool_set in date_pools.items() if len(pool_set) == 2]
+
+        self.results['dual_pool'] = {
+            'table': table,
+            'paired_dates_count': len(paired_dates),
+            'paired_dates': sorted(paired_dates)
+        }
 
     def generate_summary_recommendations(self):
         """Table 6: Summary and actionable recommendations."""
@@ -315,7 +595,7 @@ class ModelPerformanceAnalyzer:
         }
 
         # Find most profitable combos
-        over_under_table = self.results['over_under']
+        over_under_table = self.results.get('over_under', [])
         for row in over_under_table[:5]:  # Top 5
             if float(row['Profit']) > 50:
                 summary['profitable'].append(
@@ -332,7 +612,7 @@ class ModelPerformanceAnalyzer:
                 )
 
         # Archetype insights
-        archetype_table = self.results['archetype']
+        archetype_table = self.results.get('archetype', [])
         for row in archetype_table[:3]:  # Top 3 archetypes
             if float(row['Profit']) > 30:
                 summary['archetype_notes'].append(
@@ -340,7 +620,7 @@ class ModelPerformanceAnalyzer:
                 )
 
         # Calibration insights
-        edge_table = self.results['edge_bucket']
+        edge_table = self.results.get('edge_bucket', [])
         for row in edge_table:
             if row['Status'] in ['OVERCONFIDENT', 'UNDERBET']:
                 summary['calibration_notes'].append(
@@ -350,13 +630,14 @@ class ModelPerformanceAnalyzer:
         self.results['summary'] = summary
 
     def print_results(self, output_format='console'):
-        """Print all analysis results."""
+        """Print all analysis results to console."""
         print("\n" + "=" * 100)
-        print("MODEL PERFORMANCE ANALYSIS")
+        print("MODEL PERFORMANCE ANALYSIS (Enhanced V2.0)")
         print("=" * 100)
         print(f"Analysis Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Total Settled Bets: {len(self.settled_bets)}")
+        print(f"Total Settled Bets: {len(self.settled_bets)} (VOIDs excluded)")
         print(f"Date Range: {self.settled_bets[-1]['game_date']} to {self.settled_bets[0]['game_date']}")
+        print(f"Sample Size Filter: {self.MIN_SAMPLE_SIZE}+ bets for segment reporting")
         print("=" * 100)
 
         # Table 1: Stat Category Performance
@@ -394,6 +675,41 @@ class ModelPerformanceAnalyzer:
         print("TABLE 6: SUMMARY & RECOMMENDATIONS")
         print("=" * 100)
         self._print_summary()
+
+        # Table 7: Spread Buckets
+        print("\n" + "=" * 100)
+        print("TABLE 7: SPREAD BUCKET ANALYSIS")
+        print("=" * 100)
+        self._print_table(self.results['spread_bucket'])
+
+        # Table 8: Total Buckets
+        print("\n" + "=" * 100)
+        print("TABLE 8: TOTAL BUCKET ANALYSIS")
+        print("=" * 100)
+        self._print_table(self.results['total_bucket'])
+
+        # Table 9: Home vs Away
+        print("\n" + "=" * 100)
+        print("TABLE 9: HOME vs AWAY PERFORMANCE")
+        print("=" * 100)
+        self._print_table(self.results['home_away'])
+
+        # Table 10: Archetype × Stat Cross-Cuts
+        print("\n" + "=" * 100)
+        print("TABLE 10: ARCHETYPE × STAT CROSS-CUTS (100+ bets)")
+        print("=" * 100)
+        self._print_table(self.results['crosscuts'][:20])  # Show top 20
+
+        # Dual-Pool Analysis
+        print("\n" + "=" * 100)
+        print("DUAL-POOL ANALYSIS: MORNING vs EVENING")
+        print("=" * 100)
+        self._print_table(self.results['dual_pool']['table'])
+        print(f"\n  Paired Dates (Both Pools): {self.results['dual_pool']['paired_dates_count']} dates")
+        if self.results['dual_pool']['paired_dates']:
+            print(f"  Dates: {', '.join(self.results['dual_pool']['paired_dates'][:10])}")
+            if len(self.results['dual_pool']['paired_dates']) > 10:
+                print(f"          ... and {len(self.results['dual_pool']['paired_dates']) - 10} more")
 
         print("\n" + "=" * 100)
         print("ANALYSIS COMPLETE")
@@ -453,15 +769,19 @@ class ModelPerformanceAnalyzer:
         if not summary['calibration_notes']:
             print("    ✅ Model is well-calibrated across all edge buckets")
 
-    def save_markdown_report(self, output_path='reports/performance_analysis_feb2.md'):
+    def save_markdown_report(self, output_path=None):
         """Save results as markdown file."""
+        if output_path is None:
+            output_path = f"reports/performance_analysis_{datetime.now().strftime('%Y-%m-%d')}.md"
+
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         with open(output_path, 'w') as f:
-            f.write(f"# Model Performance Analysis\n\n")
+            f.write(f"# Model Performance Analysis (Enhanced V2.0)\n\n")
             f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n")
-            f.write(f"**Total Settled Bets:** {len(self.settled_bets)}  \n")
-            f.write(f"**Date Range:** {self.settled_bets[-1]['game_date']} to {self.settled_bets[0]['game_date']}  \n\n")
+            f.write(f"**Total Settled Bets:** {len(self.settled_bets)} (VOIDs excluded)  \n")
+            f.write(f"**Date Range:** {self.settled_bets[-1]['game_date']} to {self.settled_bets[0]['game_date']}  \n")
+            f.write(f"**Sample Size Filter:** {self.MIN_SAMPLE_SIZE}+ bets for segment reporting  \n\n")
 
             f.write("---\n\n")
 
@@ -480,10 +800,14 @@ class ModelPerformanceAnalyzer:
             f.write("### Profitable Patterns\n\n")
             for item in summary['profitable']:
                 f.write(f"- ✅ {item}\n")
+            if not summary['profitable']:
+                f.write("- ⚠️ No highly profitable patterns found (>50 units)\n")
 
             f.write("\n### Leaks to Fix\n\n")
             for item in summary['leaks']:
                 f.write(f"- ❌ {item}\n")
+            if not summary['leaks']:
+                f.write("- ✅ No major leaks detected (<-50 units)\n")
 
             f.write("\n### Top Archetypes\n\n")
             for item in summary['archetype_notes']:
@@ -496,11 +820,28 @@ class ModelPerformanceAnalyzer:
             if not summary['calibration_notes']:
                 f.write("- ✅ Model is well-calibrated across all edge buckets\n")
 
+            # Write new tables
+            self._write_markdown_table(f, "Table 7: Spread Bucket Analysis", self.results['spread_bucket'])
+            self._write_markdown_table(f, "Table 8: Total Bucket Analysis", self.results['total_bucket'])
+            self._write_markdown_table(f, "Table 9: Home vs Away Performance", self.results['home_away'])
+            self._write_markdown_table(f, "Table 10: Archetype × Stat Cross-Cuts (Top 20)", self.results['crosscuts'][:20])
+
+            # Write dual-pool analysis
+            f.write("## Dual-Pool Analysis: Morning vs Evening\n\n")
+            self._write_markdown_table(f, "", self.results['dual_pool']['table'], skip_title=True)
+            f.write(f"**Paired Dates (Both Pools):** {self.results['dual_pool']['paired_dates_count']} dates  \n")
+            if self.results['dual_pool']['paired_dates']:
+                f.write(f"**Dates:** {', '.join(self.results['dual_pool']['paired_dates'][:10])}")
+                if len(self.results['dual_pool']['paired_dates']) > 10:
+                    f.write(f" ... and {len(self.results['dual_pool']['paired_dates']) - 10} more")
+                f.write("  \n\n")
+
         print(f"\n📄 Markdown report saved to: {output_path}")
 
-    def _write_markdown_table(self, f, title, table):
+    def _write_markdown_table(self, f, title, table, skip_title=False):
         """Write a table in markdown format."""
-        f.write(f"## {title}\n\n")
+        if not skip_title:
+            f.write(f"## {title}\n\n")
 
         if not table:
             f.write("*No data available*\n\n")
@@ -521,7 +862,7 @@ class ModelPerformanceAnalyzer:
     def run(self, output_format='console'):
         """Execute full analysis pipeline."""
         print("\n" + "=" * 100)
-        print("STARTING MODEL PERFORMANCE ANALYSIS")
+        print("STARTING MODEL PERFORMANCE ANALYSIS (Enhanced V2.0)")
         print("=" * 100)
 
         # Load data
@@ -534,6 +875,11 @@ class ModelPerformanceAnalyzer:
         self.analyze_position_performance()
         self.analyze_archetype_performance()
         self.analyze_edge_bucket_performance()
+        self.analyze_spread_bucket_performance()
+        self.analyze_total_bucket_performance()
+        self.analyze_home_away_performance()
+        self.analyze_archetype_stat_crosscuts()
+        self.analyze_dual_pool_performance()
         self.generate_summary_recommendations()
         print("✅ All analyses complete\n")
 

@@ -52,10 +52,26 @@ class BetSettler:
                 daily_pl[game_date] = {'wins': 0, 'losses': 0, 'units': 0.0}
 
             # 2. Find Actual Result in Game Logs
-            actual_val = self._lookup_game_log(player_name, game_date, stat_cat)
-            
+            actual_val, minutes_played = self._lookup_game_log(player_name, game_date, stat_cat)
+
+            # V5.2: Auto-void DNPs (0 minutes = player was inactive/benched)
+            if actual_val is not None and minutes_played is not None and minutes_played == 0:
+                self.logger.update_outcome(bet_id, 'PUSH', -998, profit_loss=0.0, clv=0.0)
+                print(f"   ↔️  VOID-DNP (0 min): {player_name} ({game_date})")
+                settled_count += 1
+                continue
+
             if actual_val is None:
-                print(f"   ⚠️  MISSING LOG: {player_name} ({game_date}) - Skipping")
+                # Auto-void: check if team played and player was DNP
+                void_reason = self._diagnose_missing_log(bet.get('team', ''), game_date, player_name)
+                if void_reason:
+                    self.logger.update_outcome(bet_id, 'PUSH',
+                        -999 if void_reason == 'NO_GAME' else -998,
+                        profit_loss=0.0, clv=0.0)
+                    print(f"   ↔️  VOID-{void_reason}: {player_name} ({game_date})")
+                    settled_count += 1
+                else:
+                    print(f"   ⚠️  MISSING LOG: {player_name} ({game_date}) - Skipping")
                 continue
             
             # 3. Determine Outcome
@@ -101,7 +117,7 @@ class BetSettler:
     def _lookup_game_log(self, player_name, game_date, stat_cat):
         """
         Queries player_game_logs for the actual stat value.
-        Mapping needed: 'PTS' -> 'pts', 'REB' -> 'reb', '3PM' -> 'fg3m'
+        Returns: (stat_value, minutes_played) tuple. Both None if no log found.
         """
         stat_map = {
             'PTS': 'pts',
@@ -114,74 +130,89 @@ class BetSettler:
             'STEALS': 'stl',
             'TOV': 'tov',
             'TURNOVERS': 'tov',
-            'PRA': 'pra', # Derived
-            'PR': 'pr',   # Derived
-            'PA': 'pa'    # Derived
+            'PRA': 'pra',
+            'PR': 'pr',
+            'PA': 'pa'
         }
-        
+
         db_col = stat_map.get(stat_cat)
         if not db_col and stat_cat not in ['PRA', 'PR', 'PA']:
             print(f"   ❌ Unknown stat category: {stat_cat}")
-            return None
-            
+            return None, None
+
         c = self.conn.cursor()
 
-        # ---------------------------------------------------------
-        # 🛡️ ROBUST LOOKUP: Resolve Name -> Canonical ID
-        # ---------------------------------------------------------
         canonical_id = None
         try:
             canonical_id = self.resolver.resolve_to_canonical_id(player_name)
         except ValueError:
-            pass # Name not found in canonical map, will fallback to string match
+            pass
 
         def fetch_stats_by_id(pid):
             if stat_cat in ['PRA', 'PR', 'PA']:
                 c.execute('''
-                    SELECT pts, reb, ast FROM player_game_logs 
+                    SELECT pts, reb, ast, minutes FROM player_game_logs
                     WHERE player_id = ? AND game_date = ?
                 ''', (pid, game_date))
                 row = c.fetchone()
-                if not row: return None
-                p, r, a = row
-                if stat_cat == 'PRA': return p + r + a
-                if stat_cat == 'PR': return p + r
-                if stat_cat == 'PA': return p + a
+                if not row: return None, None
+                p, r, a, mins = row
+                val = p + r + a if stat_cat == 'PRA' else (p + r if stat_cat == 'PR' else p + a)
+                return val, mins
             else:
-                c.execute(f"SELECT {db_col} FROM player_game_logs WHERE player_id = ? AND game_date = ?", (pid, game_date))
+                c.execute(f"SELECT {db_col}, minutes FROM player_game_logs WHERE player_id = ? AND game_date = ?", (pid, game_date))
                 row = c.fetchone()
-                return row[0] if row else None
+                return (row[0], row[1]) if row else (None, None)
 
         def fetch_stats_by_name(pname):
             if stat_cat in ['PRA', 'PR', 'PA']:
                 c.execute('''
-                    SELECT pts, reb, ast FROM player_game_logs 
+                    SELECT pts, reb, ast, minutes FROM player_game_logs
                     WHERE player_name = ? AND game_date = ?
                 ''', (pname, game_date))
                 row = c.fetchone()
-                if not row: return None
-                p, r, a = row
-                if stat_cat == 'PRA': return p + r + a
-                if stat_cat == 'PR': return p + r
-                if stat_cat == 'PA': return p + a
+                if not row: return None, None
+                p, r, a, mins = row
+                val = p + r + a if stat_cat == 'PRA' else (p + r if stat_cat == 'PR' else p + a)
+                return val, mins
             else:
-                c.execute(f"SELECT {db_col} FROM player_game_logs WHERE player_name = ? AND game_date = ?", (pname, game_date))
+                c.execute(f"SELECT {db_col}, minutes FROM player_game_logs WHERE player_name = ? AND game_date = ?", (pname, game_date))
                 row = c.fetchone()
-                return row[0] if row else None
+                return (row[0], row[1]) if row else (None, None)
 
         # Strategy 1: Canonical ID Match (Highest Fidelity)
         if canonical_id:
-            val = fetch_stats_by_id(canonical_id)
+            val, mins = fetch_stats_by_id(canonical_id)
             if val is not None:
-                return val
-            # If ID found but no logs, it might be a data gap, but we double check name just in case
+                return val, mins
 
         # Strategy 2: Strict Name Match (Legacy Fallback)
-        val = fetch_stats_by_name(player_name)
+        val, mins = fetch_stats_by_name(player_name)
         if val is not None:
-            return val
-            
-        return None
+            return val, mins
+
+        return None, None
+
+    def _diagnose_missing_log(self, team, game_date, player_name):
+        """
+        When a game log is missing, determine WHY so we can auto-void.
+        Returns: 'NO_GAME' if team didn't play, 'DNP' if team played but
+        player has no log (sat out), or None if we can't determine.
+        """
+        c = self.conn.cursor()
+
+        # Check if the team had a game on this date
+        c.execute(
+            "SELECT COUNT(*) FROM games WHERE date = ? AND (home_team = ? OR away_team = ?)",
+            (game_date, team, team)
+        )
+        team_had_game = c.fetchone()[0] > 0
+
+        if not team_had_game:
+            return 'NO_GAME'
+
+        # Team played but no game log for this player → DNP (0 minutes, inactive, etc.)
+        return 'DNP'
 
     def _grade_bet(self, side, line, actual, units, odds_over, odds_under):
         """

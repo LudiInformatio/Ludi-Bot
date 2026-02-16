@@ -2,9 +2,7 @@ name: Ghost Protocol Tracking Sync
 
 on:
   schedule:
-    # Wednesday 11:00 UTC (6 AM EST)
-    - cron: '0 11 * * 3'
-    # Sunday 11:00 UTC (6 AM EST)  
+    # Sunday 11:00 UTC (6 AM EST) — weekly catch-up for data not covered by BDL API
     - cron: '0 11 * * 0'
   workflow_dispatch:
 
@@ -62,3 +60,12 @@ jobs:
           name: ludi-db-post-tracking-sync
           path: ludi.db
           retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"

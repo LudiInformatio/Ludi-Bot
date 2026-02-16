@@ -620,6 +620,85 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_season_wowy_team ON player_season_wowy(team_abbr)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_season_wowy_season ON player_season_wowy(season)')
 
+        # Sprint 3: Add Four Factor On/Off columns to player_season_wowy table
+        # These columns store the Four Factors (eFG%, TOV%, OREB%, FT Rate) for on/off court
+        try:
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN on_efg_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN off_efg_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN on_tov_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN off_tov_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN on_oreb_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN off_oreb_pct REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN on_ft_rate REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN off_ft_rate REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN on_pace REAL')
+            c.execute('ALTER TABLE player_season_wowy ADD COLUMN off_pace REAL')
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e).lower():
+                print(f"Warning: Four factor columns may already exist: {e}")
+
+        # Sprint 3: Team Leverage Profiles table (game state intelligence)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS team_leverage_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_abbr TEXT NOT NULL,
+                team_id TEXT NOT NULL,
+                season TEXT DEFAULT '2025-26',
+                vh_possessions INTEGER,
+                vh_ortg REAL,
+                vh_efg_pct REAL,
+                vh_pace REAL,
+                vh_oreb_pct REAL,
+                vh_ft_rate REAL,
+                h_possessions INTEGER,
+                h_ortg REAL,
+                h_efg_pct REAL,
+                h_pace REAL,
+                h_oreb_pct REAL,
+                h_ft_rate REAL,
+                l_possessions INTEGER,
+                l_ortg REAL,
+                l_efg_pct REAL,
+                l_pace REAL,
+                l_oreb_pct REAL,
+                l_ft_rate REAL,
+                overall_possessions INTEGER,
+                overall_ortg REAL,
+                overall_efg_pct REAL,
+                overall_pace REAL,
+                overall_oreb_pct REAL,
+                overall_ft_rate REAL,
+                garbage_time_boost REAL,
+                clutch_factor REAL,
+                pace_variance REAL,
+                synced_at TEXT,
+                UNIQUE(team_abbr, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_leverage_team ON team_leverage_profiles(team_abbr)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_leverage_season ON team_leverage_profiles(season)')
+
+        # Sprint 3: Player Leverage Usage table (crunch time identification)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_leverage_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name TEXT NOT NULL,
+                team_abbr TEXT NOT NULL,
+                season TEXT DEFAULT '2025-26',
+                vh_possessions INTEGER,
+                vh_shot_attempts INTEGER,
+                total_possessions INTEGER,
+                total_shot_attempts INTEGER,
+                clutch_usage_rate REAL,
+                synced_at TEXT,
+                UNIQUE(player_name, team_abbr, season)
+            )
+        ''')
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_player_leverage_player ON player_leverage_usage(player_name)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_player_leverage_team ON player_leverage_usage(team_abbr)')
+
         # Create lineup_season_totals view (aggregates per-game lineup data)
         # This view aggregates team_lineups from per-game to full-season totals
         c.execute('''

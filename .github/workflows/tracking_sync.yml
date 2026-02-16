@@ -1,8 +1,11 @@
-name: Daily Tracking Sync
+name: Daily Tracking Sync (DISABLED - replaced by BDL API in data_sync.yml)
 
+# DISABLED Feb 15, 2026: sync_bdl_tracking.py in data_sync.yml now covers
+# defense, drives, touches, speed, synergy. Ghost Protocol (Sun) covers the rest.
+# Keep workflow_dispatch for manual use if needed.
 on:
-  schedule:
-    - cron: '0 9 * * *'
+  # schedule:
+  #   - cron: '0 9 * * *'
   workflow_dispatch:
 
 jobs:
@@ -48,3 +51,12 @@ jobs:
           caffeinate -i python3 scripts/sync_browser_backfill.py --days 1
           echo "✅ Tracking data synced to local database"
           echo "📊 Database updated at: $(date +'%Y-%m-%d %H:%M')"
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"

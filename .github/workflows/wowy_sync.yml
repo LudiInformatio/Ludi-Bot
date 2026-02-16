@@ -2,8 +2,8 @@ name: Daily WOWY Sync
 
 on:
   schedule:
-    # Daily at 14:00 UTC (9:00 AM EST)
-    - cron: '0 14 * * *'
+    # Daily at 12:00 UTC (7:00 AM EST) — offset from daily_briefing (14:00 UTC) to avoid SQLite lock
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,10 @@ jobs:
   sync-wowy:
     runs-on: self-hosted
     timeout-minutes: 30
-    
+    env:
+      IS_SELF_HOSTED: 'true'
+      PYTHONPATH: ${{ github.workspace }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,46 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip3 install -r requirements.txt
 
-      - name: Ensure database indexes and data integrity
-        run: |
-          python3 -c "
-          import sqlite3
-          conn = sqlite3.connect('ludi.db')
-          c = conn.cursor()
-
-          # CRITICAL: Deduplicate FIRST (enables unique index creation)
-          c.execute('''
-              DELETE FROM player_game_logs
-              WHERE rowid NOT IN (
-                  SELECT MIN(rowid)
-                  FROM player_game_logs
-                  GROUP BY game_id, player_id
-              )
-          ''')
-          deduped = c.rowcount
-          print(f'✅ Deduped {deduped} player_game_logs records')
-
-          # Create UNIQUE index (required for Module H upserts)
-          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(game_id, player_id)')
-
-          # Create referee unique index
-          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
-
-          # Create query performance indexes
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_game_date ON player_game_logs(game_date)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_id ON player_game_logs(player_id)')
-          c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_game_id ON player_game_logs(game_id)')
-
-          conn.commit()
-          print('✅ Database indexes and integrity verified')
-          conn.close()
-          "
-
       - name: Run WOWY sync (yesterday's games)
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: python3 scripts/sync_wowy_hybrid.py --days 1
 
       - name: Upload database artifact
@@ -78,3 +42,12 @@ jobs:
           name: ludi-db-post-wowy-sync
           path: ludi.db
           retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export PYTHONPATH=$PWD
+          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"
