@@ -1,13 +1,21 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code when working with code in this repository.
+It is supplemental context only. `AGENTS.md` is the primary operating guide for Codex-style agent behavior.
+
+## Instruction Precedence
+
+When instructions conflict, use this order:
+1. `AGENTS.md` (primary agent operating rules)
+2. `ROADMAP.md` (current phase and priorities)
+3. `CLAUDE.md` (supplemental project context)
 
 ## Project Overview
 
 **Ludi Informatio v2.0** is an NBA analytics platform that generates betting recommendations for player props using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
 
 - **Product Name**: Ludi Lens v2.0 (The Front Office War Room)
-- **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | 5k Runs | Usage Vacuum)
+- **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | Usage Vacuum)
 - **Tech Stack**: Python + Streamlit + SQLite + GitHub Actions
 - **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
@@ -122,6 +130,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 | G: Zebras | `module_g.py` | `LudiRefEngine` |
 | H: Historian | `module_h_historian.py` | `LudiHistorian` |
 | X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` |
+| I: Aggregator | `module_i_aggregator.py` | `LudiAggregator` (placeholder) |
 
 ---
 
@@ -133,28 +142,40 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 
 ---
 
-## Current Focus
-
-**Phase:** Phase 5 - Production Deployment & Automation
-**Status:** Phase 4 validated (60-day backtest, +0.56 pts mean error)
-**Priority:** Automated pipeline, monitoring suite, weekly backtests
-
-See @ROADMAP.md for detailed task list.
-
----
-
 ## API Configuration
 
 | API | Tier | Purpose |
 |-----|------|---------|
 | The-Odds-API | PAID (20K/mo) | Game lines, player props |
 | Tank01 | PAID (1K/day) | Rosters, injuries, box scores |
+| Ball Don't Lie | GOAT ($39.99/mo) | Fallback odds, injuries, game logs |
 | PBP Stats | FREE | Shot quality, WOWY data |
 
-Environment variables in `.env`:
-- `ODDS_API_KEY`, `TANK01_KEY` (required)
+Environment variables in `.env` (see `.env.template` for full list):
+- `ODDS_API_KEY`, `TANK01_KEY`, `BALLDONTLIE_KEY` (required)
 - `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` (notifications)
-- `DEBUG_LOG`, `IS_PRODUCTION`, `IS_SELF_HOSTED` (flags)
+- `GEMINI_API_KEY` (optional — Ask Ludi chatbot)
+- `DEBUG_LOG`, `IS_PRODUCTION` (flags)
+
+---
+
+## Automation Schedule (GitHub Actions)
+
+All workflows run on a self-hosted macOS runner. See `.github/workflows/` for details.
+
+| Time (EST) | Workflow | Purpose |
+|------------|----------|---------|
+| 5:00 AM | `data_sync.yml` | Sync game logs, WOWY, clutch, assists |
+| 5:00 AM | `nightly_debrief.yml` | Settlement + daily P&L |
+| 6:00 AM | `db_backup.yml` | Automated database backup |
+| 9:00 AM | `daily_briefing.yml` | Morning Telegram cards |
+| 9:30 AM | `referee_sync.yml` | Daily referee assignments |
+| 11:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
+| 5:30 PM | `capture_closing_lines.yml` | CLV capture before tipoff |
+| 6:00 PM | `evening_slate_lock.yml` | Evening Telegram cards |
+| Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
+| Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data |
+| On failure | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
 
 ---
 
@@ -171,8 +192,10 @@ Environment variables in `.env`:
 ## Known Gotchas
 
 - Referee assignments require web scraping (can fail if NBA.com changes HTML)
-- DuckDuckGo search in Module D can be rate-limited - use sparingly
-- Module I (Aggregator) is placeholder code - not yet implemented
+- DuckDuckGo search in Module D can be rate-limited — use sparingly
+- Module I (Aggregator) is placeholder code — not yet implemented
+- Runner DB symlink: `actions-runner/.../ludi.db` → local project DB. Don't break the symlink.
+- BDL team abbreviation mismatches: GS/NO/NY/PHO/SA vs our GSW/NOP/NYK/PHX/SAS — always normalize
 - Always use correct class names (see Module Reference above)
 
 ---
