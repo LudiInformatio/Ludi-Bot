@@ -4,7 +4,7 @@
 **Last Audited:** February 14, 2026
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
 
-**Status:** ~60% implemented. Remaining items folded into `ROADMAP.md` under "Dormant Data Activation", "Missing PBP Stats Endpoints", and "Data Pipeline Improvements". This document is now a reference — see ROADMAP.md for actionable tasks.
+**Status:** ~60% implemented. Remaining items folded into `ROADMAP.md` under "Dormant Data Activation", "Missing PBP Stats Endpoints", and "Data Pipeline Improvements". Section 5 added Feb 15 with competitive UI/UX research for Phase 8.
 
 The following endpoints were discovered in the unofficial NBA Sense documentation and represent high-value opportunities for enhancing other Ludi-Bot modules.
 
@@ -165,6 +165,77 @@ Contains all 40+ PBP Stats endpoints documented with:
 - Return types and data structure
 - Integration priority ratings
 - Search functionality for debugging
+
+---
+
+## 5. Competitive Landscape: Betting Analytics Sites (Feb 2026 Research)
+
+**Discovered:** February 15, 2026
+**Context:** UI/UX research for Phase 8 AI-Enhanced Pipeline — how competitors present game notes, player data, and bet narratives
+**Design Doc:** `.claude/plans/crystalline-swimming-horizon.md`
+
+### 5.1 Sites Reviewed
+
+| Site | Focus | Free/Paid | Key Strength |
+|------|-------|-----------|-------------|
+| **PropsMadness** | Player prop analysis | Paywall ($20/mo) | Shooting zones, playtype analysis, similar players comparison |
+| **LandYourBets** | Edge-based curation | Free tier + Premium | 4 edge categories, injury beneficiary tables, matchup notes |
+| **BucketsToBucks** | Schedule + matchup tools | Free | Offense vs Defense matrices, DVP filtering, Key Advantage callouts |
+| **Outlier.bet** | Multi-sportsbook tooling | Premium ($20-80/mo) | 2-click betting, positive EV feed, sharp book comparison |
+| **Props.cash** | Mobile-first prop analysis | $20/mo | Correlated props, real-time injury intel, 200K+ users |
+| **StraightBettin** | Research tools (On/Off, Funnels) | Free | WOWY comparison tables with +/- deltas, defensive funneling |
+
+### 5.2 High-Value Patterns for Phase 8
+
+**For Game Notes (8.2):**
+| Pattern | Source | Implementation |
+|---------|--------|---------------|
+| Key Advantage callouts | BucketsToBucks | Auto-identify #1 matchup advantage per game (e.g., "Spot Up #3 off vs #29 def") |
+| Offense vs Defense matrix | BucketsToBucks | Top 3 O-vs-D rankings per game: Paint, 3PT, Pace, Playtype |
+| Injury beneficiary table | LandYourBets | Per OUT player: who benefits with Mins+, Pts+, Reb+, Ast+, Usg+ |
+| WOWY comparison table | StraightBettin | Teammate stat deltas when key player is OFF (green=up, red=down) |
+| Defensive funneling | StraightBettin | "Teams that ALLOW the most" — auto-surface OVER targets by weakness zone |
+| Line movement tracking | Outlier.bet | Evening mode: show how lines moved since morning |
+
+**For Player Spotlights (8.3):**
+| Pattern | Source | Implementation |
+|---------|--------|---------------|
+| Playtype Analysis table | PropsMadness | Per-player: Isolation, PnR, Spot Up, Transition with PPP% and Opp Def Rank |
+| Similar Players comparison | PropsMadness | "Players with similar profiles hit this line X% of the time" |
+| Hit Rate badges | BucketsToBucks, Props.cash | L10 Hit Rate %, Season Hit Rate % — simple visual indicators |
+| DVP ranking | BucketsToBucks | Defense vs Position rank (1-30) for the specific stat category |
+| Matchup edge notes | LandYourBets | "Post Scorer — POR allows 1st most FGA to Post Scorers" |
+| On/Off per-36 stats | StraightBettin | Full per-36 stat table with ON/OFF toggles per teammate |
+
+**For Play Curation (8.5):**
+| Pattern | Source | Implementation |
+|---------|--------|---------------|
+| Projection vs Line diff table | LandYourBets | Top 5 plays ranked by projection-line gap with direction |
+| Edge type categorization | LandYourBets | Separate: Projection, Matchup, Injury/Vacuum, Hot/Cold Trend edges |
+| Correlated props flagging | Props.cash | Flag when 2+ bets in same game are correlated (SGP risk) |
+| DVP + Hit Rate filters | BucketsToBucks | Surface plays where DVP rank <= 5 AND L10 hit rate >= 70% |
+| Funneling targets | StraightBettin | Auto-identify players who exploit specific defensive weakness zones |
+
+### 5.3 Anti-Patterns to Avoid
+
+| Anti-Pattern | Source | Lesson |
+|-------------|--------|--------|
+| Paywall basic data | PropsMadness | Our free Telegram tier should have real analytical insight |
+| Data dump without curation | BucketsToBucks | Great data but no "so what?" — needs Claude reasoning layer |
+| Generic marketing landing pages | Outlier/Props.cash | Our Telegram output IS the product, not a sales funnel |
+| Too many filters for casual users | BucketsToBucks | Telegram needs pre-filtered top picks, not 4 filter dimensions |
+
+### 5.4 StraightBettin On/Off Tool — Direct Parallel to Our WOWY System
+
+**What they built:** Interactive On/Off tool showing per-36 stats for every NBA team with player toggle buttons.
+- Click player name → see team stats when that player is ON court
+- Click "OFF" → see team stats when that player is OFF court
+- **COMPARISON table** appears showing +/- deltas per stat with color coding (green = better, red = worse, intensity = magnitude)
+- Also has PROJECTION section with configurable minutes input
+
+**Our equivalent:** `utils/wowy_calculator.py` + `team_lineups` table (10,669 records) + Module X Scenario Builder
+**Gap:** We have the data but present it as internal pipeline math. StraightBettin makes it user-facing and interactive.
+**Phase 8 action:** Use this pattern in 8.2 Game Notes (injury beneficiary deltas) and 8.3 Player Spotlights (WOWY context).
 
 ---
 
