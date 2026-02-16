@@ -151,26 +151,26 @@ class FatigueBacktest:
 
         is_guard = position in ['G', 'PG', 'SG', 'G-F']
 
-        # B2B Logic
+        # B2B Logic (V5.2 - Updated Feb 15, 2026)
         if is_b2b:
             if is_road:
-                predicted_pts *= 0.94  # Road B2B (-6%)
-                modifiers_applied.append('Road_B2B_-6%')
+                predicted_pts *= 0.952  # Road B2B (-4.8%)
+                modifiers_applied.append('Road_B2B_-4.8%')
             else:
-                predicted_pts *= 0.97  # Home B2B (-3%)
-                modifiers_applied.append('Home_B2B_-3%')
+                predicted_pts *= 0.985  # Home B2B (-1.5%)
+                modifiers_applied.append('Home_B2B_-1.5%')
 
             # Guard tax
             if is_guard:
-                predicted_pts *= 0.96  # Guard tax (-4%)
-                modifiers_applied.append('Guard_Tax_-4%')
+                predicted_pts *= 0.98  # Guard tax (-2%)
+                modifiers_applied.append('Guard_Tax_-2%')
 
         # Rested Home Edge
         elif rest_days >= 3 and not is_road:
             predicted_pts *= 1.03  # +3% boost
             modifiers_applied.append('Rested_Home_+3%')
 
-        # Schedule Density (Adjusted from -2% to -1%)
+        # Schedule Density (V5.2)
         if games_in_5 >= 3:
             predicted_pts *= 0.99  # -1% density tax
             modifiers_applied.append('Density_4in5_-1%')
@@ -350,12 +350,12 @@ class FatigueBacktest:
         if road_b2b_guard:
             metrics = self.calculate_metrics(road_b2b_guard)
             print(f"\n1. ROAD B2B GUARDS (n={metrics['sample_size']})")
-            print(f"   Modifier: -6% B2B Road, -4% Guard Tax = -9.76% total")
+            print(f"   Modifier: -4.8% B2B Road, -2% Guard Tax = -6.7% total (V5.2)")
             print(f"   Mean Error: {metrics['mean_error']:+.2f} pts")
 
             if metrics['mean_error'] > 1.0:
                 print(f"   ⚠️  UNDER-PROJECTION: Players are OUTPERFORMING by {metrics['mean_error']:.1f} pts")
-                print(f"   → Consider reducing penalty from -9.76% to ~{-9.76 + (metrics['mean_error'] / 25 * 100):.1f}%")
+                print(f"   → Consider reducing penalty from -6.7% to ~{-6.7 + (metrics['mean_error'] / 25 * 100):.1f}%")
             elif metrics['mean_error'] < -1.0:
                 print(f"   ✅ OVER-PROJECTION: Tax may be too aggressive")
             else:
@@ -364,7 +364,7 @@ class FatigueBacktest:
         if home_b2b_guard:
             metrics = self.calculate_metrics(home_b2b_guard)
             print(f"\n2. HOME B2B GUARDS (n={metrics['sample_size']})")
-            print(f"   Modifier: -3% B2B Home, -4% Guard Tax = -6.88% total")
+            print(f"   Modifier: -1.5% B2B Home, -2% Guard Tax = -3.5% total (V5.2)")
             print(f"   Mean Error: {metrics['mean_error']:+.2f} pts")
 
             if metrics['mean_error'] > 1.0:
@@ -377,13 +377,13 @@ class FatigueBacktest:
         if road_b2b_big:
             metrics = self.calculate_metrics(road_b2b_big)
             print(f"\n3. ROAD B2B NON-GUARDS (n={metrics['sample_size']})")
-            print(f"   Modifier: -6% B2B Road")
+            print(f"   Modifier: -4.8% B2B Road (V5.2)")
             print(f"   Mean Error: {metrics['mean_error']:+.2f} pts")
 
         if home_b2b_big:
             metrics = self.calculate_metrics(home_b2b_big)
             print(f"\n4. HOME B2B NON-GUARDS (n={metrics['sample_size']})")
-            print(f"   Modifier: -3% B2B Home")
+            print(f"   Modifier: -1.5% B2B Home (V5.2)")
             print(f"   Mean Error: {metrics['mean_error']:+.2f} pts")
 
         rested = self.results.get('Rested_Home', [])
@@ -429,6 +429,149 @@ class FatigueBacktest:
 
         print(f"\n{'='*70}")
 
+    def generate_markdown_report(self):
+        """Generate markdown report and save to reports/ directory."""
+        from pathlib import Path
+
+        # Create reports directory if it doesn't exist
+        reports_dir = Path('reports')
+        reports_dir.mkdir(exist_ok=True)
+
+        # Generate filename with today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        filename = reports_dir / f'fatigue_trends_{today}.md'
+
+        # Scenario order for display
+        scenario_order = [
+            'Road_B2B_Guard',
+            'Road_B2B_NonGuard',
+            'Home_B2B_Guard',
+            'Home_B2B_NonGuard',
+            'Rested_Home',
+            'Density_4in5',
+            'Normal_Rest'
+        ]
+
+        # Build markdown content
+        content = f"""# Fatigue Adjustment Performance Report - 21-Day Backtest
+
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Test Period:** Last {self.days} days (through {datetime.now().strftime('%Y-%m-%d')})
+**Modifier Version:** V5.2 (Updated Feb 15, 2026)
+
+## Modifier Values (V5.2)
+
+| Scenario | Modifier | Total Tax |
+|----------|----------|-----------|
+| Road B2B (Guard) | -4.8% B2B + -2% Guard | -6.7% |
+| Road B2B (Non-Guard) | -4.8% B2B | -4.8% |
+| Home B2B (Guard) | -1.5% B2B + -2% Guard | -3.5% |
+| Home B2B (Non-Guard) | -1.5% B2B | -1.5% |
+| Rested Home (3+ days) | +3% Boost | +3.0% |
+| Density (4-in-5) | -1% Density Tax | -1.0% |
+
+## Performance Metrics by Scenario
+
+| Scenario | N | Mean Error | RMSE | Over% | Under% |
+|----------|---|------------|------|-------|--------|
+"""
+
+        # Add metrics for each scenario
+        for scenario in scenario_order:
+            if scenario not in self.results or not self.results[scenario]:
+                continue
+
+            metrics = self.calculate_metrics(self.results[scenario])
+            if not metrics:
+                continue
+
+            content += f"| {scenario} | {metrics['sample_size']} | {metrics['mean_error']:+.2f} | {metrics['rmse']:.2f} | {metrics['over_proj_pct']:.1f}% | {metrics['under_proj_pct']:.1f}% |\n"
+
+        # Key Findings
+        content += "\n## Key Findings\n\n"
+
+        # Road B2B Guards
+        road_b2b_guard = self.results.get('Road_B2B_Guard', [])
+        if road_b2b_guard:
+            metrics = self.calculate_metrics(road_b2b_guard)
+            content += f"### 1. Road B2B Guards (n={metrics['sample_size']})\n\n"
+            content += f"- **Modifier:** -6.7% total (-4.8% B2B Road + -2% Guard Tax)\n"
+            content += f"- **Mean Error:** {metrics['mean_error']:+.2f} pts\n"
+
+            if metrics['mean_error'] > 1.0:
+                content += f"- ⚠️ **UNDER-PROJECTION:** Players outperforming by {metrics['mean_error']:.1f} pts\n"
+                content += f"- **Recommendation:** Consider reducing penalty to ~{-6.7 + (metrics['mean_error'] / 25 * 100):.1f}%\n\n"
+            elif metrics['mean_error'] < -1.0:
+                content += f"- ✅ **OVER-PROJECTION:** Tax may be too aggressive\n\n"
+            else:
+                content += f"- ✅ **WELL-CALIBRATED:** Error within ±1.0 pts\n\n"
+
+        # Home B2B Guards
+        home_b2b_guard = self.results.get('Home_B2B_Guard', [])
+        if home_b2b_guard:
+            metrics = self.calculate_metrics(home_b2b_guard)
+            content += f"### 2. Home B2B Guards (n={metrics['sample_size']})\n\n"
+            content += f"- **Modifier:** -3.5% total (-1.5% B2B Home + -2% Guard Tax)\n"
+            content += f"- **Mean Error:** {metrics['mean_error']:+.2f} pts\n"
+
+            if metrics['mean_error'] > 1.0:
+                content += f"- ⚠️ **UNDER-PROJECTION:** Players outperforming by {metrics['mean_error']:.1f} pts\n\n"
+            elif metrics['mean_error'] < -1.0:
+                content += f"- ✅ **OVER-PROJECTION:** Tax may be too aggressive\n\n"
+            else:
+                content += f"- ✅ **WELL-CALIBRATED**\n\n"
+
+        # Rested Home
+        rested = self.results.get('Rested_Home', [])
+        if rested:
+            metrics = self.calculate_metrics(rested)
+            content += f"### 3. Rested Home (3+ days) (n={metrics['sample_size']})\n\n"
+            content += f"- **Modifier:** +3% boost\n"
+            content += f"- **Mean Error:** {metrics['mean_error']:+.2f} pts\n"
+
+            if metrics['mean_error'] > 0.5:
+                content += f"- ⚠️ Players exceeding boost by {metrics['mean_error']:.1f} pts\n\n"
+            elif metrics['mean_error'] < -0.5:
+                content += f"- ⚠️ Boost may be too aggressive\n\n"
+            else:
+                content += f"- ✅ **WELL-CALIBRATED**\n\n"
+
+        # Overall Assessment
+        all_b2b = (self.results.get('Road_B2B_Guard', []) +
+                   self.results.get('Home_B2B_Guard', []) +
+                   self.results.get('Road_B2B_NonGuard', []) +
+                   self.results.get('Home_B2B_NonGuard', []))
+        normal = self.results.get('Normal_Rest', [])
+
+        if all_b2b and normal:
+            b2b_metrics = self.calculate_metrics(all_b2b)
+            normal_metrics = self.calculate_metrics(normal)
+
+            content += f"## Overall Assessment\n\n"
+            content += f"- **B2B Players (All):** {b2b_metrics['mean_error']:+.2f} pts mean error (n={b2b_metrics['sample_size']})\n"
+            content += f"- **Normal Rest:** {normal_metrics['mean_error']:+.2f} pts mean error (n={normal_metrics['sample_size']})\n"
+
+            diff = b2b_metrics['mean_error'] - normal_metrics['mean_error']
+
+            if diff > 2.0:
+                content += f"\n⚠️ **B2B players outperforming by {diff:.1f} pts vs Normal Rest**\n"
+                content += f"- Fatigue penalties are **TOO AGGRESSIVE**\n"
+                content += f"- Consider reducing all B2B modifiers by ~{diff / 25 * 100:.0f}%\n"
+            elif diff < -2.0:
+                content += f"\n✅ **B2B players underperforming by {abs(diff):.1f} pts vs Normal Rest**\n"
+                content += f"- Fatigue penalties are **APPROPRIATE**\n"
+            else:
+                content += f"\n✅ **B2B vs Normal Rest difference: {diff:.1f} pts (reasonable)**\n"
+
+        content += "\n---\n\n*Generated by scripts/backtest_fatigue_21day.py*\n"
+
+        # Write to file
+        with open(filename, 'w') as f:
+            f.write(content)
+
+        print(f"\n📄 Report saved to: {filename}")
+        return filename
+
     def close(self):
         self.conn.close()
 
@@ -441,6 +584,7 @@ if __name__ == "__main__":
     try:
         backtest.run_backtest()
         backtest.print_report()
+        backtest.generate_markdown_report()
     finally:
         backtest.close()
 

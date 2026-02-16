@@ -69,76 +69,50 @@ class LudiCalibrator:
         self.DEFENSIVE_STYLES = {
             # ELITE PAINT_PACK - Proven rim protectors with excellent DefRtg
             "OKC": "PAINT_PACK",   # 96.0 recent DefRtg (elite)
-            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)  
+            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)
             "DET": "PAINT_PACK",   # 87.5 recent DefRtg (TOP 3)
+            "MIN": "PAINT_PACK",   # Gobert rim protection
+            "SAS": "PAINT_PACK",   # Wembanyama rim protection
+            "ORL": "PAINT_PACK",   # Carter/Wagner twin towers
+
+            # BLITZ - Aggressive pressure defenses
             "PHX": "BLITZ",       # 91.3 recent DefRtg (elite pressure)
-            
-            # SOLID DEFENSES - Maintaining elite standards
-            "PHI": "PAINT_PACK",   # 106.1 stable, still effective
             "HOU": "BLITZ",       # 102.0 improving, pressure working
             "TOR": "BLITZ",       # Solid pressure defense
             "MIA": "BLITZ",       # Consistently elite
             "BKN": "BLITZ",       # 99.1 DefRtg (excellent)
-            
+
             # FUNNEL DEFENSES - Balanced schemes
             "WAS": "FUNNEL",       # High variance but stable identity
             "ATL": "FUNNEL",       # 102.7 improving
             "CHI": "FUNNEL",       # 99.9 improving
             "SAC": "FUNNEL",       # Consistently solid
             "DEN": "FUNNEL",       # 107.3 improving
-            
-            # NEUTRAL - Teams that failed elite checks or are in transition
-            "MIN": "NEUTRAL",     # Failed rim protection (diff% +0.6)
-            "SAS": "NEUTRAL",     # Failed rim protection (diff% +0.5)
-            "ORL": "NEUTRAL",     # Failed rim protection (diff% +2.9)
-            "LAL": "NEUTRAL",     # Failed rim protection, 112.3 DefRtg
-            "CLE": "NEUTRAL",     # Failed rim protection (diff% +1.5)
-            "MEM": "NEUTRAL",     # Failed rim protection (diff% +0.9)
-            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
-            "NYK": "NEUTRAL",     # Failed perimeter denial, 112.5 DefRtg
-            "DAL": "NEUTRAL",     # Failed perimeter denial, 113.0 DefRtg
-            "NOP": "NEUTRAL",     # 111.8 DefRtg, failed perimeter checks
-            "LAC": "NEUTRAL",     # Failed perimeter denial checks
-            "GSW": "NEUTRAL",     # Failed perimeter denial (51.7% opp dfg)
             "UTA": "FUNNEL",       # High variance (120.3) but scheme identity
-            
+
+            # PERIMETER - Perimeter-oriented defenses (FIX: was all NEUTRAL, 16 dead branches)
+            "GSW": "PERIMETER",    # Switch-everything, perimeter pressure
+            "DAL": "PERIMETER",    # Perimeter focus, limit 3s
+            "NYK": "PERIMETER",    # Thibs' perimeter denial system
+
             # HACKERS - Foul-heavy defenses remain unchanged
-            "IND": "HACKERS", 
-            "CHA": "HACKERS", 
-            "POR": "HACKERS"
+            "IND": "HACKERS",
+            "CHA": "HACKERS",
+            "POR": "HACKERS",
+
+            # NEUTRAL - Teams without strong defensive identity
+            "LAL": "NEUTRAL",     # 112.3 DefRtg, no clear scheme
+            "CLE": "NEUTRAL",     # 115.1 DefRtg, inconsistent
+            "MEM": "NEUTRAL",     # Rebuilding defensive identity
+            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
+            "NOP": "NEUTRAL",     # 111.8 DefRtg, scheme in flux
+            "LAC": "NEUTRAL",     # Transitional year
+            "PHI": "NEUTRAL"      # Personnel changes mid-season
         }
 
-        # 2025-26 TEAM OFFENSIVE STYLES (VERIFIED JAN 21, 2026)
-        # Based on Basketball-Reference/StatMuse pace + ORtg data
-        self.OFFENSIVE_STYLES = {
-            # MOTION - High ball movement, assist-heavy
-            "GSW": "MOTION", "BOS": "MOTION", "DEN": "MOTION", 
-            "ATL": "MOTION", "IND": "MOTION", "OKC": "MOTION",  # OKC moved from PACE_PUSH
-            
-            # ISO_HEAVY - Star-driven isolation (REDUCED from 5 to 3 teams)
-            "MIA": "ISO_HEAVY", "HOU": "ISO_HEAVY", "CLE": "ISO_HEAVY",
-            # Removed: DAL (post-Luka), PHX (now PACE_PUSH)
-            
-            # PACE_PUSH - Fast break focused (>100 pace)
-            "UTA": "PACE_PUSH",   # 101.8 (#1 fastest)
-            "CHI": "PACE_PUSH",   # 101.5 (#2 fastest)
-            "WAS": "PACE_PUSH",   # 101.1 (#3 fastest)
-            "PHX": "PACE_PUSH",   # Booker-led uptempo (changed from ISO_HEAVY)
-            "SAC": "PACE_PUSH", "NYK": "PACE_PUSH",
-            
-            # HALF_COURT - Methodical, low pace (<97)
-            "MEM": "HALF_COURT",  # 95.4 (slowest)
-            "LAC": "HALF_COURT",  # 95.8 (#2 slowest)
-            "BOS": "HALF_COURT",  # 95.7 (slow but elite 122.1 ORtg)
-            "BKN": "HALF_COURT",  # 96.6
-            "PHI": "HALF_COURT",  # 96.6
-            "ORL": "HALF_COURT", "TOR": "HALF_COURT", "MIN": "HALF_COURT",
-            
-            # Default: NEUTRAL (only 8 teams now, was 13)
-            "LAL": "NEUTRAL", "MIL": "NEUTRAL", "DAL": "NEUTRAL",  # DAL changed from ISO_HEAVY
-            "CHA": "NEUTRAL", "DET": "NEUTRAL", "POR": "NEUTRAL", 
-            "SAS": "NEUTRAL", "NOP": "NEUTRAL"
-        }
+        # OFFENSIVE_STYLES dict removed (Feb 15, 2026)
+        # Now using utils/team_offensive_classifier.py via classify_team_offense() method
+        # Fixed name mismatch: classifier now returns MOTION/ISO_HEAVY/PACE_PUSH/HALF_COURT (not MOTION_OFFENSE/ISOLATION_HEAVY)
 
         # MANUAL OVERRIDES (The "Scout's Eye")
         self.MANUAL_OVERRIDES = {
@@ -360,28 +334,33 @@ class LudiCalibrator:
         """
         Get official Synergy playtypes from database.
         Returns list of (playtype_tag, freq_pct, ppp) sorted by frequency.
-        
+
         Args:
             player_name: Player name to lookup
             min_freq: Minimum frequency % to qualify (default 5%)
+
+        Note: Applies best practice filter: (poss_per_game * games_played) >= 75
+        to ensure statistical significance of playtype data.
         """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
+            # Apply Synergy best practices: minimum 75 total possessions
             cursor.execute("""
                 SELECT playtype, freq_pct, ppp, percentile
                 FROM player_synergy_playtypes
-                WHERE player_name = ? 
+                WHERE player_name = ?
                 AND season = '2025-26'
                 AND freq_pct >= ?
+                AND (poss_per_game * games_played) >= 75
                 ORDER BY freq_pct DESC
                 LIMIT 4
             """, (player_name, min_freq))
-            
+
             results = cursor.fetchall()
             conn.close()
-            
+
             # Convert Synergy tags to our format
             playtypes = []
             for row in results:
@@ -389,9 +368,9 @@ class LudiCalibrator:
                 our_tag = self.SYNERGY_TO_TAG.get(synergy_tag)
                 if our_tag:
                     playtypes.append((our_tag, freq, ppp, percentile))
-            
+
             return playtypes
-            
+
         except Exception as e:
             # print(f"⚠️ Synergy lookup error: {e}")
             return []

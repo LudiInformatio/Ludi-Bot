@@ -51,7 +51,9 @@ def test_slasher_vs_hackers(days=60):
     print(f"📋 HYPOTHESIS TEST 1: Slasher vs Hackers (Last {days} Days)")
     print("="*60)
     slasher_condition = "pts > 20 AND fg3m < 2.0 AND minutes > 30"
-    hackers = ['IND', 'CHA', 'POR']
+    # Pull HACKERS teams from LudiCalibrator.DEFENSIVE_STYLES
+    calib = LudiCalibrator()
+    hackers = [team for team, style in calib.DEFENSIVE_STYLES.items() if style == 'HACKERS']
     for team in hackers:
         print(f"\n📊 {team} Defense:")
         results = query_historical_matchups(slasher_condition, team, min_games=2, days=days)
@@ -67,7 +69,9 @@ def test_stretch_big_vs_paint_pack(days=60):
     print(f"📋 HYPOTHESIS TEST 2: Stretch Big vs Paint Pack (Last {days} Days)")
     print("="*60)
     stretch_condition = "reb > 6.0 AND fg3m > 1.5 AND minutes > 25"
-    paint_pack = ['OKC', 'BOS', 'DET', 'MIN', 'LAL']
+    # Pull PAINT_PACK teams from LudiCalibrator.DEFENSIVE_STYLES
+    calib = LudiCalibrator()
+    paint_pack = [team for team, style in calib.DEFENSIVE_STYLES.items() if style == 'PAINT_PACK']
     for team in paint_pack[:3]:
         print(f"\n📊 {team} Defense:")
         results = query_historical_matchups(stretch_condition, team, min_games=2, days=days)
@@ -166,6 +170,57 @@ class BacktestEngine:
         mse = sum((p - a) ** 2 for p, a in zip(predictions, actuals)) / len(predictions)
         return math.sqrt(mse)
 
+    def _generate_markdown_report(self, label, processed, skipped, rmse_results, start_date, end_date):
+        """Generate markdown report and save to reports/ directory."""
+        from pathlib import Path
+
+        # Create reports directory if it doesn't exist
+        reports_dir = Path('reports')
+        reports_dir.mkdir(exist_ok=True)
+
+        # Generate filename with today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        filename = reports_dir / f'backtest_archetypes_{today}.md'
+
+        # Build markdown content
+        content = f"""# Archetype Backtest Report - {label}
+
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Test Period:** {start_date} to {end_date}
+**Games Processed:** {processed}
+**Games Skipped:** {skipped} (insufficient history)
+
+## RMSE Results (Root Mean Squared Error)
+
+| Stat | RMSE | Status |
+|------|------|--------|
+| PTS  | {rmse_results['pts']:.2f} | {'✅ PASS' if rmse_results['pts'] < 7.0 else '⚠️ NEEDS TUNING'} |
+| REB  | {rmse_results['reb']:.2f} | {'✅ PASS' if rmse_results['reb'] < 3.5 else '⚠️ NEEDS TUNING'} |
+| AST  | {rmse_results['ast']:.2f} | {'✅ PASS' if rmse_results['ast'] < 2.5 else '⚠️ NEEDS TUNING'} |
+| 3PM  | {rmse_results['fg3m']:.2f} | {'✅ PASS' if rmse_results['fg3m'] < 1.5 else '⚠️ NEEDS TUNING'} |
+| BLK  | {rmse_results['blk']:.2f} | {'✅ PASS' if rmse_results['blk'] < 0.8 else '⚠️ NEEDS TUNING'} |
+| STL  | {rmse_results['stl']:.2f} | {'✅ PASS' if rmse_results['stl'] < 0.8 else '⚠️ NEEDS TUNING'} |
+| TOV  | {rmse_results['tov']:.2f} | {'✅ PASS' if rmse_results['tov'] < 1.2 else '⚠️ NEEDS TUNING'} |
+
+## Interpretation
+
+- **RMSE** measures average prediction error in the same units as the stat
+- Lower RMSE = better model accuracy
+- Industry standard: PTS < 7.0, REB < 3.5, AST < 2.5
+
+## Notes
+
+- This backtest uses historical game logs with running averages (5+ game minimum)
+- Module E calibration applied (matchup modifiers, fatigue, blowout tax)
+- Game context (spread, total) pulled from database where available
+"""
+
+        # Write to file
+        with open(filename, 'w') as f:
+            f.write(content)
+
+        print(f"\n📄 Markdown report generated: {filename}")
+
     def run(self, label="Backtest"):
         print("\n" + "="*60)
         print(f"🔄 STARTING REPLAY LOOP: {label} (Last {self.days} Days)")
@@ -181,7 +236,11 @@ class BacktestEngine:
         results = {
             'pts': {'pred': [], 'act': []},
             'reb': {'pred': [], 'act': []},
-            'ast': {'pred': [], 'act': []}
+            'ast': {'pred': [], 'act': []},
+            'fg3m': {'pred': [], 'act': []},
+            'blk': {'pred': [], 'act': []},
+            'stl': {'pred': [], 'act': []},
+            'tov': {'pred': [], 'act': []}
         }
         
         processed_count = 0
@@ -223,9 +282,19 @@ class BacktestEngine:
                     opponent = 'UNK'
                     if home and away:
                         opponent = away if team == home else home
-                    
-                    # Vegas Context (Defaulting as historical odds might be missing)
-                    odds = {'total': 228.0, 'spread': 5.0}
+
+                    # Pull game context from database (spread, total) if available
+                    spread = 5.0
+                    total = 228.0
+                    if h_score is not None and a_score is not None:
+                        # Calculate actual spread from final scores
+                        if team == home:
+                            spread = h_score - a_score
+                        else:
+                            spread = a_score - h_score
+                        total = h_score + a_score
+
+                    odds = {'total': total, 'spread': abs(spread)}
 
                     player_packet = {
                         'name': name,
@@ -261,16 +330,28 @@ class BacktestEngine:
                     yak_report = {'status': 'Active', 'note': ''} 
                     calibrated = self.calib.calibrate_player(player_packet, yak_report)
                     
-                    # Store Results
+                    # Store Results for all 7 stats
                     results['pts']['pred'].append(calibrated['proj_pts'])
                     results['pts']['act'].append(pts)
-                    
+
                     results['reb']['pred'].append(calibrated['proj_reb'])
                     results['reb']['act'].append(reb)
-                    
+
                     results['ast']['pred'].append(calibrated['proj_ast'])
                     results['ast']['act'].append(ast)
-                    
+
+                    results['fg3m']['pred'].append(calibrated.get('proj_3pm', base_3pm))
+                    results['fg3m']['act'].append(fg3m)
+
+                    results['blk']['pred'].append(calibrated.get('proj_blk', base_blk))
+                    results['blk']['act'].append(blk)
+
+                    results['stl']['pred'].append(calibrated.get('proj_stl', base_stl))
+                    results['stl']['act'].append(stl)
+
+                    results['tov']['pred'].append(calibrated.get('proj_tov', avg_tov))
+                    results['tov']['act'].append(tov)
+
                     processed_count += 1
                 else:
                     skipped_count += 1
@@ -291,22 +372,25 @@ class BacktestEngine:
         print(f"\n✅ Processing Complete: {label}")
         print(f"   Games Predicted: {processed_count}")
         print(f"   Skipped (Low History): {skipped_count}")
-        
-        # Calculate RMSE
+
+        # Calculate RMSE for all 7 stats
         print(f"\n📊 {label} VALIDATION RESULTS (RMSE):")
-        
-        rmse_pts = self.calculate_rmse(results['pts']['pred'], results['pts']['act'])
-        rmse_reb = self.calculate_rmse(results['reb']['pred'], results['reb']['act'])
-        rmse_ast = self.calculate_rmse(results['ast']['pred'], results['ast']['act'])
-        
-        print(f"   PTS RMSE: {rmse_pts:.2f}")
-        print(f"   REB RMSE: {rmse_reb:.2f}")
-        print(f"   AST RMSE: {rmse_ast:.2f}")
-        
-        if rmse_pts < 7.0:
+
+        rmse_results = {}
+        for stat in ['pts', 'reb', 'ast', 'fg3m', 'blk', 'stl', 'tov']:
+            rmse = self.calculate_rmse(results[stat]['pred'], results[stat]['act'])
+            rmse_results[stat] = rmse
+            print(f"   {stat.upper()} RMSE: {rmse:.2f}")
+
+        if rmse_results['pts'] < 7.0:
             print("   ✅ PTS Model is solid (< 7.0)")
         else:
             print("   ⚠️ PTS Model needs tuning (> 7.0)")
+
+        # Generate markdown report
+        self._generate_markdown_report(label, processed_count, skipped_count, rmse_results, start_date, datetime.now().strftime('%Y-%m-%d'))
+
+        return rmse_results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
