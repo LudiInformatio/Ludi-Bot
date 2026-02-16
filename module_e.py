@@ -2,6 +2,7 @@ import pandas as pd
 import sqlite3
 import json
 from pathlib import Path
+import config
 from utils.player_id_resolver import PlayerIDResolver
 from utils.team_offensive_classifier import TEAM_OFFENSIVE_TYPES
 
@@ -39,8 +40,7 @@ class LudiCalibrator:
         
         # Phase 7.4: Load clutch/leverage data for close game boosts
         self.clutch_teams = {}  # {team_abbr: {'clutch_ortg': float, 'overall_ortg': float, 'is_clutch': bool}}
-        if PBP_STATS_AVAILABLE:
-            self._load_clutch_data()
+        self._load_clutch_data()
 
         # Sprint 1: Load speed/fatigue data for hustle and fatigue context
         self.speed_data = {}  # {player_name: {speed, distance, speed_recent}}
@@ -57,6 +57,16 @@ class LudiCalibrator:
         # Sprint 3: Load player leverage usage for crunch time identification
         self.player_leverage = {}  # {player_name: {clutch_usage_rate, vh_possessions}}
         self._load_player_leverage_usage()
+
+        # Step 8/9: Load cached data for archetype and opponent context wiring
+        self.hustle_profiles = {}
+        self.defense_profiles = {}
+        self.tracking_profiles = {}
+        self.opponent_profiles = {}
+        self._load_hustle_profiles()
+        self._load_defense_profiles()
+        self._load_tracking_profiles()
+        self._load_opponent_defense_profiles()
         
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -185,7 +195,7 @@ class LudiCalibrator:
         self.SECONDARY_THRESHOLD = 0.50
         
         # Load playtype thresholds from config
-        self.db_path = Path(__file__).parent / 'ludi.db'
+        self.db_path = Path(db_path)
         self.config_path = Path(__file__).parent / 'config' / 'playtype_thresholds.json'
         self.playtype_thresholds = self._load_playtype_thresholds()
 
@@ -210,7 +220,167 @@ class LudiCalibrator:
                 stl, blk, fga, fta, tov = row[0] or 0, row[1] or 0, row[2] or 0, row[3] or 0, row[4] or 0
                 return {'base_stl': round(stl, 2), 'base_blk': round(blk, 2), 'base_usg': round((fga + 0.44*fta + tov)/100, 3)}
             return {'base_stl': 0, 'base_blk': 0, 'base_usg': 0.20}
-        except: return {'base_stl': 0, 'base_blk': 0, 'base_usg': 0.20}
+        except Exception as e:
+            if self.debug_log and hasattr(self, 'logger'):
+                self.logger.debug(f"ERROR | {player_name} | MISSING_STATS | {str(e)}")
+            return {'base_stl': 0, 'base_blk': 0, 'base_usg': 0.20}
+
+    def _load_hustle_profiles(self):
+        """Load 30-day hustle profiles for contested rebounding proxies."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute(
+                """
+                SELECT h.player_name,
+                       AVG(COALESCE(h.box_outs, 0)) AS box_outs,
+                       AVG(COALESCE(h.contested_shots, 0)) AS contested_shots,
+                       AVG(COALESCE(pgl.reb, 0)) AS reb
+                FROM player_game_hustle h
+                LEFT JOIN player_game_logs pgl
+                  ON pgl.player_name = h.player_name
+                 AND pgl.game_date = h.game_date
+                WHERE h.game_date >= date('now', '-30 days')
+                GROUP BY h.player_name
+                HAVING COUNT(*) >= 5
+                """
+            )
+            rows = c.fetchall()
+            conn.close()
+
+            self.hustle_profiles = {}
+            for player_name, box_outs, contested_shots, reb in rows:
+                reb = reb or 0.0
+                box_outs = box_outs or 0.0
+                contested_shots = contested_shots or 0.0
+                proxy = (0.06 * box_outs) + (0.02 * contested_shots) + (0.015 * reb)
+                self.hustle_profiles[player_name] = {
+                    'contested_reb_pct': max(0.18, min(0.65, proxy))
+                }
+        except Exception as e:
+            print(f"[Module E] Hustle profiles unavailable: {e}")
+            self.hustle_profiles = {}
+
+    def _load_defense_profiles(self):
+        """Load defensive differential proxies used for defender archetypes."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute(
+                """
+                SELECT player_name, AVG(COALESCE(diff_pct, 0))
+                FROM player_defense
+                WHERE season = '2025-26'
+                GROUP BY player_name
+                """
+            )
+            rows = c.fetchall()
+            conn.close()
+
+            self.defense_profiles = {
+                row[0]: {
+                    'def_diff_vs_screen': row[1] or 0.0,
+                    'def_diff_vs_iso': row[1] or 0.0,
+                }
+                for row in rows
+            }
+        except Exception as e:
+            print(f"[Module E] Defense profiles unavailable: {e}")
+            self.defense_profiles = {}
+
+    def _load_tracking_profiles(self):
+        """Preload tracking aggregates once to avoid repeated per-player queries."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute(
+                """
+                SELECT
+                    player_name,
+                    AVG(drives_fga) AS avg_drives,
+                    AVG(drives_pass_pct) AS avg_drives_pass_pct,
+                    AVG(catch_shoot_fga) AS avg_cs_fga,
+                    AVG(CAST(catch_shoot_fgm AS FLOAT) / NULLIF(catch_shoot_fga, 0)) AS cs_pct,
+                    AVG(catch_shoot_3pa) AS avg_cs_3pa,
+                    AVG(pull_up_fga) AS avg_pu_fga,
+                    AVG(CAST(pull_up_fgm AS FLOAT) / NULLIF(pull_up_fga, 0)) AS pu_pct,
+                    AVG(avg_speed_off) AS avg_speed,
+                    AVG(dist_miles_off) AS avg_distance,
+                    AVG(contested_fga) AS avg_contested_fga,
+                    AVG(tight_fga) AS avg_tight_fga,
+                    AVG(open_fga) AS avg_open_fga,
+                    AVG(wide_open_fga) AS avg_wide_open_fga,
+                    AVG(avg_defender_dist) AS avg_defender_dist,
+                    COUNT(*) AS games
+                FROM player_game_tracking
+                WHERE game_date >= date('now', '-60 days')
+                GROUP BY player_name
+                HAVING COUNT(*) >= 3
+                """
+            )
+            rows = c.fetchall()
+            conn.close()
+
+            self.tracking_profiles = {
+                row[0]: {
+                    'avg_drives': row[1] or 0.0,
+                    'avg_drives_pass_pct': row[2] or 0.0,
+                    'avg_cs_fga': row[3] or 0.0,
+                    'cs_pct': row[4] or 0.0,
+                    'avg_cs_3pa': row[5] or 0.0,
+                    'avg_pu_fga': row[6] or 0.0,
+                    'pu_pct': row[7] or 0.0,
+                    'avg_speed': row[8] or 0.0,
+                    'avg_distance': row[9] or 0.0,
+                    'avg_contested_fga': row[10] or 0.0,
+                    'avg_tight_fga': row[11] or 0.0,
+                    'avg_open_fga': row[12] or 0.0,
+                    'avg_wide_open_fga': row[13] or 0.0,
+                    'avg_defender_dist': row[14] or 0.0,
+                    'tracking_games': row[15] or 0,
+                    'shot_difficulty_games': row[15] or 0,
+                }
+                for row in rows
+            }
+        except Exception as e:
+            print(f"[Module E] Tracking profile preload unavailable: {e}")
+            self.tracking_profiles = {}
+
+    def _load_opponent_defense_profiles(self):
+        """Load 30-day opponent context from player_game_opponent."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute(
+                """
+                SELECT team_abbrev,
+                       AVG(opp_fg_pct) AS avg_opp_fg_pct,
+                       AVG(opp_3p_pct) AS avg_opp_3p_pct,
+                       AVG(opp_stl) AS avg_opp_stl,
+                       AVG(opp_blk) AS avg_opp_blk,
+                       AVG(opp_tov) AS avg_opp_tov
+                FROM player_game_opponent
+                WHERE game_date >= date('now', '-30 days')
+                GROUP BY team_abbrev
+                HAVING COUNT(DISTINCT game_date) >= 5
+                """
+            )
+            rows = c.fetchall()
+            conn.close()
+
+            self.opponent_profiles = {
+                row[0]: {
+                    'opp_fg_pct': row[1] or 0.0,
+                    'opp_3p_pct': row[2] or 0.0,
+                    'opp_stl': row[3] or 0.0,
+                    'opp_blk': row[4] or 0.0,
+                    'opp_tov': row[5] or 0.0,
+                }
+                for row in rows
+            }
+        except Exception as e:
+            print(f"[Module E] Opponent profiles unavailable: {e}")
+            self.opponent_profiles = {}
 
     # === SECONDARY PLAYTYPE METHODS (Week 2 Integration) ===
     
@@ -436,79 +606,43 @@ class LudiCalibrator:
         Returns empty dict if not found.
         """
         try:
-            # Step 1: Resolve to canonical NBA ID and get player info
             try:
                 canonical_id = self.id_resolver.resolve_to_canonical_id(player_name_or_id)
                 player_info = self.id_resolver.get_player_info(canonical_id)
                 canonical_name = player_info.get('full_name', player_name_or_id)
             except ValueError:
-                # Player not found in canonical system
+                return {}
+
+            tracking_stats = dict(self.tracking_profiles.get(canonical_name, {}))
+            if not tracking_stats:
+                return {}
+
+            if tracking_stats.get('tracking_games', 0) < 3:
                 return {}
 
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            # Step 2: Query tracking data by player_name (not nba_player_id - that contains slugs)
-            tracking_query = """
-            SELECT
-                AVG(drives_fga) as avg_drives,
-                AVG(drives_pass_pct) as avg_drives_pass_pct,
-                AVG(catch_shoot_fga) as avg_cs_fga,
-                AVG(CAST(catch_shoot_fgm AS FLOAT) / NULLIF(catch_shoot_fga, 0)) as cs_pct,
-                AVG(catch_shoot_3pa) as avg_cs_3pa,
-                AVG(pull_up_fga) as avg_pu_fga,
-                AVG(CAST(pull_up_fgm AS FLOAT) / NULLIF(pull_up_fga, 0)) as pu_pct,
-                AVG(avg_speed_off) as avg_speed,
-                AVG(dist_miles_off) as avg_distance,
-                COUNT(*) as games
-            FROM player_game_tracking
-            WHERE player_name = ? AND game_date >= date('now', ?)
-            """
-            cursor.execute(tracking_query, (canonical_name, f'-{days} days'))
-            row = cursor.fetchone()
-            
-            if not row or row[9] < 3:  # Need at least 3 games
-                conn.close()
-                return {}
-            
-            tracking_stats = {
-                'avg_drives': row[0] or 0,
-                'avg_drives_pass_pct': row[1] or 0,
-                'avg_cs_fga': row[2] or 0,
-                'cs_pct': row[3] or 0,
-                'avg_cs_3pa': row[4] or 0,
-                'avg_pu_fga': row[5] or 0,
-                'pu_pct': row[6] or 0,
-                'avg_speed': row[7] or 0,
-                'avg_distance': row[8] or 0,
-                'tracking_games': row[9]
-            }
-            
-            # Step 3: Get shot quality (rim_freq)
-            # Query by canonical_id (stored as player_id in this table for now, or ensure mapping)
-            # The original code queried by player_id from players table. 
-            # Now we use canonical_id which maps to NBA ID.
-            shot_query = """
-            SELECT at_rim_freq, corner_3_freq 
-            FROM player_shot_quality 
-            WHERE player_id = ? AND season = '2025-26'
-            """
-            cursor.execute(shot_query, (canonical_id,))
+            cursor.execute(
+                """
+                SELECT at_rim_freq, corner_3_freq
+                FROM player_shot_quality
+                WHERE player_id = ? AND season = '2025-26'
+                """,
+                (canonical_id,)
+            )
             shot_row = cursor.fetchone()
-            
+            conn.close()
+
             if shot_row:
                 tracking_stats['rim_freq'] = shot_row[0] or 0
                 tracking_stats['corner_3_freq'] = shot_row[1] or 0
-            
-            # Step 4: Get Position (from canonical table - already fetched earlier)
+
             if player_info.get('position'):
                 tracking_stats['position'] = player_info['position']
-            
-            conn.close()
+
             return tracking_stats
-            
+
         except Exception as e:
-            # print(f"DEBUG: Error in _get_tracking_stats: {e}")
             return {}
 
     def _get_shot_difficulty_stats(self, player_name_or_id: str, days: int = 60) -> dict:
@@ -520,36 +654,18 @@ class LudiCalibrator:
             player_info = self.id_resolver.get_player_info(canonical_id)
             canonical_name = player_info.get('full_name', player_name_or_id)
 
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            query = """
-            SELECT
-                AVG(contested_fga) as avg_contested_fga,
-                AVG(tight_fga) as avg_tight_fga,
-                AVG(open_fga) as avg_open_fga,
-                AVG(wide_open_fga) as avg_wide_open_fga,
-                AVG(avg_defender_dist) as avg_defender_dist,
-                COUNT(*) as games
-            FROM player_game_tracking
-            WHERE player_name = ? AND game_date >= date('now', ?)
-            """
-            cursor.execute(query, (canonical_name, f'-{days} days'))
-            row = cursor.fetchone()
-
-            if not row or row[5] < 3:  # Need at least 3 games
-                conn.close()
+            profile = self.tracking_profiles.get(canonical_name, {})
+            if not profile or profile.get('shot_difficulty_games', 0) < 3:
                 return {}
 
             stats = {
-                'avg_contested_fga': row[0] or 0,
-                'avg_tight_fga': row[1] or 0,
-                'avg_open_fga': row[2] or 0,
-                'avg_wide_open_fga': row[3] or 0,
-                'avg_defender_dist': row[4] or 0,
-                'shot_difficulty_games': row[5]
+                'avg_contested_fga': profile.get('avg_contested_fga', 0),
+                'avg_tight_fga': profile.get('avg_tight_fga', 0),
+                'avg_open_fga': profile.get('avg_open_fga', 0),
+                'avg_wide_open_fga': profile.get('avg_wide_open_fga', 0),
+                'avg_defender_dist': profile.get('avg_defender_dist', 0),
+                'shot_difficulty_games': profile.get('shot_difficulty_games', 0)
             }
-            conn.close()
             return stats
         except Exception as e:
             return {}
@@ -673,6 +789,16 @@ class LudiCalibrator:
             # Player not found or error - will use 'UNK' position
             pass
 
+        # Wire archetype context from loaded data tables (Step 8)
+        hustle = self.hustle_profiles.get(player_name, {})
+        defense = self.defense_profiles.get(player_name, {})
+        if 'contested_reb_pct' not in calibrated:
+            calibrated['contested_reb_pct'] = hustle.get('contested_reb_pct', 0.5)
+        if 'def_diff_vs_screen' not in calibrated:
+            calibrated['def_diff_vs_screen'] = defense.get('def_diff_vs_screen', 0.0)
+        if 'def_diff_vs_iso' not in calibrated:
+            calibrated['def_diff_vs_iso'] = defense.get('def_diff_vs_iso', 0.0)
+
         # 1. ASSIGN UNIFIED ARCHETYPE (returns archetype + synergy dict)
         archetype, synergy_dict = self._assign_unified_archetype(calibrated)
 
@@ -682,6 +808,11 @@ class LudiCalibrator:
 
             # Store synergy modifiers for later application
             calibrated['synergy_modifiers'] = synergy_dict
+
+        # Ensure secondary playtypes are always populated for matchup layer
+        if not calibrated.get('secondary_playtypes'):
+            tracking_data = self._get_tracking_stats(player_name)
+            calibrated['secondary_playtypes'] = self._assign_secondary_playtypes(calibrated, tracking_data) if tracking_data else []
 
         # 3. NEWS CALIBRATION
         status = yak_report.get('status', 'ACTIVE')
@@ -732,7 +863,7 @@ class LudiCalibrator:
         # New logic: Context-aware (favorite/underdog, starter/bench) in Module F
         
         if total > 238.0: self._apply_factor(calibrated, 1.03)
-        elif total > 0 and total < 218.0: self._apply_factor(calibrated, 0.97)
+        elif total > 0 and total < 218.0: self._apply_factor(calibrated, config.GAME_TOTAL_LOW_FACTOR)
 
         # 5. MATCHUP LOGIC (Primary Archetypes)
         opponent = calibrated.get('opponent', 'UNK') 
@@ -775,6 +906,10 @@ class LudiCalibrator:
             elif def_style == "FUNNEL":
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Transition Chaos"
+            elif def_style == "PAINT_PACK":
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.95, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_fta', 0.92, wowy_confidence)
+                calibrated['notes'] += " | Paint Congestion"
 
         elif archetype == "JUMBO_FACILITATOR":
             if def_style == "PERIMETER":
@@ -786,6 +921,9 @@ class LudiCalibrator:
             if def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Spot-Up vs Helpers"
+            elif def_style == "PERIMETER":
+                self._boost_stat_with_confidence(calibrated, 'proj_3pm', 0.92, wowy_confidence)
+                calibrated['notes'] += " | Sniper Tax vs Perimeter"
 
         elif archetype == "TWO_LEVEL_SCORER":
             if def_style == "PERIMETER":
@@ -800,7 +938,7 @@ class LudiCalibrator:
         elif archetype == "WARRIOR_BIG":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.20, wowy_confidence)
-                self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.30, wowy_confidence)
+                self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.20, wowy_confidence)
                 calibrated['notes'] += " | Warrior Boards vs Small Ball"
             elif def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
@@ -835,14 +973,16 @@ class LudiCalibrator:
 
         elif archetype == "SCREEN_NAVIGATOR":
             # Defensive archetype - focus on defensive stats
-            self._boost_stat(calibrated, 'proj_stl', 1.15)
-            calibrated['notes'] += " | Screen Navigator"
+            if def_style in ['PAINT_PACK', 'BLITZ']:
+                self._boost_stat(calibrated, 'proj_stl', 1.15)
+                calibrated['notes'] += " | Screen Navigator"
 
         elif archetype == "ISLAND_DEFENDER":
             # Defensive archetype
-            self._boost_stat(calibrated, 'proj_stl', 1.10)
-            self._boost_stat(calibrated, 'proj_blk', 1.08)
-            calibrated['notes'] += " | Island Defender"
+            if def_style in ['PERIMETER', 'HACKERS']:
+                self._boost_stat(calibrated, 'proj_stl', 1.10)
+                self._boost_stat(calibrated, 'proj_blk', 1.08)
+                calibrated['notes'] += " | Island Defender"
 
         elif archetype == "CUTTER_SPECIALIST":
             if def_style == "PERIMETER":
@@ -919,12 +1059,18 @@ class LudiCalibrator:
             self._boost_stat(calibrated, 'proj_fta', 1.15)
             if archetype == "SLASHER":
                 calibrated['notes'] += " | Confirmed Rim Pressure"
+        elif rim_freq < 0.15:
+            self._boost_stat(calibrated, 'proj_fta', 0.92)
+            calibrated['notes'] += " | Low Rim Pressure"
 
 # C) Corner Specialist Logic
         # Corner 3s are are counter to 'PAINT_PACK' defenses
         if corner_freq > 0.20 and def_style == "PAINT_PACK":
             self._boost_stat(calibrated, 'proj_3pm', 1.12)
             calibrated['notes'] += " | Corner Specialist vs Pack"
+        elif corner_freq < 0.05:
+            self._boost_stat(calibrated, 'proj_3pm', 0.95)
+            calibrated['notes'] += " | Low Corner Volume"
 
         # === NEW: FT% SHOOTING TOUCH INDICATOR ===
         # Research: Free throw ability indicates shooting touch (ShotQualityBets)
@@ -960,9 +1106,9 @@ class LudiCalibrator:
                 
                 if shot_creation_ratio > 0.65:
                     # Pull-up dominant = off-dribble shooter (harder shots)
-                    self._boost_stat(calibrated, 'proj_3pm', 0.97)
+                    self._boost_stat(calibrated, 'proj_3pm', config.SHOT_CREATION_PULLUP_TAX)
                     calibrated['notes'] += " | Off-Dribble 3s"
-                    self._log_adjustment(player_name, 'SHOT_CREATION', 0.97, 
+                    self._log_adjustment(player_name, 'SHOT_CREATION', config.SHOT_CREATION_PULLUP_TAX, 
                         f"Pull-up: {shot_creation_ratio:.0%} of 3s")
                 elif shot_creation_ratio < 0.25:
                     # Catch-and-shoot dominant = easier shots
@@ -984,31 +1130,31 @@ class LudiCalibrator:
         # Westbrook/Giddey Rule: Guards who crash boards
         if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_CREATOR"] and calibrated.get('base_reb', 0) > 5.5:
             self._boost_stat(calibrated, 'proj_reb', 1.10)
-        # === NEW: B2B FATIGUE TAX (Phase 4) ===
-        is_b2b = yak_report.get('is_back_to_back', False)
-        is_road = calibrated.get('is_road', False)
-        rest_days = yak_report.get('rest_days', 2)
-        position = calibrated.get('position', '')
 
-        if is_b2b:
-            if is_road:
-                # Road B2B: -6% volume (research: 2-3 pt decline)
-                self._apply_factor(calibrated, 0.94)
-                calibrated['notes'] += " | B2B Road Tax"
-            else:
-                # Home B2B: -3% volume
-                self._apply_factor(calibrated, 0.97)
-                calibrated['notes'] += " | B2B Home Tax"
-            
-            # Guard-specific penalty (cover most distance)
-            if position in ['PG', 'SG', 'G']:
-                self._boost_stat(calibrated, 'proj_pts', 0.96)
-                self._boost_stat(calibrated, 'proj_ast', 0.95)
-                calibrated['notes'] += " | Guard Fatigue"
-
-        elif rest_days >= 3 and not is_road:
-            self._apply_factor(calibrated, 1.03)
-            calibrated['notes'] += " | Rested Home Edge"
+        # --- GLOBAL MODIFIER CAP ---
+        stat_pairs = [
+            ('proj_pts', 'base_pts'),
+            ('proj_reb', 'base_reb'),
+            ('proj_ast', 'base_ast'),
+            ('proj_3pm', 'base_3pm'),
+            ('proj_stl', 'base_stl'),
+            ('proj_blk', 'base_blk'),
+            ('proj_oreb', 'base_oreb'),
+            ('proj_dreb', 'base_dreb'),
+            ('proj_fta', 'base_fta'),
+            ('proj_fga', 'base_fga'),
+        ]
+        for proj_key, base_key in stat_pairs:
+            base_val = calibrated.get(base_key, 0) or 0
+            if base_val <= 0 or proj_key not in calibrated:
+                continue
+            ratio = calibrated[proj_key] / base_val
+            if ratio > config.MAX_MODIFIER:
+                calibrated[proj_key] = round(base_val * config.MAX_MODIFIER, 2)
+                calibrated['notes'] += f" | CAP({proj_key}:{ratio:.2f}->{config.MAX_MODIFIER})"
+            elif ratio < config.MIN_MODIFIER:
+                calibrated[proj_key] = round(base_val * config.MIN_MODIFIER, 2)
+                calibrated['notes'] += f" | FLOOR({proj_key}:{ratio:.2f}->{config.MIN_MODIFIER})"
 
         return calibrated
 
@@ -1292,6 +1438,8 @@ class LudiCalibrator:
 
         tov_rate = opponent_stats.get('tov_rate', 0)
         two_pa_rate = opponent_stats.get('two_pa_rate', 0)
+        opponent_abbr = calibrated.get('opponent')
+        opponent_profile = self.opponent_profiles.get(opponent_abbr, {})
 
         # STL boost vs high-turnover teams
         if tov_rate > 0.15:
@@ -1306,6 +1454,25 @@ class LudiCalibrator:
             self._boost_stat(calibrated, 'proj_blk', blk_mod)
             calibrated['notes'] += " | BLK Boost (High 2PA%)"
             self._log_adjustment(player_name, 'OPPONENT_CONTEXT', blk_mod, f"Opponent 2PA Rate: {two_pa_rate:.1%}")
+
+        # Richer opponent profile signals from player_game_opponent
+        if opponent_profile:
+            opp_stl = opponent_profile.get('opp_stl', 0)
+            opp_blk = opponent_profile.get('opp_blk', 0)
+            opp_fg_pct = opponent_profile.get('opp_fg_pct', 0)
+
+            if opp_stl > 8.5:
+                self._boost_stat(calibrated, 'proj_tov', 1.05)
+                calibrated['notes'] += " | Ball Pressure"
+            elif opp_stl < 6.5:
+                self._boost_stat(calibrated, 'proj_tov', 0.97)
+
+            if opp_blk > 5.5 and calibrated.get('pbp_rim_freq', 0) > 0.35:
+                self._boost_stat(calibrated, 'proj_pts', 0.97)
+                calibrated['notes'] += " | Rim Deterrence"
+
+            if opp_fg_pct > 0 and opp_fg_pct < 0.455:
+                self._boost_stat(calibrated, 'proj_fg_pct', 0.98)
 
     def classify_team_offense(self, team_abbr: str) -> str:
         """
@@ -1353,9 +1520,9 @@ class LudiCalibrator:
             if opponent_defense in ["FUNNEL", "HACKERS"]:
                 # Transition exploits slow recovery
                 if 'TRANSITION' in sec_playtypes:
-                    self._boost_stat(calibrated, 'proj_pts', 1.06)
+                    self._boost_stat(calibrated, 'proj_pts', 1.03)
                     calibrated['notes'] += " | Pace Push"
-                    self._log_adjustment(player_name, 'OFF_STYLE', 1.06, 
+                    self._log_adjustment(player_name, 'OFF_STYLE', 1.03, 
                         "PACE_PUSH vs weak transition defense")
         
         # HALF_COURT specific
@@ -1436,9 +1603,8 @@ class LudiCalibrator:
             total_freq = sum(r[1] for r in rows)
             weighted_ppp = sum(r[1] * r[2] for r in rows) / total_freq
 
-            # Compare to league average (1.05 PPP = average NBA efficiency)
-            LEAGUE_AVG_PPP = 1.05
-            efficiency_ratio = weighted_ppp / LEAGUE_AVG_PPP
+            # Compare to league average PPP from config
+            efficiency_ratio = weighted_ppp / config.LEAGUE_AVG_PPP
 
             # Cap at ±12% adjustment (avoid over-calibration)
             modifier = max(0.88, min(1.12, efficiency_ratio))
@@ -1457,10 +1623,8 @@ class LudiCalibrator:
                 calibrated['notes'] += f" | {direction} ({pct_change:+d}% PPP)"
 
         except Exception as e:
-            # Silently fail - don't break pipeline if Synergy data unavailable
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | PPP_EFFICIENCY | {str(e)}")
-            pass
 
     def _apply_defensive_diff_adjustment(self, calibrated: dict, opponent_abbr: str) -> None:
         """
@@ -1534,10 +1698,8 @@ class LudiCalibrator:
                     calibrated['notes'] += f" | Weak Rim D ({pct_change:+d}%)"
 
         except Exception as e:
-            # Silently fail
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | DEFENSIVE_DIFF | {str(e)}")
-            pass
 
     def _apply_drives_assist_profile(self, calibrated: dict) -> None:
         """
@@ -1552,29 +1714,15 @@ class LudiCalibrator:
         player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
 
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            profile = self.tracking_profiles.get(player_name, {})
+            games = profile.get('tracking_games', 0)
+            drives = profile.get('avg_drives', 0)
+            pass_pct = profile.get('avg_drives_pass_pct', 0)
 
-            # Aggregate drives data from game logs (season avg)
-            cursor.execute("""
-                SELECT
-                    COUNT(*) as games,
-                    AVG(drives_fga + drives_fgm) as avg_drives,
-                    AVG(drives_pass_pct) as avg_pass_pct
-                FROM player_game_tracking
-                WHERE player_name = ? AND (drives_fga > 0 OR drives_fgm > 0)
-                GROUP BY player_name
-            """, (player_name,))
-
-            row = cursor.fetchone()
-            conn.close()
-
-            if not row or row[0] < 5:  # Need at least 5 games for reliable sample
+            if games < 5:  # Need at least 5 games for reliable sample
                 self._log_skip(player_name, 'DRIVES_AST', 
-                    f"Insufficient data ({row[0] if row else 0} games)")
+                    f"Insufficient data ({games} games)")
                 return  # No drives data or insufficient sample
-
-            games, drives, pass_pct = row
 
             # High volume + high pass% = elite playmaker
             if drives >= 8 and pass_pct >= 40:
@@ -1602,10 +1750,8 @@ class LudiCalibrator:
                 f"{tag}: {drives:.1f} drives, {pass_pct:.1f}% pass")
 
         except Exception as e:
-            # Silently fail
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | DRIVES_AST | {str(e)}")
-            pass
 
     def _apply_fatigue_adjustments(self, calibrated: dict, yak_report: dict) -> None:
         """
@@ -1749,10 +1895,11 @@ class LudiCalibrator:
             elif playtype == 'SPOT_UP':
                 if def_style == 'PAINT_PACK':
                     # Paint-pack leaves shooters open (strongest edge)
-                    self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.15, wowy_confidence)
-                    calibrated['notes'] += " | Spot-Up vs Pack"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
-                        "SPOT_UP vs PAINT_PACK: open 3s from help D")
+                    if "Paint Pack Edge" not in calibrated.get('notes', ''):
+                        self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.08, wowy_confidence)
+                        calibrated['notes'] += " | Spot-Up vs Pack"
+                        self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
+                            "SPOT_UP vs PAINT_PACK: open 3s from help D")
                 elif def_style == 'PERIMETER':
                     # Perimeter switching closes out shooters
                     self._boost_stat_with_confidence(calibrated, 'proj_3pm', 0.95, wowy_confidence)
@@ -1764,10 +1911,11 @@ class LudiCalibrator:
             elif playtype == 'TRANSITION':
                 if def_style == 'FUNNEL':
                     # Funnel defense vulnerable in transition
-                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
-                    calibrated['notes'] += " | Transition Chaos"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
-                        "TRANSITION vs FUNNEL: fast break chaos")
+                    if "Transition Chaos" not in calibrated.get('notes', ''):
+                        self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
+                        calibrated['notes'] += " | Transition Edge (sec)"
+                        self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
+                            "TRANSITION vs FUNNEL: fast break chaos")
                 elif def_style == 'PAINT_PACK':
                     # Set defense slows transition
                     self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
@@ -1785,10 +1933,12 @@ class LudiCalibrator:
             elif playtype == 'P&R_ROLL_MAN':
                 if def_style == 'PAINT_PACK':
                     # Drop coverage = easy dunks for roll man
-                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
+                    if "Roll Man vs Drop" in calibrated.get('notes', ''):
+                        continue
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                     self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
                     calibrated['notes'] += " | Roll Man vs Drop"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
                         "P&R_ROLL_MAN vs PAINT_PACK: lobs and dunks")
                     self._log_adjustment(player_name, 'PLAYTYPE', 1.10,
                         "P&R_ROLL_MAN vs PAINT_PACK: increased FG%")
@@ -1833,10 +1983,12 @@ class LudiCalibrator:
             elif playtype == 'PUTBACK':
                 if def_style == 'PERIMETER':
                     # Small ball = offensive glass dominance + putback points
-                    self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.25, wowy_confidence)
+                    if "Warrior Boards vs Small Ball" in calibrated.get('notes', ''):
+                        continue
+                    self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.08, wowy_confidence)
                     self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
                     calibrated['notes'] += " | Putback vs Small"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.25,
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
                         "PUTBACK vs PERIMETER: size advantage on glass")
                     self._log_adjustment(player_name, 'PLAYTYPE', 1.15,
                         "PUTBACK vs PERIMETER: putback scoring")
@@ -1885,7 +2037,7 @@ class LudiCalibrator:
         freq, ppp = synergy_dict[primary_playtype]
 
         # Apply PPP efficiency modifier
-        league_avg_ppp = 1.05
+        league_avg_ppp = config.LEAGUE_AVG_PPP
         ppp_mod = 1.0 + ((ppp - league_avg_ppp) / league_avg_ppp * 0.5)  # Max ±50% of diff
         ppp_mod = max(0.90, min(ppp_mod, 1.12))  # Cap at ±12%
 
@@ -1969,36 +2121,61 @@ class LudiCalibrator:
         Load team clutch performance data from PBP Stats.
         Teams with clutch ORtg 15%+ higher than overall areCH_PERFORMER tagged as CLUT.
         """
-        if not PBP_STATS_AVAILABLE:
-            print("[Module E] PBP Stats not available, skipping clutch data")
-            return
-        
+        self.clutch_teams = {}
+        if PBP_STATS_AVAILABLE:
+            try:
+                from utils.pbp_stats_client import get_team_leverage_summary
+                data = get_team_leverage_summary("2025-26", "VeryHigh")
+                if data and 'results' in data:
+                    for row in data.get('results', []):
+                        team = row.get('team')
+                        overall_ortg = row.get('offRating', {}).get('overall', 0) or 0
+                        clutch_ortg = row.get('offRating', {}).get('veryHigh', 0) or 0
+                        if overall_ortg and clutch_ortg:
+                            clutch_diff_pct = ((clutch_ortg - overall_ortg) / overall_ortg) * 100
+                            self.clutch_teams[team] = {
+                                'clutch_ortg': clutch_ortg,
+                                'overall_ortg': overall_ortg,
+                                'is_clutch': clutch_diff_pct >= 15.0,
+                                'diff_pct': clutch_diff_pct,
+                            }
+                if self.clutch_teams:
+                    clutch_count = sum(1 for t in self.clutch_teams.values() if t['is_clutch'])
+                    print(f"[Module E] Loaded clutch data for {len(self.clutch_teams)} teams, {clutch_count} CLUTCH_PERFORMERs")
+                    return
+            except Exception as e:
+                print(f"[Module E] Live clutch load failed, using DB fallback: {e}")
+
+        # DB fallback: derive team clutch performers from player_clutch_stats
         try:
-            from utils.pbp_stats_client import get_team_leverage_summary
-            data = get_team_leverage_summary("2025-26", "VeryHigh")
-            if not data or 'results' not in data:
-                print("[Module E] No leverage data available")
-                return
-            
-            for row in data.get('results', []):
-                team = row.get('team')
-                overall_ortg = row.get('offRating', {}).get('overall', 0) or 0
-                clutch_ortg = row.get('offRating', {}).get('veryHigh', 0) or 0
-                
-                if overall_ortg and clutch_ortg:
-                    clutch_diff_pct = ((clutch_ortg - overall_ortg) / overall_ortg) * 100
-                    is_clutch = clutch_diff_pct >= 15.0
-                    self.clutch_teams[team] = {
-                        'clutch_ortg': clutch_ortg,
-                        'overall_ortg': overall_ortg,
-                        'is_clutch': is_clutch,
-                        'diff_pct': clutch_diff_pct
-                    }
-            
-            clutch_count = sum(1 for t in self.clutch_teams.values() if t['is_clutch'])
-            print(f"[Module E] Loaded clutch data for {len(self.clutch_teams)} teams, {clutch_count} CLUTCH_PERFORMERs")
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute(
+                """
+                SELECT team_abbr,
+                       SUM(clutch_pts) * 1.0 / NULLIF(SUM(clutch_fga) + 0.44 * SUM(clutch_fta), 0) AS clutch_ppp
+                FROM player_clutch_stats
+                WHERE game_date >= date('now', '-60 days')
+                  AND team_abbr IS NOT NULL
+                GROUP BY team_abbr
+                HAVING COUNT(*) >= 20
+                """
+            )
+            rows = c.fetchall()
+            conn.close()
+
+            for team, clutch_ppp in rows:
+                clutch_ppp = clutch_ppp or 0.0
+                diff_pct = ((clutch_ppp - config.LEAGUE_AVG_PPP) / config.LEAGUE_AVG_PPP) * 100 if config.LEAGUE_AVG_PPP else 0.0
+                self.clutch_teams[team] = {
+                    'clutch_ortg': clutch_ppp * 100.0,
+                    'overall_ortg': config.LEAGUE_AVG_PPP * 100.0,
+                    'is_clutch': diff_pct >= 8.0,
+                    'diff_pct': diff_pct,
+                }
+            print(f"[Module E] DB clutch fallback loaded: {len(self.clutch_teams)} teams")
         except Exception as e:
-            print(f"[Module E] Error loading clutch data: {e}")
+            print(f"[Module E] Error loading clutch fallback data: {e}")
             self.clutch_teams = {}
 
     def _apply_clutch_boost(self, calibrated: dict, spread: float):

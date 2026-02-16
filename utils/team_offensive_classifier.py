@@ -135,20 +135,20 @@ class TeamOffensiveClassifier:
         if ast_per_fgm > 0.675:
             return "MOTION"
 
-        # PACE_PUSH: High pace, transition-focused
-        # Threshold: pace > 100 OR ppg > 120 (fast-paced teams)
-        if pace > 100 or ppg > 120:
-            return "PACE_PUSH"
-
         # ISO_HEAVY: Low ball movement, star-dependent
         # Threshold: ast_per_fgm < 0.600 (bottom 20%, Q1 is 0.603)
         if ast_per_fgm < 0.600:
             return "ISO_HEAVY"
 
         # HALF_COURT: Methodical, low pace
-        # Threshold: pace < 98 (slowest teams)
-        if pace < 98:
+        # Threshold: pace < 99 (captures slower third of teams)
+        if pace < 99:
             return "HALF_COURT"
+
+        # PACE_PUSH: High pace, transition-focused
+        # Threshold: pace > 101 OR ppg > 120
+        if pace > 101 or ppg > 120:
+            return "PACE_PUSH"
 
         return "BALANCED"
     
