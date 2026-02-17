@@ -217,6 +217,6 @@ This project has custom skills available:
 - **Methodology**: @docs/METHODOLOGY.md (edge calc, line shopping, CLV)
 - **Status History**: @docs/STATUS_HISTORY.md (archived updates)
 - **Production Handbook**: @docs/PRODUCTION_HANDBOOK.md
-- **Best Practices**: @best-practices/ (API patterns, lessons learned, reusable templates)
-  - **API Best Practices**: @best-practices/api/API_BEST_PRACTICES.md (comprehensive guide)
-  - **API Quick Reference**: @best-practices/api/API_QUICK_REFERENCE.md (cheatsheet)
+- **Best Practices**: `best-practices/` (API patterns, lessons learned, reusable templates)
+  - **API Best Practices**: `best-practices/api/API_BEST_PRACTICES.md` (comprehensive guide)
+  - **API Quick Reference**: `best-practices/api/API_QUICK_REFERENCE.md` (cheatsheet)

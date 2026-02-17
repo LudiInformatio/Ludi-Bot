@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 17, 2026 (3:00 PM EST)
-**Current Phase:** Phase 7 - All-Star Break Sprint ✅ COMPLETE
-**Active Work:** Paused before Phase 8 (awaiting All-Star break end Feb 19)
-**Completed:** Phases 5.5, 6.0-6.5f, 7.1-7.9.5 ✅ (see docs/archive/ for details)
+**Last Updated:** February 19, 2026
+**Current Phase:** Phase 8 — AI-Enhanced Pipeline
+**Active Work:** Phase 8.0 Injury Intelligence System
+**Completed:** Phases 5–7 ✅ (see `docs/archive/phase_reports/` for details)
 
 This is the single source of truth for project tasks and priorities.
 
@@ -19,324 +19,11 @@ This is the single source of truth for project tasks and priorities.
 
 ## High Priority
 
-### Phase 7: All-Star Break Sprint (Feb 14-19, 2026)
-
-**Goal:** Clean foundation, fix math, add API redundancy, prep for frontend
-**Status:** ✅ COMPLETE (Feb 17, 2026) — All sub-phases 7.1-7.9.5 finished
-**Remaining (blocked until Feb 19 — first game day back):**
-- [ ] Run full pipeline dry run with all new data sources active
-- [ ] Validate all workflows via manual trigger on live game day
-
-**Phase 7 Completion Summary (Feb 17, 2026):**
-- Data integrity: 10,780 duplicate rows removed, 1,246 team codes normalized
-- Module overhauls: C (V4.0), E (V4.0), F (V5.2) all complete
-- Archetype system: GENERALIST 20.7% achieved, 5 defensive archetypes, team scheme cache
-- nba_api integration: 10 endpoints with `league_id="00"` parameter, PlayByPlayV3 support
-- Classification fixes: Defensive 7%→77%, Offensive 0%→53%, Valid archetypes 56%→96%
-- **Documentation**: Created comprehensive API best practices (69 KB, 2,435 lines) → `best-practices/api/`
-
-**Phase 7.9: Backtest Audit & Analysis** ✅ COMPLETE (Feb 15-17, 2026)
-**Dataset:** 15,575 settled bets (Jan 7 - Feb 12), 14,423 after VOID exclusion
-**Data:** 21 game dates, 14 with morning+evening pipeline runs (pseudo-CLV pairs)
-**Lost data:** ~5,593 bets across 15 game days (runner DB wiped by `clean: true` bug, fixed Feb 2)
-**Reports:** 16 analysis reports generated in `reports/` (see `reports/MASTER_TREND_REPORT_2026-02-15.md`)
-**Outcome:** All critical issues identified and fixed via Module C/E/F overhauls + archetype system upgrade
-
-*Phase 1: Script Audits*
-- [x] Audit `generate_validation_report.py` — per-stat RMSE, Brier score, edge/tier checks
-- [x] Audit `scripts/analyze_model_performance.py` — 10-table analyzer, dual-pool, cross-cuts
-- [x] Audit `backtest_archetypes.py` + Full Classification System Audit (5 parts)
-  - Team Defensive: 93% NEUTRAL → 23% NEUTRAL, PERIMETER reactivated (16 dead branches fixed)
-  - Team Offensive: 100% BALANCED → 47% BALANCED, name mismatch fixed, all 4 boosts verified
-  - Player Archetypes: NULL 52→21, TWO_WAY_WING 59→3, 300 players reclassified, 96% valid
-  - Backtest: 6/7 stats passing (STL 0.96 > 0.8 target — flagged)
-- [ ] Audit `backtest_regression.py` — FG% regression-to-mean (low priority)
-- [x] Audit `scripts/backtest_fatigue_21day.py` — V5.2 modifiers applied, markdown output added
-- [x] Audit `scripts/backtest_playtype_trends_14day.py` — performance metrics added
-
-*Phase 1b: 14-Day Trend Analysis (bonus)*
-- [x] Fatigue trends (21-day window, 2,484 player-games)
-- [x] Defensive scheme performance by scheme (6 schemes)
-- [x] Player drift analysis (902 players)
-- [x] Archetype vs Synergy validation (258/482 players with data)
-- [x] Edge calibration analysis (5 buckets)
-- [x] Stat category OVER/UNDER trends
-- [x] Master trend report consolidating all findings
-
-*Phase 2: Run Analysis*
-- [x] Full pipeline scorecard — 55% WR, -3.34u P&L, Brier 0.2787
-- [x] Per-stat deep dive — OVER leaks -649u, UNDER profits +645u
-- [x] Direction analysis — OVER 46.1% WR, UNDER 59.0% WR (12.9% gap)
-- [x] Edge calibration — 5-10% = 57.9% (only calibrated), 25%+ = 50.3% (broken)
-- [x] Game context — moderate favorites (-7 to -3) = +172u sweet spot
-- [x] Cross-cut analysis — archetype alignment +2.4% WR when Synergy-matched
-
-*Phase 3: Fix Critical Issues (Module Overhauls)*
-- [x] Fix Module C OVER projection bias (46.1% WR on OVERs) ✅ commit `93635dc` — V4.0 overhaul: per-player shooting %, Poisson fix, opponent defense, fatigue tax, drives context
-- [x] Fix Module E vs_FUNNEL matchup logic (-105u at 49.6% WR) ✅ commit `d00afd0` — 9-step overhaul: duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned
-- [x] Investigate & fix Module F edge/tier logic (inverted edge calibration) ✅ COMPLETE — Edge dampening (20%+ edges), negative edge fix, composite tiers, tier-based sizing, archetype modifiers disabled (pending audit)
-- [x] Player Archetype System Overhaul ✅ COMPLETE — 6 phases: new defensive archetypes (5 types replacing 2 broken), Synergy-powered secondary playtypes (hybrid 70/30), GENERALIST reduction (20.7% active players), defensive Synergy scraping, tag_classifier sync, Module F re-enable. Commit: `1e100c7`
-
-*Phase 4: Forward Plan*
-- [ ] Gap analysis & forward recommendations report
-- [ ] Feb 19 full pipeline dry run with all module fixes active
-
-**Critical Findings:**
-| Finding | Impact | Status |
-|---------|--------|--------|
-| GENERALIST <25% target | 20.7% of active players (21-day window) | ✅ Achieved (was 31.4% all players) |
-| 25%+ edge = 50% WR (expected 74%) | Edge calc broken above 20% | ✅ Module F V5.2 (edge dampening applied) |
-| OVER 46.1% WR / UNDER 59.0% WR | Systematic over-projection | ✅ Module C V4.0 fix (commit `93635dc`) |
-| vs_FUNNEL -105u at 49.6% WR | TRANSITION +15% too aggressive | ✅ Module E fix — FUNNEL dedup (commit `d00afd0`) |
-| Home B2B Guards +3.05 pts error | Guard Tax too conservative | ✅ Module E fix — duplicate B2B removed (commit `d00afd0`) |
-| Spread sign strips abs() | Blowout tax on wrong team every game | ✅ Module F V5.2 (fixed) |
-| 3 stat keys unnormalized | STL/BLK/TOV: no sim hit rates | ✅ Module F V5.2 (fixed) |
-| Referee notes never generated | ref_data vs ref_impact key mismatch | ✅ Module F V5.2 (fixed) |
-| Defensive activation 7% → 77% | Classification fixes applied | ✅ Fixed (commit `8ee5f28`) |
-| Offensive activation 0% → 53% | Name mismatch + classifier fixed | ✅ Fixed (commit `8ee5f28`) |
-| Valid archetypes 56% → 96% | 300 players reclassified | ✅ Fixed (commit `1e100c7`) |
-| vs_NEUTRAL +74u, 58.9% WR | Base projections strong | ✅ Working |
-| Archetype alignment +2.4% WR | Classification quality matters | ✅ Validated |
-| Rested Home -0.35 pts error | Nearly perfect calibration | ✅ Working |
-
-**Phase 7.9.5: Module Overhauls** ✅ COMPLETE (Feb 17, 2026)
-**Goal:** Fix all critical issues identified in Phase 7.9 backtest audit across 3 core modules + classifiers
-**Completion:** Data integrity (10,780 duplicates removed), nba_api integration (10 endpoints), archetype cleanup, GENERALIST 20.7% achieved
-
-| Module | Status | Commit | Key Fixes |
-|--------|--------|--------|-----------|
-| C: Oracle | ✅ COMPLETE | `93635dc` | Per-player FG%, Poisson fix, opponent defense, fatigue tax, drives context, data contract |
-| E: Calibrator | ✅ COMPLETE | `d00afd0` | Duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned, opponent profiles wired |
-| F: Alchemist | ✅ COMPLETE | V5.2 (Phase 7.7) | Edge dampening (20%+ edges), negative edge fix, composite tiers, tier-based sizing |
-| Archetype System | ✅ COMPLETE | `1e100c7` + `8ee5f28` | 5 defensive archetypes, Synergy hybrid, GENERALIST 20.7% (active), team scheme cache, nba_api integration |
-
-**Note on GENERALIST Measurement**: The 25% target applies to **active players** (21-day window),
-not all 503 DB players. Inactive players (injured/waived) default to GENERALIST but don't generate
-betting recommendations. Active: 95/458 = 20.7% ✅
-
-**Phase 7.1: Git + Roadmap Cleanup** ✅ COMPLETE
-- [x] Fix .gitignore, delete dead files, organize scripts
-- [x] Archive completed roadmap details
-- [x] Commit untracked reports
-
-**Phase 7.2: Math Calibration V5.2** ✅ COMPLETE
-- [x] Tiered stdev widening (60% at 20%+ edges, 40% at 15-20%)
-- [x] Marginal edge filter (skip 20-22% edge bets)
-- [x] Archetype edge bonuses/penalties (TWO_WAY_WING +3%, STRETCH_BIG -3%)
-- [x] Starter status fix (use depth_charts instead of minutes heuristic)
-- [x] Backtest validation (target: 20%+ edge WR >58%)
-
-**Phase 7.3: Ball Don't Lie Integration** ✅ COMPLETE
-- [x] Create `utils/bdl_client.py` (GOAT tier, 600 req/min, cached)
-- [x] Module A fallback (odds + props)
-- [x] Module D fallback (injuries)
-- [x] API audit document (`docs/API_USAGE_AUDIT.md`)
-
-**Phase 7.4: Backend Completion** ✅ COMPLETE (Feb 14, 2026)
-- [x] Forward CLV capture (`scripts/capture_closing_lines.py`)
-- [x] Integrate unused PBP Stats data (leverage/clutch tagging, WOWY activation)
-- [x] Close Phase 5 gaps (log cleanup, IS_PRODUCTION flag)
-- [x] Validate all workflows on Feb 19 (first game day back) → moved to Phase 7 top-level remaining
-
-**Phase 7.5: Ludi Lens Scaffold (stretch)**
-- [ ] Streamlit app scaffold (`app.py`)
-- [ ] War Room theme (Dark Navy + Gold + Emerald)
-
-**Phase 7.6: Post-Trade Deadline Roster Verification** ✅ COMPLETE (Feb 15, 2026)
-- [x] Clean `players` table (1005 active → 503, removed 502 composite duplicates + stale entries)
-- [x] Re-sync depth charts (722 entries, 150 starters, 30 teams)
-- [x] Re-sync WOWY data (base: 357 records, four-factor: 292 players)
-- [x] Update `player_canonical_ids` for traded players (60 team assignments updated)
-- [x] Verify traded players' stats split correctly (pre-trade vs post-trade team)
-- [x] Flag players traded but not yet debuted for new team (DNP/injured)
-- [x] Fix "XXX" team assignment (1 placeholder deleted)
-- [x] Fix IND inflated roster (40 → 17 active players)
-- [-] Re-run assist_combos sync post-deadline → skipped (already refreshed Feb 14)
-- [x] Validate all downstream tables reflect correct team assignments
-- [x] Fix non-standard abbreviations (GS→GSW, NO→NOP, NY→NYK, PHO→PHX, SA→SAS)
-- [x] RosterValidator applied 229 changes (134 trades, 32 signings, 63 waivers)
-- [x] Resolved 16 diacritical name mismatches (Jokić→Jokic, Dončić→Doncic, etc.)
-- [x] Module E smoke test passed
-
-**Phase 7.7: Full Integration Audit + BDL Fallback** ✅ COMPLETE (Feb 15, 2026)
-- [x] BDL game lines fallback (Module A + CLV capture)
-- [x] GitHub Actions updated with BALLDONTLIE_KEY
-- [x] Refresh stale PBP Stats data (11,189 records, 8 tables, BDL migration for 5 tables)
-- [x] Module F V5.2: negative edge fix, edge dampening, composite tiers, tier-based sizing
-- [x] Settle/void 436 unsettled bets (241 NO_GAME, 195 DNP)
-- [x] End-to-end integration audit (WOWY import fix, BDL tracking wired, schedule collision fixed)
-- [x] Verify sync script → table → module consumer paths
-
-**Phase 7.8: Workflow Hardening + Claude Ops Hub** ✅ COMPLETE (Feb 15, 2026)
-- [x] GitHub Actions audit: 7 fixes across 8 workflows
-  - Disabled redundant tracking_sync (replaced by BDL in data_sync)
-  - Fixed db_backup schedule collision (09:00→06:00 UTC)
-  - Added Telegram failure alerts to 6 silent workflows
-  - Removed stale Jan 9 test cron from nightly_debrief
-  - Removed unused secrets from wowy_sync
-  - Consolidated duplicate dedup+index blocks (data_sync owns this)
-  - Reduced Ghost Protocol to Sunday only (BDL covers weekdays)
-- [x] Claude Ops Hub: reactive failure diagnosis for 14 monitored workflows
-  - 5 domain sub-agents (Data Sync, Pipeline, Database, Settlement, Validation)
-  - Auto-creates GitHub issues with root cause + recommended fix
-- [x] Silent failure elimination: 3 critical fixes + 2 freshness gates
-  - CLV capture: removed continue-on-error (must fail loudly)
-  - Health monitor: removed continue-on-error (drift detection critical)
-  - QA check: fixed self-masking (broken gh CLI no longer reports "all clear")
-  - Data freshness gate in data_sync (fails if games played but no logs synced)
-  - Pre-simulation freshness check in pipeline (blocks stale-data runs)
-- [x] Runner/local DB split-brain fix: symlinked runner ludi.db → local project
-  - Imported 5,970 missing bets (Feb 2-12) from runner DB
-  - Settled 716 unsettled bets (all VOID-DNP)
-  - Single source of truth going forward (no more data divergence)
-
----
-
-### Phase 6: Full Data Integration ✅ COMPLETE (Feb 2-4, 2026)
-
-**Goal:** Integrate ALL unused data sources and fix broken data flows
-**Result:** +292u profit, 55.7% win rate confirmed. Positive CLV across ALL edge buckets.
-
-**Phase 6.1-6.4** ✅ COMPLETE — Depth charts, BENEFICIARY pipeline, WOWY enhancement, ROLE_CHANGE handler, referee backfill (515 games).
-**Phase 6.5** — Forward CLV capture remaining items moved to Phase 7.4.
-
-**Phase 6.5b: Daily Data Sync Fixes** ✅ COMPLETE (Feb 3, 2026)
-Implemented Tank01 rate limiting (200 req/day budget), resume state for multi-day backfills,
-direct SQLite writes (eliminated JSON staging), and canonical ID resolution (99.75% clean).
-See `docs/archive/PHASE_6_5_DETAILS.md` for step-by-step details.
-
-**Phase 6.5c: PBP Stats API Fixes** ✅ COMPLETE (Feb 3, 2026)
-Added timeouts, retry logic with 429 handling, local response caching (19.4x speedup).
-See `docs/archive/PHASE_6_5_DETAILS.md` for details.
-
-**Phase 6.5c-ii: Workflow Infrastructure Fixes** ✅ COMPLETE (Feb 3, 2026)
-Fixed referee UNIQUE constraint, WOWY ID resolution (100% success rate), schema validation.
-See `docs/archive/PHASE_6_5_DETAILS.md` for details.
-
-**Phase 6.5d: Canonical ID System Audit** ✅ COMPLETE (Feb 3, 2026)
-99.84% clean IDs, 520 canonical players, CI validation automated.
-See `docs/archive/PHASE_6_5_DETAILS.md` for details.
-
-**Phase 6.5e: Workflow Infrastructure Fixes** ✅ COMPLETE (Feb 4, 2026)
-Fixed 5 failing workflows, added Claude QA cron job, database initialization safeguards.
-See `docs/archive/PHASE_6_5_DETAILS.md` for details.
-
-**Phase 6.5f: Missing Index Fix** ✅ COMPLETE (Feb 4, 2026)
-Added `idx_player_game_logs_unique`, standardized deduplication across 5 workflows.
-See `docs/archive/PHASE_6_5_DETAILS.md` for details.
-
-**Phase 6.6: API Audit & Optimization** ✅ COMPLETE (Feb 14, 2026)
-- [x] Document all Tank01 endpoints in use vs available
-- [x] Document all The-Odds-API endpoints in use vs available
-- [x] Integrate Ball Don't Lie API (GOAT tier $39.99/mo, 600 req/min)
-- [x] Create `docs/API_USAGE_AUDIT.md` with findings
-
-**CLV Finding (Important Context):**
-Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
-| Edge Bucket | Real CLV (pts) | Win Rate |
-|-------------|----------------|----------|
-| 5-10% | +0.013 | 58.3% |
-| 10-15% | +0.050 | 52.8% |
-| 15-20% | +0.096 | 58.6% |
-| 20-25% | +0.115 | 51.5% |
-| 25%+ | +0.147 | 51.6% |
-
----
-
-### Phase 5: Production Deployment & Automation ✅ ESSENTIALLY COMPLETE
-
-**Status:** 7/8 items done. Final item (Feb 19 workflow validation) pending first game day back.
-
-- [x] Create/Update `daily_simulation_pipeline.yml` (11 AM EST trigger) ✅
-- [x] `scripts/monitor_system_health.py` ✅ FIXED (Feb 3)
-- [x] Referee backfill (60-day, 452 games) ✅
-- [x] Create `.github/workflows/weekly_validation.yml` (Tuesdays 4 AM EST) ✅
-- [x] Implement automated weekly backtests with drift alerts ✅
-- [x] Create `scripts/cleanup_old_logs.py` (30-day retention) ✅
-- [x] Add `IS_PRODUCTION` flag handling in `config.py` ✅ (Phase 7.4)
-- [x] Verify all workflows via manual trigger → moved to Phase 7 top-level remaining
-
----
-
-### Database Architecture Strategy
-
-**Current State:** Single SQLite database (`ludi.db`) - 30 MB, 38 tables
-
-**Phase 1: Consolidation** ✅ COMPLETE (Phase 6.5b Steps 5-6)
-- [x] JSON staging buffer removed (direct SQLite writes)
-- [x] All data flows directly to SQLite
-- [x] Single source of truth for all game data
-
-**Phase 2: Multi-Season Support (Before 2026-27 Season)**
-- [ ] Add season archive workflow: `archives/data/ludi_YYYY_YY.db`
-- [ ] Create `scripts/archive_season.py` for end-of-season backup
-- [ ] Document season rollover procedure in `docs/SEASON_ROLLOVER.md`
-
-**Phase 3: Web App Migration (When Ludi Lens Launches)**
-- [ ] Evaluate PostgreSQL vs SQLite for production web app
-- [ ] Design API layer between frontend and database
-
----
-
-## Medium Priority
-
-### Ludi Lens Dashboard
-- [ ] Streamlit dashboard scaffold (`app.py`)
-- [ ] "War Room" visual design implementation
-- [ ] Real-time prop display integration
-- [ ] Historical performance charts
-
-### CLV Tracking Enhancement
-- [x] Historical CLV backfill (Jan 7-29, 2026) - 63.5% of bets updated ✅
-- [x] Forward CLV capture → **COMPLETE in Phase 7.4** ✅
-- [ ] CLV reporting in PM Bot daily summary
-- [ ] 30-day rolling CLV metrics
-
-### Historical Odds Backfill (March 2026)
-**Context:** ~5,593 bets lost across 15 game days (Jan 8,10,16-28,30-31,Feb 1) due to `clean: true` bug wiping runner DB between workflow runs. Fix deployed Feb 2. Bets were confirmed generated via workflow logs but individual records are unrecoverable.
-- [ ] Backfill historical odds via The-Odds-API `/v4/historical/` endpoint (~10 credits/query)
-- [ ] Re-run pipeline for 15 missing dates to regenerate bets with historical odds
-- [ ] Settle regenerated bets against existing game logs
-- **Blocked until:** March 2026 (Feb Odds API quota exhausted by Ludi Lite project; 20K credits/month)
-
-### Dormant Data Activation (synced daily but unused in pipeline)
-- [x] Integrate `shot_quality_avg` into Module C FG% simulation adjustment (499 players synced) ✅
-- [x] Use rolling TS%, eFG% from `player_game_advanced` in Module C (12,179 records synced) ✅
-- [x] Activate `player_defense` in Module E for matchup-based defensive adjustments (509 players) ✅
-- [x] Integrate `player_touches` into Module E usage refinement (505 players synced) ✅
-- [x] Add drives/assists boost in Module C using `player_drives` data (currently archetype-only) ✅
-- [x] Add speed/fatigue context in Module E using `player_speed` data (currently archetype-only) ✅
-
-### Missing PBP Stats Endpoints
-- [x] Implement `get_assist_combo_summary` — fixes BENEFICIARY (currently 99.9% NULL) ✅
-- [x] Implement `get_four_factor_on_off` — better WOWY (4 dimensions vs 1) ✅ (Sprint 3)
-- [x] Implement `get_possessions` — clutch detection, blowout tax validation ✅ (Sprint 3)
-
-### Data Pipeline Improvements
-- [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
-- [ ] Multi-book arbitrage detection
-- [ ] Steam move detection (rapid line movement alerts)
-
----
-
-## Low Priority
-
-### Future Enhancements
-- [ ] DFS multiplier conversion (PrizePicks/Underdog)
-- [ ] Strength of Schedule (SOS) adjustment
-- [x] Depth Chart Authority modeling → **COMPLETE in Phase 6.1** ✅
-- [ ] Shooting Luck Deviation signals
-- [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
-
----
-
-## Future Phases
-
 ### Phase 8: AI-Enhanced Pipeline (Claude Integration)
 
 **Goal:** Add Claude as an analytical reasoning layer on top of the deterministic pipeline
 **Principle:** LLMs orchestrate and reason — never calculate. Math stays deterministic.
-**Status:** 📋 PLANNED — detailed design complete, pending Phase 7.9 completion
+**Status:** 🟡 ACTIVE — Phase 7.9 complete, starting Phase 8.0
 **Phase 8.0 Foundation Plan:** `docs/PHASE_8_FOUNDATION_PLAN.md` (Injury + Rotation Intelligence)
 **Design Doc:** `.claude/plans/crystalline-swimming-horizon.md`
 **Estimated Daily Cost:** ~$1.17/day (~$35/month)
@@ -393,10 +80,89 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 
 ---
 
+### Phase 7: All-Star Break Sprint ✅ COMPLETE (Feb 17, 2026)
+
+**Status:** All sub-phases 7.1–7.9.5 complete. Full details: `docs/archive/phase_reports/PHASE_7_COMPLETION_SUMMARY.md`
+
+**Remaining (unblocked Feb 19 — first game day back):**
+- [ ] Run full pipeline dry run with all new data sources active
+- [ ] Validate all workflows via manual trigger on live game day
+
+**Key outcomes:** Module C/E/F overhauls (V4.0/V4.0/V5.2) · OVER bias fixed (46.1%→target) · GENERALIST 20.7% ✅ · 5 defensive archetypes · 10,780 duplicate rows removed · nba_api 10 endpoints integrated · API best practices guide created (69 KB)
+
+---
+
+### Phase 6 ✅ COMPLETE (Feb 2–14, 2026)
++292u profit, 55.7% WR, positive CLV across all edge buckets. Full details: `docs/archive/phase_reports/PHASE_6_COMPLETION_SUMMARY.md`
+
+### Phase 5 ✅ ESSENTIALLY COMPLETE
+Production automation live. Final validation pending Feb 19. See `docs/archive/phase_reports/PHASE_5_5_COMPLETION_LOG.md`
+
+---
+
+### Database Architecture Strategy
+
+**Current State:** Single SQLite database (`ludi.db`) — 30 MB, 38 tables
+
+**Phase 1: Consolidation** ✅ COMPLETE (Phase 6.5b)
+- [x] JSON staging buffer removed (direct SQLite writes)
+- [x] Single source of truth for all game data
+
+**Phase 2: Multi-Season Support (Before 2026-27 Season)**
+- [ ] Add season archive workflow: `archives/data/ludi_YYYY_YY.db`
+- [ ] Create `scripts/archive_season.py` for end-of-season backup
+- [ ] Document season rollover procedure in `docs/SEASON_ROLLOVER.md`
+
+**Phase 3: Web App Migration (When Ludi Lens Launches)**
+- [ ] Evaluate PostgreSQL vs SQLite for production web app
+- [ ] Design API layer between frontend and database
+
+---
+
+## Medium Priority
+
+### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
+**Blocked until:** Phase 8 complete + dedicated web app sprint
+**Design identity:** Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981 | "War Room" theme
+- [ ] Streamlit app scaffold (`app.py`)
+- [ ] "War Room" visual design implementation
+- [ ] Real-time prop display integration
+- [ ] Historical performance charts
+
+### CLV Tracking Enhancement
+- [ ] CLV reporting in PM Bot daily summary
+- [ ] 30-day rolling CLV metrics
+
+### Historical Odds Backfill (March 2026)
+**Context:** ~5,593 bets lost across 15 game days (Jan 8,10,16-28,30-31,Feb 1) due to `clean: true` bug. Fix deployed Feb 2. Recoverable via The-Odds-API `/v4/historical/` in March.
+- [ ] Backfill historical odds via The-Odds-API `/v4/historical/` endpoint (~10 credits/query)
+- [ ] Re-run pipeline for 15 missing dates to regenerate bets with historical odds
+- [ ] Settle regenerated bets against existing game logs
+- **Blocked until:** March 2026 (Feb Odds API quota exhausted)
+
+### Data Pipeline Improvements
+- [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
+- [ ] Multi-book arbitrage detection
+- [ ] Steam move detection (rapid line movement alerts)
+
+---
+
+## Low Priority
+
+### Future Enhancements
+- [ ] DFS multiplier conversion (PrizePicks/Underdog)
+- [ ] Strength of Schedule (SOS) adjustment
+- [ ] Shooting Luck Deviation signals
+- [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
+
+---
+
 ## Archive
 
-- **docs/archive/PHASE_6_5_DETAILS.md** — Phase 6.5 step-by-step details
-- **docs/archive/PHASE_5_5_COMPLETION_LOG.md** — Phase 5.5 completion
-- **docs/STATUS_HISTORY.md** — Phases 1-4 history
+- **docs/archive/phase_reports/** — Phase completion reports (Phases 1–7)
+  - `PHASE_7_COMPLETION_SUMMARY.md` — Phase 7 full details (module overhauls, critical findings, backtest)
+  - `PHASE_6_COMPLETION_SUMMARY.md` — Phase 6 full details (CLV buckets, sub-phase steps)
+  - `PHASE_5_5_COMPLETION_LOG.md` — Phase 5.5 completion
+- **docs/STATUS_HISTORY.md** — Phases 1–4 history
 - **reports/** — Calibration analysis, performance breakdowns
-- **docs/archive/** — All other completion reports, organized by phase
+- **docs/archive/** — All other completion reports, organized by sub-phase
