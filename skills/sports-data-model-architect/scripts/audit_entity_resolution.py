@@ -44,19 +44,17 @@ def main() -> int:
         if not table_exists(conn, "player_canonical_ids"):
             findings.append(("missing_table", "player_canonical_ids", 1))
         else:
-            if column_exists(conn, "player_canonical_ids", "team_abbreviation"):
-                bad_teams = conn.execute(
-                    "SELECT COUNT(*) FROM player_canonical_ids WHERE team_abbreviation IS NOT NULL"
-                    " AND team_abbreviation NOT IN ({})".format(
-                        ",".join("?" for _ in NBA_TEAMS)
-                    ),
-                    tuple(sorted(NBA_TEAMS)),
+            if column_exists(conn, "player_canonical_ids", "team"):
+                # Note: player_canonical_ids.team uses full names not abbreviations
+                # Just count non-null values
+                non_null = conn.execute(
+                    "SELECT COUNT(*) FROM player_canonical_ids WHERE team IS NOT NULL"
                 ).fetchone()[0]
-                findings.append(("invalid_team_abbrev", "player_canonical_ids", bad_teams))
+                findings.append(("team_values_present", "player_canonical_ids", non_null))
             else:
-                findings.append(("missing_required_column", "team_abbreviation", 1))
+                findings.append(("missing_required_column", "team", 1))
 
-            required = ["canonical_name", "tank01_player_id", "bdl_player_id"]
+            required = ["full_name", "canonical_id"]
             for col in required:
                 if column_exists(conn, "player_canonical_ids", col):
                     c = conn.execute(
@@ -67,16 +65,16 @@ def main() -> int:
                     findings.append(("missing_required_column", col, 1))
 
         if table_exists(conn, "players") and table_exists(conn, "player_canonical_ids"):
-            if column_exists(conn, "players", "full_name") and column_exists(
-                conn, "player_canonical_ids", "canonical_name"
+            if column_exists(conn, "players", "name") and column_exists(
+                conn, "player_canonical_ids", "full_name"
             ):
                 unresolved = conn.execute(
                     """
                     SELECT COUNT(*)
                     FROM players p
                     LEFT JOIN player_canonical_ids c
-                      ON lower(trim(p.full_name)) = lower(trim(c.canonical_name))
-                    WHERE c.canonical_name IS NULL
+                      ON lower(trim(p.name)) = lower(trim(c.full_name))
+                    WHERE c.full_name IS NULL
                     """
                 ).fetchone()[0]
                 findings.append(("players_missing_canonical_match", "players", unresolved))

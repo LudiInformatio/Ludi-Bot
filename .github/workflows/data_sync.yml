@@ -181,6 +181,13 @@ jobs:
         run: |
           python3 scripts/sync_bdl_tracking.py --all
 
+      - name: Update Team Scheme Cache
+        timeout-minutes: 5
+        run: |
+          python3 scripts/update_team_scheme_cache.py --db-path ludi.db --verbose
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
       - name: Validate data freshness
         run: |
           python3 -c "

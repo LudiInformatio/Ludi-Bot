@@ -11,7 +11,7 @@ beautifulsoup4
 unidecode
 pytz
 inputimeout
-nba_api>=1.4.1
+nba_api==1.11.3
 Pillow==12.1.0
 pilmoji==2.0.3
 emoji==2.2.0

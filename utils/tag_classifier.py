@@ -35,18 +35,41 @@ class TagClassifier:
         self.db_path = db_path
 
         # DEFENSIVE SCHEME MAPPING (30 NBA Teams → 5 Defensive Styles)
-        # Source: module_e.py DEFENSIVE_STYLES
+        # Source: team_scheme_cache (fallback to static mapping if cache unavailable)
         # NOTE: Using PHX for Phoenix (not PHO) per Tank01 standard
         self.DEFENSIVE_SCHEMES = {
-            "OKC": "PAINT_PACK", "BOS": "PAINT_PACK", "DET": "PAINT_PACK",
-            "MIN": "PAINT_PACK", "SAS": "PAINT_PACK", "ORL": "PAINT_PACK",
-            "PHX": "BLITZ", "HOU": "BLITZ", "TOR": "BLITZ", "MIA": "BLITZ", "BKN": "BLITZ",
-            "GSW": "PERIMETER", "DAL": "PERIMETER", "NYK": "PERIMETER",
-            "WAS": "FUNNEL", "ATL": "FUNNEL", "CHI": "FUNNEL", "SAC": "FUNNEL", "DEN": "FUNNEL", "UTA": "FUNNEL",
-            "IND": "HACKERS", "CHA": "HACKERS", "POR": "HACKERS",
-            "LAL": "NEUTRAL", "CLE": "NEUTRAL", "MEM": "NEUTRAL",
-            "MIL": "NEUTRAL", "NOP": "NEUTRAL", "LAC": "NEUTRAL", "PHI": "NEUTRAL",
+            "ATL": "FUNNEL",
+            "BOS": "NEUTRAL",
+            "BKN": "PERIMETER",
+            "CHA": "PAINT_PACK",
+            "CHI": "PAINT_PACK",
+            "CLE": "PAINT_PACK",
+            "DAL": "NEUTRAL",
+            "DEN": "NEUTRAL",
+            "DET": "NEUTRAL",
+            "GSW": "PERIMETER",
+            "HOU": "BLITZ",
+            "IND": "FUNNEL",
+            "LAC": "FUNNEL",
+            "LAL": "PAINT_PACK",
+            "MEM": "PAINT_PACK",
+            "MIA": "NEUTRAL",
+            "MIL": "PERIMETER",
+            "MIN": "PAINT_PACK",
+            "NOP": "PAINT_PACK",
+            "NYK": "PERIMETER",
+            "OKC": "PAINT_PACK",
+            "ORL": "NEUTRAL",
+            "PHI": "BLITZ",
+            "PHX": "PERIMETER",
+            "POR": "NEUTRAL",
+            "SAC": "NEUTRAL",
+            "SAS": "PERIMETER",
+            "TOR": "PAINT_PACK",
+            "UTA": "NEUTRAL",
+            "WAS": "NEUTRAL",
         }
+        self._load_defensive_schemes_from_cache()
 
         # Historical aliases for team codes
         self.TEAM_ALIASES = {
@@ -63,6 +86,35 @@ class TagClassifier:
         self.HIGH_UNIT_THRESHOLD = 1.2  # For correlated SGP detection
 
         print("✅ TagClassifier initialized with synced defensive schemes")
+
+    def _load_defensive_schemes_from_cache(self) -> None:
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='team_scheme_cache'"
+            )
+            if not cursor.fetchone():
+                conn.close()
+                return
+            cursor.execute(
+                """
+                SELECT team_abbr, active_style
+                FROM team_scheme_cache
+                WHERE scheme_type = 'DEFENSE'
+                """
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            if not rows:
+                return
+            for team, style in rows:
+                if not style or style == "INSUFFICIENT":
+                    self.DEFENSIVE_SCHEMES[team] = "NEUTRAL"
+                else:
+                    self.DEFENSIVE_SCHEMES[team] = style
+        except Exception:
+            return
 
     def assign_archetype_tag(self, player_stats: Dict) -> str:
         """

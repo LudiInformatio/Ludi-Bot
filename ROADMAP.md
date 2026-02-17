@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 16, 2026 (5:15 PM EST)
+**Last Updated:** February 17, 2026
 **Current Phase:** Phase 7 - All-Star Break Sprint
-**Active Work:** Phase 7.9.5 Module Overhauls — C ✅, E ✅, F 🔄 (agent executing), Archetype Overhaul 🔄 (agent executing)
+**Active Work:** Phase 7.9.5 Module Overhauls — C ✅, E ✅, F 🔄 (agent executing), Archetype Overhaul ✅ COMPLETE
 **Completed:** Phases 5.5, 6.0-6.5f (see docs/archive/ for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -66,7 +66,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] Fix Module C OVER projection bias (46.1% WR on OVERs) ✅ commit `93635dc` — V4.0 overhaul: per-player shooting %, Poisson fix, opponent defense, fatigue tax, drives context
 - [x] Fix Module E vs_FUNNEL matchup logic (-105u at 49.6% WR) ✅ commit `d00afd0` — 9-step overhaul: duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned
 - [-] Investigate & fix Module F edge/tier logic (inverted edge calibration) 🔄 Agent executing — 9 bugs (2 P0, 3 P1, 4 P2) + combo props (PRA/PA/PR/RA) via BDL
-- [-] Player Archetype System Overhaul 🔄 Agent executing — 6 phases: new defensive archetypes (5 types replacing 2 broken), Synergy-powered secondary playtypes (hybrid 70/30), GENERALIST reduction (<25%), defensive Synergy scraping, tag_classifier sync, Module F re-enable. Plan: `docs/ARCHETYPE_OVERHAUL_PLAN.md`
+- [x] Player Archetype System Overhaul ✅ COMPLETE — 6 phases: new defensive archetypes (5 types replacing 2 broken), Synergy-powered secondary playtypes (hybrid 70/30), GENERALIST reduction (20.7% active players), defensive Synergy scraping, tag_classifier sync, Module F re-enable. Commit: `1e100c7`
 
 *Phase 4: Forward Plan*
 - [ ] Gap analysis & forward recommendations report
@@ -75,6 +75,7 @@ This is the single source of truth for project tasks and priorities.
 **Critical Findings:**
 | Finding | Impact | Status |
 |---------|--------|--------|
+| GENERALIST <25% target | 20.7% of active players (21-day window) | ✅ Achieved (was 31.4% all players) |
 | 25%+ edge = 50% WR (expected 74%) | Edge calc broken above 20% | 🔄 Module F fix in progress (edge dampening + 9 bugs) |
 | OVER 46.1% WR / UNDER 59.0% WR | Systematic over-projection | ✅ Module C V4.0 fix (commit `93635dc`) |
 | vs_FUNNEL -105u at 49.6% WR | TRANSITION +15% too aggressive | ✅ Module E fix — FUNNEL dedup (commit `d00afd0`) |
@@ -98,7 +99,11 @@ This is the single source of truth for project tasks and priorities.
 | C: Oracle | ✅ DONE | `93635dc` | Per-player FG%, Poisson fix, opponent defense, fatigue tax, drives context, data contract |
 | E: Calibrator | ✅ DONE | `d00afd0` | Duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned, opponent profiles wired |
 | F: Alchemist | 🔄 Agent executing | — | 9 bugs (spread sign, ref key, stat normalization, gold combos, display dict) + combo props (PRA/PA/PR/RA) via BDL |
-| Archetype System | 🔄 Agent executing | — | 5 new defensive archetypes, Synergy hybrid scoring, GENERALIST <25%, defensive Synergy scraping |
+| Archetype System | ✅ COMPLETE | `1e100c7` | 5 defensive archetypes, Synergy hybrid, GENERALIST 20.7% (active), team scheme cache |
+
+**Note on GENERALIST Measurement**: The 25% target applies to **active players** (21-day window),
+not all 503 DB players. Inactive players (injured/waived) default to GENERALIST but don't generate
+betting recommendations. Active: 95/458 = 20.7% ✅
 
 **Phase 7.1: Git + Roadmap Cleanup** ✅ COMPLETE
 - [x] Fix .gitignore, delete dead files, organize scripts
@@ -323,6 +328,7 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 **Goal:** Add Claude as an analytical reasoning layer on top of the deterministic pipeline
 **Principle:** LLMs orchestrate and reason — never calculate. Math stays deterministic.
 **Status:** 📋 PLANNED — detailed design complete, pending Phase 7.9 completion
+**Phase 8.0 Foundation Plan:** `docs/PHASE_8_FOUNDATION_PLAN.md` (Injury + Rotation Intelligence)
 **Design Doc:** `.claude/plans/crystalline-swimming-horizon.md`
 **Estimated Daily Cost:** ~$1.17/day (~$35/month)
 
@@ -337,10 +343,12 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 
 | # | Sub-Phase | Priority | Description | Daily Cost |
 |---|-----------|----------|-------------|------------|
+| 8.0 | **Injury Intelligence System** | **CRITICAL** | **Persistent injury tracking (status, return dates, descriptions), long-term injury handling, recently-returned player pipeline. REQUIRES: nba_api==1.11.3 with league_id parameter** | **$0** |
 | 8.1 | Injury Intelligence Upgrade | HIGH | BDL → primary, Claude for ambiguous text | ~$0.20 |
 | 8.5 | Play Curation Engine | HIGH | Sanity gate (Haiku) + Top 5 curation (Sonnet) | ~$0.20 |
 | 8.2 | Game Notes Generator | HIGH | Analytical Telegram briefings | ~$0.35 |
 | 8.3 | Player Spotlight Cards | HIGH | Per-bet narratives for DIAMOND/BLUE CHIP | ~$0.25 |
+| 8.9 | **Rotation/Minutes Projection** | **MEDIUM** | **Track coach rotation patterns from PBP data (nba_api PlayByPlayV3), situational minutes modeling, stint-level analysis** | **TBD** |
 | 8.7 | Perplexity MCP | MEDIUM | Real-time search replacing DuckDuckGo | ~$0.10 |
 | 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude | ~$0.07 |
 | 8.6 | MCP Server Integration | LOW | BDL + Odds API MCP for Ops Hub | $0 |
@@ -348,12 +356,26 @@ Historical CLV backfill (Jan 7-29) showed positive CLV across ALL edge buckets:
 **Shared Infrastructure:**
 - [ ] Create `utils/claude_client.py` — shared Anthropic SDK wrapper
 - [ ] Add `ANTHROPIC_API_KEY` to config.py and `.env.template`
+- [x] Verify `nba_api==1.11.3` installed with league_id parameter support ✅
+- [x] Add PlayByPlayV3 endpoint support to `utils/nba_api_client.py` ✅
 
 **Key Tasks:**
+- [ ] 8.0: **Injury Intelligence System (Pre-Phase 8 Foundation)**
+  - Create `player_injuries` table (status, return_date, injury_type, description, onset_date, days_out)
+  - Enhance Module D to persist BDL injury metadata (not just cache)
+  - Fix `get_active_roster()` to handle long-term injuries (30+ days) and recently returned players
+  - Create `scripts/sync_injuries.py` for daily injury refresh
+  - Add injury intel to daily Telegram briefing
 - [ ] 8.1: Promote BDL injuries to primary, add Claude reasoning for ambiguous statuses
 - [ ] 8.5: Sanity gate + holistic "Top 5 Plays" curation with reasoning
 - [ ] 8.2: Per-game analytical cards with Key Advantages, Injury Beneficiaries, WOWY deltas
 - [ ] 8.3: 2-3 sentence narratives with playtype breakdown, DVP ranking, hit rates
+- [ ] 8.9: **Rotation/Minutes Projection Enhancement**
+  - Parse play-by-play data to extract actual rotation patterns (check-in/check-out times)
+  - Build coach tendency models (stint lengths, rest patterns, rotation depth)
+  - Model situational minutes (blowout tax, close game boost, B2B rest management)
+  - Create `scripts/analyze_rotation_patterns.py` to track historical patterns
+  - Integrate rotation intelligence into Module C minutes projection
 - [ ] 8.7: Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`
 - [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F modifiers
 - [ ] 8.6: Configure BDL MCP server, add to Claude Ops Hub

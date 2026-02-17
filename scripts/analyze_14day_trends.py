@@ -9,7 +9,8 @@ Created: 2026-02-15
 """
 
 import sqlite3
-from datetime import datetime
+import argparse
+from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
 
@@ -24,6 +25,22 @@ DB_PATH = '/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/ludi.db'
 # Reports directory
 REPORTS_DIR = Path('/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/reports')
 REPORTS_DIR.mkdir(exist_ok=True)
+
+
+def _resolve_window_end(db_path: str, end_date: str = None) -> str:
+    if end_date:
+        return end_date
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(date) FROM games")
+        row = cursor.fetchone()
+        conn.close()
+        if row and row[0]:
+            return row[0]
+    except Exception:
+        pass
+    return '2026-02-12'
 
 
 def get_db_connection():
@@ -630,6 +647,24 @@ def analyze_stat_trends():
 
 def main():
     """Run all trend analyses."""
+    parser = argparse.ArgumentParser(description="14-day trend analysis")
+    parser.add_argument("--db-path", default=DB_PATH)
+    parser.add_argument("--season-start", default=SEASON_START)
+    parser.add_argument("--trend-start", default=None)
+    parser.add_argument("--trend-end", default=None)
+    args = parser.parse_args()
+
+    global DB_PATH, SEASON_START, TREND_WINDOW_START, TREND_WINDOW_END
+    DB_PATH = args.db_path
+    SEASON_START = args.season_start
+    TREND_WINDOW_END = _resolve_window_end(DB_PATH, args.trend_end)
+
+    if args.trend_start:
+        TREND_WINDOW_START = args.trend_start
+    else:
+        end_dt = datetime.strptime(TREND_WINDOW_END, "%Y-%m-%d")
+        TREND_WINDOW_START = (end_dt - timedelta(days=13)).strftime("%Y-%m-%d")
+
     print("\n" + "="*80)
     print("14-DAY TREND ANALYSIS")
     print("="*80)

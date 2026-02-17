@@ -743,7 +743,7 @@ def process_closest_defender(page, date_str, nba_date):
 # MAIN GHOST PROTOCOL LOOP
 # ============================================================
 
-def run_ghost_protocol(start_date, end_date, headless=False):
+def run_ghost_protocol(start_date, end_date, headless=False, closest_only=False):
     print("\n" + "="*50)
     print(f"👻 LUDI GHOST PROTOCOL v2.1 | HUMAN STEALTH MODE")
     print(f"📅 Range: {start_date} -> {end_date}")
@@ -806,35 +806,36 @@ def run_ghost_protocol(start_date, end_date, headless=False):
             
             print(f"\n[{db_date}] Processing...")
 
-            # Iterate through Manifest (skip closest_defender - handled separately)
-            for key, config in DATA_MANIFEST.items():
-                # Skip closest_defender - it requires special multi-page handling
-                if config['type'] == 'closest_defender':
-                    continue
+            if not closest_only:
+                # Iterate through Manifest (skip closest_defender - handled separately)
+                for key, config in DATA_MANIFEST.items():
+                    # Skip closest_defender - it requires special multi-page handling
+                    if config['type'] == 'closest_defender':
+                        continue
 
-                label = config['label']
-                url_template = config['url']
+                    label = config['label']
+                    url_template = config['url']
 
-                try:
-                    url = url_template.format(date=nba_date)
+                    try:
+                        url = url_template.format(date=nba_date)
 
-                    # 1. Navigate with optimized wait strategy
-                    # Use 'domcontentloaded' to avoid hanging on ads/tracking pixels
-                    # Increase timeout to 90s for safety
-                    page.goto(url, wait_until='domcontentloaded', timeout=90000)
+                        # 1. Navigate with optimized wait strategy
+                        # Use 'domcontentloaded' to avoid hanging on ads/tracking pixels
+                        # Increase timeout to 90s for safety
+                        page.goto(url, wait_until='domcontentloaded', timeout=90000)
 
-                    # 2. Scrape (includes human interaction)
-                    data = scrape_table(page, label)
+                        # 2. Scrape (includes human interaction)
+                        data = scrape_table(page, label)
 
-                    # 3. Process
-                    count = process_item(key, data, db_date)
-                    print(f"   ✓ {label}: {count} records")
+                        # 3. Process
+                        count = process_item(key, data, db_date)
+                        print(f"   ✓ {label}: {count} records")
 
-                    # Human-like pause between tables
-                    time.sleep(random.uniform(3.0, 6.0))
+                        # Human-like pause between tables
+                        time.sleep(random.uniform(3.0, 6.0))
 
-                except Exception as e:
-                    print(f"   ❌ {label} Error: {e}")
+                    except Exception as e:
+                        print(f"   ❌ {label} Error: {e}")
 
             # Process Closest Defender separately (requires scraping 4 distance ranges)
             try:
@@ -853,6 +854,7 @@ if __name__ == "__main__":
     parser.add_argument("--end-date", help="YYYY-MM-DD")
     parser.add_argument("--days", type=int, help="Number of days back to sync (1 = yesterday)")
     parser.add_argument("--headless", action="store_true", help="Run browser in headless mode (for CI)")
+    parser.add_argument("--closest-only", action="store_true", help="Only sync closest defender data")
     args = parser.parse_args()
 
     end = datetime.now()
@@ -867,4 +869,4 @@ if __name__ == "__main__":
         if args.days == 1:
             end = start
 
-    run_ghost_protocol(start, end, headless=args.headless)
+    run_ghost_protocol(start, end, headless=args.headless, closest_only=args.closest_only)

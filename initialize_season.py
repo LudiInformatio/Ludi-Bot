@@ -53,6 +53,7 @@ def fetch_season_game_logs(target_season: str, headers: dict):
     logs = leaguegamelog.LeagueGameLog(
         season=target_season,
         player_or_team_abbreviation='P',
+        league_id="00",  # ✅ NBA league ID (required for 2023-24+)
         headers=headers,
         timeout=120
     ).get_data_frames()[0]

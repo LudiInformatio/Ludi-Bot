@@ -23,6 +23,20 @@ sys.path.insert(0, '/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot')
 from module_e import LudiCalibrator
 
 
+def compute_defensive_tag(defense_profile, stl, blk):
+    """
+    Mirror Module E defensive_tag logic for batch reclassification.
+    """
+    def_diff = float(defense_profile.get('def_diff_pct', 0) or 0.0)
+    def_freq = float(defense_profile.get('def_freq_pct', 0) or 0.0)
+    stl = float(stl or 0.0)
+    blk = float(blk or 0.0)
+
+    if ((def_diff > 1.5 and def_freq > 8.0) or (def_diff > 2.0 and (stl + blk) < 1.0)):
+        return 'WEAK_LINK'
+    return None
+
+
 def fetch_season_stats(conn, player_name, team_abbr=None):
     """
     Fetch aggregated season stats from player_game_logs.
@@ -88,6 +102,27 @@ def fetch_season_stats(conn, player_name, team_abbr=None):
         'base_min': mins or 0.0,
         'base_oreb': oreb or 0.0,
         'base_dreb': dreb or 0.0
+    }
+
+
+def empty_season_stats(player_name):
+    """Fallback stats when no game logs exist (avoid NULL archetypes)."""
+    return {
+        'name': player_name,
+        'games': 0,
+        'base_pts': 0.0,
+        'base_ast': 0.0,
+        'base_reb': 0.0,
+        'base_3pm': 0.0,
+        'base_stl': 0.0,
+        'base_blk': 0.0,
+        'base_usg': 0.0,
+        'base_fga': 0.0,
+        'base_fta': 0.0,
+        'base_tov': 0.0,
+        'base_min': 0.0,
+        'base_oreb': 0.0,
+        'base_dreb': 0.0,
     }
 
 
@@ -170,7 +205,7 @@ def main():
 
     # Fetch all active players
     cursor.execute("""
-        SELECT player_id, name, team, position, archetype
+        SELECT player_id, name, team, position, archetype, defensive_tag
         FROM players
         WHERE is_active = 1
         ORDER BY name
@@ -186,14 +221,20 @@ def main():
     unchanged_count = 0
     changes = []
 
-    for player_id, name, team, position, old_archetype in players:
+    for player_id, name, team, position, old_archetype, old_defensive_tag in players:
         # Fetch season stats
         stats = fetch_season_stats(conn, name, team)
+        if not stats and team:
+            stats = fetch_season_stats(conn, name)
 
         if not stats:
-            no_data_count += 1
-            print(f"⚠️  {name:30} - No game logs found, skipping")
-            continue
+            if not old_archetype:
+                stats = empty_season_stats(name)
+                print(f"⚠️  {name:30} - No game logs found, using zeroed stats to clear NULL")
+            else:
+                no_data_count += 1
+                print(f"⚠️  {name:30} - No game logs found, skipping")
+                continue
 
         # Add position
         stats['position'] = position or 'UNK'
@@ -205,9 +246,18 @@ def main():
 
         # Call the archetype assignment function
         new_archetype, synergy_dict = calibrator._assign_unified_archetype(stats)
+        defense_profile = calibrator.defense_profiles.get(name, {})
+        new_defensive_tag = compute_defensive_tag(
+            defense_profile,
+            stats.get('base_stl', 0.0),
+            stats.get('base_blk', 0.0),
+        )
 
-        # Check if changed
-        if new_archetype != old_archetype:
+        # Track changes
+        archetype_changed = new_archetype != old_archetype
+        defensive_tag_changed = new_defensive_tag != old_defensive_tag
+
+        if archetype_changed or defensive_tag_changed:
             updated_count += 1
             changes.append({
                 'name': name,
@@ -220,11 +270,16 @@ def main():
             # Update database
             cursor.execute("""
                 UPDATE players
-                SET archetype = ?, updated_at = ?
+                SET archetype = ?, defensive_tag = ?, updated_at = ?
                 WHERE player_id = ?
-            """, (new_archetype, datetime.now(), player_id))
+            """, (new_archetype, new_defensive_tag, datetime.now(), player_id))
 
-            print(f"✓ {name:30} {old_archetype or 'NULL':20} → {new_archetype:20}")
+            if archetype_changed and defensive_tag_changed:
+                print(f"✓ {name:30} {old_archetype or 'NULL':20} → {new_archetype:20} | tag {old_defensive_tag or 'NONE'} → {new_defensive_tag or 'NONE'}")
+            elif archetype_changed:
+                print(f"✓ {name:30} {old_archetype or 'NULL':20} → {new_archetype:20}")
+            else:
+                print(f"✓ {name:30} tag {old_defensive_tag or 'NONE'} → {new_defensive_tag or 'NONE'}")
         else:
             unchanged_count += 1
 

@@ -40,7 +40,8 @@ from nba_api.stats.endpoints import (
     playerdashptpass,
     commonplayerinfo,
     boxscorematchupsv3,
-    leaguegamefinder
+    leaguegamefinder,
+    playbyplayv3
 )
 from nba_api.stats.static import players as nba_players
 from nba_api.stats.static import teams as nba_teams
@@ -211,6 +212,7 @@ class NBAAPIClient:
         try:
             info = commonplayerinfo.CommonPlayerInfo(
                 player_id=player_id,
+                league_id="00",
                 headers=self.headers,
                 timeout=30
             )
@@ -306,6 +308,7 @@ class NBAAPIClient:
             response = playerdashboardbyshootingsplits.PlayerDashboardByShootingSplits(
                 player_id=player_id,
                 season=season,
+                league_id="00",
                 per_mode_detailed=per_mode,
                 date_from_nullable=date_from or "",
                 date_to_nullable=date_to or "",
@@ -399,6 +402,7 @@ class NBAAPIClient:
                 player_id=player_id,
                 team_id=team_id,
                 season=season,
+                league_id="00",
                 date_from_nullable=date_from or "",
                 date_to_nullable=date_to or "",
                 last_n_games=last_n_games,
@@ -486,6 +490,7 @@ class NBAAPIClient:
                 player_id=player_id,
                 vs_player_id=vs_player_id,
                 season=season,
+                league_id="00",
                 headers=self.headers,
                 timeout=30
             )
@@ -528,6 +533,7 @@ class NBAAPIClient:
                 player_id=player_id,
                 team_id=team_id,
                 season=season,
+                league_id="00",
                 headers=self.headers,
                 timeout=30
             )
@@ -598,6 +604,7 @@ class NBAAPIClient:
                 player_id=player_id,
                 team_id=team_id,
                 season=season,
+                league_id="00",
                 headers=self.headers,
                 timeout=30
             )
@@ -619,6 +626,7 @@ class NBAAPIClient:
                 player_id=player_id,
                 team_id=team_id,
                 season=season,
+                league_id="00",
                 headers=self.headers,
                 timeout=30
             )
@@ -762,6 +770,54 @@ class NBAAPIClient:
                 time.sleep(60)
 
             raise
+
+    @retry_with_backoff(max_attempts=3, backoff=2.0)
+    def get_play_by_play(self, game_id: str, season: str = "2025-26") -> Optional[Dict]:
+        """
+        Get play-by-play data including substitution events.
+
+        Used for rotation tracking (Phase 8.0 Rotation Intelligence).
+
+        Args:
+            game_id: NBA game ID (e.g., "0022300001")
+            season: Season string (e.g., "2025-26")
+
+        Returns:
+            Dict with PBP data or None if fetch fails
+
+        Example:
+            pbp = client.get_play_by_play("0022300001")
+            subs = [e for e in pbp['PlayByPlay'] if e['EVENTMSGTYPE'] == 8]
+        """
+        cache_key = f"playbyplay_{game_id}.json"
+        cache_path = self._get_cache_path(cache_key)
+
+        # Check cache (24-hour TTL)
+        if self._is_cache_valid(cache_path, ttl_hours=24):
+            print(f"   [NBA-API] Using cached PBP for {game_id}")
+            return self._read_cache(cache_path)
+
+        # Rate limit and fetch
+        self._rate_limit()
+        print(f"   [NBA-API] Fetching PBP for game {game_id}...")
+
+        try:
+            response = playbyplayv3.PlayByPlayV3(
+                game_id=game_id,
+                league_id="00"
+            )
+
+            result = response.get_dict()
+
+            # Cache the result
+            self._write_cache(cache_path, result)
+            self.monitor.log_request('nba_api', 'playbyplay', {})
+
+            return result
+
+        except Exception as e:
+            print(f"   [NBA-API] Error fetching PBP: {e}")
+            return None
 
     @retry_with_backoff(max_attempts=3, backoff=2.0)
     def get_recent_game_ids(

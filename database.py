@@ -721,6 +721,22 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_def_synergy_team ON player_defensive_synergy(team_abbr)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_def_synergy_playtype ON player_defensive_synergy(playtype)')
 
+        # Team scheme cache (season + 21d + 14d with active scheme)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS team_scheme_cache (
+                team_abbr TEXT NOT NULL,
+                scheme_type TEXT NOT NULL,
+                season_style TEXT NOT NULL,
+                d21_style TEXT NOT NULL,
+                d14_style TEXT NOT NULL,
+                active_style TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (team_abbr, scheme_type)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_team_scheme_type ON team_scheme_cache(scheme_type)')
+
         # Create lineup_season_totals view (aggregates per-game lineup data)
         # This view aggregates team_lineups from per-game to full-season totals
         c.execute('''

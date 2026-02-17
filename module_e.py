@@ -75,52 +75,43 @@ class LudiCalibrator:
             "OUT": 0.0              
         }
         
-        # 2025-26 VERIFIED DEFENSIVE STYLES (JAN 21, 2026 REVISION)
-        # Based on actual defensive performance and 60-day backtest validation
+        # 2025-26 VERIFIED DEFENSIVE STYLES
+        # Season-long dynamic alignment (2025-10-01 to 2026-02-12), mapped to Module E categories
         self.DEFENSIVE_STYLES = {
-            # ELITE PAINT_PACK - Proven rim protectors with excellent DefRtg
-            "OKC": "PAINT_PACK",   # 96.0 recent DefRtg (elite)
-            "BOS": "PAINT_PACK",   # 93.7 recent DefRtg (elite)
-            "DET": "PAINT_PACK",   # 87.5 recent DefRtg (TOP 3)
-            "MIN": "PAINT_PACK",   # Gobert rim protection
-            "SAS": "PAINT_PACK",   # Wembanyama rim protection
-            "ORL": "PAINT_PACK",   # Carter/Wagner twin towers
-
-            # BLITZ - Aggressive pressure defenses
-            "PHX": "BLITZ",       # 91.3 recent DefRtg (elite pressure)
-            "HOU": "BLITZ",       # 102.0 improving, pressure working
-            "TOR": "BLITZ",       # Solid pressure defense
-            "MIA": "BLITZ",       # Consistently elite
-            "BKN": "BLITZ",       # 99.1 DefRtg (excellent)
-
-            # FUNNEL DEFENSES - Balanced schemes
-            "WAS": "FUNNEL",       # High variance but stable identity
-            "ATL": "FUNNEL",       # 102.7 improving
-            "CHI": "FUNNEL",       # 99.9 improving
-            "SAC": "FUNNEL",       # Consistently solid
-            "DEN": "FUNNEL",       # 107.3 improving
-            "UTA": "FUNNEL",       # High variance (120.3) but scheme identity
-
-            # PERIMETER - Perimeter-oriented defenses (FIX: was all NEUTRAL, 16 dead branches)
-            "GSW": "PERIMETER",    # Switch-everything, perimeter pressure
-            "DAL": "PERIMETER",    # Perimeter focus, limit 3s
-            "NYK": "PERIMETER",    # Thibs' perimeter denial system
-
-            # HACKERS - Foul-heavy defenses remain unchanged
-            "IND": "HACKERS",
-            "CHA": "HACKERS",
-            "POR": "HACKERS",
-
-            # NEUTRAL - Teams without strong defensive identity
-            "LAL": "NEUTRAL",     # 112.3 DefRtg, no clear scheme
-            "CLE": "NEUTRAL",     # 115.1 DefRtg, inconsistent
-            "MEM": "NEUTRAL",     # Rebuilding defensive identity
-            "MIL": "NEUTRAL",     # 115.3 DefRtg (too high for elite)
-            "NOP": "NEUTRAL",     # 111.8 DefRtg, scheme in flux
-            "LAC": "NEUTRAL",     # Transitional year
-            "PHI": "NEUTRAL"      # Personnel changes mid-season
+            "ATL": "FUNNEL",
+            "BOS": "NEUTRAL",
+            "BKN": "PERIMETER",
+            "CHA": "PAINT_PACK",
+            "CHI": "PAINT_PACK",
+            "CLE": "PAINT_PACK",
+            "DAL": "NEUTRAL",
+            "DEN": "NEUTRAL",
+            "DET": "NEUTRAL",
+            "GSW": "PERIMETER",
+            "HOU": "BLITZ",
+            "IND": "FUNNEL",
+            "LAC": "FUNNEL",
+            "LAL": "PAINT_PACK",
+            "MEM": "PAINT_PACK",
+            "MIA": "NEUTRAL",
+            "MIL": "PERIMETER",
+            "MIN": "PAINT_PACK",
+            "NOP": "PAINT_PACK",
+            "NYK": "PERIMETER",
+            "OKC": "PAINT_PACK",
+            "ORL": "NEUTRAL",
+            "PHI": "BLITZ",
+            "PHX": "PERIMETER",
+            "POR": "NEUTRAL",
+            "SAC": "NEUTRAL",
+            "SAS": "PERIMETER",
+            "TOR": "PAINT_PACK",
+            "UTA": "NEUTRAL",
+            "WAS": "NEUTRAL"
         }
-        self._load_dynamic_defensive_styles()
+        cache_loaded = self._load_cached_defensive_styles()
+        if not cache_loaded:
+            self._load_dynamic_defensive_styles()
 
         # OFFENSIVE_STYLES dict removed (Feb 15, 2026)
         # Now using utils/team_offensive_classifier.py via classify_team_offense() method
@@ -527,6 +518,32 @@ class LudiCalibrator:
         'ZONE_FLUID': 'BLITZ',
         'NEUTRAL': 'NEUTRAL'
     }
+
+    def _load_cached_defensive_styles(self) -> bool:
+        """Load active defensive schemes from team_scheme_cache if available."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT team_abbr, active_style
+                FROM team_scheme_cache
+                WHERE scheme_type = 'DEFENSE'
+                """
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            if not rows:
+                return False
+            for team, style in rows:
+                if not style or style == "INSUFFICIENT":
+                    self.DEFENSIVE_STYLES[team] = "NEUTRAL"
+                else:
+                    self.DEFENSIVE_STYLES[team] = style
+            return True
+        except Exception as e:
+            print(f"[Module E] Defensive scheme cache unavailable: {e}")
+            return False
 
     def _load_dynamic_defensive_styles(self) -> None:
         """Overlay data-driven defensive styles; keep static mapping as fallback."""
@@ -1019,21 +1036,8 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.08, wowy_confidence)
                 calibrated['notes'] += " | P&R Drop Edge"
 
-        elif archetype == "ISO_ASSASSIN":
-            if def_style == "BLITZ":
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
-                self._boost_stat(calibrated, 'proj_tov', 1.12)
-                calibrated['notes'] += " | ISO Tax vs Blitz"
-            elif def_style == "PERIMETER":
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.10, wowy_confidence)
-                calibrated['notes'] += " | ISO Mismatch"
-
         elif archetype == "SLASHING_CREATOR":
-            if def_style == "HACKERS":
-                self._boost_stat_with_confidence(calibrated, 'proj_fta', 1.20, wowy_confidence)
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.05, wowy_confidence)
-                calibrated['notes'] += " | Foul Drawn Magnet"
-            elif def_style == "FUNNEL":
+            if def_style == "FUNNEL":
                 funnel_mod = 1.08 if trans_freq_primary >= 14.0 else 1.02
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', funnel_mod, wowy_confidence)
                 calibrated['notes'] += " | Transition Chaos" if funnel_mod > 1.03 else " | Funnel Minor Edge"
@@ -1061,12 +1065,6 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                 calibrated['notes'] += " | Mid-Range Mismatch"
 
-        elif archetype == "ATHLETIC_FINISHER":
-            if def_style == "FUNNEL":
-                funnel_mod = 1.06 if trans_freq_primary >= 14.0 else 1.01
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', funnel_mod, wowy_confidence)
-                calibrated['notes'] += " | Transition Edge" if funnel_mod > 1.03 else " | Minor Tempo Edge"
-
         elif archetype == "WARRIOR_BIG":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.20, wowy_confidence)
@@ -1077,25 +1075,11 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
-        elif archetype == "VULTURE_BIG":
-            if def_style == "FUNNEL":
-                self._boost_stat_with_confidence(calibrated, 'proj_dreb', 1.10, wowy_confidence)
-                if trans_freq_primary >= 14.0:
-                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.04, wowy_confidence)
-                    calibrated['notes'] += " | Vulture Transition Edge"
-                else:
-                    calibrated['notes'] += " | Vulture Board Edge"
-
         elif archetype == "STRETCH_BIG":
             if def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.15, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_3pa', 1.15, wowy_confidence)
                 calibrated['notes'] += f" | {opponent} Paint Pack Edge"
-
-        elif archetype == "POST_ANCHOR":
-            if def_style == "PERIMETER":
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
-                calibrated['notes'] += " | Post Mismatch"
 
         elif archetype == "ROLL_MAN":
             if def_style == "PERIMETER":
@@ -1119,9 +1103,6 @@ class LudiCalibrator:
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_stl', 1.02)
                 calibrated['notes'] += " | Hawk Passing Lanes"
-            elif def_style == "HACKERS":
-                self._boost_stat(calibrated, 'proj_stl', 1.02)
-                calibrated['notes'] += " | Hawk vs Sloppy Handle"
 
         elif archetype == "SWITCHABLE_ANCHOR":
             if def_style == "BLITZ":
@@ -1133,9 +1114,6 @@ class LudiCalibrator:
             if def_style == "FUNNEL":
                 self._boost_stat(calibrated, 'proj_stl', 1.02)
                 calibrated['notes'] += " | Hustle vs Funnel"
-            elif def_style == "HACKERS":
-                self._boost_stat(calibrated, 'proj_stl', 1.02)
-                calibrated['notes'] += " | Hustle Disruption"
 
         elif archetype == "CUTTER_SPECIALIST":
             if def_style == "PERIMETER":
@@ -1360,6 +1338,7 @@ class LudiCalibrator:
         usg = float(p.get('base_usg', 0) or 0)
         stl = float(p.get('base_stl', 0) or 0)
         blk = float(p.get('base_blk', 0) or 0)
+        mins = float(p.get('base_min', 0) or 0)
 
         # Fallback Logic
         if stl == 0 and blk == 0 and usg == 0:
@@ -1393,11 +1372,6 @@ class LudiCalibrator:
         if (usg > 0.30 and ast > 6.0 and prh_freq > 15.0):
             return 'HELIOCENTRIC_MAESTRO', synergy_dict
 
-        # ISO_ASSASSIN
-        iso_freq = synergy_dict.get('ISO_SCORER', (0, 0))[0]
-        if (pts > 24.0 and usg > 0.28 and iso_freq > 12.0):
-            return 'ISO_ASSASSIN', synergy_dict
-
         # SLASHING_CREATOR
         trans_freq = synergy_dict.get('TRANSITION', (0, 0))[0]
         if (pts > 22.0 and drives > 8.0 and tpm < 2.0 and trans_freq > 10.0):
@@ -1415,12 +1389,9 @@ class LudiCalibrator:
             return 'SNIPER_ELITE', synergy_dict
 
         # TWO_LEVEL_SCORER
+        iso_freq = synergy_dict.get('ISO_SCORER', (0, 0))[0]
         if (pts > 22.0 and 1.5 < tpm < 2.5 and iso_freq > 8.0):
             return 'TWO_LEVEL_SCORER', synergy_dict
-
-        # ATHLETIC_FINISHER
-        if (pts > 18.0 and rim_freq > 0.45 and trans_freq > 12.0):
-            return 'ATHLETIC_FINISHER', synergy_dict
 
         # === TIER 3: BIG MEN (Rebounding & Rim) ===
 
@@ -1432,18 +1403,9 @@ class LudiCalibrator:
         if (reb > 8.0 and contested_reb_pct > 0.40 and prr_freq > 8.0):
             return 'WARRIOR_BIG', synergy_dict
 
-        # VULTURE_BIG
-        if (reb > 8.0 and contested_reb_pct < 0.30 and trans_freq > 10.0):
-            return 'VULTURE_BIG', synergy_dict
-
         # STRETCH_BIG
         if (reb > 6.5 and tpm > 1.8 and ast < 4.0):
             return 'STRETCH_BIG', synergy_dict
-
-        # POST_ANCHOR
-        post_freq = synergy_dict.get('POST_UP', (0, 0))[0]
-        if (reb > 8.0 and speed < 4.2 and post_freq > 10.0):
-            return 'POST_ANCHOR', synergy_dict
 
         # ROLL_MAN
         if (rim_freq > 0.50 and prr_freq > 12.0 and ast < 3.0):
@@ -1473,7 +1435,7 @@ class LudiCalibrator:
         strong_def_tags = sum(
             1
             for pt in ('ISO', 'PR_BALL_HANDLER', 'PR_ROLL_MAN', 'SPOT_UP', 'POST_UP', 'CUT')
-            if (def_syn.get(pt) or {}).get('percentile', 0.0) >= 60.0
+            if (def_syn.get(pt) or {}).get('percentile', 0.0) >= 70.0
         )
 
         if ((blk >= 1.1 and position in ('F', 'C', 'UNK')) or (pr_roll_def >= 75 and post_def >= 70)):
@@ -1482,7 +1444,7 @@ class LudiCalibrator:
         if ((stl >= 1.2 and position in ('G', 'F', 'UNK')) or (iso_def >= 75 and spot_def >= 70)):
             return 'PERIMETER_HAWK', synergy_dict
 
-        if (((stl + blk) >= 1.7 and speed > 3.9) or strong_def_tags >= 2):
+        if (((stl + blk) >= 2.0 and speed > 3.9) or strong_def_tags >= 3):
             return 'SWITCHABLE_ANCHOR', synergy_dict
 
         if (stl > 1.15 or (stl > 0.9 and def_distance > 2.3)):
@@ -1568,13 +1530,21 @@ class LudiCalibrator:
 
         # === FINAL CATCH-ALL: NBA-level production (Phase 7.9.5 Conservative Thresholds) ===
         # Tighter thresholds to avoid false positives on deep bench players
-        if pts > 8.0 or ast > 2.5 or reb > 4.0:
+        if pts > 6.0 or ast > 2.0 or reb > 3.5:
             if tpm > 0.8 and usg > 0.18:
                 return 'TWO_LEVEL_SCORER', synergy_dict
             elif ast > 2.5 and pts < 14.0:
                 return 'CONNECTOR', synergy_dict
             elif reb > 4.0 and position in ('F', 'C', 'UNK'):
                 return 'ENERGY_BIG', synergy_dict
+
+        # Minutes-based fallback: keep rotation players out of GENERALIST
+        if mins > 15.0:
+            if position in ('F', 'C', 'PF', 'SF', 'F-C', 'C-F'):
+                return 'ENERGY_BIG', synergy_dict
+            if position == 'UNK':
+                return ('ENERGY_BIG' if reb >= ast else 'CONNECTOR'), synergy_dict
+            return 'CONNECTOR', synergy_dict
 
         # GENERALIST (final fallback - low usage role players)
         return 'GENERALIST', synergy_dict
@@ -1742,7 +1712,7 @@ class LudiCalibrator:
         
         # PACE_PUSH bonuses
         elif team_offense == "PACE_PUSH":
-            if opponent_defense in ["FUNNEL", "HACKERS"]:
+            if opponent_defense == "FUNNEL":
                 # Transition exploits slow recovery
                 if 'TRANSITION' in sec_playtypes:
                     self._boost_stat(calibrated, 'proj_pts', 1.03)
@@ -1859,7 +1829,7 @@ class LudiCalibrator:
         player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
         position = (calibrated.get('position') or 'UNK').upper()
 
-        if archetype not in ('ISO_ASSASSIN', 'SLASHING_CREATOR', 'WARRIOR_BIG', 'ROLL_MAN'):
+        if archetype not in ('SLASHING_CREATOR', 'WARRIOR_BIG', 'ROLL_MAN'):
             return
 
         pos_filter = "AND (position LIKE 'G%' OR position LIKE 'F%')" if position.startswith('G') else "AND (position LIKE 'F%' OR position LIKE 'C%')"
@@ -1889,7 +1859,7 @@ class LudiCalibrator:
                 return
 
             weak_name, _, _, weak_pos = row
-            if archetype in ('ISO_ASSASSIN', 'SLASHING_CREATOR'):
+            if archetype in ('SLASHING_CREATOR',):
                 self._boost_stat(calibrated, 'proj_pts', 1.05)
                 calibrated['notes'] += f" | Weak Link ({weak_pos}/{weak_name[:10]})"
             elif archetype in ('WARRIOR_BIG', 'ROLL_MAN'):
@@ -2205,12 +2175,6 @@ class LudiCalibrator:
                     calibrated['notes'] += " | Transition Tax"
                     self._log_adjustment(player_name, 'PLAYTYPE', 0.92,
                         "TRANSITION vs PAINT_PACK: set defense stops breaks")
-                elif def_style == 'HACKERS':
-                    # Hackers create fast break opportunities
-                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
-                    calibrated['notes'] += " | Fast Break Edge"
-                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
-                        "TRANSITION vs HACKERS: fast break opportunities")
 
             # === HANDOFF MATCHUPS (2 total) ===
             elif playtype == 'HANDOFF':
@@ -2324,16 +2288,12 @@ class LudiCalibrator:
         # Map archetypes to their primary synergy playtype
         archetype_synergy_map = {
             'HELIOCENTRIC_MAESTRO': 'P&R_HANDLER',
-            'ISO_ASSASSIN': 'ISO_SCORER',
             'SLASHING_CREATOR': 'TRANSITION',
             'JUMBO_FACILITATOR': 'P&R_HANDLER',
             'SNIPER_ELITE': 'SPOT_UP',
             'TWO_LEVEL_SCORER': 'ISO_SCORER',
-            'ATHLETIC_FINISHER': 'TRANSITION',
             'WARRIOR_BIG': 'P&R_ROLL_MAN',
-            'VULTURE_BIG': 'TRANSITION',
             'STRETCH_BIG': 'SPOT_UP',
-            'POST_ANCHOR': 'POST_UP',
             'ROLL_MAN': 'P&R_ROLL_MAN',
             'CUTTER_SPECIALIST': 'OFF_BALL_CUTTER',
             'FACILITATOR': 'P&R_HANDLER',

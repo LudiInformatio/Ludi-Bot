@@ -39,8 +39,84 @@ class TeamDefensiveClassifier:
             'high_opp_drive_rate': 28,               # >28 drives/game = funnel defense
             'min_games_sample': 10                  # Need 10+ games for reliable stats
         }
+
+    def _resolve_window_end(self, end_date: str = None) -> str:
+        if end_date:
+            return end_date
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT MAX(date) FROM games")
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0]:
+                return row[0]
+        except Exception:
+            pass
+        return "2026-02-12"
+
+    @staticmethod
+    def _percentile(values, pct):
+        """Return the pct percentile from a list of numeric values."""
+        if not values:
+            return 0
+        values_sorted = sorted(values)
+        if len(values_sorted) == 1:
+            return values_sorted[0]
+        idx = int(round((len(values_sorted) - 1) * pct))
+        return values_sorted[max(0, min(idx, len(values_sorted) - 1))]
+
+    def _compute_relative_thresholds(self, stats_by_team):
+        """Compute relative thresholds across teams for a given window."""
+        def_dist_vals = [s.get('opp_avg_defender_dist', 0) for s in stats_by_team.values() if s]
+        drive_vol_vals = [s.get('opp_drives_fga', 0) for s in stats_by_team.values() if s]
+        drive_pct_vals = [s.get('opp_drive_fg_pct', 0) for s in stats_by_team.values() if s]
+        cs_3pa_vals = [s.get('opp_catch_shoot_3pa', 0) for s in stats_by_team.values() if s]
+        speed_vals = [s.get('opp_speed', 0) for s in stats_by_team.values() if s]
+
+        return {
+            'def_dist_low': self._percentile(def_dist_vals, 0.25),
+            'def_dist_high': self._percentile(def_dist_vals, 0.75),
+            'drive_vol_low': self._percentile(drive_vol_vals, 0.25),
+            'drive_vol_high': self._percentile(drive_vol_vals, 0.75),
+            'drive_pct_low': self._percentile(drive_pct_vals, 0.25),
+            'drive_pct_med': self._percentile(drive_pct_vals, 0.50),
+            'cs_3pa_low': self._percentile(cs_3pa_vals, 0.25),
+            'cs_3pa_high': self._percentile(cs_3pa_vals, 0.75),
+            'speed_high': self._percentile(speed_vals, 0.75),
+        }
+
+    def _apply_relative_rules(self, stats: Dict, thresholds: Dict) -> str:
+        """Apply relative thresholds (percentile-based) to classify defense."""
+        cs_3pa = stats.get('opp_catch_shoot_3pa', 0)
+        drive_vol = stats.get('opp_drives_fga', 0)
+        drive_pct = stats.get('opp_drive_fg_pct', 0)
+        def_dist = stats.get('opp_avg_defender_dist', 0)
+        opp_speed = stats.get('opp_speed', 0)
+
+        # RIM_FORTRESS: bottom quartile drive FG% allowed
+        if drive_pct <= thresholds['drive_pct_low']:
+            return "RIM_FORTRESS"
+
+        # PERIMETER_FUNNEL: high drive volume but low catch-and-shoot 3PA allowed
+        if drive_vol >= thresholds['drive_vol_high'] and cs_3pa <= thresholds['cs_3pa_low']:
+            return "PERIMETER_FUNNEL"
+
+        # ZONE_FLUID: high opponent speed + high C&S volume
+        if opp_speed >= thresholds['speed_high'] and cs_3pa >= thresholds['cs_3pa_high']:
+            return "ZONE_FLUID"
+
+        # DROP_COVERAGE: low defender distance + decent drive defense
+        if def_dist <= thresholds['def_dist_low'] and drive_pct <= thresholds['drive_pct_med']:
+            return "DROP_COVERAGE"
+
+        # SWITCH_HEAVY: high defender distance or high drive volume
+        if def_dist >= thresholds['def_dist_high'] or drive_vol >= thresholds['drive_vol_high']:
+            return "SWITCH_HEAVY"
+
+        return "NEUTRAL"
         
-    def _load_tracking_stats(self, team_name: str, games_back: int = 20) -> Dict:
+    def _load_tracking_stats(self, team_name: str, games_back: int = 40) -> Dict:
         """Load team defensive stats from player_game_tracking table."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -87,6 +163,62 @@ class TeamDefensiveClassifier:
         avg_opp_def_dist = safe_avg(6)
         
         # Derived metrics
+        opp_drive_fg_pct = (avg_opp_drives_fgm / avg_opp_drives_fga) if avg_opp_drives_fga > 0 else 0
+        opp_cs_3p_pct = (avg_opp_cs_3pm / avg_opp_cs_3pa) if avg_opp_cs_3pa > 0 else 0
+
+        return {
+            'opp_catch_shoot_3pa': avg_opp_cs_3pa,
+            'opp_catch_shoot_3p_pct': opp_cs_3p_pct,
+            'opp_drives_fga': avg_opp_drives_fga,
+            'opp_drive_fg_pct': opp_drive_fg_pct,
+            'opp_speed': avg_opp_speed,
+            'opp_avg_defender_dist': avg_opp_def_dist,
+            'sample_size': total_games
+        }
+
+    def _load_tracking_stats_range(self, team_name: str, start_date: str, end_date: str) -> Dict:
+        """Load team defensive stats for a specific date range."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                pg.game_date,
+                SUM(pg.catch_shoot_3pa) as opp_catch_shoot_3pa,
+                SUM(pg.catch_shoot_3pm) as opp_catch_shoot_3pm,
+                SUM(pg.drives_fga) as opp_drives_fga,
+                SUM(pg.drives_fgm) as opp_drives_fgm,
+                AVG(pg.avg_speed_off) as opp_speed,
+                AVG(pg.avg_defender_dist) as opp_avg_defender_dist
+            FROM player_game_tracking pg
+            JOIN games g ON pg.game_date = g.date
+            WHERE (g.home_team = ? OR g.away_team = ?)
+            AND pg.team_abbr != ?
+            AND pg.game_date >= ?
+            AND pg.game_date <= ?
+            GROUP BY pg.game_date
+            ORDER BY pg.game_date DESC
+        """, (team_name, team_name, team_name, start_date, end_date))
+
+        stats = cursor.fetchall()
+        conn.close()
+
+        if not stats:
+            return {}
+
+        total_games = len(stats)
+
+        def safe_avg(idx):
+            vals = [s[idx] for s in stats if s[idx] is not None]
+            return sum(vals) / len(vals) if vals else 0
+
+        avg_opp_cs_3pa = safe_avg(1)
+        avg_opp_cs_3pm = safe_avg(2)
+        avg_opp_drives_fga = safe_avg(3)
+        avg_opp_drives_fgm = safe_avg(4)
+        avg_opp_speed = safe_avg(5)
+        avg_opp_def_dist = safe_avg(6)
+
         opp_drive_fg_pct = (avg_opp_drives_fgm / avg_opp_drives_fga) if avg_opp_drives_fga > 0 else 0
         opp_cs_3p_pct = (avg_opp_cs_3pm / avg_opp_cs_3pa) if avg_opp_cs_3pa > 0 else 0
 
@@ -147,30 +279,30 @@ class TeamDefensiveClassifier:
         def_dist = stats.get('opp_avg_defender_dist', 0)
         opp_speed = stats.get('opp_speed', 0)
         
-        # Rule 1: DROP_COVERAGE 
-        # Proxies: Allows 3s (maybe), but mostly defined by limiting rim efficiency or keeping opponents in front (low speed?)
-        # Better Proxy: Low defender distance (sagging) AND solid drive defense
-        if (def_dist < 4.5 and drive_pct < 0.45):
+        # Rule 1: DROP_COVERAGE
+        # Proxy: Low defender distance (sagging) + solid drive defense
+        # NOTE: Thresholds calibrated to team-aggregated tracking totals (not per-player rates).
+        if (def_dist < 4.0 and drive_pct < 0.487):
             return "DROP_COVERAGE"
         
-        # Rule 2: SWITCH_HEAVY 
-        # Proxy: Tighter defender distance + higher drive volume allowed (switches create mismatches/drives)
-        if (def_dist > 5.5 or drive_vol > 30):
+        # Rule 2: SWITCH_HEAVY
+        # Proxy: Higher defender distance and/or high drive volume allowed
+        if (def_dist > 4.23 or drive_vol > 370):
             return "SWITCH_HEAVY"
         
-        # Rule 3: ZONE_FLUID 
-        # Proxy: High opponent speed (moving ball against zone) + Low 3P% allowed (closing out)
-        if (opp_speed > 4.5 and cs_3pa > 25):
+        # Rule 3: ZONE_FLUID
+        # Proxy: High opponent speed + high catch-and-shoot volume allowed
+        if (opp_speed > 4.56 and cs_3pa > 470):
              return "ZONE_FLUID"
         
-        # Rule 4: RIM_FORTRESS 
+        # Rule 4: RIM_FORTRESS
         # Proxy: Low drive FG% allowed
-        if (drive_pct < 0.42):
+        if (drive_pct < 0.486):
             return "RIM_FORTRESS"
         
-        # Rule 5: PERIMETER_FUNNEL 
+        # Rule 5: PERIMETER_FUNNEL
         # Proxy: High drive volume allowed but low 3PA allowed
-        if (cs_3pa < 20 and drive_vol > 25):
+        if (cs_3pa < 380 and drive_vol > 340):
             return "PERIMETER_FUNNEL"
         
         # Default: NEUTRAL (no clear pattern)
@@ -218,7 +350,8 @@ class TeamDefensiveClassifier:
         else:
             return "INSUFFICIENT"
     
-    def batch_classify_all_teams(self) -> Dict[str, str]:
+    def batch_classify_all_teams(self, start_date: str = None, end_date: str = None,
+                                 min_games: int = 10, return_stats: bool = False) -> Dict[str, str]:
         """Classify all 30 NBA teams."""
         teams = [
             "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DAL", "DEN", "DET",
@@ -226,11 +359,34 @@ class TeamDefensiveClassifier:
             "MIN", "NOP", "NYK", "OKC", "ORL", "PHI", "PHX", "POR",
             "SAC", "SAS", "TOR", "UTA", "WAS"
         ]
-        
+
+        range_requested = start_date is not None or end_date is not None
+        if range_requested:
+            if start_date is None:
+                start_date = "2025-10-01"
+            end_date = self._resolve_window_end(end_date)
+            raw_stats = {team: self._load_tracking_stats_range(team, start_date, end_date) for team in teams}
+        else:
+            raw_stats = {team: self._load_tracking_stats(team) for team in teams}
+
+        stats_by_team = {}
+        for team, stats in raw_stats.items():
+            if not stats or stats.get('sample_size', 0) < min_games:
+                stats_by_team[team] = {}
+            else:
+                stats_by_team[team] = stats
+        thresholds = self._compute_relative_thresholds(stats_by_team)
+
         classifications = {}
         for team in teams:
-            classifications[team] = self.classify_defense(team)
-        
+            stats = stats_by_team.get(team, {})
+            if not stats:
+                classifications[team] = "NEUTRAL"
+            else:
+                classifications[team] = self._apply_relative_rules(stats, thresholds)
+
+        if return_stats:
+            return classifications, stats_by_team
         return classifications
 
 def main():

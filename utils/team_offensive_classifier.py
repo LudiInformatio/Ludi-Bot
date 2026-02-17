@@ -29,14 +29,37 @@ class TeamOffensiveClassifier:
         # Auto-run classification on init
         self.classify_all_teams()
 
-    def classify_all_teams(self) -> Dict[str, str]:
+    def _resolve_window_end(self, end_date: str = None) -> str:
+        if end_date:
+            return end_date
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT MAX(date) FROM games")
+            row = c.fetchone()
+            if row and row[0]:
+                conn.close()
+                return row[0]
+            c.execute("SELECT MAX(game_date) FROM player_game_logs")
+            row = c.fetchone()
+            conn.close()
+            if row and row[0]:
+                return row[0]
+        except Exception:
+            pass
+        return "2026-02-12"
+
+    def classify_all_teams(self, start_date: str = None, end_date: str = None, min_games: int = 30) -> Dict[str, str]:
         """
         Classify all 30 NBA teams by offensive identity.
 
         Returns:
             Dict mapping team_abbr -> offensive_type
         """
-        team_stats = self._fetch_team_stats()
+        if start_date is None:
+            start_date = "2025-10-01"
+        end_date = self._resolve_window_end(end_date)
+        team_stats = self._fetch_team_stats(start_date, end_date, min_games)
 
         for team_abbr, stats in team_stats.items():
             normalized = TEAM_ABBR_MAP.get(team_abbr, team_abbr)
@@ -45,7 +68,7 @@ class TeamOffensiveClassifier:
 
         return self.TEAM_OFFENSIVE_TYPES
 
-    def _fetch_team_stats(self) -> Dict:
+    def _fetch_team_stats(self, start_date: str, end_date: str, min_games: int) -> Dict:
         """Fetch team stats from ludi.db box scores"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -64,11 +87,12 @@ class TeamOffensiveClassifier:
                     SUM(stl) * 1.0 / COUNT(DISTINCT game_id) as spg,
                     CASE WHEN SUM(fgm) > 0 THEN 1.0 * SUM(ast) / SUM(fgm) ELSE 0.6 END as ast_per_fgm
                 FROM player_game_logs
-                WHERE game_date >= '2025-10-01'
+                WHERE game_date >= ?
+                AND game_date <= ?
                 AND team_abbreviation IS NOT NULL
                 GROUP BY team_abbreviation
-                HAVING COUNT(DISTINCT game_id) >= 30
-            ''')
+                HAVING COUNT(DISTINCT game_id) >= ?
+            ''', (start_date, end_date, min_games))
 
             team_stats = {}
             for row in c.fetchall():

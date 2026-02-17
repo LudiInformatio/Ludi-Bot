@@ -493,7 +493,7 @@ class LudiReporter:
 
         # --- Archetype modifier (re-enabled after Phase 7.9 overhaul) ---
         positive_archetypes = {
-            'HELIOCENTRIC_MAESTRO', 'ISO_ASSASSIN', 'SLASHING_CREATOR',
+            'HELIOCENTRIC_MAESTRO', 'SLASHING_CREATOR',
             'SNIPER_ELITE', 'WARRIOR_BIG', 'RIM_GUARDIAN', 'PERIMETER_HAWK',
             'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR'
         }

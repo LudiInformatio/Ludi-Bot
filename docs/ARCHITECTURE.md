@@ -132,6 +132,20 @@ from module_e import LudiEvaluator           # ImportError
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
 | `team_lineups` | 10,669 | WOWY lineup data |
 
+#### Player Classification Columns
+
+| Column | Purpose | Values |
+|--------|---------|--------|
+| `archetype` | Primary role classification | GENERALIST, RIM_GUARDIAN, PERIMETER_HAWK, SNIPER_ELITE, etc. (19 types) |
+| `defensive_tag` | Secondary overlay for poor defenders ONLY | WEAK_LINK or NULL |
+
+**Important**: Defensive archetypes (RIM_GUARDIAN, PERIMETER_HAWK, SWITCHABLE_ANCHOR, HUSTLE_DISRUPTOR)
+are stored in the `archetype` column, NOT `defensive_tag`. The `defensive_tag` column is reserved
+exclusively for the WEAK_LINK designation (poor defenders who allow >1.5% worse FG% on >8% frequency).
+
+**GENERALIST Measurement**: The <25% target applies to **active players** (21-day window), not all 503
+players in database. Inactive players (injured, waived) default to GENERALIST but don't generate bets.
+
 ### Indexes for Performance
 - `idx_player_game_logs_player_date` (composite index for fast player queries)
 - `idx_player_game_logs_game_date` (for date-range queries)

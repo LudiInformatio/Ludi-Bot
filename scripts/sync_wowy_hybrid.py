@@ -73,6 +73,7 @@ def sync_via_api(target_date: datetime) -> int:
             season_type_all_star='Regular Season',
             measure_type_detailed_defense='Advanced',
             group_quantity=5,
+            league_id="00",  # ✅ NBA league ID (required for 2023-24+)
             date_from_nullable=nba_date_str,
             date_to_nullable=nba_date_str,
             headers=HEADERS,

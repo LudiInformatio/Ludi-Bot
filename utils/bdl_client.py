@@ -76,6 +76,15 @@ class BDLClient:
     BASE_URL_V1 = "https://api.balldontlie.io/nba/v1"
     BASE_URL_V2 = "https://api.balldontlie.io/nba/v2"
 
+    # Team abbreviation normalization (BDL → Standard NBA codes)
+    TEAM_ABBREVIATION_MAP = {
+        'GS': 'GSW',
+        'NO': 'NOP',
+        'NY': 'NYK',
+        'PHO': 'PHX',
+        'SA': 'SAS'
+    }
+
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("BALLDONTLIE_KEY")
         if not self.api_key:
@@ -95,6 +104,24 @@ class BDLClient:
     # Internal HTTP
     # ------------------------------------------------------------------
 
+    def _normalize_team_abbreviation(self, abbrev: str) -> str:
+        """Normalize BDL team abbreviations to standard NBA codes."""
+        return self.TEAM_ABBREVIATION_MAP.get(abbrev, abbrev)
+
+    def _normalize_team_data(self, data: Any) -> Any:
+        """Recursively normalize team abbreviations in API response data."""
+        if isinstance(data, dict):
+            if 'abbreviation' in data:
+                data['abbreviation'] = self._normalize_team_abbreviation(data['abbreviation'])
+            if 'team_abbreviation' in data:
+                data['team_abbreviation'] = self._normalize_team_abbreviation(data['team_abbreviation'])
+            # Recursively process nested dicts
+            for key, value in data.items():
+                data[key] = self._normalize_team_data(value)
+        elif isinstance(data, list):
+            return [self._normalize_team_data(item) for item in data]
+        return data
+
     def _wait_for_rate_limit(self):
         """Enforce rate limits between calls."""
         elapsed = time.time() - self.last_request_time
@@ -108,7 +135,9 @@ class BDLClient:
         try:
             response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            # Normalize team abbreviations in response
+            return self._normalize_team_data(data)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
                 logger.error("BDL Rate Limit Exceeded (429).")
