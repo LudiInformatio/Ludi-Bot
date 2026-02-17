@@ -1,0 +1,137 @@
+LUDI LITE - FREESTYLE vs S.A.V.A.G.E. COMPARISON
+Feb 19, 2026 (Post All-Star)
+========================================================================================================================
+
+========================================================================================================================
+  ATL @ PHI | 7:00 PM ET
+========================================================================================================================
+
+┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+│ FREESTYLE                                               │ S.A.V.A.G.E.                                             │
+├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+│ ## ATL @ PHI                                            │ ## ATL @ PHI | S.A.V.A.G.E.                              │
+│                                                         │                                                          │
+│ **Quick Take:** Post All-Star break game.               │ **Scheme Matchup:**                                      │
+│                                                         │ - ATL OFF vs PHI DEF (NEUTRAL)                           │
+│ **Injury Watch:**                                       │ - PHI OFF vs ATL DEF (FUNNEL)                            │
+│ - ATL: Full strength                                    │                                                          │
+│ - PHI: Paul George (UNCLEAR)                            │ **Key Advantages:**                                      │
+│                                                         │ | Team | Edge | Why |                                    │
+│ **Players to Watch:**                                   │ |------|------|-----|                                    │
+│ | Player | Why |                                        │ | ATL | Standard | vs NEUTRAL |                          │
+│ |--------|-----|                                        │ | PHI | Gaps | vs FUNNEL |                               │
+│ | Jalen Johnson (ATL) | 20.3ppg recent |                │                                                          │
+│ | Tyrese Maxey (PHI) | 22.4ppg recent |                 │ **Players to Target:**                                   │
+│ | Joel Embiid (PHI) | 32.4ppg recent |                  │ | Player | Archetype | Stat |                            │
+│                                                         │ |--------|-----------|------|                            │
+│ **Flags:** Post All-Star rust                           │ | Jalen Johnson | HELIOCENTRIC | PTS |                   │
+│                                                         │ | Tyrese Maxey | HELIOCENTRIC | PTS |                    │
+│ ---                                                     │ | Joel Embiid | SLASHER | PTS |                          │
+│ *Research notes*                                        │                                                          │
+│                                                         │ **Flags:** Verify pre-game                               │
+│                                                         │                                                          │
+│                                                         │ ---                                                      │
+│                                                         │ *S.A.V.A.G.E. analysis*                                  │
+└─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+========================================================================================================================
+  PHX @ SAS | 8:30 PM ET
+========================================================================================================================
+
+┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+│ FREESTYLE                                               │ S.A.V.A.G.E.                                             │
+├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+│ ## PHX @ SAS                                            │ ## PHX @ SAS | S.A.V.A.G.E.                              │
+│                                                         │                                                          │
+│ **Quick Take:** Post All-Star break game.               │ **Scheme Matchup:**                                      │
+│                                                         │ - PHX OFF vs SAS DEF (PAINT_PACK)                        │
+│ **Injury Watch:**                                       │ - SAS OFF vs PHX DEF (BLITZ)                             │
+│ - PHX: Full strength                                    │                                                          │
+│ - SAS: Full strength                                    │ **Key Advantages:**                                      │
+│                                                         │ | Team | Edge | Why |                                    │
+│ **Players to Watch:**                                   │ |------|------|-----|                                    │
+│ | Player | Why |                                        │ | PHX | 3PM boost | vs PAINT_PACK |                      │
+│ |--------|-----|                                        │ | SAS | Standard | vs BLITZ |                            │
+│ | Devin Booker (PHX) | 27.2ppg recent |                 │                                                          │
+│ | Dillon Brooks (PHX) | 16.7ppg recent |                │ **Players to Target:**                                   │
+│ | Victor Wembanyama (SAS) | 25.0ppg recent |            │ | Player | Archetype | Stat |                            │
+│ | De'Aaron Fox (SAS) | 19.0ppg recent |                 │ |--------|-----------|------|                            │
+│                                                         │ | Devin Booker | HELIOCENTRIC | PTS |                    │
+│ **Flags:** Post All-Star rust                           │ | Dillon Brooks | GENERALIST | PTS |                     │
+│                                                         │ | Victor Wembanyama | SLASHER | PTS |                    │
+│ ---                                                     │ | De'Aaron Fox | GENERALIST | PTS |                      │
+│ *Research notes*                                        │                                                          │
+│                                                         │ **Flags:** Verify pre-game                               │
+│                                                         │                                                          │
+│                                                         │ ---                                                      │
+│                                                         │ *S.A.V.A.G.E. analysis*                                  │
+└─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+========================================================================================================================
+  DET @ NYK | 7:30 PM ET
+========================================================================================================================
+
+┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+│ FREESTYLE                                               │ S.A.V.A.G.E.                                             │
+├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+│ ## DET @ NYK                                            │ ## DET @ NYK | S.A.V.A.G.E.                              │
+│                                                         │                                                          │
+│ **Quick Take:** Post All-Star break game.               │ **Scheme Matchup:**                                      │
+│                                                         │ - DET OFF vs NYK DEF (PERIMETER)                         │
+│ **Injury Watch:**                                       │ - NYK OFF vs DET DEF (PAINT_PACK)                        │
+│ - DET: Full strength                                    │                                                          │
+│ - NYK: Full strength                                    │ **Key Advantages:**                                      │
+│                                                         │ | Team | Edge | Why |                                    │
+│ **Players to Watch:**                                   │ |------|------|-----|                                    │
+│ | Player | Why |                                        │ | DET | Lanes open | vs PERIMETER |                      │
+│ |--------|-----|                                        │ | NYK | 3PM boost | vs PAINT_PACK |                      │
+│ | Cade Cunningham (DET) | 17.5ppg recent |              │                                                          │
+│ | Jalen Brunson (NYK) | 25.2ppg recent |                │ **Players to Target:**                                   │
+│ | Karl-Anthony Towns (NYK) | 17.2ppg recent |           │ | Player | Archetype | Stat |                            │
+│                                                         │ |--------|-----------|------|                            │
+│ **Flags:** Post All-Star rust                           │ | Cade Cunningham | HELIOCENTRIC | PTS |                 │
+│                                                         │ | Jalen Brunson | HELIOCENTRIC | PTS |                   │
+│ ---                                                     │ | Karl-Anthony Towns | STRETCH_BIG | PTS |               │
+│ *Research notes*                                        │                                                          │
+│                                                         │ **Flags:** Verify pre-game                               │
+│                                                         │                                                          │
+│                                                         │ ---                                                      │
+│                                                         │ *S.A.V.A.G.E. analysis*                                  │
+└─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+========================================================================================================================
+  ORL @ SAC | 10:00 PM ET
+========================================================================================================================
+
+┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+│ FREESTYLE                                               │ S.A.V.A.G.E.                                             │
+├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+│ ## ORL @ SAC                                            │ ## ORL @ SAC | S.A.V.A.G.E.                              │
+│                                                         │                                                          │
+│ **Quick Take:** Post All-Star break game.               │ **Scheme Matchup:**                                      │
+│                                                         │ - ORL OFF vs SAC DEF (FUNNEL)                            │
+│ **Injury Watch:**                                       │ - SAC OFF vs ORL DEF (PAINT_PACK)                        │
+│ - ORL: Colin Castleton (QUESTIONABLE)                   │                                                          │
+│ - SAC: Keegan Murray (QUESTIONABLE)                     │ **Key Advantages:**                                      │
+│                                                         │ | Team | Edge | Why |                                    │
+│ **Players to Watch:**                                   │ |------|------|-----|                                    │
+│ | Player | Why |                                        │ | ORL | Gaps | vs FUNNEL |                               │
+│ |--------|-----|                                        │ | SAC | 3PM boost | vs PAINT_PACK |                      │
+│ | Paolo Banchero (ORL) | 25.8ppg recent |               │                                                          │
+│ | Franz Wagner (ORL) | 16.0ppg recent |                 │ **Players to Target:**                                   │
+│ | DeMar DeRozan (SAC) | 19.8ppg recent |                │ | Player | Archetype | Stat |                            │
+│ | Zach LaVine (SAC) | 15.8ppg recent |                  │ |--------|-----------|------|                            │
+│                                                         │ | Paolo Banchero | SLASHER | PTS |                       │
+│ **Flags:** Post All-Star rust                           │ | Franz Wagner | GENERALIST | PTS |                      │
+│                                                         │ | DeMar DeRozan | GENERALIST | PTS |                     │
+│ ---                                                     │ | Zach LaVine | GENERALIST | PTS |                       │
+│ *Research notes*                                        │                                                          │
+│                                                         │ **Flags:** Verify pre-game                               │
+│                                                         │                                                          │
+│                                                         │ ---                                                      │
+│                                                         │ *S.A.V.A.G.E. analysis*                                  │
+└─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+========================================================================================================================
+Data: ludi.db (archetypes, game_logs, synergy) + BDL injuries
+========================================================================================================================
