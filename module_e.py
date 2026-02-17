@@ -5,6 +5,7 @@ from pathlib import Path
 import config
 from utils.player_id_resolver import PlayerIDResolver
 from utils.team_offensive_classifier import TEAM_OFFENSIVE_TYPES
+from utils.team_defensive_classifier import TeamDefensiveClassifier
 
 try:
     from utils.pbp_stats_client import get_team_leverage_summary
@@ -119,6 +120,7 @@ class LudiCalibrator:
             "LAC": "NEUTRAL",     # Transitional year
             "PHI": "NEUTRAL"      # Personnel changes mid-season
         }
+        self._load_dynamic_defensive_styles()
 
         # OFFENSIVE_STYLES dict removed (Feb 15, 2026)
         # Now using utils/team_offensive_classifier.py via classify_team_offense() method
@@ -169,12 +171,12 @@ class LudiCalibrator:
         # === SECONDARY PLAYTYPE SYSTEM (Week 2 Integration) ===
         # Position-based filtering: Guards create, wings cut/shoot, bigs finish
         self.POSITION_ELIGIBILITY = {
-            'G': ['ISO_SCORER', 'P&R_HANDLER', 'SPOT_UP', 'TRANSITION'],
-            'G-F': ['ISO_SCORER', 'P&R_HANDLER', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION'],
-            'F': ['ISO_SCORER', 'P&R_HANDLER', 'P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION'],
-            'F-C': ['P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'PUTBACK', 'POST_UP'],
+            'G': ['ISO_SCORER', 'P&R_HANDLER', 'SPOT_UP', 'TRANSITION', 'HANDOFF', 'OFF_SCREEN'],
+            'G-F': ['ISO_SCORER', 'P&R_HANDLER', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'HANDOFF', 'OFF_SCREEN'],
+            'F': ['ISO_SCORER', 'P&R_HANDLER', 'P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'HANDOFF', 'OFF_SCREEN'],
+            'F-C': ['P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'PUTBACK', 'POST_UP', 'OFF_SCREEN'],
             'C': ['P&R_ROLL_MAN', 'OFF_BALL_CUTTER', 'PUTBACK', 'POST_UP', 'SPOT_UP', 'TRANSITION'],
-            'UNK': ['ISO_SCORER', 'P&R_HANDLER', 'P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'PUTBACK', 'POST_UP']
+            'UNK': ['ISO_SCORER', 'P&R_HANDLER', 'P&R_ROLL_MAN', 'SPOT_UP', 'OFF_BALL_CUTTER', 'TRANSITION', 'PUTBACK', 'POST_UP', 'HANDOFF', 'OFF_SCREEN']
         }
         
         # Position bonuses for priority scoring (validated in Week 1)
@@ -268,10 +270,19 @@ class LudiCalibrator:
             c = conn.cursor()
             c.execute(
                 """
-                SELECT player_name, AVG(COALESCE(diff_pct, 0))
-                FROM player_defense
-                WHERE season = '2025-26'
-                GROUP BY player_name
+                SELECT
+                    d.player_name,
+                    AVG(COALESCE(d.diff_pct, 0)),
+                    AVG(COALESCE(d.freq_pct, 0)),
+                    AVG(COALESCE(d.dfga, 0)),
+                    MAX(COALESCE(d.position, 'UNK')),
+                    AVG(COALESCE(s.dist_miles_def, 0))
+                FROM player_defense d
+                LEFT JOIN player_speed s
+                  ON s.player_name = d.player_name
+                 AND s.season = d.season
+                WHERE d.season = '2025-26'
+                GROUP BY d.player_name
                 """
             )
             rows = c.fetchall()
@@ -281,6 +292,11 @@ class LudiCalibrator:
                 row[0]: {
                     'def_diff_vs_screen': row[1] or 0.0,
                     'def_diff_vs_iso': row[1] or 0.0,
+                    'def_diff_pct': row[1] or 0.0,
+                    'def_freq_pct': row[2] or 0.0,
+                    'def_dfga': row[3] or 0.0,
+                    'def_position': row[4] or 'UNK',
+                    'def_distance_miles': row[5] or 0.0,
                 }
                 for row in rows
             }
@@ -497,8 +513,58 @@ class LudiCalibrator:
         'POST_UP': 'POST_UP',
         'SPOT_UP': 'SPOT_UP',
         'CUT': 'OFF_BALL_CUTTER',
-        'PUTBACK': 'PUTBACK'
+        'PUTBACK': 'PUTBACK',
+        'HANDOFF': 'HANDOFF',
+        'OFF_SCREEN': 'OFF_SCREEN',
+        'OFFSCREEN': 'OFF_SCREEN',
     }
+
+    DEFENSIVE_STYLE_MAP = {
+        'DROP_COVERAGE': 'PAINT_PACK',
+        'RIM_FORTRESS': 'PAINT_PACK',
+        'SWITCH_HEAVY': 'PERIMETER',
+        'PERIMETER_FUNNEL': 'FUNNEL',
+        'ZONE_FLUID': 'BLITZ',
+        'NEUTRAL': 'NEUTRAL'
+    }
+
+    def _load_dynamic_defensive_styles(self) -> None:
+        """Overlay data-driven defensive styles; keep static mapping as fallback."""
+        try:
+            classifier = TeamDefensiveClassifier(db_path=str(self.db_path))
+            dynamic = classifier.batch_classify_all_teams()
+            for team, dyn_style in dynamic.items():
+                mapped = self.DEFENSIVE_STYLE_MAP.get(dyn_style, 'NEUTRAL')
+                if mapped != 'NEUTRAL':
+                    self.DEFENSIVE_STYLES[team] = mapped
+        except Exception as e:
+            print(f"[Module E] Dynamic defensive styles unavailable: {e}")
+
+    def _get_player_defensive_synergy(self, player_name: str) -> dict:
+        """Return defensive synergy percentile/ppp by playtype for a player."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT playtype, percentile, ppp_allowed
+                FROM player_defensive_synergy
+                WHERE player_name = ?
+                  AND season = '2025-26'
+                """,
+                (player_name,),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            return {
+                (pt or '').upper(): {
+                    'percentile': perc or 0.0,
+                    'ppp_allowed': ppp or 0.0,
+                }
+                for pt, perc, ppp in rows
+            }
+        except Exception:
+            return {}
     
     def _get_synergy_playtypes(self, player_name: str, min_freq: float = 5.0) -> list:
         """
@@ -670,16 +736,12 @@ class LudiCalibrator:
         except Exception as e:
             return {}
 
-    def _assign_secondary_playtypes(self, p, tracking_data):
+    def _assign_secondary_playtypes(self, p, tracking_data, synergy_data):
         """
-        Assign 0-2 secondary playtypes using strict thresholds.
-        
-        Threshold Logic: Player must meet 2 of 3 criteria for each playtype.
-        This prevents every player from populating every tag.
+        Assign up to 2 secondary playtypes using Synergy-led hybrid scoring.
+        If Synergy data exists: 70% Synergy + 30% tracking proxy.
+        Else: 100% tracking fallback.
         """
-        secondaries = []
-        
-        # Extract stats
         drives = tracking_data.get('avg_drives', 0)
         cs_fga = tracking_data.get('avg_cs_fga', 0)
         cs_pct = tracking_data.get('cs_pct', 0)
@@ -699,57 +761,98 @@ class LudiCalibrator:
              
         oreb = p.get('base_oreb', 0)
         tpm = p.get('base_3pm', 0)
-        
-        # Approximate metrics
         rim_freq = tracking_data.get('rim_freq', 0)
-        rim_fg_pct = p.get('pbp_rim_fg_pct', 0.60) # Fallback
-        paint_pts = p.get('base_pts', 0) * 0.45  # Rough estimate
-        
-        # 1. ISO_SCORER (2 of 3)
-        iso_criteria = [drives > 8, pu_fga > 4.5, usg > 0.28]
-        if sum(iso_criteria) >= 2:
-            secondaries.append('ISO_SCORER')
-        
-        # 2. P&R_HANDLER (2 of 3)
-        prh_criteria = [drives > 5, ast > 6.0, cs_fga < pu_fga]
-        if sum(prh_criteria) >= 2:
-            secondaries.append('P&R_HANDLER')
-        
-        # 3. P&R_ROLL_MAN (2 of 3)
-        prr_criteria = [rim_freq > 0.40, cs_fga > pu_fga, ast < 3.0]
-        if sum(prr_criteria) >= 2:
-            secondaries.append('P&R_ROLL_MAN')
-        
-        # 4. SPOT_UP (2 of 3)
-        spot_criteria = [cs_fga > 3.5, cs_pct > 0.38, tpm > 1.5]
-        if sum(spot_criteria) >= 2:
-            secondaries.append('SPOT_UP')
-        
-        # 5. OFF_BALL_CUTTER (2 of 3)
-        cut_criteria = [rim_fg_pct > 0.65, cs_fga > pu_fga, drives < 4]
-        if sum(cut_criteria) >= 2:
-            secondaries.append('OFF_BALL_CUTTER')
-        
-        # 6. TRANSITION (2 of 3)
-        # Get team pace if available
+        rim_fg_pct = p.get('pbp_rim_fg_pct', 0.60)
+        paint_pts = p.get('base_pts', 0) * 0.45
         team_pace = p.get('team_pace', 100)
-        trans_criteria = [speed > 4.5, distance > 2.3, team_pace > 102]
-        if sum(trans_criteria) >= 2:
-            secondaries.append('TRANSITION')
-        
-        # 7. PUTBACK (2 of 3)
         rim_fga = p.get('base_fga', 0) * rim_freq if rim_freq > 0 else 0
-        putback_criteria = [oreb > 2.2, rim_freq > 0.45, rim_fga > 4]
-        if sum(putback_criteria) >= 2:
-            secondaries.append('PUTBACK')
-        
-        # 8. POST_UP (2 of 3) - Approximation
-        post_criteria = [paint_pts > 10, rim_freq > 0.40, speed < 4.0]
-        if sum(post_criteria) >= 2:
-            secondaries.append('POST_UP')
-        
-        # Return max 2 secondary playtypes (prioritize first matches)
-        return secondaries[:2]
+        position = p.get('position', 'UNK')
+        if position in ('PG', 'SG'):
+            position = 'G'
+        elif position in ('SF', 'PF'):
+            position = 'F'
+        elif position in ('C',):
+            position = 'C'
+        eligible = set(self._get_eligible_playtypes(position))
+
+        synergy_freq = {}
+        if isinstance(synergy_data, dict):
+            for tag, value in synergy_data.items():
+                if isinstance(value, tuple):
+                    synergy_freq[tag] = float(value[0] or 0.0)
+                else:
+                    synergy_freq[tag] = float(value or 0.0)
+
+        def _bool_score(criteria):
+            if not criteria:
+                return 0.0
+            return sum(1 for c in criteria if c) / len(criteria)
+
+        def _ratio(value, threshold):
+            if threshold <= 0:
+                return 0.0
+            return min(1.0, (value or 0.0) / threshold)
+
+        definitions = {
+            'ISO_SCORER': {
+                'synergy_tag': 'ISO_SCORER', 'synergy_thr': 8.0,
+                'tracking': _bool_score([drives > 8, pu_fga > 4.5, usg > 0.28]),
+            },
+            'P&R_HANDLER': {
+                'synergy_tag': 'P&R_HANDLER', 'synergy_thr': 12.0,
+                'tracking': _bool_score([drives > 5, ast > 6.0, cs_fga < pu_fga]),
+            },
+            'P&R_ROLL_MAN': {
+                'synergy_tag': 'P&R_ROLL_MAN', 'synergy_thr': 8.0,
+                'tracking': _bool_score([rim_freq > 0.40, cs_fga > pu_fga, ast < 3.0]),
+            },
+            'SPOT_UP': {
+                'synergy_tag': 'SPOT_UP', 'synergy_thr': 12.0,
+                'tracking': _bool_score([cs_fga > 3.5, cs_pct > 0.38, tpm > 1.5]),
+            },
+            'OFF_BALL_CUTTER': {
+                'synergy_tag': 'OFF_BALL_CUTTER', 'synergy_thr': 8.0,
+                'tracking': _bool_score([rim_fg_pct > 0.65, cs_fga > pu_fga, drives < 4]),
+            },
+            'TRANSITION': {
+                'synergy_tag': 'TRANSITION', 'synergy_thr': 10.0,
+                'tracking': _bool_score([speed > 4.5, distance > 2.3, team_pace > 102]),
+            },
+            'PUTBACK': {
+                'synergy_tag': 'PUTBACK', 'synergy_thr': 5.0,
+                'tracking': _bool_score([oreb > 2.2, rim_freq > 0.45, rim_fga > 4]),
+            },
+            'POST_UP': {
+                'synergy_tag': 'POST_UP', 'synergy_thr': 8.0,
+                'tracking': _bool_score([paint_pts > 10, rim_freq > 0.40, speed < 4.0]),
+            },
+            'HANDOFF': {
+                'synergy_tag': 'HANDOFF', 'synergy_thr': 6.0,
+                'tracking': _bool_score([cs_fga > 2.5, speed > 4.0, drives < 5]),
+            },
+            'OFF_SCREEN': {
+                'synergy_tag': 'OFF_SCREEN', 'synergy_thr': 5.0,
+                'tracking': _bool_score([cs_fga > 3.0, distance > 2.5, tpm > 1.2]),
+            },
+        }
+
+        scored = []
+        for playtype, spec in definitions.items():
+            if playtype not in eligible:
+                continue
+            sy_tag = spec['synergy_tag']
+            s_freq = synergy_freq.get(sy_tag, 0.0)
+            s_score = _ratio(s_freq, spec['synergy_thr'])
+            t_score = spec['tracking']
+            if s_freq > 0:
+                score = (0.7 * s_score) + (0.3 * t_score)
+            else:
+                score = t_score
+            if score >= 0.60:
+                scored.append((playtype, score))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [tag for tag, _ in scored[:2]]
 
     def calibrate_player(self, player_packet, yak_report, use_synergy=True):
         calibrated = player_packet.copy()
@@ -798,6 +901,16 @@ class LudiCalibrator:
             calibrated['def_diff_vs_screen'] = defense.get('def_diff_vs_screen', 0.0)
         if 'def_diff_vs_iso' not in calibrated:
             calibrated['def_diff_vs_iso'] = defense.get('def_diff_vs_iso', 0.0)
+        if 'def_diff_pct' not in calibrated:
+            calibrated['def_diff_pct'] = defense.get('def_diff_pct', 0.0)
+        if 'def_freq_pct' not in calibrated:
+            calibrated['def_freq_pct'] = defense.get('def_freq_pct', 0.0)
+        if 'def_dfga' not in calibrated:
+            calibrated['def_dfga'] = defense.get('def_dfga', 0.0)
+        if 'def_position' not in calibrated:
+            calibrated['def_position'] = defense.get('def_position', 'UNK')
+        if 'def_distance_miles' not in calibrated:
+            calibrated['def_distance_miles'] = defense.get('def_distance_miles', 0.0)
 
         # 1. ASSIGN UNIFIED ARCHETYPE (returns archetype + synergy dict)
         archetype, synergy_dict = self._assign_unified_archetype(calibrated)
@@ -809,10 +922,26 @@ class LudiCalibrator:
             # Store synergy modifiers for later application
             calibrated['synergy_modifiers'] = synergy_dict
 
+        # 1b. ASSIGN DEFENSIVE_TAG if player is weak defender (Phase 7.9.5)
+        # This is separate from primary archetype classification
+        def_diff = float(calibrated.get('def_diff_pct', 0) or 0.0)
+        def_freq = float(calibrated.get('def_freq_pct', 0) or 0.0)
+        stl = float(calibrated.get('base_stl', 0) or 0)
+        blk = float(calibrated.get('base_blk', 0) or 0)
+
+        if ((def_diff > 1.5 and def_freq > 8.0) or (def_diff > 2.0 and (stl + blk) < 1.0)):
+            calibrated['defensive_tag'] = 'WEAK_LINK'
+        else:
+            calibrated['defensive_tag'] = None
+
         # Ensure secondary playtypes are always populated for matchup layer
         if not calibrated.get('secondary_playtypes'):
             tracking_data = self._get_tracking_stats(player_name)
-            calibrated['secondary_playtypes'] = self._assign_secondary_playtypes(calibrated, tracking_data) if tracking_data else []
+            calibrated['secondary_playtypes'] = self._assign_secondary_playtypes(
+                calibrated,
+                tracking_data if tracking_data else {},
+                synergy_dict,
+            )
 
         # 3. NEWS CALIBRATION
         status = yak_report.get('status', 'ACTIVE')
@@ -878,6 +1007,7 @@ class LudiCalibrator:
 
         # === NEW 16-ARCHETYPE MATCHUP MATRIX ===
         # Phase 6.3: Key boosts use _boost_stat_with_confidence for WOWY weighting
+        trans_freq_primary = calibrated.get('synergy_modifiers', {}).get('TRANSITION', (0, 0))[0]
 
         if archetype == "HELIOCENTRIC_MAESTRO":
             if def_style == "BLITZ":
@@ -904,8 +1034,9 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.05, wowy_confidence)
                 calibrated['notes'] += " | Foul Drawn Magnet"
             elif def_style == "FUNNEL":
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.15, wowy_confidence)
-                calibrated['notes'] += " | Transition Chaos"
+                funnel_mod = 1.08 if trans_freq_primary >= 14.0 else 1.02
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', funnel_mod, wowy_confidence)
+                calibrated['notes'] += " | Transition Chaos" if funnel_mod > 1.03 else " | Funnel Minor Edge"
             elif def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.95, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_fta', 0.92, wowy_confidence)
@@ -932,8 +1063,9 @@ class LudiCalibrator:
 
         elif archetype == "ATHLETIC_FINISHER":
             if def_style == "FUNNEL":
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
-                calibrated['notes'] += " | Transition Edge"
+                funnel_mod = 1.06 if trans_freq_primary >= 14.0 else 1.01
+                self._boost_stat_with_confidence(calibrated, 'proj_pts', funnel_mod, wowy_confidence)
+                calibrated['notes'] += " | Transition Edge" if funnel_mod > 1.03 else " | Minor Tempo Edge"
 
         elif archetype == "WARRIOR_BIG":
             if def_style == "PERIMETER":
@@ -947,9 +1079,12 @@ class LudiCalibrator:
 
         elif archetype == "VULTURE_BIG":
             if def_style == "FUNNEL":
-                self._boost_stat_with_confidence(calibrated, 'proj_dreb', 1.15, wowy_confidence)
-                self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
-                calibrated['notes'] += " | Vulture Transition Edge"
+                self._boost_stat_with_confidence(calibrated, 'proj_dreb', 1.10, wowy_confidence)
+                if trans_freq_primary >= 14.0:
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.04, wowy_confidence)
+                    calibrated['notes'] += " | Vulture Transition Edge"
+                else:
+                    calibrated['notes'] += " | Vulture Board Edge"
 
         elif archetype == "STRETCH_BIG":
             if def_style == "PAINT_PACK":
@@ -971,18 +1106,36 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
-        elif archetype == "SCREEN_NAVIGATOR":
-            # Defensive archetype - focus on defensive stats
-            if def_style in ['PAINT_PACK', 'BLITZ']:
-                self._boost_stat(calibrated, 'proj_stl', 1.15)
-                calibrated['notes'] += " | Screen Navigator"
-
-        elif archetype == "ISLAND_DEFENDER":
-            # Defensive archetype
-            if def_style in ['PERIMETER', 'HACKERS']:
-                self._boost_stat(calibrated, 'proj_stl', 1.10)
+        elif archetype == "RIM_GUARDIAN":
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_blk', 1.12)
+                calibrated['notes'] += " | Rim Guardian vs Funnel"
+            elif def_style == "BLITZ":
                 self._boost_stat(calibrated, 'proj_blk', 1.08)
-                calibrated['notes'] += " | Island Defender"
+                self._boost_stat(calibrated, 'proj_reb', 1.05)
+                calibrated['notes'] += " | Rim Guardian Help Side"
+
+        elif archetype == "PERIMETER_HAWK":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hawk Passing Lanes"
+            elif def_style == "HACKERS":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hawk vs Sloppy Handle"
+
+        elif archetype == "SWITCHABLE_ANCHOR":
+            if def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                self._boost_stat(calibrated, 'proj_blk', 1.04)
+                calibrated['notes'] += " | Switchable Pressure"
+
+        elif archetype == "HUSTLE_DISRUPTOR":
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hustle vs Funnel"
+            elif def_style == "HACKERS":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hustle Disruption"
 
         elif archetype == "CUTTER_SPECIALIST":
             if def_style == "PERIMETER":
@@ -997,6 +1150,16 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_ast', 1.08)
                 calibrated['notes'] += " | Playmaking vs Drop"
 
+        elif archetype == "CONNECTOR":
+            if def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_ast', 1.05)
+                calibrated['notes'] += " | Connector vs Pack"
+
+        elif archetype == "ENERGY_BIG":
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_reb', 1.08)
+                calibrated['notes'] += " | Energy Big Boards"
+
         # Apply archetype-specific synergy modifiers
         synergy_dict = calibrated.get('synergy_modifiers', {})
         if synergy_dict:
@@ -1006,6 +1169,7 @@ class LudiCalibrator:
         # Extracted to separate method for Phase 3 implementation
         # Phase 6.3: Pass wowy_confidence for BENEFICIARY weighting
         self._apply_secondary_playtype_matchups(calibrated, def_style, wowy_confidence)
+        self._apply_opponent_weak_link_boost(calibrated, opponent, def_style)
 
         # 6b. CLUTCH PERFORMER BOOST (Phase 7.4)
         # Apply +3% PTS boost for players on clutch-strong teams in close games
@@ -1144,17 +1308,22 @@ class LudiCalibrator:
             ('proj_fta', 'base_fta'),
             ('proj_fga', 'base_fga'),
         ]
+        stat_overrides = {
+            'proj_stl': {'max': 1.10, 'min': 0.85},  # Phase 7.9.5: Tightened cap to reduce STL over-projection
+        }
         for proj_key, base_key in stat_pairs:
             base_val = calibrated.get(base_key, 0) or 0
             if base_val <= 0 or proj_key not in calibrated:
                 continue
+            max_mod = stat_overrides.get(proj_key, {}).get('max', config.MAX_MODIFIER)
+            min_mod = stat_overrides.get(proj_key, {}).get('min', config.MIN_MODIFIER)
             ratio = calibrated[proj_key] / base_val
-            if ratio > config.MAX_MODIFIER:
-                calibrated[proj_key] = round(base_val * config.MAX_MODIFIER, 2)
-                calibrated['notes'] += f" | CAP({proj_key}:{ratio:.2f}->{config.MAX_MODIFIER})"
-            elif ratio < config.MIN_MODIFIER:
-                calibrated[proj_key] = round(base_val * config.MIN_MODIFIER, 2)
-                calibrated['notes'] += f" | FLOOR({proj_key}:{ratio:.2f}->{config.MIN_MODIFIER})"
+            if ratio > max_mod:
+                calibrated[proj_key] = round(base_val * max_mod, 2)
+                calibrated['notes'] += f" | CAP({proj_key}:{ratio:.2f}->{max_mod})"
+            elif ratio < min_mod:
+                calibrated[proj_key] = round(base_val * min_mod, 2)
+                calibrated['notes'] += f" | FLOOR({proj_key}:{ratio:.2f}->{min_mod})"
 
         return calibrated
 
@@ -1282,17 +1451,47 @@ class LudiCalibrator:
 
         # === TIER 4: ROLE PLAYERS & DEFENDERS ===
 
-        # Get defensive data (future enhancement - use defaults for now)
-        def_diff_screen = p.get('def_diff_vs_screen', 0)
-        def_diff_iso = p.get('def_diff_vs_iso', 0)
+        # Defensive profile and defensive Synergy fallback.
+        # Pull from loaded defense table when caller packet is sparse (e.g. batch reclassify scripts).
+        defense_profile = self.defense_profiles.get(raw_name, {})
+        def_diff = float(
+            p.get(
+                'def_diff_pct',
+                defense_profile.get('def_diff_pct', p.get('def_diff_vs_screen', 0))
+            ) or 0.0
+        )
+        def_freq = float(p.get('def_freq_pct', defense_profile.get('def_freq_pct', 0)) or 0.0)
+        def_distance = float(
+            p.get('def_distance_miles', defense_profile.get('def_distance_miles', 0)) or 0.0
+        )
+        def_syn = self._get_player_defensive_synergy(raw_name)
 
-        # SCREEN_NAVIGATOR
-        if (def_diff_screen < -3.0 and stl > 1.2):
-            return 'SCREEN_NAVIGATOR', synergy_dict
+        pr_roll_def = (def_syn.get('PR_ROLL_MAN') or {}).get('percentile', 0.0)
+        post_def = (def_syn.get('POST_UP') or {}).get('percentile', 0.0)
+        iso_def = (def_syn.get('ISO') or {}).get('percentile', 0.0)
+        spot_def = (def_syn.get('SPOT_UP') or {}).get('percentile', 0.0)
+        strong_def_tags = sum(
+            1
+            for pt in ('ISO', 'PR_BALL_HANDLER', 'PR_ROLL_MAN', 'SPOT_UP', 'POST_UP', 'CUT')
+            if (def_syn.get(pt) or {}).get('percentile', 0.0) >= 60.0
+        )
 
-        # ISLAND_DEFENDER
-        if (def_diff_iso < -5.0 and (stl + blk) > 1.5):
-            return 'ISLAND_DEFENDER', synergy_dict
+        if ((blk >= 1.1 and position in ('F', 'C', 'UNK')) or (pr_roll_def >= 75 and post_def >= 70)):
+            return 'RIM_GUARDIAN', synergy_dict
+
+        if ((stl >= 1.2 and position in ('G', 'F', 'UNK')) or (iso_def >= 75 and spot_def >= 70)):
+            return 'PERIMETER_HAWK', synergy_dict
+
+        if (((stl + blk) >= 1.7 and speed > 3.9) or strong_def_tags >= 2):
+            return 'SWITCHABLE_ANCHOR', synergy_dict
+
+        if (stl > 1.15 or (stl > 0.9 and def_distance > 2.3)):
+            return 'HUSTLE_DISRUPTOR', synergy_dict
+
+        # WEAK_LINK removed from primary archetypes - now stored as defensive_tag
+        # if ((def_diff > 1.5 and def_freq > 8.0) or (def_diff > 2.0 and (stl + blk) < 1.0)):
+        #     return 'WEAK_LINK', synergy_dict
+        # This check now happens in calibrate_player() and writes to defensive_tag column
 
         # CUTTER_SPECIALIST
         cut_freq = synergy_dict.get('OFF_BALL_CUTTER', (0, 0))[0]
@@ -1318,7 +1517,7 @@ class LudiCalibrator:
             return 'SNIPER_ELITE', synergy_dict
 
         # Relaxed STRETCH_BIG (reb + some 3s)
-        if (reb > 5.5 and tpm > 1.5 and position in ['F', 'C']):
+        if (reb > 5.5 and tpm > 1.5 and position in ['F', 'C', 'UNK']):
             return 'STRETCH_BIG', synergy_dict
 
         # Relaxed ROLL_MAN (big with high rim freq)
@@ -1332,8 +1531,14 @@ class LudiCalibrator:
         # === ADDITIONAL FALLBACKS (Feb 2026 Calibration) ===
 
         # TWO_LEVEL_SCORER fallback: Scoring guards/wings who don't fit other categories
-        if (pts > 15.0 and tpm > 1.0 and usg > 0.22):
+        if (pts > 10.0 and tpm > 0.8 and usg > 0.19):
             return 'TWO_LEVEL_SCORER', synergy_dict
+
+        if (ast > 2.0 and pts < 14.0 and usg < 0.24):
+            return 'CONNECTOR', synergy_dict
+
+        if (reb > 3.5 and (stl + blk) > 0.8 and pts < 12.0 and position in ['F', 'C', 'UNK']):
+            return 'ENERGY_BIG', synergy_dict
 
         # SNIPER_ELITE relaxed further: High 3PM shooters regardless of assists
         if (tpm > 2.2):
@@ -1350,6 +1555,26 @@ class LudiCalibrator:
         # FACILITATOR relaxed: Any player with decent assists
         if (ast > 3.5):
             return 'FACILITATOR', synergy_dict
+
+        # Synergy-dominant fallback: classify low-usage role players by clear action profile.
+        if (spot_freq >= 20.0 and tpm >= 0.7 and ast < 3.0):
+            return 'SNIPER_ELITE', synergy_dict
+
+        if (prh_freq >= 14.0 and ast >= 2.5 and usg < 0.26):
+            return 'CONNECTOR', synergy_dict
+
+        if (prr_freq >= 10.0 and reb >= 4.0 and position in ['F', 'C', 'UNK']):
+            return 'ENERGY_BIG', synergy_dict
+
+        # === FINAL CATCH-ALL: NBA-level production (Phase 7.9.5 Conservative Thresholds) ===
+        # Tighter thresholds to avoid false positives on deep bench players
+        if pts > 8.0 or ast > 2.5 or reb > 4.0:
+            if tpm > 0.8 and usg > 0.18:
+                return 'TWO_LEVEL_SCORER', synergy_dict
+            elif ast > 2.5 and pts < 14.0:
+                return 'CONNECTOR', synergy_dict
+            elif reb > 4.0 and position in ('F', 'C', 'UNK'):
+                return 'ENERGY_BIG', synergy_dict
 
         # GENERALIST (final fallback - low usage role players)
         return 'GENERALIST', synergy_dict
@@ -1441,9 +1666,9 @@ class LudiCalibrator:
         opponent_abbr = calibrated.get('opponent')
         opponent_profile = self.opponent_profiles.get(opponent_abbr, {})
 
-        # STL boost vs high-turnover teams
-        if tov_rate > 0.15:
-            stl_mod = 1.10
+        # STL boost vs high-turnover teams (Phase 7.9.5: threshold raised to 0.17, boost reduced to 1.05)
+        if tov_rate > 0.17:
+            stl_mod = 1.05
             self._boost_stat(calibrated, 'proj_stl', stl_mod)
             calibrated['notes'] += " | STL Boost (High TOV%)"
             self._log_adjustment(player_name, 'OPPONENT_CONTEXT', stl_mod, f"Opponent TOV Rate: {tov_rate:.1%}")
@@ -1626,77 +1851,135 @@ class LudiCalibrator:
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | PPP_EFFICIENCY | {str(e)}")
 
+    def _apply_opponent_weak_link_boost(self, calibrated: dict, opponent_abbr: str, def_style: str) -> None:
+        """
+        Boost offensive projections when opponent has a targeted weak-link defender.
+        """
+        archetype = calibrated.get('archetype', '')
+        player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
+        position = (calibrated.get('position') or 'UNK').upper()
+
+        if archetype not in ('ISO_ASSASSIN', 'SLASHING_CREATOR', 'WARRIOR_BIG', 'ROLL_MAN'):
+            return
+
+        pos_filter = "AND (position LIKE 'G%' OR position LIKE 'F%')" if position.startswith('G') else "AND (position LIKE 'F%' OR position LIKE 'C%')"
+        if position.startswith('C'):
+            pos_filter = "AND position LIKE 'C%'"
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                f"""
+                SELECT player_name, diff_pct, freq_pct, position
+                FROM player_defense
+                WHERE team_abbr = ?
+                  AND season = '2025-26'
+                  AND COALESCE(diff_pct, 0) > 2.0
+                  AND COALESCE(freq_pct, 0) >= 10.0
+                  {pos_filter}
+                ORDER BY diff_pct DESC, freq_pct DESC
+                LIMIT 1
+                """,
+                (opponent_abbr,),
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if not row:
+                return
+
+            weak_name, _, _, weak_pos = row
+            if archetype in ('ISO_ASSASSIN', 'SLASHING_CREATOR'):
+                self._boost_stat(calibrated, 'proj_pts', 1.05)
+                calibrated['notes'] += f" | Weak Link ({weak_pos}/{weak_name[:10]})"
+            elif archetype in ('WARRIOR_BIG', 'ROLL_MAN'):
+                self._boost_stat(calibrated, 'proj_pts', 1.05)
+                self._boost_stat(calibrated, 'proj_reb', 1.05)
+                calibrated['notes'] += f" | Weak Link Big ({weak_name[:10]})"
+        except Exception:
+            return
+
     def _apply_defensive_diff_adjustment(self, calibrated: dict, opponent_abbr: str) -> None:
         """
-        Apply opponent defensive adjustment using diff_pct (FG% allowed vs expected).
-
-        Focuses on rim protection for rim-based playtypes (roll men, cutters, putbacks).
-        Elite rim protectors (diff% < -5) penalize interior scoring.
-
-        Args:
-            calibrated: Player packet with projections
-            opponent_abbr: Opponent team abbreviation
+        Apply opponent defensive adjustment, preferring playtype-specific defensive Synergy.
+        Falls back to aggregate player_defense diff_pct when defensive Synergy is unavailable.
         """
         player_name = calibrated.get('name', calibrated.get('PLAYER_NAME', ''))
         sec_playtypes = calibrated.get('secondary_playtypes', [])
-
-        # Only apply to rim-based playtypes
-        RIM_BASED = ['P&R_ROLL_MAN', 'OFF_BALL_CUTTER', 'PUTBACK', 'POST_UP']
-        has_rim_playtype = any(pt in RIM_BASED for pt in sec_playtypes)
-
-        if not has_rim_playtype:
-            self._log_skip(player_name, 'DEFENSIVE_DIFF', 
-                f"No rim playtype (has: {sec_playtypes})")
-            return  # Not a rim scorer, skip adjustment
+        if not sec_playtypes:
+            return
 
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Get opponent's best rim protector (lowest diff_pct = most impact)
-            cursor.execute("""
+            # Phase 4 path: use playtype-specific opponent defensive Synergy if available.
+            try:
+                cursor.execute(
+                    """
+                    SELECT playtype, MAX(percentile) AS top_percentile
+                    FROM player_defensive_synergy
+                    WHERE team_abbr = ?
+                      AND season = '2025-26'
+                      AND playtype IN ('ISO', 'PR_ROLL_MAN', 'SPOT_UP')
+                    GROUP BY playtype
+                    """,
+                    (opponent_abbr,),
+                )
+                by_playtype = {row[0]: row[1] for row in cursor.fetchall()}
+            except Exception:
+                by_playtype = {}
+
+            applied = False
+            if by_playtype:
+                rim_based = {'P&R_ROLL_MAN', 'OFF_BALL_CUTTER', 'PUTBACK', 'POST_UP'}
+                if any(pt in rim_based for pt in sec_playtypes) and by_playtype.get('PR_ROLL_MAN', 0) >= 75:
+                    self._boost_stat(calibrated, 'proj_pts', 0.94)
+                    self._boost_stat(calibrated, 'proj_fg_pct', 0.96)
+                    calibrated['notes'] += " | Elite Roll-Man D"
+                    applied = True
+
+                if 'ISO_SCORER' in sec_playtypes and by_playtype.get('ISO', 0) >= 75:
+                    self._boost_stat(calibrated, 'proj_pts', 0.94)
+                    calibrated['notes'] += " | Elite ISO D"
+                    applied = True
+
+                if 'SPOT_UP' in sec_playtypes and by_playtype.get('SPOT_UP', 0) >= 75:
+                    self._boost_stat(calibrated, 'proj_3pm', 0.94)
+                    calibrated['notes'] += " | Elite Spot-Up D"
+                    applied = True
+
+            if applied:
+                conn.close()
+                return
+
+            # Fallback: aggregate best diff_pct against rim-based players.
+            rim_based = {'P&R_ROLL_MAN', 'OFF_BALL_CUTTER', 'PUTBACK', 'POST_UP'}
+            if not any(pt in rim_based for pt in sec_playtypes):
+                conn.close()
+                self._log_skip(player_name, 'DEFENSIVE_DIFF', f"No rim playtype (has: {sec_playtypes})")
+                return
+
+            cursor.execute(
+                """
                 SELECT player_name, diff_pct
                 FROM player_defense
                 WHERE team_abbr = ? AND diff_pct IS NOT NULL
                 ORDER BY diff_pct ASC
                 LIMIT 1
-            """, (opponent_abbr,))
-
+                """,
+                (opponent_abbr,),
+            )
             row = cursor.fetchone()
             conn.close()
-
             if not row:
-                self._log_skip(player_name, 'DEFENSIVE_DIFF', 
-                    f"No defensive data for {opponent_abbr}")
-                return  # No defensive data for opponent
+                self._log_skip(player_name, 'DEFENSIVE_DIFF', f"No defensive data for {opponent_abbr}")
+                return
 
             rim_protector_name, diff_pct = row
-
-            # Elite rim protection = negative diff% (opponents shoot WORSE than expected)
-            # diff_pct of -10% → opponents shoot 10% worse → penalty for our player
-            # diff_pct of +5% → weak rim D → boost for our player
-
-            # Convert diff_pct to modifier: -10% diff → 0.90 modifier (10% penalty)
-            modifier = 1.0 + (diff_pct / 100)
-
-            # Cap adjustment at ±12%
-            modifier = max(0.88, min(1.12, modifier))
-
-            # Apply to points projection
+            modifier = max(0.88, min(1.12, 1.0 + (diff_pct / 100)))
             self._boost_stat(calibrated, 'proj_pts', modifier)
-            
-            # Log adjustment
-            self._log_adjustment(player_name, 'DEFENSIVE_DIFF', modifier,
-                f"vs {rim_protector_name}: {diff_pct:.1f}% diff")
-
-            # Add note if significant (>3% adjustment)
-            if abs(modifier - 1.0) > 0.03:
-                pct_change = int((modifier - 1.0) * 100)
-                if diff_pct < -5:
-                    calibrated['notes'] += f" | Elite Rim D ({rim_protector_name[:10]}, {pct_change:+d}%)"
-                elif diff_pct > 3:
-                    calibrated['notes'] += f" | Weak Rim D ({pct_change:+d}%)"
-
+            self._log_adjustment(player_name, 'DEFENSIVE_DIFF', modifier, f"vs {rim_protector_name}: {diff_pct:.1f}% diff")
         except Exception as e:
             if self.debug_log and hasattr(self, 'logger'):
                 self.logger.debug(f"ERROR | {player_name} | DEFENSIVE_DIFF | {str(e)}")
@@ -1912,9 +2195,9 @@ class LudiCalibrator:
                 if def_style == 'FUNNEL':
                     # Funnel defense vulnerable in transition
                     if "Transition Chaos" not in calibrated.get('notes', ''):
-                        self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
+                        self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.05, wowy_confidence)
                         calibrated['notes'] += " | Transition Edge (sec)"
-                        self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
+                        self._log_adjustment(player_name, 'PLAYTYPE', 1.05,
                             "TRANSITION vs FUNNEL: fast break chaos")
                 elif def_style == 'PAINT_PACK':
                     # Set defense slows transition
@@ -1928,6 +2211,32 @@ class LudiCalibrator:
                     calibrated['notes'] += " | Fast Break Edge"
                     self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
                         "TRANSITION vs HACKERS: fast break opportunities")
+
+            # === HANDOFF MATCHUPS (2 total) ===
+            elif playtype == 'HANDOFF':
+                if def_style == 'BLITZ':
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.95, wowy_confidence)
+                    calibrated['notes'] += " | Handoff Tax vs Blitz"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.95,
+                        "HANDOFF vs BLITZ: pressure disrupts dribble handoffs")
+                elif def_style == 'PAINT_PACK':
+                    self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
+                    calibrated['notes'] += " | Handoff vs Drop"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.08,
+                        "HANDOFF vs PAINT_PACK: drop creates pull-up space")
+
+            # === OFF_SCREEN MATCHUPS (2 total) ===
+            elif playtype == 'OFF_SCREEN':
+                if def_style == 'PAINT_PACK':
+                    self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.10, wowy_confidence)
+                    calibrated['notes'] += " | Off-Screen vs Pack"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 1.10,
+                        "OFF_SCREEN vs PAINT_PACK: late closeouts")
+                elif def_style == 'PERIMETER':
+                    self._boost_stat_with_confidence(calibrated, 'proj_3pm', 0.95, wowy_confidence)
+                    calibrated['notes'] += " | Off-Screen Tax"
+                    self._log_adjustment(player_name, 'PLAYTYPE', 0.95,
+                        "OFF_SCREEN vs PERIMETER: tight screen navigation")
 
             # === P&R_ROLL_MAN MATCHUPS (3 total) ===
             elif playtype == 'P&R_ROLL_MAN':
@@ -2397,7 +2706,8 @@ class LudiCalibrator:
         # Guards with high offensive speed (>4.5 mph) = hustle plays
         if is_guard and speed > 4.5:
             self._boost_stat(calibrated, 'proj_ast', 1.03)
-            self._boost_stat(calibrated, 'proj_stl', 1.02)
+            # Phase 7.9.5: Removed STL boost - speed doesn't causally predict steals
+            # self._boost_stat(calibrated, 'proj_stl', 1.02)
             calibrated['notes'] += " | Speed Hustle"
 
         # Declining speed trend: last 5 games slower than 30-day avg by >5%

@@ -60,6 +60,26 @@ def get_db_connection(db_path: str = "ludi.db") -> sqlite3.Connection:
     return conn
 
 
+def normalize_pct_value(raw_value: Optional[float]) -> float:
+    """
+    Normalize mixed-scale percentages to canonical 0-100 storage.
+
+    Some BDL endpoints return proportions (0-1), while others return already
+    percent-scaled values (0-100). We normalize only strict fractions.
+    """
+    if raw_value is None:
+        return 0.0
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return 0.0
+    if value < 0:
+        return 0.0
+    if 0 < value < 1.0:
+        return round(value * 100.0, 4)
+    return round(value, 4)
+
+
 def _build_team_lookup(conn: sqlite3.Connection) -> Dict[str, str]:
     """
     Build player name → team_abbr lookup from our players table.
@@ -145,7 +165,7 @@ def fetch_defense_data(client: BDLClient, team_lookup: Dict[str, str],
             'team_abbr': team_abbr,
             'season': CURRENT_SEASON,
             'gp': stats.get('gp', 0) or 0,
-            'freq_pct': stats.get('freq', 0.0) or 0.0,
+            'freq_pct': normalize_pct_value(stats.get('freq', 0.0) or 0.0),
             'dfgm': stats.get('d_fgm', 0.0) or 0.0,
             'dfga': stats.get('d_fga', 0.0) or 0.0,
             'dfg_pct': stats.get('d_fg_pct', 0.0) or 0.0,
@@ -584,7 +604,7 @@ def fetch_synergy_data(client: BDLClient, team_lookup: Dict[str, str],
                 'playtype': playtype_tag,
                 'games_played': gp,
                 'poss_per_game': poss_per_game,
-                'freq_pct': stats.get('poss_pct', 0.0) or 0.0,
+                'freq_pct': normalize_pct_value(stats.get('poss_pct', 0.0) or 0.0),
                 'ppp': stats.get('ppp', 0.0) or 0.0,
                 'pts_per_game': pts_per_game,
                 'fgm': stats.get('fgm', 0) or 0,

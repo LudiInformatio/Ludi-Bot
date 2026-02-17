@@ -337,11 +337,26 @@ class LudiOracle:
             'tov': 'TOV'
         }
 
+        combo_map = {
+            'pra': ['PTS', 'REB', 'AST'],
+            'pa': ['PTS', 'AST'],
+            'pr': ['PTS', 'REB'],
+            'ra': ['REB', 'AST'],
+        }
+
         for prop_key, line in sportsbook_lines.items():
             if line is None or line == 'N/A':
                 continue
 
-            stat_key = stat_key_map.get(prop_key.lower())
+            prop_key_lower = prop_key.lower()
+            combo_keys = combo_map.get(prop_key_lower)
+            if combo_keys and all(ck in distributions for ck in combo_keys):
+                combo_dist = sum(distributions[ck] for ck in combo_keys)
+                hit_rate = np.mean(combo_dist > float(line))
+                hit_rates[prop_key] = round(hit_rate, 4)
+                continue
+
+            stat_key = stat_key_map.get(prop_key_lower)
             if stat_key and stat_key in distributions:
                 dist = distributions[stat_key]
                 hit_rate = np.mean(dist > float(line))

@@ -24,7 +24,7 @@ except ImportError:
 # - Implemented composite confidence tier (edge + gold combos)
 # - Switched to tier-based unit sizing (DIAMOND=1.0, BLUE CHIP=0.75, etc.)
 # - Gold combos: BLK/3PM/TOV/STL UNDER (+1 tier)
-# - Archetype modifiers DISABLED (audit needed first)
+# - Archetype modifiers re-enabled after Phase 7.9 archetype overhaul
 #
 # CHANGELOG V5.1 (Feb 2, 2026):
 # - Added REB OVER filter (skip until calibration - was -198u leak)
@@ -267,9 +267,10 @@ class LudiReporter:
                                 note_elements.append(f"🚨 GTD Risk")
 
                             # E) Referee Context (from Module G)
-                            if abs(game.get('ref_impact', 1.0) - 1.0) > 0.04:
-                                ref_val = game.get('ref_impact')
-                                ref_note = f"⚖️ Refs Boost Overs ({ref_val}x)" if ref_val > 1.0 else f"⚖️ Refs Drag Unders ({ref_val}x)"
+                            ref_data = game.get('ref_data', {})
+                            ref_pace = ref_data.get('pace_impact', 1.0) if isinstance(ref_data, dict) else 1.0
+                            if abs(ref_pace - 1.0) > 0.04:
+                                ref_note = f"⚖️ Refs Boost Overs ({ref_pace}x)" if ref_pace > 1.0 else f"⚖️ Refs Drag Unders ({ref_pace}x)"
                                 note_elements.append(ref_note)
 
                             # F) Yak Decision Note (V2.0 - Explicit Injury Confirmation)
@@ -349,7 +350,7 @@ class LudiReporter:
                                         'confidence_tier': confidence_tier,
                                         'note': " | ".join(note_elements),
                                         'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
-                                        'referee_impact': game.get('ref_impact', 1.0),
+                                        'referee_impact': ref_pace,
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
                                         'bookmaker': book_over if bet_direction == 'over' else book_under  # Line Shopping V2.0
@@ -366,14 +367,14 @@ class LudiReporter:
                                 "bet_on": bet_direction.upper(),
                                 "line": line,
                                 "proj": round(final_proj, 2),
-                                "ev": edge,  # V2.1: Now using devigged edge (not inflated ev)
+                                "edge": edge,  # True devigged edge percentage
                                 "units": units,
                                 "note": " | ".join(note_elements),
                                 "tags": tags_formatted  # Week 2, Days 3-4: Tag classification
                             })
 
                 # --- 4. CORRELATION CHECK (SGP TARGETS) ---
-                if len([x for x in player_props if x['units'] >= 1.2]) >= 2:
+                if len([x for x in player_props if x['units'] >= 0.75]) >= 2:
                     for x in player_props: 
                         x['note'] += " [🔥 CORRELATED SGP]"
                 
@@ -388,7 +389,7 @@ class LudiReporter:
                 unique_props[key] = p
             else:
                 # Keep the one with higher EV
-                if p['ev'] > unique_props[key]['ev']:
+                if p['edge'] > unique_props[key]['edge']:
                     unique_props[key] = p
         
         all_props = list(unique_props.values())
@@ -405,8 +406,8 @@ class LudiReporter:
                     'total_bets': len(all_props),
                     'total_units': sum(p['units'] for p in all_props),
                     'pending': len(all_props),  # All bets start as pending
-                    'avg_edge': sum(p.get('true_edge', 0) for p in all_props) / len(all_props) if all_props else 0,
-                    'avg_ev': sum(p['ev'] for p in all_props) / len(all_props),
+                    'avg_edge': sum(p.get('edge', 0) for p in all_props) / len(all_props) if all_props else 0,
+                    'avg_ev': sum(p['edge'] for p in all_props) / len(all_props),
                     'games_analyzed': len(processed_slate)
                 }
                 self.bet_logger.calculate_daily_summary(run_date, summary_data)
@@ -453,17 +454,21 @@ class LudiReporter:
 
     def _map_stat(self, p, key):
         """Maps internal projection keys to common sportsbook prop keys."""
-        m = {
-            'pts': 'proj_pts',
-            'reb': 'proj_reb',
-            'ast': 'proj_ast',
-            '3pm': 'proj_3pm',
-            'oreb': 'proj_oreb',
-            'steals': 'proj_stl',
-            'blocks': 'proj_blk',
-            'defensive_rebounds': 'proj_dreb'
+        COMBOS = {
+            'pra': ('proj_pts', 'proj_reb', 'proj_ast'),
+            'pa': ('proj_pts', 'proj_ast'),
+            'pr': ('proj_pts', 'proj_reb'),
+            'ra': ('proj_reb', 'proj_ast'),
         }
-        return p.get(m.get(key.lower(), ''), 0)
+        k = key.lower()
+        if k in COMBOS:
+            return sum(p.get(c, 0) for c in COMBOS[k])
+        m = {
+            'pts': 'proj_pts', 'reb': 'proj_reb', 'ast': 'proj_ast',
+            '3pm': 'proj_3pm', 'oreb': 'proj_oreb', 'dreb': 'proj_dreb',
+            'stl': 'proj_stl', 'blk': 'proj_blk', 'tov': 'proj_tov'
+        }
+        return p.get(m.get(k, ''), 0)
 
     def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction=''):
         """
@@ -486,11 +491,20 @@ class LudiReporter:
         else:
             tier_score = 0     # THE STEAL zone
 
-        # --- Archetype modifier (DISABLED until archetype audit complete) ---
-        # KNOWN ISSUE: 3 inconsistent archetype systems exist in codebase.
-        # Misclassifications found: Turner/Lopez/Porzingis → TWO_WAY_WING,
-        # Westbrook → STRETCH_BIG, etc. Position-agnostic thresholds cause this.
-        # DO NOT enable until classification is fixed.
+        # --- Archetype modifier (re-enabled after Phase 7.9 overhaul) ---
+        positive_archetypes = {
+            'HELIOCENTRIC_MAESTRO', 'ISO_ASSASSIN', 'SLASHING_CREATOR',
+            'SNIPER_ELITE', 'WARRIOR_BIG', 'RIM_GUARDIAN', 'PERIMETER_HAWK',
+            'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR'
+        }
+        # Phase 7.9.5: Removed GENERALIST and WEAK_LINK penalties
+        # GENERALIST = neutral (no strong playtype signal, but not a bad bet)
+        # WEAK_LINK = moved to defensive_tag column (not a primary archetype)
+        negative_archetypes = set()  # Empty set - no archetype penalties
+        if archetype in positive_archetypes:
+            tier_score += 1
+        elif archetype in negative_archetypes:
+            tier_score -= 1
 
         # --- Stat-direction modifier (gold combos from backtest) ---
         GOLD_COMBOS = {
@@ -499,7 +513,9 @@ class LudiReporter:
             'TOV_UNDER',   # +79.8u, 71.1% WR
             'STL_UNDER',   # +114.5u, 53.4% WR
         }
-        stat_dir = f"{stat_key}_{bet_direction}".upper()
+        STAT_SHORT = {'steals': 'stl', 'blocks': 'blk', 'turnovers': 'tov', 'defensive_rebounds': 'dreb', 'threes': '3pm'}
+        norm_key = STAT_SHORT.get(stat_key.lower(), stat_key.lower())
+        stat_dir = f"{norm_key}_{bet_direction}".upper()
         if stat_dir in GOLD_COMBOS:
             tier_score += 1
 
@@ -541,6 +557,9 @@ class LudiReporter:
             'blk': 1.3,    # Blocks: widened from 1.0 to 1.3
             'tov': 1.6,    # Turnovers: widened from 1.2 to 1.6
             'pra': 10.4,   # Pts+Reb+Ast combo: widened from 8.0 to 10.4
+            'pa': 9.2,     # Pts+Ast combo
+            'pr': 9.5,     # Pts+Reb combo
+            'ra': 5.3,     # Reb+Ast combo
         }
 
         # Get standard deviation for this stat (default to pts if unknown)
@@ -615,7 +634,8 @@ class LudiReporter:
                         if tags_list:
                             tags_display = " | ".join(tags_list)
                             report += f"      🏷️  {tags_display}\n"
-                    except: pass
+                    except Exception as e:
+                        print(f"   >>> [Module F] Tag parse error: {e}")
 
                 if bet['note']:
                     report += f"      📝 {bet['note']}\n"

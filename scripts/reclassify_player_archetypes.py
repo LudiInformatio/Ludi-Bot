@@ -145,6 +145,10 @@ def main():
     print(f"Total active players: {total_players}")
     print()
 
+    defensive_archetypes = {
+        'RIM_GUARDIAN', 'PERIMETER_HAWK', 'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR', 'WEAK_LINK'
+    }
+
     # Count problematic cases
     null_count = before_dist.get('NULL', 0)
     two_way_count = before_dist.get('TWO_WAY_WING', 0)
@@ -258,6 +262,10 @@ def main():
         delta_str = f"({delta:+d})" if delta != 0 else ""
 
         print(f"{archetype:30} {count:4} ({count/total_players*100:.1f}%) {delta_str}")
+
+    def_count = sum(after_dist.get(a, 0) for a in defensive_archetypes)
+    print()
+    print(f"Defensive archetype population: {def_count} ({(def_count/total_players*100):.1f}%)")
 
     print()
 

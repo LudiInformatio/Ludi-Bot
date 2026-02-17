@@ -699,6 +699,28 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_leverage_player ON player_leverage_usage(player_name)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_leverage_team ON player_leverage_usage(team_abbr)')
 
+        # Defensive Synergy (Phase 7.9 archetype overhaul)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_defensive_synergy (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name TEXT NOT NULL,
+                team_abbr TEXT,
+                season TEXT DEFAULT '2025-26',
+                playtype TEXT NOT NULL,
+                games_played INTEGER,
+                poss_per_game REAL,
+                freq_pct REAL,
+                ppp_allowed REAL,
+                fg_pct_allowed REAL,
+                percentile INTEGER,
+                synced_at TEXT,
+                UNIQUE(player_name, playtype, season)
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_def_synergy_player ON player_defensive_synergy(player_name)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_def_synergy_team ON player_defensive_synergy(team_abbr)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_def_synergy_playtype ON player_defensive_synergy(playtype)')
+
         # Create lineup_season_totals view (aggregates per-game lineup data)
         # This view aggregates team_lineups from per-game to full-season totals
         c.execute('''

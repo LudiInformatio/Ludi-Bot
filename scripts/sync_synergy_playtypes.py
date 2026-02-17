@@ -45,7 +45,41 @@ PLAYTYPES = {
     'defense': {'url': 'defense-dash-overall', 'tag': 'DEFENSE', 'table': 'player_defense'}
 }
 
+DEFENSIVE_PLAYTYPES = {
+    'def-isolation': {'url': 'isolation?TypeGrouping=Defensive', 'tag': 'ISO', 'defensive': True},
+    'def-ball-handler': {'url': 'ball-handler?TypeGrouping=Defensive', 'tag': 'PR_BALL_HANDLER', 'defensive': True},
+    'def-roll-man': {'url': 'roll-man?TypeGrouping=Defensive', 'tag': 'PR_ROLL_MAN', 'defensive': True},
+    'def-spot-up': {'url': 'spot-up?TypeGrouping=Defensive', 'tag': 'SPOT_UP', 'defensive': True},
+    'def-post-up': {'url': 'playtype-post-up?TypeGrouping=Defensive', 'tag': 'POST_UP', 'defensive': True},
+    'def-cut': {'url': 'cut?TypeGrouping=Defensive', 'tag': 'CUT', 'defensive': True},
+}
+
 DB_PATH = 'ludi.db'
+
+
+def ensure_defensive_synergy_table():
+    """Create defensive synergy table if it does not exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS player_defensive_synergy (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_name TEXT NOT NULL,
+            team_abbr TEXT,
+            season TEXT DEFAULT '2025-26',
+            playtype TEXT NOT NULL,
+            games_played INTEGER,
+            poss_per_game REAL,
+            freq_pct REAL,
+            ppp_allowed REAL,
+            fg_pct_allowed REAL,
+            percentile INTEGER,
+            synced_at TEXT,
+            UNIQUE(player_name, playtype, season)
+        )
+    """)
+    conn.commit()
+    conn.close()
 
 async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
     """Scrape a single playtype page and return player data."""
@@ -181,7 +215,7 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                     player = {
                         'player_name': player_name, 'team_abbr': ct[1], 'season': season,
                         'age': parse_int(ct[2]), 'position': ct[3],
-                        'gp': parse_int(ct[4]), 'freq_pct': parse_float(ct[6]),
+                        'gp': parse_int(ct[4]), 'freq_pct': parse_percent(ct[6]),
                         'dfgm': parse_float(ct[7]), 'dfga': parse_float(ct[8]),
                         'dfg_pct': parse_float(ct[9]), 'fg_pct': parse_float(ct[10]),
                         'diff_pct': parse_float(ct[11])
@@ -198,21 +232,22 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
                         'team_abbr': ct[1] if len(ct) > 1 else None,
                         'games_played': parse_int(ct[2]),
                         'poss_per_game': parse_float(ct[3]),
-                        'freq_pct': parse_float(ct[4]),
+                        'freq_pct': parse_percent(ct[4]),
                         'ppp': parse_float(ct[5]),
                         'pts_per_game': parse_float(ct[6]),
                         'fgm': parse_float(ct[7]),
                         'fga': parse_float(ct[8]),
                         'fg_pct': parse_float(ct[9]),
                         'efg_pct': parse_float(ct[10]),
-                        'ft_freq_pct': parse_float(ct[11]),
-                        'tov_freq_pct': parse_float(ct[12]),
-                        'sf_freq_pct': parse_float(ct[13]),
-                        'and_one_freq_pct': parse_float(ct[14]),
-                        'score_freq_pct': parse_float(ct[15]),
+                        'ft_freq_pct': parse_percent(ct[11]),
+                        'tov_freq_pct': parse_percent(ct[12]),
+                        'sf_freq_pct': parse_percent(ct[13]),
+                        'and_one_freq_pct': parse_percent(ct[14]),
+                        'score_freq_pct': parse_percent(ct[15]),
                         'percentile': parse_int(ct[16]),
                         'playtype': config['tag'],
-                        'season': season
+                        'season': season,
+                        'defensive': config.get('defensive', False)
                     }
                 
                 players.append(player)
@@ -241,6 +276,24 @@ def parse_float(text: str) -> float:
         return 0.0
 
 
+def parse_percent(text: str) -> float:
+    """
+    Parse percentage-like values to canonical 0-100 scale.
+
+    If source includes '%' we trust it is already percent-scaled.
+    If source has no '%' and is a strict fraction (0-1), convert to 0-100.
+    """
+    if not text or text == '-' or text == '':
+        return 0.0
+    has_pct = '%' in text
+    val = parse_float(text)
+    if has_pct:
+        return val
+    if 0 < val < 1.0:
+        return val * 100.0
+    return val
+
+
 def parse_int(text: str) -> int:
     """Parse integer from text."""
     if not text or text == '-' or text == '':
@@ -264,7 +317,28 @@ def save_to_database(players: list):
     for p in players:
         try:
             # Determine which table to save to based on keys
-            if 'drives_per_game' in p:
+            if p.get('defensive'):
+                cursor.execute("""
+                    INSERT INTO player_defensive_synergy (
+                        player_name, team_abbr, season, playtype,
+                        games_played, poss_per_game, freq_pct, ppp_allowed,
+                        fg_pct_allowed, percentile, synced_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(player_name, playtype, season) DO UPDATE SET
+                        team_abbr=excluded.team_abbr,
+                        games_played=excluded.games_played,
+                        poss_per_game=excluded.poss_per_game,
+                        freq_pct=excluded.freq_pct,
+                        ppp_allowed=excluded.ppp_allowed,
+                        fg_pct_allowed=excluded.fg_pct_allowed,
+                        percentile=excluded.percentile,
+                        synced_at=excluded.synced_at
+                """, (
+                    p['player_name'], p['team_abbr'], p['season'], p['playtype'],
+                    p['games_played'], p['poss_per_game'], p['freq_pct'], p['ppp'],
+                    p['fg_pct'], p['percentile'], datetime.now().isoformat()
+                ))
+            elif 'drives_per_game' in p:
                 cursor.execute("""
                     INSERT OR REPLACE INTO player_drives (
                         player_name, team_abbr, season, gp, min_per_game,
@@ -423,17 +497,25 @@ def main():
     parser = argparse.ArgumentParser(description='Sync NBA Synergy playtype data')
     parser.add_argument('--all', action='store_true', help='Scrape all playtypes')
     parser.add_argument('--playtype', type=str, help='Specific playtype to scrape')
+    parser.add_argument('--defensive', action='store_true', help='Scrape defensive Synergy playtypes')
     parser.add_argument('--season', type=str, default='2025-26', help='NBA season (e.g., 2025-26)')
     
     args = parser.parse_args()
+    ensure_defensive_synergy_table()
     
-    if args.all:
+    if args.all and args.defensive:
+        playtypes = list(DEFENSIVE_PLAYTYPES.keys())
+        PLAYTYPES.update(DEFENSIVE_PLAYTYPES)
+    elif args.all:
         playtypes = list(PLAYTYPES.keys())
     elif args.playtype:
+        if args.defensive:
+            PLAYTYPES.update(DEFENSIVE_PLAYTYPES)
         playtypes = [args.playtype]
     else:
         print("Usage: --all or --playtype <name>")
-        print(f"Available: {list(PLAYTYPES.keys())}")
+        available = list(PLAYTYPES.keys()) + list(DEFENSIVE_PLAYTYPES.keys())
+        print(f"Available: {available}")
         return
     
     asyncio.run(run_scraper(playtypes, args.season))

@@ -53,6 +53,16 @@ jobs:
           export PYTHONPATH=$PWD
           caffeinate -i python3 scripts/sync_synergy_playtypes.py --all --season 2025-26
 
+      - name: Sync Defensive Synergy Playtypes (NBA.com)
+        run: |
+          export PYTHONPATH=$PWD
+          caffeinate -i python3 scripts/sync_synergy_playtypes.py --all --defensive --season 2025-26
+
+      - name: Reclassify Player Archetypes
+        run: |
+          export PYTHONPATH=$PWD
+          python3 scripts/reclassify_player_archetypes.py
+
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
         if: always()

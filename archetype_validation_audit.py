@@ -54,7 +54,7 @@ def run_archetype_audit():
 
     player_types = {}
     for _, p in baselines.iterrows():
-        # Create a mock packet for _assign_archetype
+        # Create a mock packet for _assign_unified_archetype
         # (Assuming Usg is approx (fga + 0.44*fta)/minutes/2.1)
         usg = 0.20
         if p['minutes'] > 0:
@@ -65,7 +65,7 @@ def run_archetype_audit():
             'base_pts': p['pts'], 'base_reb': p['reb'], 'base_ast': p['ast'],
             'base_3pm': p['fg3m'], 'base_usg': usg, 'base_stl': 0, 'base_blk': 0
         }
-        archetype, _ = calib._assign_archetype(packet)
+        archetype, _ = calib._assign_unified_archetype(packet)
         player_types[p['player_name']] = archetype
 
     df['archetype'] = df['player_name'].map(player_types)

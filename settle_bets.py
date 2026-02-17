@@ -132,11 +132,12 @@ class BetSettler:
             'TURNOVERS': 'tov',
             'PRA': 'pra',
             'PR': 'pr',
-            'PA': 'pa'
+            'PA': 'pa',
+            'RA': 'ra'
         }
 
         db_col = stat_map.get(stat_cat)
-        if not db_col and stat_cat not in ['PRA', 'PR', 'PA']:
+        if not db_col and stat_cat not in ['PRA', 'PR', 'PA', 'RA']:
             print(f"   ❌ Unknown stat category: {stat_cat}")
             return None, None
 
@@ -149,7 +150,7 @@ class BetSettler:
             pass
 
         def fetch_stats_by_id(pid):
-            if stat_cat in ['PRA', 'PR', 'PA']:
+            if stat_cat in ['PRA', 'PR', 'PA', 'RA']:
                 c.execute('''
                     SELECT pts, reb, ast, minutes FROM player_game_logs
                     WHERE player_id = ? AND game_date = ?
@@ -157,7 +158,14 @@ class BetSettler:
                 row = c.fetchone()
                 if not row: return None, None
                 p, r, a, mins = row
-                val = p + r + a if stat_cat == 'PRA' else (p + r if stat_cat == 'PR' else p + a)
+                if stat_cat == 'PRA':
+                    val = p + r + a
+                elif stat_cat == 'PR':
+                    val = p + r
+                elif stat_cat == 'PA':
+                    val = p + a
+                else:  # RA
+                    val = r + a
                 return val, mins
             else:
                 c.execute(f"SELECT {db_col}, minutes FROM player_game_logs WHERE player_id = ? AND game_date = ?", (pid, game_date))
@@ -165,7 +173,7 @@ class BetSettler:
                 return (row[0], row[1]) if row else (None, None)
 
         def fetch_stats_by_name(pname):
-            if stat_cat in ['PRA', 'PR', 'PA']:
+            if stat_cat in ['PRA', 'PR', 'PA', 'RA']:
                 c.execute('''
                     SELECT pts, reb, ast, minutes FROM player_game_logs
                     WHERE player_name = ? AND game_date = ?
@@ -173,7 +181,14 @@ class BetSettler:
                 row = c.fetchone()
                 if not row: return None, None
                 p, r, a, mins = row
-                val = p + r + a if stat_cat == 'PRA' else (p + r if stat_cat == 'PR' else p + a)
+                if stat_cat == 'PRA':
+                    val = p + r + a
+                elif stat_cat == 'PR':
+                    val = p + r
+                elif stat_cat == 'PA':
+                    val = p + a
+                else:  # RA
+                    val = r + a
                 return val, mins
             else:
                 c.execute(f"SELECT {db_col}, minutes FROM player_game_logs WHERE player_name = ? AND game_date = ?", (pname, game_date))

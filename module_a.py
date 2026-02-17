@@ -579,11 +579,63 @@ class Gatekeeper:
             if props:
                 print(f"      ✅ [BDL] Retrieved {len(props)} props")
                 self.games[game_id]['bdl_props'] = props
+                self._parse_bdl_props(game_id, props)
             else:
                 print(f"      ⚠️ [BDL] No props available")
 
         except Exception as e:
             print(f"      ⚠️ [BDL] Error: {e}")
+
+    def _parse_bdl_props(self, game_id, raw_props):
+        """Parse BDL player_props into standard pipeline format."""
+        BDL_VENDOR_MAP = {
+            'draftkings': 'DraftKings', 'fanduel': 'FanDuel',
+            'betmgm': 'BetMGM', 'caesars': 'Caesars',
+            'bet365': 'bet365',
+        }
+        COMBO_MAP = {
+            'points_rebounds_assists': 'pra',
+            'points_assists': 'pa',
+            'points_rebounds': 'pr',
+            'rebounds_assists': 'ra',
+        }
+        
+        for prop in raw_props:
+            if prop.get('market', {}).get('type') != 'over_under':
+                continue
+            player_id = prop.get('player_id')
+            player_name = self._resolve_bdl_player(player_id)
+            if not player_name:
+                continue
+            prop_type = prop.get('prop_type', '')
+            internal_key = COMBO_MAP.get(prop_type, prop_type)
+            line = float(prop.get('line_value', 0))
+            vendor = BDL_VENDOR_MAP.get(prop.get('vendor', ''), prop.get('vendor', ''))
+            over_odds = prop.get('market', {}).get('over_odds', -110)
+            under_odds = prop.get('market', {}).get('under_odds', -110)
+
+            if player_name not in self.games[game_id]['props']:
+                self.games[game_id]['props'][player_name] = {}
+            if internal_key not in self.games[game_id]['props'][player_name]:
+                self.games[game_id]['props'][player_name][internal_key] = {
+                    'line': line,
+                    'odds_over': over_odds, 'book_over': vendor,
+                    'odds_under': under_odds, 'book_under': vendor,
+                }
+
+    def _resolve_bdl_player(self, player_id):
+        """Resolve BDL player_id to player name using canonical IDs."""
+        if not player_id:
+            return None
+        try:
+            c = self.db_conn.cursor()
+            c.execute("SELECT player_name FROM player_canonical_ids WHERE bdl_id = ?", (player_id,))
+            row = c.fetchone()
+            if row:
+                return row[0]
+        except Exception as e:
+            pass
+        return None
 
     def fetch_full_sim_packet(self):
         """ [4] GET SIM INPUTS (Same as before) """

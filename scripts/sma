@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+PYTHON_BIN=".venv/bin/python"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="python3"
+fi
+
+echo "== Sports Data Model Architect: Audit First =="
+echo "Project: $ROOT_DIR"
+echo
+
+run_audit() {
+  local label="$1"
+  local script_path="$2"
+  echo "$label"
+  if "$PYTHON_BIN" "$script_path"; then
+    echo "status: PASS"
+  else
+    echo "status: FINDINGS/ERROR (non-zero exit)"
+  fi
+  echo
+}
+
+run_audit "1) Temporal Integrity Audit" "skills/sports-data-model-architect/scripts/audit_temporal_integrity.py"
+echo
+run_audit "2) Feature Coverage Audit" "skills/sports-data-model-architect/scripts/audit_feature_coverage.py"
+run_audit "3) Entity Resolution Audit" "skills/sports-data-model-architect/scripts/audit_entity_resolution.py"
+
+if [[ $# -gt 0 ]]; then
+  echo "Task note: $*"
+fi
+
+echo "Completed. Use findings to produce critical/high/medium summary and change plan."

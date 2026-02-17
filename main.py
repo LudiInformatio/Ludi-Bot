@@ -287,7 +287,15 @@ class LudiOrchestrator:
                         book_over = 'legacy'
                         book_under = 'legacy'
 
-                    mk = {'points': 'pts', 'rebounds': 'reb', 'assists': 'ast', 'threes': '3pm', 'offensive_rebounds': 'oreb'}.get(k, k)
+                    mk = {
+                        'points': 'pts', 'rebounds': 'reb', 'assists': 'ast',
+                        'threes': '3pm', 'offensive_rebounds': 'oreb',
+                        'steals': 'stl', 'blocks': 'blk', 'turnovers': 'tov',
+                        'points_rebounds_assists': 'pra',
+                        'points_assists': 'pa',
+                        'points_rebounds': 'pr',
+                        'rebounds_assists': 'ra',
+                    }.get(k, k)
                     props_fmt[mk] = {
                         'line': line, 
                         'odds_over': o_over, 
@@ -295,7 +303,9 @@ class LudiOrchestrator:
                         'book_over': book_over,
                         'book_under': book_under
                     }
-                except: continue
+                except Exception as e:
+                    print(f"   >>> [main] Prop format error for {k}: {e}")
+                    continue
             
             if props_fmt:
                 p_dict['sportsbook_props'] = props_fmt
@@ -315,7 +325,7 @@ class LudiOrchestrator:
             'matchup': game_data.get('matchup', 'UNKNOWN'),
             'game_date': get_est_today(),
             'home_team': home, 'away_team': away, 'opponent': '',
-            'spread': abs(spread) if spread != 'N/A' else 0,
+            'spread': float(spread) if spread != 'N/A' else 0,
             'ref_data': game_data.get('archetypes', {}).get('ref_data', {'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0}),
             'players': players
         }]

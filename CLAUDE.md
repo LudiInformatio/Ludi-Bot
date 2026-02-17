@@ -205,6 +205,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 This project has custom skills available:
 - `/backtest` - Run validation suite and check model accuracy
 - `/daily` - Daily pipeline health check
+- `/sports-model` (alias: `/sma`) - Use `skills/sports-data-model-architect` for balanced audit-first data modeling + implementation support
 
 ---
 

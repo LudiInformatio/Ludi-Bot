@@ -12,6 +12,7 @@ with synergy playtype modifiers happens in Module E during calibration.
 
 import sqlite3
 from datetime import datetime, timedelta
+from module_e import LudiCalibrator
 
 # Database path
 DB_PATH = "ludi.db"
@@ -177,6 +178,7 @@ def populate_archetypes():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
+    calibrator = LudiCalibrator(db_path=DB_PATH)
     
     # Get all unique players from player_game_logs
     c.execute('''
@@ -239,35 +241,25 @@ def populate_archetypes():
         # Calculate usage
         usg = calculate_usage(fga, fta, tov, minutes)
 
-        # Get synergy playtype data
-        c.execute('''
-            SELECT playtype, freq_pct
-            FROM player_synergy_playtypes
-            WHERE player_name = ? AND season = '2025-26'
-        ''', (player_name,))
-        synergy_rows = c.fetchall()
-        synergy_data = {row[0]: row[1] for row in synergy_rows}
-
-        # Get tracking data
-        c.execute('''
-            SELECT
-                AVG(drives_fga) as avg_drives,
-                AVG(catch_shoot_fga) as avg_cs_fga,
-                AVG(pull_up_fga) as avg_pu_fga
-            FROM player_game_tracking
-            WHERE player_name = ? AND game_date >= date('now', '-60 days')
-        ''', (player_name,))
-        tracking_row = c.fetchone()
-        tracking_data = {}
-        if tracking_row:
-            tracking_data = {
-                'avg_drives': tracking_row[0] or 0,
-                'avg_cs_fga': tracking_row[1] or 0,
-                'avg_pu_fga': tracking_row[2] or 0
-            }
-
-        # Classify archetype with enriched data
-        archetype = classify_archetype(pts, reb, ast, tpm, stl, blk, usg, synergy_data, tracking_data)
+        player_packet = {
+            'name': player_name,
+            'PLAYER_NAME': player_name,
+            'team': team,
+            'TEAM_ABBREVIATION': team,
+            'position': 'UNK',
+            'base_pts': pts,
+            'base_reb': reb,
+            'base_ast': ast,
+            'base_3pm': tpm,
+            'base_stl': stl,
+            'base_blk': blk,
+            'base_usg': usg,
+            'base_fga': fga,
+            'base_fta': fta,
+            'base_tov': tov,
+            'base_min': minutes,
+        }
+        archetype, _ = calibrator._assign_unified_archetype(player_packet)
         
         # Update players table (upsert)
         # FIXED: Now updates base_ppg and usg_pct

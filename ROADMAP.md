@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 15, 2026
+**Last Updated:** February 16, 2026 (5:15 PM EST)
 **Current Phase:** Phase 7 - All-Star Break Sprint
-**Active Work:** Phase 7.9 Backtest Audit in progress (2/6 script audits complete, critical findings emerging)
+**Active Work:** Phase 7.9.5 Module Overhauls — C ✅, E ✅, F 🔄 (agent executing), Archetype Overhaul 🔄 (agent executing)
 **Completed:** Phases 5.5, 6.0-6.5f (see docs/archive/ for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -27,10 +27,10 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Run full pipeline dry run with all new data sources active
 - [ ] Validate all workflows via manual trigger on live game day
 
-**Phase 7.9: Backtest Audit & Analysis** 🔄 IN PROGRESS (Feb 15, 2026)
+**Phase 7.9: Backtest Audit & Analysis** 🔄 IN PROGRESS (Feb 15-16, 2026)
 **Dataset:** 15,575 settled bets (Jan 7 - Feb 12), 14,423 after VOID exclusion
 **Data:** 21 game dates, 14 with morning+evening pipeline runs (pseudo-CLV pairs)
-**Lost data:** ~5,593 bets across 11 dates (runner DB wiped by `clean: true` bug, fixed Feb 2)
+**Lost data:** ~5,593 bets across 15 game days (runner DB wiped by `clean: true` bug, fixed Feb 2)
 **Reports:** 16 analysis reports generated in `reports/` (see `reports/MASTER_TREND_REPORT_2026-02-15.md`)
 
 *Phase 1: Script Audits*
@@ -62,27 +62,43 @@ This is the single source of truth for project tasks and priorities.
 - [x] Game context — moderate favorites (-7 to -3) = +172u sweet spot
 - [x] Cross-cut analysis — archetype alignment +2.4% WR when Synergy-matched
 
-*Phase 3: Fix Critical Issues*
-- [ ] Investigate & fix Module F edge/tier logic (inverted edge calibration) 🔴 CRITICAL
-- [ ] Fix Module C OVER projection bias (46.1% WR on OVERs) 🔴 CRITICAL
-- [ ] Fix Module E vs_FUNNEL matchup logic (-105u at 49.6% WR) 🟠 HIGH
+*Phase 3: Fix Critical Issues (Module Overhauls)*
+- [x] Fix Module C OVER projection bias (46.1% WR on OVERs) ✅ commit `93635dc` — V4.0 overhaul: per-player shooting %, Poisson fix, opponent defense, fatigue tax, drives context
+- [x] Fix Module E vs_FUNNEL matchup logic (-105u at 49.6% WR) ✅ commit `d00afd0` — 9-step overhaul: duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned
+- [-] Investigate & fix Module F edge/tier logic (inverted edge calibration) 🔄 Agent executing — 9 bugs (2 P0, 3 P1, 4 P2) + combo props (PRA/PA/PR/RA) via BDL
+- [-] Player Archetype System Overhaul 🔄 Agent executing — 6 phases: new defensive archetypes (5 types replacing 2 broken), Synergy-powered secondary playtypes (hybrid 70/30), GENERALIST reduction (<25%), defensive Synergy scraping, tag_classifier sync, Module F re-enable. Plan: `docs/ARCHETYPE_OVERHAUL_PLAN.md`
 
 *Phase 4: Forward Plan*
 - [ ] Gap analysis & forward recommendations report
+- [ ] Feb 19 full pipeline dry run with all module fixes active
 
 **Critical Findings:**
 | Finding | Impact | Status |
 |---------|--------|--------|
-| 25%+ edge = 50% WR (expected 74%) | Edge calc broken above 20% | 🔴 Fix needed |
-| OVER 46.1% WR / UNDER 59.0% WR | Systematic over-projection | 🔴 Fix needed |
-| vs_FUNNEL -105u at 49.6% WR | TRANSITION +15% too aggressive | 🟠 Fix needed |
-| Home B2B Guards +3.05 pts error | Guard Tax too conservative | 🟡 Fix needed |
+| 25%+ edge = 50% WR (expected 74%) | Edge calc broken above 20% | 🔄 Module F fix in progress (edge dampening + 9 bugs) |
+| OVER 46.1% WR / UNDER 59.0% WR | Systematic over-projection | ✅ Module C V4.0 fix (commit `93635dc`) |
+| vs_FUNNEL -105u at 49.6% WR | TRANSITION +15% too aggressive | ✅ Module E fix — FUNNEL dedup (commit `d00afd0`) |
+| Home B2B Guards +3.05 pts error | Guard Tax too conservative | ✅ Module E fix — duplicate B2B removed (commit `d00afd0`) |
+| Spread sign strips abs() | Blowout tax on wrong team every game | 🔄 Module F Step 1 (P0 bug) |
+| 3 stat keys unnormalized | STL/BLK/TOV: no sim hit rates | 🔄 Module F Step 3 (P1 bug) |
+| Referee notes never generated | ref_data vs ref_impact key mismatch | 🔄 Module F Step 2 (P0 bug) |
 | Defensive activation 7% → 77% | Classification fixes applied | ✅ Fixed |
 | Offensive activation 0% → 53% | Name mismatch + classifier fixed | ✅ Fixed |
 | Valid archetypes 56% → 96% | 300 players reclassified | ✅ Fixed |
 | vs_NEUTRAL +74u, 58.9% WR | Base projections strong | ✅ Working |
 | Archetype alignment +2.4% WR | Classification quality matters | ✅ Validated |
 | Rested Home -0.35 pts error | Nearly perfect calibration | ✅ Working |
+
+**Phase 7.9.5: Module Overhauls** 🔄 IN PROGRESS (Feb 16, 2026)
+**Goal:** Fix all critical issues identified in Phase 7.9 backtest audit across 3 core modules + classifiers
+**Plans:** `docs/module_f_overhaul.md` (Module F), `docs/module_f_agent.md` (agent prompt)
+
+| Module | Status | Commit | Key Fixes |
+|--------|--------|--------|-----------|
+| C: Oracle | ✅ DONE | `93635dc` | Per-player FG%, Poisson fix, opponent defense, fatigue tax, drives context, data contract |
+| E: Calibrator | ✅ DONE | `d00afd0` | Duplicate B2B removed, ±25% global cap, FUNNEL dedup, classifier retuned, opponent profiles wired |
+| F: Alchemist | 🔄 Agent executing | — | 9 bugs (spread sign, ref key, stat normalization, gold combos, display dict) + combo props (PRA/PA/PR/RA) via BDL |
+| Archetype System | 🔄 Agent executing | — | 5 new defensive archetypes, Synergy hybrid scoring, GENERALIST <25%, defensive Synergy scraping |
 
 **Phase 7.1: Git + Roadmap Cleanup** ✅ COMPLETE
 - [x] Fix .gitignore, delete dead files, organize scripts

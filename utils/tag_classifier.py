@@ -6,6 +6,7 @@
 # Version: 1.0 (Week 2, Days 3-4)
 
 import json
+import sqlite3
 from typing import Dict, List, Optional
 
 class TagClassifier:
@@ -29,29 +30,22 @@ class TagClassifier:
         - Non-mutually exclusive scenarios (player can have multiple tags)
     """
 
-    def __init__(self):
+    def __init__(self, db_path: str = "ludi.db"):
         """Initialize with defensive scheme mapping and threshold constants."""
+        self.db_path = db_path
 
         # DEFENSIVE SCHEME MAPPING (30 NBA Teams → 5 Defensive Styles)
-        # Source: Module E lines 22-38 (2025-26 Season Updated)
+        # Source: module_e.py DEFENSIVE_STYLES
         # NOTE: Using PHX for Phoenix (not PHO) per Tank01 standard
         self.DEFENSIVE_SCHEMES = {
-            # Paint Pack: Elite interior defense, guards the rim aggressively
             "OKC": "PAINT_PACK", "BOS": "PAINT_PACK", "DET": "PAINT_PACK",
             "MIN": "PAINT_PACK", "SAS": "PAINT_PACK", "ORL": "PAINT_PACK",
-
-            # Blitz: High pressure, turnover generators, trap-heavy
-            "HOU": "BLITZ", "TOR": "BLITZ", "MIA": "BLITZ", "PHX": "BLITZ",
-
-            # Perimeter: Switch-heavy, small ball, focuses on perimeter defense
+            "PHX": "BLITZ", "HOU": "BLITZ", "TOR": "BLITZ", "MIA": "BLITZ", "BKN": "BLITZ",
             "GSW": "PERIMETER", "DAL": "PERIMETER", "NYK": "PERIMETER",
-
-            # Funnel: Volumetric vulnerability, high pace, allows penetration
-            "WAS": "FUNNEL", "ATL": "FUNNEL", "CHI": "FUNNEL",
-            "UTA": "FUNNEL", "SAC": "FUNNEL",
-
-            # Hackers: Foul-prone, physical defense, high free throw rate against
+            "WAS": "FUNNEL", "ATL": "FUNNEL", "CHI": "FUNNEL", "SAC": "FUNNEL", "DEN": "FUNNEL", "UTA": "FUNNEL",
             "IND": "HACKERS", "CHA": "HACKERS", "POR": "HACKERS",
+            "LAL": "NEUTRAL", "CLE": "NEUTRAL", "MEM": "NEUTRAL",
+            "MIL": "NEUTRAL", "NOP": "NEUTRAL", "LAC": "NEUTRAL", "PHI": "NEUTRAL",
         }
 
         # Historical aliases for team codes
@@ -61,36 +55,14 @@ class TagClassifier:
             "NY": "NYK",   # New York Knicks
         }
 
-        # ARCHETYPE THRESHOLDS (from Module E v2.0 - 8 archetypes)
-        # Decision tree rules - order matters, first match wins
-        # CRITICAL: Must match Module E _assign_archetype() priority order
-        self.ARCHETYPE_RULES = {
-            # Tier 1: High-usage specialists
-            'HELIOCENTRIC': lambda p: p.get('base_usg', 0) > 0.30 and p.get('base_ast', 0) > 6.0,
-            'SLASHER': lambda p: (p.get('base_pts', 0) > 22.0 and
-                                  p.get('base_usg', 0) > 0.30 and
-                                  p.get('base_3pm', 0) < 2.0),
-
-            # Tier 2: Specialists
-            'STRETCH_BIG': lambda p: p.get('base_reb', 0) > 6.5 and p.get('base_3pm', 0) > 1.8,
-            'RIM_RUNNER': lambda p: p.get('base_reb', 0) > 8.0 and p.get('base_3pm', 0) < 0.6,
-            'SNIPER': lambda p: p.get('base_3pm', 0) > 2.8 and p.get('base_ast', 0) < 3.5,
-
-            # Tier 3: Role players (NEW - Week 2 Day 5)
-            'TWO_WAY_WING': lambda p: ((p.get('base_stl', 0) + p.get('base_blk', 0)) >= 1.8 and
-                                       p.get('base_3pm', 0) >= 1.5 and
-                                       p.get('base_pts', 0) < 22.0),
-            'FACILITATOR': lambda p: (p.get('base_ast', 0) >= 5.0 and
-                                      p.get('base_pts', 0) < 15.0 and
-                                      p.get('base_usg', 0) < 0.28),
-        }
+        self.ARCHETYPE_RULES = {}
 
         # SCENARIO THRESHOLDS
         self.HOT_STREAK_MULTIPLIER = 1.20  # L5 must be 20% above season avg
         self.BENEFICIARY_USAGE_THRESHOLD = 0.18  # Minimum usage to be considered key player
         self.HIGH_UNIT_THRESHOLD = 1.2  # For correlated SGP detection
 
-        print("✅ TagClassifier initialized with 2025-26 defensive schemes")
+        print("✅ TagClassifier initialized with synced defensive schemes")
 
     def assign_archetype_tag(self, player_stats: Dict) -> str:
         """
@@ -111,16 +83,26 @@ class TagClassifier:
             >>> classifier.assign_archetype_tag(stats)
             'STRETCH_BIG'
         """
-        # Check each archetype rule in priority order
-        for archetype_name, rule_func in self.ARCHETYPE_RULES.items():
-            try:
-                if rule_func(player_stats):
-                    return archetype_name
-            except (KeyError, TypeError):
-                # Missing stats - skip this rule
-                continue
+        if player_stats.get('archetype'):
+            return player_stats['archetype']
 
-        # Default fallback for balanced players
+        player_id = player_stats.get('player_id')
+        player_name = player_stats.get('name') or player_stats.get('PLAYER_NAME')
+        if player_id or player_name:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                if player_id:
+                    cursor.execute("SELECT archetype FROM players WHERE player_id = ? LIMIT 1", (player_id,))
+                else:
+                    cursor.execute("SELECT archetype FROM players WHERE name = ? LIMIT 1", (player_name,))
+                row = cursor.fetchone()
+                conn.close()
+                if row and row[0]:
+                    return row[0]
+            except Exception:
+                pass
+
         return "GENERALIST"
 
     def assign_scenario_tags(self, player: Dict, game_context: Dict,
