@@ -1,0 +1,4 @@
+{
+  "query": "\n    NBA February 19, 2026: Nuggets vs Clippers game tonight.\n    \n    ONLY return:\n    1. Players OUT/DOUBTFUL/SUSPENDED for each team (name + status)\n    2. Any GTD (game-time decisions)\n    3. Recent team form (W/L last 3 games if available)\n    \n    Max 80 words. Bullets only.\n    ",
+  "result": "Error: 400"
+}
