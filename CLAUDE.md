@@ -27,6 +27,7 @@ See @ROADMAP.md for current tasks and priorities.
 See @docs/ARCHITECTURE.md for system design and module reference.
 See @docs/METHODOLOGY.md for betting edge calculations.
 See @docs/STATUS_HISTORY.md for historical updates.
+See @best-practices/ for reusable patterns and lessons learned.
 
 ---
 
@@ -216,3 +217,6 @@ This project has custom skills available:
 - **Methodology**: @docs/METHODOLOGY.md (edge calc, line shopping, CLV)
 - **Status History**: @docs/STATUS_HISTORY.md (archived updates)
 - **Production Handbook**: @docs/PRODUCTION_HANDBOOK.md
+- **Best Practices**: @best-practices/ (API patterns, lessons learned, reusable templates)
+  - **API Best Practices**: @best-practices/api/API_BEST_PRACTICES.md (comprehensive guide)
+  - **API Quick Reference**: @best-practices/api/API_QUICK_REFERENCE.md (cheatsheet)
