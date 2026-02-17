@@ -1,0 +1,56 @@
+====================================================================================================
+ S.A.V.A.G.E. SIDE-BY-SIDE COMPARISON - FEB 19, 2026 (Post All-Star)
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+ ATL @ PHI | 7:00 PM ET | SCHEME: FUNNEL vs NEUTRAL
+----------------------------------------------------------------------------------------------------
+ AWAY: ATL                                        | HOME: PHI
+----------------------------------------------------------------------------------------------------
+ Jalen Johnson      HELIOCENTRIC 20.3/6.7/12.5  | Tyrese Maxey       HELIOCENTRIC 22.4/8.0/3.0
+                                                | Joel Embiid        SLASHER      32.4/5.4/9.8
+ Nickeil Alexander- SNIPER       17.7/4.8/3.2   |                                               
+----------------------------------------------------------------------------------------------------
+ ATL vs NEUTRAL: Standard matchup           | PHI vs FUNNEL: GAPS EXPLOITABLE
+ INJ: Full strength                            | INJ: Paul George: UNCLEAR
+
+----------------------------------------------------------------------------------------------------
+ PHX @ SAS | 8:30 PM ET | SCHEME: BLITZ vs PAINT_PACK
+----------------------------------------------------------------------------------------------------
+ AWAY: PHX                                        | HOME: SAS
+----------------------------------------------------------------------------------------------------
+ Devin Booker       HELIOCENTRIC 27.2/3.8/3.8   | Victor Wembanyama  SLASHER      25.0/1.7/11.5
+ Dillon Brooks      GENERALIST   16.7/1.7/4.4   | De'Aaron Fox       GENERALIST   19.0/6.8/3.7
+ Grayson Allen      TWO_WAY_WING 18.7/4.1/3.7   | Stephon Castle     GENERALIST   13.2/8.0/4.3
+----------------------------------------------------------------------------------------------------
+ PHX vs PAINT_PACK: 3PM FAVORABLE, rim tough   | SAS vs BLITZ: TOV RISK elevated
+ INJ: Full strength                            | INJ: Full strength
+
+----------------------------------------------------------------------------------------------------
+ DET @ NYK | 7:30 PM ET | SCHEME: PAINT_PACK vs PERIMETER
+----------------------------------------------------------------------------------------------------
+ AWAY: DET                                        | HOME: NYK
+----------------------------------------------------------------------------------------------------
+ Cade Cunningham    HELIOCENTRIC 17.5/10.0/3.2  | Jalen Brunson      HELIOCENTRIC 25.2/5.2/3.0
+                                                | Karl-Anthony Towns STRETCH_BIG  17.2/2.7/12.3
+ Jalen Duren        RIM_RUNNER   17.0/1.6/10.1  | Mikal Bridges      TWO_WAY_WING 13.5/3.3/2.8
+----------------------------------------------------------------------------------------------------
+ DET vs PERIMETER: DRIVING LANES open         | NYK vs PAINT_PACK: 3PM FAVORABLE, rim tough
+ INJ: Full strength                            | INJ: Full strength
+
+----------------------------------------------------------------------------------------------------
+ ORL @ SAC | 10:00 PM ET | SCHEME: PAINT_PACK vs FUNNEL
+----------------------------------------------------------------------------------------------------
+ AWAY: ORL                                        | HOME: SAC
+----------------------------------------------------------------------------------------------------
+ Paolo Banchero     SLASHER      25.8/4.8/8.6   | DeMar DeRozan      GENERALIST   19.8/3.0/2.7
+ Franz Wagner       GENERALIST   16.0/2.5/6.5   | Zach LaVine        GENERALIST   15.8/3.2/1.0
+                                                |                                               
+----------------------------------------------------------------------------------------------------
+ ORL vs FUNNEL: GAPS EXPLOITABLE           | SAC vs PAINT_PACK: 3PM FAVORABLE, rim tough
+ INJ: Colin Castleton: QUESTIONABLE            | INJ: Keegan Murray: QUESTIONABLE
+
+====================================================================================================
+KEY: Stats = PTS/AST/REB (L5+ since Jan 15)
+SCHEMES: PAINT_PACK=rim D | BLITZ=pressure | PERIMETER=chase | FUNNEL=gaps
+====================================================================================================
