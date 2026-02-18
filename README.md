@@ -16,15 +16,16 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 25K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.11 + SQLite + GitHub Actions |
-| **Status** | Production (Phase 6 - Full Data Integration) |
+| **Status** | Production (Phase 8 — AI-Enhanced Pipeline) |
 
 ### Key Features
 
 - **Monte Carlo Simulations** - 25,000 iterations per player with Poisson/Normal hybrid distributions
 - **Usage Vacuum Theory** - Automatic usage redistribution when star players are OUT
-- **16-Archetype Matchup System** - Player style vs defensive scheme analysis
-- **Line Shopping** - NC Legal book integration with CLV tracking
-- **Real-time Injury Intelligence** - 15-minute refresh via Tank01 + RotoWire RSS
+- **19-Archetype Matchup System** - Player style vs defensive scheme analysis (incl. 5 defensive archetypes)
+- **AI-Enhanced Pipeline** - Claude (Haiku/Sonnet) for play curation, game notes, and player spotlights
+- **Line Shopping** - NC Legal book integration with CLV tracking across 11 markets
+- **Real-time Injury Intelligence** - 15-minute refresh via BDL + Tank01, DB-driven smart vacuum
 - **Referee Impact Modeling** - Pace, whistle tendency, and star bias factors
 
 ---
@@ -58,7 +59,7 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - API Keys: The-Odds-API (paid), Tank01 (paid)
 - Optional: Telegram bot for notifications
 
@@ -120,28 +121,32 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 
 | Workflow | Schedule (EST) | Purpose |
 |----------|---------------|---------|
-| Daily Data Sync | 3:00 AM | Fetch game logs, update player stats |
-| Daily Referee Sync | 4:30 AM | Scrape referee assignments |
-| Morning Briefing | 6:00 AM | Generate visual betting cards |
+| Daily Data Sync | 5:00 AM | Sync game logs, WOWY, clutch, assists, injuries |
+| Nightly Debrief | 5:00 AM | Settlement + daily P&L |
+| DB Backup | 6:00 AM | Automated database backup (7-day rotation) |
+| Morning Briefing | 9:00 AM | Generate visual betting cards + AI game notes |
+| Daily Referee Sync | 9:30 AM | Scrape referee assignments |
 | Production Pipeline | 11:00 AM | Run simulations, output recommendations |
-| Evening Slate Lock | 6:00 PM | Final pre-game updates |
-| Nightly Debrief | 10:30 PM | Settlement + PM Bot summary |
-| Claude QA Check | 6:00 AM | Automated failure detection |
+| Closing Line Capture | 5:30 PM | CLV capture before tipoff |
+| Evening Slate Lock | 6:00 PM | Final pre-game Telegram cards |
+| Weekly Validation | Tuesdays | Backtest + drift detection + retrospective |
+| Claude Ops Hub | On failure | Auto-diagnosis of workflow failures |
 
 ---
 
 ## Project Status
 
-**Current Phase:** Phase 6 - Full Data Integration
+**Current Phase:** Phase 8 — AI-Enhanced Pipeline
 
 **Recent Completions:**
-- Phase 6.5e: Workflow infrastructure fixes
-- Phase 6.5d: Canonical ID system audit (99.84% data quality)
-- Phase 6.5c: PBP Stats API fixes (19.4x performance improvement)
-- Phase 6.5b: Direct SQLite writes, JSON cleanup
+- Phase 8.0: Injury schema + smart vacuum + three-tier active roster
+- Phase 8.5: Play Curation Engine (Haiku sanity gate + Sonnet Top 5)
+- Phase 8.2: S.A.V.A.G.E. game notes with smart game selection (top 4 by tier score)
+- Phase 8.3: Player spotlight cards for DIAMOND + BLUE CHIP plays
+- Phase 8.6: CLV expanded to 11 markets + weekly retrospective
 
-**Performance (Jan 7-29, 2026):**
-- Total Bets: 9,605 logged, 6,344 settled
+**Performance (Jan 7 – Feb 12, 2026):**
+- Total Bets: 15,575 logged, all settled
 - Win Rate: 55.7%
 - Profit: +292 units
 - CLV: Positive across all edge buckets
@@ -175,7 +180,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress tracking.
 
 ## Tech Stack
 
-- **Language:** Python 3.11
+- **Language:** Python 3.14
 - **Database:** SQLite with WAL mode
 - **Automation:** GitHub Actions (self-hosted runner)
 - **Notifications:** Telegram Bot API
