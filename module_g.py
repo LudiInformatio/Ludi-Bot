@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from io import StringIO
 import sys
 import os
+import config
 from utils.mappings import resolve_team_abbr
 from utils.browser_utils import close_popups, simulate_human_interaction
 
@@ -334,6 +335,18 @@ class LudiRefEngine:
                             count += 1
             
             print(f"✅ Success. Found assignments for {count} games.")
+
+            if count == 0 and getattr(config, 'PERPLEXITY_API_KEY', None):
+                try:
+                    from utils.perplexity_client import PerplexityClient
+                    perp = PerplexityClient()
+                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    news = perp._query(f"NBA referee crew assignments tonight {today_str}")
+                    if news:
+                        print(f"   [ZEBRAS] 🔍 Perplexity referee fallback: {news[:100]}...")
+                except Exception as e:
+                    print(f"   [ZEBRAS] Perplexity referee fallback failed: {e}")
+
             return self.daily_assignments
 
         except Exception as e:

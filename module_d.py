@@ -279,6 +279,16 @@ class LudiYak:
             if datetime.now() - datetime.fromisoformat(entry['timestamp']) < timedelta(minutes=20):
                 return entry['data']
 
+        if getattr(config, 'PERPLEXITY_API_KEY', None):
+            try:
+                from utils.perplexity_client import PerplexityClient
+                perp = PerplexityClient()
+                text = perp._query(query)
+                if text:
+                    return {"items": [{"snippet": text, "link": "perplexity.ai"}]}
+            except Exception as e:
+                print(f"   [YAK] Perplexity failed, falling back to DuckDuckGo: {e}")
+
         try:
             results = DDGS().text(query, max_results=3, timelimit="w") 
             formatted = [{"snippet": r['body'], "link": r['href']} for r in results]

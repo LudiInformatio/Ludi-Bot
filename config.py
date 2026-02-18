@@ -191,6 +191,7 @@ def validate_config():
         'GEMINI_API_KEY': GEMINI_API_KEY,
         'GOOGLE_SEARCH_KEY': GOOGLE_SEARCH_KEY,
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'PERPLEXITY_API_KEY': PERPLEXITY_API_KEY,
     }
 
     missing_required = [key for key, value in required_keys.items() if not value]

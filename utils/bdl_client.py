@@ -14,8 +14,12 @@ import hashlib
 import sqlite3
 import logging
 import requests
+import pytz
+from datetime import datetime
 from typing import Optional, Dict, List, Any
 from functools import lru_cache
+
+_BDL_EST = pytz.timezone('US/Eastern')
 
 logger = logging.getLogger(__name__)
 
@@ -355,10 +359,11 @@ class BDLClient:
             return []
 
     def get_odds(self, date: str = None) -> List[Dict]:
-        """Fetch game odds from BDL v2."""
-        params: Dict[str, Any] = {}
-        if date:
-            params["dates[]"] = date
+        """Fetch game odds from BDL v2. Defaults to today (EST) if no date provided."""
+        # Default to today in EST — prevents accidentally fetching multi-day results
+        if not date:
+            date = datetime.now(_BDL_EST).strftime('%Y-%m-%d')
+        params: Dict[str, Any] = {"dates[]": date}
 
         cache_path = _get_cache_path("odds", params)
         cached = _read_cache(cache_path, ttl_hours=0.5)

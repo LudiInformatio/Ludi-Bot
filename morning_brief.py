@@ -19,7 +19,8 @@ from utils.claude_prompts import (
     GAME_NOTES_TEMPLATE, 
     SPOTLIGHT_TEMPLATE
 )
-import main # Import to reuse helper methods if possible, or just copy critical logic
+import main
+from utils.perplexity_client import PerplexityClient
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -252,16 +253,38 @@ class MorningBriefEngine:
                 # Top 5 plays (curate_plays.py) are independent and board-wide — not tied to game selection
                 MAX_GAME_NOTES = 4
                 _tier_weights = {'DIAMOND': 4.0, 'BLUE CHIP': 2.5, 'CORE ASSET': 1.0, 'THE STEAL': 0.5}
+                _INJURY_KWS = ["out", "ruled out", "scratch", "game-time", "gtd", "doubtful"]
+                _NARRATIVE_KWS = ["revenge", "rivalry", "return", "milestone", "debut"]
 
-                def _score_game(bets):
+                perp_client = None
+                game_news_cache = {}
+                if getattr(config, 'PERPLEXITY_API_KEY', None):
+                    try:
+                        perp_client = PerplexityClient()
+                        for gid, bets in game_groups.items():
+                            first = bets[0] if bets else {}
+                            home = first.get('home_team', '')
+                            away = first.get('away_team', '')
+                            if home and away:
+                                game_news_cache[gid] = perp_client.search_game_news(home, away)
+                    except Exception as e:
+                        print(f"   ℹ️  Perplexity game news fetch failed: {e}")
+
+                def _score_game(bets, gid=""):
                     score = sum(
                         _tier_weights.get(b.get('confidence_tier', 'THE STEAL'), 0.5)
                         + (1.0 if 'BENEFICIARY' in str(b.get('tags', '')) else 0.0)
                         for b in bets
                     )
-                    return score
+                    news = game_news_cache.get(gid, "").lower()
+                    if news:
+                        if any(kw in news for kw in _INJURY_KWS):
+                            score += 1.5
+                        if any(kw in news for kw in _NARRATIVE_KWS):
+                            score += 0.5
+                    return min(score, 20.0)
 
-                scored_games = sorted(game_groups.items(), key=lambda x: _score_game(x[1]), reverse=True)
+                scored_games = sorted(game_groups.items(), key=lambda x: _score_game(x[1], x[0]), reverse=True)
                 top_games = scored_games[:MAX_GAME_NOTES]
                 skipped = len(scored_games) - len(top_games)
                 if skipped > 0:
@@ -330,16 +353,31 @@ class MorningBriefEngine:
                                   "boost", "proj", "update_time", "one_sentence"]
                     }
                     
+                    game_news = game_news_cache.get(gid, "")
+                    schedule_notes = game_news[:200] if game_news else "Standard rest"
+
+                    # Build date label: "TONIGHT · Feb 19" or "TOMORROW · Feb 20"
+                    import pytz as _pytz_mb
+                    _est_now = datetime.datetime.now(_pytz_mb.timezone('US/Eastern'))
+                    _game_date_str = first.get('game_date', '')
+                    try:
+                        _gd = datetime.datetime.strptime(_game_date_str, '%Y-%m-%d').date() if _game_date_str else _est_now.date()
+                        _day = "TONIGHT" if _gd == _est_now.date() else "TOMORROW"
+                        game_label = f"{_day} · {_gd.strftime('%b %d').replace(' 0', ' ')}"
+                    except Exception:
+                        game_label = f"TONIGHT · {_est_now.strftime('%b %d').replace(' 0', ' ')}"
+
                     try:
                         prompt = GAME_NOTES_TEMPLATE.format(
                             away_team=away_team,
                             home_team=home_team,
+                            game_label=game_label,
                             spread=spread,
                             blowout_risk=blowout_risk,
                             total=total,
-                            pace_context="Normal", # Default
-                            schedule_notes="Standard rest", # Default
-                            fatigue_flag="None", # Default
+                            pace_context="Normal",
+                            schedule_notes=schedule_notes,
+                            fatigue_flag="None",
                             injury_intel_block=injury_intel_block,
                             away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),
                             home_def_scheme=schemes.get(home_team, "UNK"),

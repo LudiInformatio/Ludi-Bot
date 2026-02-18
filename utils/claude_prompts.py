@@ -43,7 +43,8 @@ BEFORE SUBMITTING, verify:
 - All numbers match the injected data above
 """
 
-GAME_NOTES_TEMPLATE = """## {away_team} @ {home_team} | S.A.V.A.G.E.
+GAME_NOTES_TEMPLATE = """📅 {game_label}
+## {away_team} @ {home_team} | S.A.V.A.G.E.
 
 **Game Context:**
 | Factor | Value | Impact |

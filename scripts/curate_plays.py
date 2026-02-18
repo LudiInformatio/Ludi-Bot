@@ -34,6 +34,8 @@ sys.path.insert(0, _PROJECT_ROOT)
 
 DB_PATH = os.path.join(_PROJECT_ROOT, 'ludi.db')
 
+import config
+
 # ─── Reused Infrastructure (do NOT rewrite these) ─────────────────────────────
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
 from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
@@ -159,18 +161,33 @@ def _haiku_sanity_check(bet: dict, injury: dict | None, verbose: bool = False) -
             print(f"  [HAIKU-SKIP] Deterministic FLAG: {reason}")
         return result, reason
 
-    # No injury record → safe to auto-PASS without API call
+    # No injury record → try Perplexity for soft-scratch detection
+    perp_news = ""
     if not injury:
-        return 'PASS', ''
+        if getattr(config, 'PERPLEXITY_API_KEY', None):
+            try:
+                from utils.perplexity_client import PerplexityClient
+                perp_news = PerplexityClient().search_player_news(
+                    bet['player_name'], bet['team']
+                )
+            except Exception:
+                pass
 
-    injury_text = (
-        f"Status: {injury['status']}\n"
-        f"Days Out: {injury['days_out'] if injury['days_out'] is not None else 'Unknown'}\n"
-        f"Description: {injury['description'] or 'None provided'}\n"
-        f"Game Day Report: {'Yes' if injury['is_game_day_report'] else 'No'}"
-    )
+        if not perp_news:
+            return 'PASS', ''
+
+        injury_text = f"RECENT NEWS (from Perplexity, fetched today):\n{perp_news}"
+    else:
+        injury_text = (
+            f"Status: {injury['status']}\n"
+            f"Days Out: {injury['days_out'] if injury['days_out'] is not None else 'Unknown'}\n"
+            f"Description: {injury['description'] or 'None provided'}\n"
+            f"Game Day Report: {'Yes' if injury['is_game_day_report'] else 'No'}"
+        )
 
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+
+    perplexity_block = f"\n\nRECENT NEWS (Perplexity):\n{perp_news}" if perp_news else ""
 
     user_prompt = f"""Sanity check this bet. Return JSON only, no other text:
 {{"result": "PASS" or "FLAG", "reason": "<one sentence max>"}}
@@ -182,7 +199,7 @@ BET:
 - True Edge: {bet.get('true_edge', 'N/A')}%
 
 INJURY DATA (from official report, fetched today):
-{injury_text}
+{injury_text}{perplexity_block}
 
 FLAG this bet ONLY if:
 1. Player is OUT or DOUBTFUL AND bet_side is OVER a volume stat (PTS, REB, AST, MIN)

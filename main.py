@@ -391,10 +391,20 @@ class LudiOrchestrator:
                 yak = {'status': sim.get('status', 'ACTIVE'), 'note': sim.get('injury_note', '')}
                 players.append(self.calib.calibrate_player(p_dict, yak))
 
+        # Use the game's actual start_time for game_date — not today's date.
+        # This prevents tomorrow's games (visible after 9 PM) from being logged
+        # with today's date in bet_recommendations.
+        _start_time = game_data.get('start_time')
+        _actual_game_date = (
+            _start_time.strftime('%Y-%m-%d')
+            if _start_time and hasattr(_start_time, 'strftime')
+            else get_est_today()
+        )
+
         return [{
             'game_id': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_'),
             'matchup': game_data.get('matchup', 'UNKNOWN'),
-            'game_date': get_est_today(),
+            'game_date': _actual_game_date,
             'home_team': home, 'away_team': away, 'opponent': '',
             'spread': float(spread) if spread != 'N/A' else 0,
             'ref_data': game_data.get('archetypes', {}).get('ref_data', {'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0}),

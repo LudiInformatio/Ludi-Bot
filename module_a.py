@@ -1,7 +1,7 @@
 import requests
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz  # Added for Timezone conversion
 import config  # Imports: ODDS_API_KEY, TANK01_KEY
 
@@ -88,16 +88,29 @@ class Gatekeeper:
             
             # --- PROCESS & SORT GAMES ---
             display_list = []
-            
+
+            # --- DATE WINDOW: 9 PM cutoff ---
+            # Before 9 PM EST: today's games only
+            # At/after 9 PM EST: include tomorrow for early research
+            _est_now = datetime.now(self.est_tz)
+            _today_date = _est_now.date()
+            _allowed_dates = {_today_date}
+            if _est_now.hour >= 21:
+                _allowed_dates.add(_today_date + timedelta(days=1))
+
             for game in data:
                 game_id = game['id']
                 home = game['home_team']
                 away = game['away_team']
-                
+
                 # 1. Parse Time (API gives UTC, we convert to EST)
                 # Handle 'Z' manually to avoid py version issues
                 utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
                 est_time = utc_time.astimezone(self.est_tz)
+
+                # Skip games outside the allowed date window
+                if est_time.date() not in _allowed_dates:
+                    continue
                 
                 # 2. Calculate Ref Impact (V3.0: Returns dict with pace_impact, whistle_impact)
                 home_abbr = self._get_abbr(home)
