@@ -370,7 +370,15 @@ class LudiReporter:
                                 "edge": edge,  # True devigged edge percentage
                                 "units": units,
                                 "note": " | ".join(note_elements),
-                                "tags": tags_formatted  # Week 2, Days 3-4: Tag classification
+                                "tags": tags_formatted,  # Week 2, Days 3-4: Tag classification
+                                "game_id": game.get('game_id', ''),
+                                "home_team": game.get('home_team', ''),
+                                "away_team": game.get('away_team', ''),
+                                "spread": game.get('spread', 0),
+                                "total": game.get('total', 0),
+                                "confidence_tier": confidence_tier,
+                                "archetype": p.get('archetype', ''),
+                                "opponent": game.get('opponent', '')
                             })
 
                 # --- 4. CORRELATION CHECK (SGP TARGETS) ---
@@ -431,7 +439,7 @@ class LudiReporter:
         # Generate visual card (V4.6 - Visual Upgrade)
         image_path = self.generate_image_card(visual_props, title=title)
         
-        return self.create_daily_briefing(all_props), image_path
+        return self.create_daily_briefing(all_props), image_path, all_props
 
     def generate_image_card(self, props: list, title: str = "LUDI GAME BRIEF") -> str:
         """

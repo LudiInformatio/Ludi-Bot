@@ -1,5 +1,7 @@
 import logging
 import datetime
+import sqlite3
+import config
 from module_a import Gatekeeper
 from module_c import LudiOracle
 from module_d import LudiYak
@@ -10,6 +12,13 @@ from module_h_historian import LudiHistorian
 from module_x_scenario import ScenarioBuilder
 from utils.render_full_report import create_briefing_card
 from utils.telegram_notifier import send_photo, send_message
+from utils.claude_client import get_claude_analysis, SONNET_MODEL
+from utils.claude_prompts import (
+    ROSTER_RULES, 
+    ANALYSIS_PROTOCOL,
+    GAME_NOTES_TEMPLATE, 
+    SPOTLIGHT_TEMPLATE
+)
 import main # Import to reuse helper methods if possible, or just copy critical logic
 
 # Configure Logging
@@ -18,14 +27,15 @@ logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
 import argparse
 
 class MorningBriefEngine:
-    def __init__(self, target_teams=None, mode="morning"):
+    def __init__(self, target_teams=None, mode="morning", dry_run=False):
         print("\n" + "="*50)
         print(f"   🌅 LUDI {mode.upper()} BRIEF ENGINE")
-        print("   Status: Production | Visual: V1.0")
+        print(f"   Status: Production | Visual: V1.0 | Dry Run: {dry_run}")
         print("="*50)
         
         self.target_teams = target_teams
         self.mode = mode
+        self.dry_run = dry_run
         
         # Orchestrator helper (The Central Brain)
         self.orch = main.LudiOrchestrator(send_telegram=False) 
@@ -38,6 +48,63 @@ class MorningBriefEngine:
         self.zebras = self.orch.zebras
         self.scenario_builder = self.orch.scenario_builder
         self.reporter = self.orch.reporter
+
+    def _get_db_conn(self):
+        """WAL-mode SQLite connection."""
+        conn = sqlite3.connect(config.DB_PATH, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        return conn
+
+    def _get_l10_for_spotlight(self, conn, player_name: str, stat_col: str, line: float) -> dict:
+        """Returns {'avg': float, 'hit_rate': float} from player_game_logs last 10 games."""
+        stat_col_map = {
+            'PTS': 'points', 'REB': 'total_rebounds', 'AST': 'assists',
+            '3PM': 'three_pointers_made', 'BLK': 'blocks', 'STL': 'steals'
+        }
+        db_col = stat_col_map.get(stat_col.upper())
+        if not db_col:
+            return {'avg': 0, 'hit_rate': 0}
+            
+        try:
+            # Get player_id first (assuming name match)
+            cursor = conn.cursor()
+            cursor.execute("SELECT player_id FROM players WHERE name = ? LIMIT 1", (player_name,))
+            pid_row = cursor.fetchone()
+            
+            if not pid_row:
+                return {'avg': 0, 'hit_rate': 0}
+                
+            player_id = pid_row[0]
+            
+            # Query last 10 games from player_game_logs
+            # Note: Checking if player_game_logs exists and has date column. 
+            # Assuming standard schema: player_id, game_date, [stats]
+            query = f"""
+                SELECT {db_col} 
+                FROM player_game_logs 
+                WHERE player_id = ? 
+                ORDER BY game_date DESC 
+                LIMIT 10
+            """
+            cursor.execute(query, (player_id,))
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return {'avg': 0, 'hit_rate': 0}
+                
+            values = [r[0] for r in rows if r[0] is not None]
+            if not values:
+                return {'avg': 0, 'hit_rate': 0}
+                
+            avg_val = sum(values) / len(values)
+            hits = sum(1 for v in values if v > line)
+            hit_rate = (hits / len(values)) * 100
+            
+            return {'avg': round(avg_val, 1), 'hit_rate': round(hit_rate, 1)}
+            
+        except Exception as e:
+            print(f"⚠️ Error getting L10 for {player_name}: {e}")
+            return {'avg': 0, 'hit_rate': 0}
 
     def run(self):
         """
@@ -157,8 +224,227 @@ class MorningBriefEngine:
             body = "Top 5 Quality Plays + SGP Targets"
         
         # Module F handles Bet Logging, Tagging, and Image Generation
-        text_report, image_path = self.reporter.generate_report(all_bets, title=report_title)
-        
+        # V5.2 Update: Returns processed_bets (list of dicts) as 3rd element
+        try:
+            text_report, image_path, processed_bets = self.reporter.generate_report(all_bets, title=report_title)
+        except ValueError:
+            # Fallback for old Module F signature if not updated
+            result = self.reporter.generate_report(all_bets, title=report_title)
+            text_report, image_path = result
+            processed_bets = [] # Cannot proceed with 8.2/8.3 without this data
+
+        # --- PHASE 8.2: S.A.V.A.G.E. GAME NOTES ---
+        if processed_bets:
+            print("\n📝 Generating S.A.V.A.G.E. Game Notes...")
+            try:
+                conn = self._get_db_conn()
+                
+                # 1. Group all_bets by game_id
+                game_groups = {}
+                for bet in processed_bets:
+                    gid = bet.get('game_id') or bet.get('matchup', 'UNKNOWN')
+                    if gid not in game_groups: game_groups[gid] = []
+                    game_groups[gid].append(bet)
+                
+                for gid, bets in game_groups.items():
+                    if not bets: continue
+                    
+                    # 2. Build Context
+                    first = bets[0]
+                    home_team = first.get('home_team', 'UNK')
+                    away_team = first.get('away_team', 'UNK')
+                    spread = first.get('spread', 0)
+                    total = first.get('total', 0)
+                    matchup = first.get('matchup', gid)
+                    
+                    blowout_risk = "HIGH" if abs(spread) > 10 else "MODERATE"
+                    
+                    print(f"   > Notes for {matchup}...")
+                    
+                    # 3. Query Injuries (By Team)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT player_name, status, days_out, injury_type 
+                        FROM player_injuries 
+                        WHERE (team_abbreviation = ? OR team_abbreviation = ?) 
+                          AND resolved_at IS NULL
+                          AND status IN ('OUT', 'DOUBTFUL', 'GTD')
+                    """, (home_team, away_team))
+                    injuries = cursor.fetchall()
+                    
+                    injury_lines = []
+                    for row in injuries:
+                        injury_lines.append(f"{row[1]}: {row[0]} ({row[3]})")
+                    injury_intel_block = "\n".join(injury_lines) if injury_lines else "No major injuries reported."
+
+                    # 4. Opponent Scheme
+                    # Fetch for both teams
+                    schemes = {}
+                    for tm in [home_team, away_team]:
+                        cursor.execute("""
+                            SELECT active_style FROM team_scheme_cache 
+                            WHERE team_abbr = ? AND scheme_type = 'DEFENSIVE'
+                        """, (tm,))
+                        row = cursor.fetchone()
+                        schemes[tm] = row[0] if row else "Standard"
+
+                    # 5. Edges Block (Top 3 bets)
+                    # Sort by edge descending
+                    sorted_bets = sorted(bets, key=lambda x: x.get('edge', 0), reverse=True)[:3]
+                    edges_lines = []
+                    for b in sorted_bets:
+                        edges_lines.append(
+                            f"• {b['name']} {b['stat']} ({b['line']}) — {b['bet_on']} "
+                            f"(Edge: {b.get('edge', 0)}%)"
+                        )
+                    edges_block = "\n".join(edges_lines)
+
+                    # 6. Build Prompt
+                    # Handle template placeholders that are for Claude (e.g., {player}) by preserving them
+                    # We pass them as literal strings "{key}" so python's .format() keeps them
+                    preservation_keys = {
+                        k: "{" + k + "}" 
+                        for k in ["player", "stat", "edge_reason", "edge_pct", 
+                                  "days_out", "injury_type", "beneficiary", 
+                                  "boost", "proj", "update_time", "one_sentence"]
+                    }
+                    
+                    try:
+                        prompt = GAME_NOTES_TEMPLATE.format(
+                            away_team=away_team,
+                            home_team=home_team,
+                            spread=spread,
+                            blowout_risk=blowout_risk,
+                            total=total,
+                            pace_context="Normal", # Default
+                            schedule_notes="Standard rest", # Default
+                            fatigue_flag="None", # Default
+                            injury_intel_block=injury_intel_block,
+                            away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),
+                            home_def_scheme=schemes.get(home_team, "UNK"),
+                            home_archetype_summary="Style: " + schemes.get(home_team, "UNK"),
+                            away_def_scheme=schemes.get(away_team, "UNK"),
+                            edges_block=edges_block,
+                            **preservation_keys
+                        )
+                        
+                        # 7. Call Claude
+                        response = get_claude_analysis(
+                            prompt=prompt,
+                            system_prompt=ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
+                            model=SONNET_MODEL,
+                            temperature=0.2,
+                            max_tokens=1500
+                        )
+
+                        if response:
+                            print(f"      ✅ Notes generated for {matchup}")
+                            if not self.dry_run:
+                                send_message(response, parse_mode="Markdown")
+                            else:
+                                print(f"      [DRY RUN] Would send:\n{response[:100]}...")
+                        else:
+                            print(f"      ⚠️ No response from Claude for {matchup}")
+                            
+                    except KeyError as e:
+                        print(f"      ❌ Template format error for {matchup}: Missing key {e}")
+
+                conn.close()
+
+            except Exception as e:
+                print(f"⚠️ Global Game Notes Error: {e}")
+                # Continue to Spotlight phase despite errors
+
+        # --- PHASE 8.3: PLAYER SPOTLIGHT CARDS ---
+        print("\n🔦 Generating Player Spotlight Cards...")
+        try:
+            if processed_bets:
+                # 1. Filter for top-tier bets
+                top_bets = [b for b in processed_bets if b.get('confidence_tier') in ('DIAMOND', 'BLUE CHIP')][:5]
+                
+                if top_bets:
+                    conn = self._get_db_conn()
+                    
+                    for bet in top_bets:
+                        try:
+                            player_name = bet.get('player_name') or bet.get('name')
+                            team = bet.get('team')
+                            opponent = bet.get('opponent')
+                            stat_cat = bet.get('stat_category') or bet.get('stat', 'PTS')
+                            line = bet.get('line', 0.0)
+                            
+                            print(f"   > Spotlight analysis for {player_name} ({stat_cat})...")
+
+                            # 2a. Get L10 Stats
+                            l10_data = self._get_l10_for_spotlight(conn, player_name, stat_cat, line)
+                            
+                            # 2b. Get Injury Context
+                            cursor = conn.cursor()
+                            cursor.execute("""
+                                SELECT status, injury_type, days_out 
+                                FROM player_injuries 
+                                WHERE player_name = ? AND status != 'ACTIVE'
+                                ORDER BY snapshot_time DESC LIMIT 1
+                            """, (player_name,))
+                            inj_row = cursor.fetchone()
+                            injury_context = f"{inj_row[0]} - {inj_row[1]}" if inj_row else "Healthy"
+                            
+                            # 2c. Get Opponent Scheme
+                            cursor.execute("""
+                                SELECT active_style FROM team_scheme_cache 
+                                WHERE team_abbr = ? AND scheme_type = 'DEFENSIVE'
+                            """, (opponent,))
+                            scheme_row = cursor.fetchone()
+                            opp_scheme = scheme_row[0] if scheme_row else "Standard"
+                            
+                            # 2d. Build Prompt
+                            prompt = SPOTLIGHT_TEMPLATE.format(
+                                player=player_name,
+                                team=team,
+                                opponent=opponent,
+                                stat=stat_cat,
+                                line=line,
+                                tier=bet.get('confidence_tier'),
+                                archetype=bet.get('archetype', 'Unknown'),
+                                opp_scheme=opp_scheme,
+                                injury_context=injury_context,
+                                l10_avg=l10_data['avg'],
+                                hit_rate_l10=l10_data['hit_rate'],
+                                edge_pct=round((bet.get('edge', 0)), 1), # Edge is already % in module_f? Check. module_f says "edge": edge (float). If >5.0, it's %.
+                                analysis_block="" # Let Claude fill this based on system prompt
+                            )
+                            
+                            # 2e. Call Claude
+                            response = get_claude_analysis(
+                                prompt=prompt,
+                                system_prompt=ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
+                                model=SONNET_MODEL,
+                                temperature=0.2,
+                                max_tokens=600
+                            )
+                            
+                            if response:
+                                print(f"      ✅ Spotlight generated for {player_name}")
+                                if not self.dry_run:
+                                    send_message(response, parse_mode="Markdown")
+                                else:
+                                    print(f"      [DRY RUN] Would send:\n{response[:100]}...")
+                            else:
+                                print(f"      ⚠️ No response from Claude for {player_name}")
+                                
+                        except Exception as e:
+                            print(f"      ❌ Failed spotlight for {bet.get('name')}: {e}")
+                            continue
+                            
+                    conn.close()
+                else:
+                    print("   ℹ️ No DIAMOND/BLUE CHIP bets for spotlights.")
+            else:
+                print("   ℹ️ No processed bets available for spotlights.")
+                
+        except Exception as e:
+            print(f"⚠️ Global Spotlight Error: {e}")
+
         if image_path:
             print(f"✅ Visual Card Ready: {image_path}")
             # 5. Send to Telegram (Visual Only)
@@ -167,14 +453,19 @@ class MorningBriefEngine:
                 f"**{report_title} | {datetime.date.today().strftime('%b %d')}**\n"
                 f"💎 {body}"
             )
-            send_photo(image_path, caption=caption)
-            print("🚀 Sent to Telegram!")
+            
+            if not self.dry_run:
+                send_photo(image_path, caption=caption)
+                print("🚀 Sent to Telegram!")
+            else:
+                print(f"🚫 [DRY RUN] Skipping photo send for {image_path}")
         else:
             print("❌ Failed to generate visual card.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["morning", "evening"], default="morning", help="Report mode")
+    parser.add_argument("--dry-run", action="store_true", help="Skip Telegram sends")
     args = parser.parse_args()
 
     # --- MANUAL WATCHLIST CONFIG ---
@@ -185,5 +476,5 @@ if __name__ == "__main__":
         'CLE', 'PHI', 'NYK', 'SAC', 'UTA'         # Jan 14
     ]
     
-    engine = MorningBriefEngine(target_teams=watchlist, mode=args.mode)
+    engine = MorningBriefEngine(target_teams=watchlist, mode=args.mode, dry_run=args.dry_run)
     engine.run()

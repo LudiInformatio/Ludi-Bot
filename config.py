@@ -14,6 +14,11 @@ else:
     print("🔒 Running in Self-Hosted Mode: Skipping .env load (relying on injected secrets)")
 
 # ====================================================
+# 0. DATABASE CONFIGURATION
+# ====================================================
+DB_PATH = "ludi.db"
+
+# ====================================================
 # 1. ODDS & LINES PROVIDERS
 # ====================================================
 
