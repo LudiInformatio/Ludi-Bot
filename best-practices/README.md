@@ -25,7 +25,7 @@ best-practices/
 ## Current Categories
 
 ### 📡 API Best Practices (`api/`)
-**Status:** ✅ Complete (Feb 17, 2026)
+**Status:** ✅ Complete (Feb 17, 2026) — Updated Feb 19, 2026
 
 Comprehensive guide covering:
 - Authentication & secrets management
@@ -38,9 +38,11 @@ Comprehensive guide covering:
 - Multi-API architecture
 - GitHub Actions integration
 - Sports API considerations
+- **LLM/Claude integration (Phase 8)** — see `LLM_INTEGRATION.md`
 
 **Documentation:**
-- `API_BEST_PRACTICES.md` (56 KB, 15 sections, 60+ examples)
+- `API_BEST_PRACTICES.md` (15 sections, 60+ examples — traditional REST APIs)
+- `LLM_INTEGRATION.md` (Claude/Anthropic integration — Phase 8 patterns)
 - `API_QUICK_REFERENCE.md` (7 KB, 1-page cheatsheet)
 - `API_DOCUMENTATION_INDEX.md` (6 KB, navigation hub)
 

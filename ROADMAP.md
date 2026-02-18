@@ -2,7 +2,7 @@
 
 **Last Updated:** February 19, 2026
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.0 Injury Intelligence System
+**Active Work:** Phase 8 Pre-Work → Step 0 (Shared Claude Infrastructure)
 **Completed:** Phases 5–7 ✅ (see `docs/archive/phase_reports/` for details)
 
 This is the single source of truth for project tasks and priorities.
@@ -24,9 +24,9 @@ This is the single source of truth for project tasks and priorities.
 **Goal:** Add Claude as an analytical reasoning layer on top of the deterministic pipeline
 **Principle:** LLMs orchestrate and reason — never calculate. Math stays deterministic.
 **Status:** 🟡 ACTIVE — Phase 7.9 complete, starting Phase 8.0
-**Phase 8.0 Foundation Plan:** `docs/PHASE_8_FOUNDATION_PLAN.md` (Injury + Rotation Intelligence)
-**Design Doc:** `.claude/plans/crystalline-swimming-horizon.md`
-**Estimated Daily Cost:** ~$1.17/day (~$35/month)
+**Phase 8 Foundation Plan:** `docs/PHASE_8_FOUNDATION_PLAN.md` (Injury Intelligence + Phase 8 Pre-Work)
+**Design Doc:** `.claude/plans/curried-growing-toucan.md` (revised Feb 17 — Ludi-Lite review + SMA audit)
+**Estimated Daily Cost:** ~$0.73/day (~$22/month) — token-optimized with Haiku gates
 
 **Ground Rules:**
 - Claude handles reasoning/analysis ONLY — never factual NBA data (enforced by CLAUDE.md Critical Data Rules)
@@ -39,42 +39,56 @@ This is the single source of truth for project tasks and priorities.
 
 | # | Sub-Phase | Priority | Description | Daily Cost |
 |---|-----------|----------|-------------|------------|
-| 8.0 | **Injury Intelligence System** | **CRITICAL** | **Persistent injury tracking (status, return dates, descriptions), long-term injury handling, recently-returned player pipeline. REQUIRES: nba_api==1.11.3 with league_id parameter** | **$0** |
-| 8.1 | Injury Intelligence Upgrade | HIGH | BDL → primary, Claude for ambiguous text | ~$0.20 |
-| 8.5 | Play Curation Engine | HIGH | Sanity gate (Haiku) + Top 5 curation (Sonnet) | ~$0.20 |
-| 8.2 | Game Notes Generator | HIGH | Analytical Telegram briefings | ~$0.35 |
-| 8.3 | Player Spotlight Cards | HIGH | Per-bet narratives for DIAMOND/BLUE CHIP | ~$0.25 |
-| 8.9 | **Rotation/Minutes Projection** | **MEDIUM** | **Track coach rotation patterns from PBP data (nba_api PlayByPlayV3), situational minutes modeling, stint-level analysis** | **TBD** |
+| **Pre** | **Shared Claude Infrastructure** | **BLOCKING** | **`utils/claude_client.py` (OAuth-first auth, Haiku/Sonnet), `utils/claude_prompts.py` (ROSTER_RULES + templates), config.py update** | **$0** |
+| 8.0-A | Injury Schema + Sync | CRITICAL | `player_injuries` table (intraday-safe), 4 `players` columns, `scripts/sync_injuries.py` standalone script. BDL primary, Tank01 fallback. Fix 55-player canonical ID gap. | $0 |
+| 8.0-B | Three-Tier Active Roster | CRITICAL | `main.py` roster fix: Tier 1 (active), Tier 2 (recently returned), Tier 3 (long-term out logged). Module D untouched. | $0 |
+| 8.0-C | Smart Vacuum Enhancement | HIGH | `module_x_scenario.py` — full S.A.V.A.G.E. vacuum using `player_game_logs` L10, `player_wowy_stats`, archetype+scheme matrix | $0 |
+| 8.0-D | Workflow Wiring | HIGH | Wire `sync_injuries.py` into `data_sync.yml` (5AM), `daily_briefing.yml` (11AM), `capture_closing_lines.yml` (5:30PM) | $0 |
+| 8.5 | Play Curation Engine | HIGH | Haiku sanity gate (~$0.02) + Sonnet Top 5 curation (~$0.06). Claude reasons about selection — never recalculates edge. | ~$0.08 |
+| 8.2 | Game Notes Generator | HIGH | Structured S.A.V.A.G.E. cards (tables + bullets) replacing wall-of-text. Morning brief + evening lock. | ~$0.35 |
+| 8.3 | Player Spotlight Cards | HIGH | 2-3 sentence narratives for DIAMOND/BLUE CHIP only (~5/day) | ~$0.15 |
+| 8.9 | **Rotation/Minutes Projection** | **MEDIUM** | **Track coach rotation patterns from PBP data (PlayByPlayV3), situational minutes modeling** | **TBD** |
 | 8.7 | Perplexity MCP | MEDIUM | Real-time search replacing DuckDuckGo | ~$0.10 |
 | 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude | ~$0.07 |
 | 8.6 | MCP Server Integration | LOW | BDL + Odds API MCP for Ops Hub | $0 |
 
-**Shared Infrastructure:**
-- [ ] Create `utils/claude_client.py` — shared Anthropic SDK wrapper
-- [ ] Add `ANTHROPIC_API_KEY` to config.py and `.env.template`
+**Shared Infrastructure (Pre-Work — BLOCKING all Phase 8 Claude calls):**
+- [ ] Create `utils/claude_client.py` — OAuth-first auth (CLAUDE_CODE_OAUTH_TOKEN → ~/.claude/config.json → ANTHROPIC_API_KEY), Haiku/Sonnet model selection, token tracking, graceful degradation
+- [ ] Create `utils/claude_prompts.py` — ROSTER_RULES anti-hallucination block, GAME_NOTES_TEMPLATE, SPOTLIGHT_TEMPLATE
+- [ ] Add `CLAUDE_AUTH_TOKEN` to config.py via `_get_claude_auth_token()` helper
+- [ ] Add `CLAUDE_CODE_OAUTH_TOKEN=your-token-here` to `.env.template`
 - [x] Verify `nba_api==1.11.3` installed with league_id parameter support ✅
 - [x] Add PlayByPlayV3 endpoint support to `utils/nba_api_client.py` ✅
 
+**Token Optimization (5x Max Plan):**
+| Task | Model | Est. tokens/call | Frequency |
+|------|-------|-----------------|-----------|
+| Sanity gate | Haiku (temp=0.1) | ~800 | Per bet (~300/day → ~$0.02) |
+| Top 5 curation | Sonnet (temp=0.1) | ~2,000 | Once/day → ~$0.06 |
+| Game notes | Sonnet (temp=0.2) | ~1,500/game | ~10 games/day → ~$0.35 |
+| Player spotlights | Sonnet (temp=0.2) | ~1,000/bet | DIAMOND+BLUE only (~5/day → ~$0.15) |
+
 **Key Tasks:**
-- [ ] 8.0: **Injury Intelligence System (Pre-Phase 8 Foundation)**
-  - Create `player_injuries` table (status, return_date, injury_type, description, onset_date, days_out)
-  - Enhance Module D to persist BDL injury metadata (not just cache)
-  - Fix `get_active_roster()` to handle long-term injuries (30+ days) and recently returned players
-  - Create `scripts/sync_injuries.py` for daily injury refresh
-  - Add injury intel to daily Telegram briefing
-- [ ] 8.1: Promote BDL injuries to primary, add Claude reasoning for ambiguous statuses
-- [ ] 8.5: Sanity gate + holistic "Top 5 Plays" curation with reasoning
-- [ ] 8.2: Per-game analytical cards with Key Advantages, Injury Beneficiaries, WOWY deltas
-- [ ] 8.3: 2-3 sentence narratives with playtype breakdown, DVP ranking, hit rates
-- [ ] 8.9: **Rotation/Minutes Projection Enhancement**
-  - Parse play-by-play data to extract actual rotation patterns (check-in/check-out times)
-  - Build coach tendency models (stint lengths, rest patterns, rotation depth)
-  - Model situational minutes (blowout tax, close game boost, B2B rest management)
-  - Create `scripts/analyze_rotation_patterns.py` to track historical patterns
-  - Integrate rotation intelligence into Module C minutes projection
+- [ ] **Pre-Work (Step 0):** `utils/claude_client.py` + `utils/claude_prompts.py` + config.py update
+  - OAuth-first: tries `CLAUDE_CODE_OAUTH_TOKEN` → `~/.claude/config.json` → `ANTHROPIC_API_KEY`
+  - No actual Claude calls — just wrapper + prompts setup
+- [ ] **8.0-A (Step 1):** `player_injuries` table (intraday-safe — `snapshot_time`, `is_game_day_report`, status-change detection), 4 new `players` columns, `scripts/sync_injuries.py` standalone (BDL primary, Tank01 roster fallback). Fix 55-player canonical ID gap. NOTE: NBA.com CDN injury endpoint CONFIRMED BROKEN (403/empty, Feb 2026) — do not use.
+- [ ] **8.0-B (Step 3):** Three-tier roster in `main.py`. Module D stays untouched. Falls back to Tier 1 if `player_injuries` empty.
+- [ ] **8.0-C (Step 4):** Smart vacuum in `module_x_scenario.py` — `player_game_logs` L10 (not API averages), `player_wowy_stats` on/off delta, archetype vs scheme modifier, exact `days_out` from DB (not keyword matching)
+- [ ] **8.0-D (Step 5):** Wire `sync_injuries.py` into 3 workflows: `data_sync.yml` (5AM, `is_game_day_report=0`), `daily_briefing.yml` (11AM, `is_game_day_report=1`), `capture_closing_lines.yml` (5:30PM, `is_game_day_report=1`)
+- [ ] **8.5 (Step 6):** `scripts/curate_plays.py` — Stage 1 Haiku sanity gate (injury contradictions, impossible lines) + Stage 2 Sonnet Top 5 (correlation-aware, diversified). Claude NEVER recalculates edge.
+- [ ] **8.2 (Step 7):** Structured S.A.V.A.G.E. game cards in `morning_brief.py` + `evening_slate_lock.py`. Format: Context table + Injury Impact + Scheme Edge + Key Edges.
+- [ ] **8.3 (Step 8):** Player spotlight cards in `utils/telegram_notifier.py`. DIAMOND + BLUE CHIP only.
+- [ ] 8.9: **Rotation/Minutes Projection Enhancement** — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
 - [ ] 8.7: Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`
 - [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F modifiers
 - [ ] 8.6: Configure BDL MCP server, add to Claude Ops Hub
+
+**Data Architecture Notes:**
+- Injury intraday: `player_injuries` stores multiple snapshots/day — only insert when status changes. `is_game_day_report=1` for snapshots <8h before tipoff.
+- Smart vacuum uses full S.A.V.A.G.E. DB (not simplified Ludi-Lite API approach): `player_game_logs` L10, `player_wowy_stats`, archetype+scheme matrix
+- GENERALIST target: **Already achieved at 20.0%** ✅ (was incorrectly noted as 31.4% blocking)
+- SMA audit (Feb 17): Temporal ✅ Clean | Feature Coverage ✅ Clean | Entity Resolution ⚠️ 55 canonical ID gap (fix in 8.0-A)
 
 **Competitive Research:** See `docs/FUTURE_DATA_SOURCES.md` §5 for UI/UX patterns from 6 betting analytics sites (PropsMadness, LandYourBets, BucketsToBucks, Outlier.bet, Props.cash, StraightBettin)
 

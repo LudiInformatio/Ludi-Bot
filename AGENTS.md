@@ -137,8 +137,8 @@ A task is done only if:
 ## Slash Aliases (Repo-Local)
 When a user message starts with one of these aliases, treat it as an explicit request to run the mapped skill workflow:
 
-- `/sports-model` -> `skills/sports-data-model-architect/SKILL.md`
-- `/sma` -> `skills/sports-data-model-architect/SKILL.md`
+- `/sports-model` -> `.claude/skills/sports-data-model-architect/SKILL.md`
+- `/sma` -> `.claude/skills/sports-data-model-architect/SKILL.md`
 
 ### How to Invoke (Examples)
 Use these aliases by starting your message with the alias and your task in the same line.

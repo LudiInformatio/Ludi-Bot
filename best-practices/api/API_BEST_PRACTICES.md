@@ -1359,6 +1359,29 @@ def test_live_api():
     print("✅ API integration verified")
 ```
 
+### ❌ Relying on Unverified CDN Endpoints
+
+**Anti-Pattern:**
+```python
+# BAD: Assuming a CDN endpoint works because it's in the docs
+url = "https://cdn.nba.com/static/json/staticData/injury-report_{date}.json"
+response = requests.get(url)
+injuries = response.json()  # 403 Forbidden — endpoint broken as of Feb 2026
+```
+
+**Correct Pattern:**
+```python
+# GOOD: Test the endpoint before shipping; always have a fallback
+def get_nba_official_injuries():
+    # NBA.com CDN endpoints CONFIRMED BROKEN as of Feb 2026 (403/empty).
+    # Do not use cdn.nba.com or ak-static.cms.nba.com for injury data.
+    # Use BDL primary → Tank01 fallback instead.
+    return []
+```
+
+> **Lessons from Ludi-Bot:**
+> Both `cdn.nba.com/static/json/staticData/injury-report_{date}.json` and `ak-static.cms.nba.com/referee/injury/...` return 403 or empty responses as of February 2026. This was discovered during Phase 8 planning — not at runtime — because we test endpoints before building on them. Always verify CDN endpoints are live before using them as a data source. CDN paths can go dark without notice.
+
 ---
 
 ## 11. Ludi-Bot Specific Patterns
@@ -1558,32 +1581,52 @@ def sync_schedule(date: str):
 
 **NBA rule:** Teams must report injuries 15 minutes before tipoff.
 
-**Implementation:**
+> ⚠️ **NBA.com CDN CONFIRMED BROKEN (Feb 2026)**
+> Both `cdn.nba.com/static/json/staticData/injury-report_{date}.json` and
+> `ak-static.cms.nba.com/referee/injury/...` return 403 or empty responses.
+> Do **not** use these endpoints. See anti-patterns section for details.
+
+**Source hierarchy (updated Phase 8):**
+1. **BDL primary** — `bdl_client.get_injuries()` (most reliable, structured response)
+2. **Tank01 fallback** — roster-embedded injury fields via `get_team_roster()`
+3. **`player_injuries` table** — local DB cache with intraday snapshots (Phase 8.0-A)
+
+**Phase 8 intraday pattern (replaces file-based `yak_cache.json`):**
+
+The new `player_injuries` table stores multiple snapshots per day, inserting only when status changes. This avoids unbounded row growth while preserving history.
 
 ```python
-# Module D: Injury sync
-INJURY_CACHE_TTL = 900  # 15 minutes (matches NBA rule)
+# scripts/sync_injuries.py — standalone, runs 3x daily
+# is_game_day_report: 0 = overnight sync (5AM), 1 = game-day windows (11AM, 5:30PM)
 
-def get_injuries(self) -> List[Dict]:
-    """Fetch injury list with 15-min cache."""
+def sync_injuries(is_game_day_report: int = 0):
+    """Fetch injuries from BDL; only insert row when status changes."""
+    injuries = bdl_client.get_injuries()  # BDL primary
 
-    cache_path = "cache/yak_cache.json"
+    for player in injuries:
+        last = db.query(
+            "SELECT status FROM player_injuries WHERE player_id=? ORDER BY snapshot_time DESC LIMIT 1",
+            [player['id']]
+        )
+        if not last or last[0]['status'] != player['status']:
+            # Status changed — insert new snapshot
+            db.execute(
+                "INSERT INTO player_injuries (player_id, status, designation, "
+                "description, snapshot_time, is_game_day_report) VALUES (?,?,?,?,?,?)",
+                [player['id'], player['status'], player['designation'],
+                 player['description'], datetime.utcnow().isoformat(), is_game_day_report]
+            )
+            # Also update fast-lookup columns on players table
+            db.execute(
+                "UPDATE players SET injury_status=?, injury_description=?, "
+                "last_injury_update=? WHERE id=?",
+                [player['status'], player['description'], datetime.utcnow().isoformat(), player['id']]
+            )
 
-    # Check cache age
-    if os.path.exists(cache_path):
-        age = time.time() - os.path.getmtime(cache_path)
-        if age < INJURY_CACHE_TTL:
-            with open(cache_path) as f:
-                return json.load(f)
-
-    # Fetch fresh
-    injuries = tank01_api.get_injury_list()
-
-    # Cache
-    with open(cache_path, 'w') as f:
-        json.dump(injuries, f)
-
-    return injuries
+# Three sync windows (wired via GitHub Actions):
+# data_sync.yml      5:00 AM  — is_game_day_report=0  (overnight baseline)
+# daily_briefing.yml 11:00 AM — is_game_day_report=1  (game-day report)
+# capture_closing.yml 5:30 PM — is_game_day_report=1  (pre-tipoff final)
 ```
 
 ### Line/Odds Data Freshness

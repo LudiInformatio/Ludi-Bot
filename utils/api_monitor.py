@@ -205,6 +205,38 @@ class APIMonitor:
         except Exception as e:
             print(f"      ⚠️ Telegram alert failed: {e}")
 
+    def log_claude_usage(self, model: str, input_tokens: int, output_tokens: int, task: str = ""):
+        """Log Claude API token usage to api_usage_log.json."""
+        timestamp = datetime.now().isoformat()
+
+        haiku_cost_input = 0.00025
+        haiku_cost_output = 0.00125
+        sonnet_cost_input = 0.003
+        sonnet_cost_output = 0.015
+
+        if "haiku" in model.lower():
+            estimated_cost = (input_tokens / 1000) * haiku_cost_input + (output_tokens / 1000) * haiku_cost_output
+            model_short = "haiku"
+        else:
+            estimated_cost = (input_tokens / 1000) * sonnet_cost_input + (output_tokens / 1000) * sonnet_cost_output
+            model_short = "sonnet"
+
+        log_entry = {
+            'timestamp': timestamp,
+            'api': 'claude',
+            'task': task,
+            'model': model,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+            'total_tokens': input_tokens + output_tokens,
+            'estimated_cost_usd': round(estimated_cost, 6)
+        }
+
+        self.logs.append(log_entry)
+        self._save_logs()
+
+        print(f"[Claude] {task} | {model_short} | {input_tokens}in/{output_tokens}out tokens")
+
     def _save_logs(self):
         """Persist logs to JSON file."""
         try:

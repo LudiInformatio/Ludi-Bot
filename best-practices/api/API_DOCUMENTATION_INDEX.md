@@ -35,7 +35,25 @@
 
 ---
 
-### 2. API Quick Reference
+### 2. LLM Integration Guide
+**File:** `LLM_INTEGRATION.md` (~200 lines)
+**Purpose:** Claude/Anthropic integration patterns for Phase 8 AI pipeline
+**Audience:** Developers adding Claude calls to the Ludi-Bot pipeline
+
+**Contents:**
+- OAuth-first auth chain (CLAUDE_CODE_OAUTH_TOKEN → ~/.claude/config.json → ANTHROPIC_API_KEY)
+- Model selection and exact model IDs (Haiku for gates, Sonnet for narratives)
+- SDK patterns: lazy import, client-inside-function, `system=` vs `user=` separation
+- Context engineering: the 5 ordering rules, ROSTER_RULES block
+- Token tracking via `api_monitor.py` extension
+- Graceful degradation (always fall back to rule-based logic)
+- Anti-patterns: Claude for NBA facts, module-level init, blocking pipeline
+
+**Key Feature:** Kept separate from `API_BEST_PRACTICES.md` — LLMs have different constraints from REST APIs.
+
+---
+
+### 3. API Quick Reference
 **File:** `docs/API_QUICK_REFERENCE.md` (7 KB, 1-page cheatsheet)
 **Purpose:** Fast lookup for common API patterns
 **Audience:** Developers who need quick code snippets
@@ -172,6 +190,9 @@ except Exception as e:
 ```
 Need to add a new API?
 └─> API_BEST_PRACTICES.md (Section 13)
+
+Adding a Claude/LLM call?
+└─> LLM_INTEGRATION.md (full guide)
 
 Need a quick code snippet?
 └─> API_QUICK_REFERENCE.md

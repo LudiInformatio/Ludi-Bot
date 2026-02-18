@@ -55,6 +55,28 @@ BALLDONTLIE_HOST = "api.balldontlie.io"
 # Pricing: Pay-as-you-go (~$5-10/mo estimated)
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
+# PERPLEXITY API (Research queries)
+# Source: https://docs.perplexity.ai/
+PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
+
+# --- Claude API (Phase 8 AI Integration) ---
+def _get_claude_auth_token() -> str:
+    """Returns Claude auth token. Priority: OAuth env → local config → API key."""
+    if os.getenv('CLAUDE_CODE_OAUTH_TOKEN'):
+        return os.getenv('CLAUDE_CODE_OAUTH_TOKEN')
+    config_path = os.path.expanduser('~/.claude/config.json')
+    if os.path.exists(config_path):
+        try:
+            import json as _json
+            data = _json.load(open(config_path))
+            if data.get('oauthToken'):
+                return data['oauthToken']
+        except Exception:
+            pass
+    return os.getenv('ANTHROPIC_API_KEY', '')
+
+CLAUDE_AUTH_TOKEN = _get_claude_auth_token()
+
 # ====================================================
 # 3. NEWS & SCOUTING (The Yak)
 # ====================================================

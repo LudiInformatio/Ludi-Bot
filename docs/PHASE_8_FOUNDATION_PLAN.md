@@ -1,25 +1,100 @@
-# Phase 8 Foundation: Injury + Rotation Intelligence Systems
+# Phase 8 Foundation Plan: Shared Claude Infrastructure + Injury Intelligence
 
-**Status:** 📋 PLANNED (awaiting Phase 7.9.5 completion)
-**Priority:** CRITICAL (blocking Phase 8.1+ AI integration)
-**Related:** See `ROADMAP.md` Phase 8.0
+**Status:** 🟡 ACTIVE — Ready for implementation
+**Priority:** CRITICAL (blocking all Phase 8.1+ AI integration)
+**Related:** See `ROADMAP.md` Phase 8 | Design doc: `.claude/plans/curried-growing-toucan.md`
+**Last Revised:** February 19, 2026 (post Ludi-Lite review + SMA audit + user corrections)
 
 ---
 
 ## Executive Summary
 
-This document outlines the implementation plan for Phase 8.0 Foundation: two data intelligence systems that create rich context for AI-enhanced pipeline work (Phase 8.1+):
+Phase 8.0 consists of two sequential concerns:
 
-1. **Injury Intelligence** — Persistent tracking of injury status, return dates, severity, descriptions
-2. **Rotation Intelligence** — Minute-by-minute rotation patterns, coach tendencies, situational minutes modeling
+1. **Pre-Work (Step 0):** Shared Claude infrastructure — auth wrapper + prompt library. Zero API cost. Blocking everything that follows.
+2. **Injury Intelligence (Steps 1–5):** Persistent, intraday-safe injury tracking. Standalone sync script. Module D is NOT touched.
 
-Both systems address critical gaps:
-- **Injury:** 19 players with no game logs → defaulting to GENERALIST (31.4%, target <25%)
-- **Rotation:** Naive minutes projection (simple averages) → missing situational adjustments (blowouts, B2B, lineups)
+**Part B (Rotation Intelligence) has been moved to `docs/PHASE_8_9_ROTATION_PLAN.md`** — it is Phase 8.9 scope, not a blocker for Phase 8.0.
 
 ---
 
-## Part A: Injury Intelligence System
+## SMA Audit Findings (Feb 17, 2026 — Pre-Implementation)
+
+| Check | Severity | Result |
+|-------|----------|--------|
+| Temporal integrity | Critical | ✅ CLEAN |
+| Feature coverage | High | ✅ CLEAN |
+| Entity resolution | Medium | ⚠️ 55 players with no canonical ID match |
+
+**Live DB State Corrections vs Old Plan:**
+| Item | Old Plan Said | Actual |
+|------|---------------|--------|
+| GENERALIST % | 31.4% — BLOCKING | **20.0% — TARGET ACHIEVED** ✅ |
+| `player_injuries` table | needs creating | Does not exist (confirmed) |
+| `current_injury_status` on `players` | needs adding | Does not exist (confirmed) |
+| NBA.com CDN injury endpoint | "option" | **CONFIRMED BROKEN Feb 2026** (403/empty) |
+
+---
+
+## Pre-Work: Shared Claude Infrastructure (Step 0 — BLOCKING)
+
+**Purpose:** Foundation for all Phase 8 Claude calls. Nothing else starts without this.
+
+### Auth Architecture (No Separate API Key)
+
+Auth priority (OAuth-first):
+```python
+# utils/claude_client.py
+def _get_claude_auth_token() -> str:
+    # Priority 1: GitHub Actions secret
+    if os.getenv('CLAUDE_CODE_OAUTH_TOKEN'):
+        return os.getenv('CLAUDE_CODE_OAUTH_TOKEN')
+    # Priority 2: Local Claude Code config
+    config_path = os.path.expanduser('~/.claude/config.json')
+    if os.path.exists(config_path):
+        try:
+            data = json.load(open(config_path))
+            if data.get('oauthToken'):
+                return data['oauthToken']
+        except Exception:
+            pass
+    # Priority 3: Explicit API key (future fallback)
+    return os.getenv('ANTHROPIC_API_KEY', '')
+```
+
+### Files to Create / Modify
+
+| File | Action | What |
+|------|--------|------|
+| `utils/claude_client.py` | CREATE | OAuth-first auth, `HAIKU_MODEL`/`SONNET_MODEL` constants, `get_claude_analysis()`, token tracking, graceful degradation |
+| `utils/claude_prompts.py` | CREATE | `ROSTER_RULES`, `GAME_NOTES_TEMPLATE`, `SPOTLIGHT_TEMPLATE` |
+| `config.py` | MODIFY | Add `CLAUDE_AUTH_TOKEN = _get_claude_auth_token()` |
+| `.env.template` | MODIFY | Add `CLAUDE_CODE_OAUTH_TOKEN=your-token-here  # From Max plan` |
+
+### Model Constants
+
+```python
+# utils/claude_client.py
+HAIKU_MODEL = "claude-haiku-4-5-20251001"   # Sanity gates, classification
+SONNET_MODEL = "claude-sonnet-4-6"           # Narratives, curation
+
+# Temperature guide:
+# 0.1 — math-adjacent (sanity gates, Top 5 curation)
+# 0.2 — player spotlights, game notes
+# 0.3 — freestyle/narrative only
+```
+
+### Acceptance Test
+
+```bash
+python -c "from utils.claude_client import HAIKU_MODEL, SONNET_MODEL; print('OK', HAIKU_MODEL, SONNET_MODEL)"
+python -c "from utils.claude_prompts import ROSTER_RULES, GAME_NOTES_TEMPLATE; print('prompts OK')"
+python -c "from config import CLAUDE_AUTH_TOKEN; print('auth token present:', bool(CLAUDE_AUTH_TOKEN))"
+```
+
+---
+
+## Part A: Injury Intelligence System (Steps 1–5)
 
 ### Problem Statement
 
@@ -29,573 +104,337 @@ Both systems address critical gaps:
 - Long-term injured players (30+ days) silently disappear from pipeline
 - BDL `return_date` and `description` (rich metadata) are fetched but discarded
 - No distinction between injury vs data gap
+- No intraday snapshots — status can change multiple times on game day
 
-**Impact:**
-- Can't tell if Damian Lillard has no logs because he's injured or sync failure
-- No way to track "how long has player X been out?"
-- Can't forecast "welcome back" value plays for returning stars
-- Process restart loses all injury state
+**What changes on game day:**
+- GTD players resolve to OUT or ACTIVE
+- Late scratches appear after lineup lock (~6:30 PM)
+- Injury updates can flip a bet from valid to void
 
-### Solution: Persistent Injury Tracking
+---
 
-#### Database Schema
+### Step 1 — Database Schema
 
-**New table: `player_injuries`**
+**File:** `database.py`
+
+#### New Table: `player_injuries` (Intraday-Safe Design)
+
 ```sql
-CREATE TABLE player_injuries (
+CREATE TABLE IF NOT EXISTS player_injuries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_name TEXT NOT NULL,
     team_abbreviation TEXT,
-    status TEXT NOT NULL,  -- OUT, DOUBTFUL, QUESTIONABLE, PROBABLE, ACTIVE
-    injury_type TEXT,      -- "Ankle sprain", "Knee soreness", etc.
-    return_date TEXT,      -- YYYY-MM-DD or NULL
-    days_out INTEGER,      -- Calculated from onset_date to return_date
-    onset_date TEXT,       -- When injury first reported
-    description TEXT,      -- Full BDL narrative paragraph (50-200 words)
-    source TEXT,           -- 'BDL', 'Tank01', 'RotoWire'
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TEXT,      -- When player returned to ACTIVE
-    PRIMARY KEY (player_name, onset_date)
+    status TEXT NOT NULL,          -- OUT, DOUBTFUL, QUESTIONABLE, PROBABLE, ACTIVE
+    injury_type TEXT,              -- "Ankle sprain", "Knee soreness", etc.
+    return_date TEXT,              -- YYYY-MM-DD or NULL
+    days_out INTEGER,              -- Calculated: onset_date → return_date or today
+    onset_date TEXT,               -- When injury first appeared in our records
+    description TEXT,              -- Full BDL narrative (50-200 words)
+    source TEXT,                   -- 'BDL', 'Tank01'
+    snapshot_time TEXT DEFAULT CURRENT_TIMESTAMP,  -- When THIS record was captured
+    is_game_day_report BOOLEAN DEFAULT 0,          -- TRUE if captured <8h before any game
+    resolved_at TEXT               -- When player returned to ACTIVE (NULL = still out)
 );
 
-CREATE INDEX idx_injuries_current ON player_injuries(player_name, resolved_at);
-CREATE INDEX idx_injuries_status ON player_injuries(status, return_date);
+-- Fast "current status" lookup
+CREATE INDEX IF NOT EXISTS idx_injuries_player_latest
+    ON player_injuries(player_name, snapshot_time DESC);
+-- Game-day snapshots
+CREATE INDEX IF NOT EXISTS idx_injuries_game_day
+    ON player_injuries(snapshot_time, is_game_day_report);
+-- Active injuries
+CREATE INDEX IF NOT EXISTS idx_injuries_active
+    ON player_injuries(status, resolved_at);
 ```
 
-**Enhance `players` table:**
+**Why intraday-safe:** Multiple rows per player per day are normal and intentional. Each sync creates a new row only when status changes (not on every run). `snapshot_time` allows full audit trail.
+
+#### Additions to `players` Table
+
 ```sql
 ALTER TABLE players ADD COLUMN current_injury_status TEXT DEFAULT 'ACTIVE';
-ALTER TABLE players ADD COLUMN days_out_current INTEGER DEFAULT 0;
+ALTER TABLE players ADD COLUMN injury_updated_at TEXT;
 ALTER TABLE players ADD COLUMN injury_return_date TEXT;
+ALTER TABLE players ADD COLUMN days_out_current INTEGER DEFAULT 0;
 ```
 
-#### Module D Enhancement
+#### Also Fix: 55-Player Canonical ID Gap
 
-**File:** `module_d.py` (lines 139-154)
+During schema work, query and repair the 55 players missing from `player_canonical_ids`:
 
-**Current:** Only extracts injury status
-**After:** Extract all BDL metadata
-
-```python
-# AFTER: Extract all fields
-for entry in data['body']:
-    p = entry.get('player', {})
-    injury_record = {
-        'player_name': f"{p.get('first_name')} {p.get('last_name')}",
-        'team_abbreviation': self._resolve_team(p.get('team', {})),
-        'status': self._normalize_status(entry.get('status')),
-        'injury_type': self._extract_injury_type(entry.get('description', '')),
-        'return_date': entry.get('return_date'),
-        'description': entry.get('description', ''),
-        'onset_date': self._infer_onset_date(existing_record, entry),
-        'source': 'BDL'
-    }
-    self._persist_injury(injury_record)
+```sql
+-- Identify gap
+SELECT p.name FROM players p
+LEFT JOIN player_canonical_ids c ON p.name = c.player_name
+WHERE c.player_name IS NULL;
 ```
 
-**New helper methods needed:**
-- `_extract_injury_type(description)` — Parse "ankle sprain" from description
-- `_infer_onset_date(existing, new)` — Use DB history to set onset if new injury
-- `_persist_injury(record)` — Write to `player_injuries` table
-- `_calculate_days_out(onset, return_date)` — Compute duration
+Then upsert via Tank01/BDL ID lookup for each unmatched player.
 
-#### Pipeline Integration
-
-**File:** `main.py` (lines 80-96)
-
-**Problem:** `get_active_roster()` kills long-term injured players
-
-**Current filter:**
-```python
-WHERE pgl.game_date >= date('now', '-30 days')
-HAVING COUNT(pgl.player_id) >= 3  -- Eliminates Lillard, Tatum, etc.
+**Acceptance Test:**
+```bash
+python database.py
+sqlite3 ludi.db "SELECT COUNT(*) FROM player_injuries;"
+sqlite3 ludi.db "SELECT COUNT(*) FROM players WHERE current_injury_status IS NOT NULL;"
+# Canonical gap check
+sqlite3 ludi.db "SELECT COUNT(*) FROM players p LEFT JOIN player_canonical_ids c ON p.name = c.player_name WHERE c.player_name IS NULL;"
 ```
 
-**Proposed fix — Three-tier roster:**
-```python
-# Tier 1: Active players (recent logs)
-active_roster = db.query("""
-    SELECT ... FROM player_game_logs
-    WHERE game_date >= date('now', '-30 days')
-    HAVING COUNT >= 3
-""")
+---
 
-# Tier 2: Recently returned players (check injuries table)
+### Step 2 — Standalone Sync Script
+
+**File:** `scripts/sync_injuries.py`
+
+**Design principle:** Module D stays exactly as-is (in-memory cache, 15-min TTL). Injury persistence is a completely separate, standalone concern.
+
+**What it does:**
+1. Call BDL API → get active injuries (primary source: structured fields, return_date, description)
+2. For each team playing today, call `tank01_client.get_team_roster()` → extract embedded injury fields (Tank01 fallback)
+3. Status-change detection: only insert new `player_injuries` row when status changes vs last snapshot
+4. Always update `players.current_injury_status` + `players.injury_updated_at`
+5. Calculate `days_out` from `onset_date` to today (or `return_date` if known)
+6. Set `is_game_day_report=1` when run within 8 hours of any scheduled game tipoff
+
+**What it does NOT do:**
+- Does NOT modify `module_d.py`
+- Does NOT add helper methods to any existing module
+- Does NOT call any AI/Claude
+- Does NOT use NBA.com CDN injury endpoint (confirmed broken Feb 2026)
+
+**Status-change detection logic:**
+```python
+# Only insert new record if status CHANGED since last snapshot
+last = db.query("""
+    SELECT status FROM player_injuries
+    WHERE player_name = ? ORDER BY snapshot_time DESC LIMIT 1
+""", name)
+
+if not last or last['status'] != new_status:
+    db.insert('player_injuries', new_record)  # Status changed → log it
+
+# Always update players fast-lookup columns regardless
+db.execute("""
+    UPDATE players SET
+        current_injury_status = ?,
+        injury_updated_at = CURRENT_TIMESTAMP,
+        injury_return_date = ?,
+        days_out_current = ?
+    WHERE name = ?
+""", new_status, return_date, days_out, player_name)
+```
+
+**Acceptance Test:**
+```bash
+python scripts/sync_injuries.py --dry-run
+python scripts/sync_injuries.py
+sqlite3 ludi.db "SELECT player_name, status, description FROM player_injuries WHERE resolved_at IS NULL LIMIT 5;"
+sqlite3 ludi.db "SELECT name, current_injury_status FROM players WHERE current_injury_status != 'ACTIVE' LIMIT 10;"
+```
+
+---
+
+### Step 3 — Three-Tier Active Roster
+
+**File:** `main.py` (lines 80-96, `get_active_roster()` filter)
+
+**Tier logic:**
+- **Tier 1:** Active (game logs last 30 days, ≥3 games) — existing behavior, unchanged
+- **Tier 2:** Recently returned (`player_injuries.resolved_at` last 7 days) — add to simulation with flagged context ("WELCOME BACK" tag)
+- **Tier 3:** Long-term out (`days_out > 14`) — log reason, skip simulation, include in injury intel for Telegram
+
+**Backward compatibility:** If `player_injuries` table is empty, falls back to Tier 1 only. No crash.
+
+```python
+# Tier 2 query example
 recently_returned = db.query("""
     SELECT DISTINCT p.name, p.team, p.position, p.archetype
     FROM players p
     JOIN player_injuries i ON p.name = i.player_name
-    WHERE i.status = 'ACTIVE'
-      AND i.resolved_at >= date('now', '-7 days')  -- Returned in last 7 days
-      AND p.name NOT IN (SELECT player_name FROM active_roster)
+    WHERE i.resolved_at >= date('now', '-7 days')
+      AND i.resolved_at IS NOT NULL
 """)
-
-# Tier 3: Long-term injured (track but skip simulation)
-long_term_out = db.query("""
-    SELECT player_name, status, days_out, return_date
-    FROM player_injuries
-    WHERE status IN ('OUT', 'DOUBTFUL')
-      AND (days_out > 14 OR return_date > date('now', '+14 days'))
-""")
-
-final_roster = active_roster + recently_returned
-# Log long_term_out players to explain why they have no recommendations
 ```
 
-#### Daily Sync Script
+**Acceptance Test:**
+```bash
+python main.py --dry-run 2>&1 | grep -E "Tier|INJURY|recently.returned|long.term"
+```
 
-**Create:** `scripts/sync_injuries.py`
+---
 
-**Purpose:** Run as part of `data_sync.yml` (5 AM EST) to populate injury table daily
+### Step 4 — Smart Vacuum Enhancement
 
-**Logic:**
+**File:** `module_x_scenario.py`
+
+**Goal:** Replace the current usage vacuum (which uses API averages and keyword-based long-term detection) with full S.A.V.A.G.E. infrastructure.
+
+| Signal | Old Approach | New Approach | Advantage |
+|--------|-------------|--------------|-----------|
+| Base stats | API averages | `player_game_logs` L10 | Hot streaks, recent form |
+| Absorbed detection | Long-term injury keywords | `player_injuries.days_out` | Exact days, not guessing |
+| Beneficiary selection | Position-only | Position + `player_wowy_stats` on/off delta | Measured impact |
+| Pace modifier | Game total from API | `games.pace` from DB | Our own calculated pace |
+| Archetype fit | Not applied | `archetype` + scheme matrix | Full matchup modifier |
+| Trade deadline | Manual overrides | Roster history query | Dynamic |
+
+**Classification logic (using our DB):**
 ```python
-def sync_injuries():
-    # 1. Fetch from BDL (primary)
-    bdl_injuries = bdl_client.get_active_injuries()
+def _classify_vacuum_smart(out_player_name: str, team_abbr: str) -> dict:
+    # Exact days_out from DB (not keyword matching)
+    inj = db.query("""
+        SELECT days_out, status FROM player_injuries
+        WHERE player_name = ? AND resolved_at IS NULL
+        ORDER BY snapshot_time DESC LIMIT 1
+    """, out_player_name)
 
-    # 2. Fetch from Tank01 (fallback)
-    tank01_injuries = fetch_tank01_injuries()
+    if not inj:
+        return {'status': 'skip', 'scale': 0.0, 'reason': 'Not in injury table'}
 
-    # 3. Merge (BDL takes priority)
-    merged = merge_injury_sources(bdl_injuries, tank01_injuries)
+    days_out = inj['days_out'] or 0
 
-    # 4. For each injury:
-    for inj in merged:
-        existing = db.query("SELECT * FROM player_injuries WHERE player_name = ? AND resolved_at IS NULL", inj['player_name'])
-
-        if existing and inj['status'] == 'ACTIVE':
-            # Player returned — mark as resolved
-            db.execute("UPDATE player_injuries SET resolved_at = CURRENT_TIMESTAMP WHERE ...")
-        elif not existing and inj['status'] != 'ACTIVE':
-            # New injury — insert
-            db.execute("INSERT INTO player_injuries (...) VALUES (...)")
-        else:
-            # Existing injury — update (e.g., status changed or return_date updated)
-            db.execute("UPDATE player_injuries SET status = ?, return_date = ?, ... WHERE ...")
-
-    # 5. Update players.current_injury_status
-    db.execute("""
-        UPDATE players SET
-            current_injury_status = (SELECT status FROM player_injuries WHERE player_name = players.name AND resolved_at IS NULL),
-            days_out_current = (SELECT days_out FROM player_injuries WHERE player_name = players.name AND resolved_at IS NULL),
-            injury_return_date = (SELECT return_date FROM player_injuries WHERE player_name = players.name AND resolved_at IS NULL)
-    """)
+    if days_out > 14:
+        return {'status': 'absorbed', 'scale': 0.0, 'reason': f'{days_out} days — team adjusted'}
+    elif days_out <= 3:
+        return {'status': 'active', 'scale': 1.0, 'reason': f'Recent absence ({days_out}d)'}
+    else:
+        # Partial: scale 0.3–1.0 based on days
+        scale = round(1.0 - ((days_out - 3) / 11 * 0.7), 2)
+        return {'status': 'partial', 'scale': scale, 'reason': f'{days_out}d out — {int(scale*100)}% weight'}
 ```
 
-**Add to `.github/workflows/data_sync.yml`:**
+**Constraint:** Output format unchanged — Module F reads the same vacuum dict structure.
+
+**Acceptance Test:**
+```bash
+python -c "
+from module_x_scenario import ScenarioBuilder
+sb = ScenarioBuilder()
+result = sb.build_vacuum_scenarios_for_game('LAL', 'DEN')
+for k, v in result.items():
+    print(f'{k}: scale={v.get(\"vacuum_scale\",0):.1f}, beneficiary={v.get(\"primary_beneficiary\",\"none\")}')
+"
+```
+
+---
+
+### Step 5 — Workflow Wiring
+
+**Files modified:**
+- `.github/workflows/data_sync.yml` — add injury sync step (after `sync_bdl_game_logs`)
+- `.github/workflows/daily_briefing.yml` — add pre-brief injury refresh
+- `.github/workflows/capture_closing_lines.yml` — add pre-tipoff injury refresh (most critical)
+
+**Intraday sync schedule:**
+| Time | Workflow | is_game_day_report | Purpose |
+|------|---------|-------------------|---------|
+| 5 AM EST | `data_sync.yml` | 0 | Overnight refresh |
+| 11 AM EST | `daily_briefing.yml` | 1 | Pre-morning-brief |
+| 5:30 PM EST | `capture_closing_lines.yml` | 1 | Pre-tipoff (critical) |
+
+**`data_sync.yml` snippet:**
 ```yaml
-- name: Sync Injuries
+- name: Sync Injuries (Overnight)
   run: |
     source .venv/bin/activate
     python scripts/sync_injuries.py
+  env:
+    IS_GAME_DAY_REPORT: "false"
 ```
 
-#### Verification
-
-**Query: Long-term injured players**
-```sql
-SELECT player_name, status, days_out, return_date, injury_type
-FROM player_injuries
-WHERE status IN ('OUT', 'DOUBTFUL')
-  AND resolved_at IS NULL
-ORDER BY days_out DESC;
-```
-
-**Query: Recent returns**
-```sql
-SELECT player_name, status, onset_date, resolved_at, days_out
-FROM player_injuries
-WHERE resolved_at >= date('now', '-7 days')
-ORDER BY resolved_at DESC;
-```
-
-**Add to daily briefing Telegram:**
-```
-🏥 INJURY INTEL
-━━━━━━━━━━━━━━━
-Long-term OUT: Damian Lillard (DAL) - 42 days, return Feb 25
-Recently returned: Jayson Tatum (BOS) - returned Feb 16 after 12 days
+**Acceptance Test:**
+```bash
+python scripts/sync_injuries.py  # direct run verifies it works
+sqlite3 ludi.db "SELECT status, COUNT(*) FROM player_injuries WHERE resolved_at IS NULL GROUP BY status;"
 ```
 
 ---
 
-## Part B: Rotation Intelligence System
+## Critical Files Summary
 
-### Problem Statement
+| Step | File | Action |
+|------|------|--------|
+| 0 | `utils/claude_client.py` | CREATE — OAuth-first auth, model constants, graceful degradation |
+| 0 | `utils/claude_prompts.py` | CREATE — ROSTER_RULES, game notes template, spotlight template |
+| 0 | `config.py` | MODIFY — add `CLAUDE_AUTH_TOKEN` |
+| 0 | `.env.template` | MODIFY — add `CLAUDE_CODE_OAUTH_TOKEN` |
+| 1 | `database.py` | MODIFY — add `player_injuries` (intraday-safe) + 4 `players` columns |
+| 2 | `scripts/sync_injuries.py` | CREATE — standalone BDL+Tank01, status-change detection |
+| 3 | `main.py` | MODIFY — three-tier roster (lines 80-96) |
+| 4 | `module_x_scenario.py` | MODIFY — smart vacuum using DB |
+| 5 | `.github/workflows/data_sync.yml` | MODIFY — add injury sync step |
+| 5 | `.github/workflows/daily_briefing.yml` | MODIFY — add pre-brief refresh |
+| 5 | `.github/workflows/capture_closing_lines.yml` | MODIFY — add pre-tipoff refresh |
 
-**Current State:**
-- Minutes projection = `AVG(minutes)` from recent games (naive scalar)
-- No rotation pattern modeling (when players check in/out, stint lengths)
-- No situational adjustments (blowouts, close games, B2B rest management)
-- No lineup-based minutes (some players get more run in specific combinations)
-- No coach tendency modeling (rigid rotations vs dynamic adjustments)
-
-**Impact:**
-- Minutes are foundation for ALL volume stats (FGA, FTA, REB, AST)
-- If minutes are wrong, everything downstream is wrong
-- Missing huge edges: garbage time boost for bench, close game extension for starters, B2B rest
-
-**Research:**
-- StraightBettin.com and PopcornMachine.net track minute-by-minute rotation timelines
-- Per-stint performance (points, +/-, fouls per rotation stint)
-- Lineup analytics (which 5-man units are most effective)
-- Data is publicly available via NBA play-by-play feeds
-
-### Solution: Rotation Pattern Tracking
-
-#### Database Schema
-
-**New table: `player_rotation_patterns`**
-```sql
-CREATE TABLE player_rotation_patterns (
-    player_name TEXT NOT NULL,
-    team_abbreviation TEXT,
-    game_id TEXT,
-    game_date TEXT,
-    stint_number INTEGER,          -- 1st, 2nd, 3rd rotation stint
-    check_in_time TEXT,            -- Game clock when checked in (e.g., "11:45 Q1")
-    check_out_time TEXT,           -- Game clock when checked out
-    stint_duration_minutes REAL,   -- Actual minutes played in stint
-    stint_points INTEGER,          -- Points scored in this stint
-    stint_plus_minus INTEGER,      -- +/- for this stint
-    stint_fouls INTEGER,           -- Fouls in this stint
-    lineup_id TEXT,                -- 5-player lineup hash for this stint
-    PRIMARY KEY (game_id, player_name, stint_number)
-);
-
-CREATE INDEX idx_rotation_player_recent ON player_rotation_patterns(player_name, game_date DESC);
-CREATE INDEX idx_rotation_lineup ON player_rotation_patterns(lineup_id, stint_plus_minus);
-```
-
-**New table: `coach_rotation_tendencies`**
-```sql
-CREATE TABLE coach_rotation_tendencies (
-    team_abbreviation TEXT NOT NULL,
-    season TEXT NOT NULL,
-    avg_starter_first_rest TEXT,      -- When starters typically check out (e.g., "6:00 Q1")
-    avg_stint_length_minutes REAL,    -- Average stint duration
-    rotation_depth INTEGER,            -- How many players get meaningful minutes
-    blowout_threshold INTEGER,         -- Spread at which coach pulls starters
-    close_game_extension_minutes REAL, -- Extra minutes for starters in close games
-    b2b_rest_reduction_pct REAL,      -- % reduction in starter minutes on B2B
-    last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (team_abbreviation, season)
-);
-```
-
-#### PBP Parsing Script
-
-**Create:** `scripts/sync_rotation_patterns.py`
-
-**Purpose:** Parse NBA play-by-play data to extract check-in/check-out times
-
-**Data Sources (Research-Backed):**
-
-Based on research from:
-- `nba_api` (Python wrapper for NBA.com official stats)
-- `lbiedma/nba-stats-analysis` (example implementations)
-- SportAnalytics.com free data sources
-
-**Recommended Approach:**
-1. **`nba_api` PlayByPlayV3 endpoint** (Primary) ✅ **IMPLEMENTED in utils/nba_api_client.py**
-   - Official NBA.com wrapper (v1.11.3)
-   - Free, comprehensive PBP data
-   - Includes substitution events with timestamps
-   - **CRITICAL:** Must include `league_id="00"` parameter (2023-24+ requirement)
-   - Example: `playbyplayv3.PlayByPlayV3(game_id='0022100001', league_id="00")`
-   - **Available method:** `client.get_play_by_play(game_id)`
-
-2. **BallDontLie PBP endpoint** (Fallback)
-   - GOAT tier subscription ($39.99/mo)
-   - May have cleaner PBP format
-
-3. **Estimate from existing `player_game_logs`** (Last resort)
-   - Use total minutes to infer approximate stints
-   - Less accurate but always available
-
-**Best Practices (from research):**
-- **Rate limiting:** Retry logic with 30s sleep between attempts (up to 5 retries)
-- **Batch processing:** Don't fetch all games at once, process incrementally
-- **Caching:** Store raw PBP responses locally to avoid re-fetching
-- **Pandas DataFrames:** Use for data manipulation and aggregation
-
-**Logic (with best practices):**
-```python
-from utils.nba_api_client import get_nba_client
-
-def parse_rotation_data(game_id):
-    # 1. Fetch play-by-play data using our client wrapper
-    client = get_nba_client()
-    pbp_response = client.get_play_by_play(game_id)
-
-    if not pbp_response:
-        print(f"Failed to fetch PBP for {game_id}")
-        return None
-
-    # 2. Extract play-by-play events
-    pbp_data = pbp_response.get('PlayByPlay', [])
-
-    # 3. Identify substitution events (EVENTMSGTYPE == 8)
-    subs = [e for e in pbp_data if e.get('EVENTMSGTYPE') == 8]
-
-    # 4. Build stint timeline for each player
-    # ... (rest of implementation)
-        player_in = sub['PLAYER1_NAME']
-        player_out = sub['PLAYER2_NAME']
-        game_clock = sub['PCTIMESTRING']
-
-        # Track check-in time
-        if player_in not in player_stints:
-            player_stints[player_in] = []
-        player_stints[player_in].append({'check_in': game_clock})
-
-        # Track check-out time
-        if player_out in player_stints and player_stints[player_out]:
-            player_stints[player_out][-1]['check_out'] = game_clock
-
-    # 4. Calculate stint-level stats (points, +/-, fouls)
-    for player, stints in player_stints.items():
-        for i, stint in enumerate(stints):
-            stint['stint_number'] = i + 1
-            stint['stats'] = calculate_stint_stats(player, stint['check_in'], stint['check_out'], pbp_data)
-
-    # 5. Persist to database
-    save_rotation_patterns(player_stints, game_id)
-```
-
-#### Coach Tendency Analyzer
-
-**Create:** `scripts/analyze_rotation_tendencies.py`
-
-**Purpose:** Aggregate rotation patterns to identify coach tendencies
-
-**Logic:**
-```python
-def analyze_coach_tendencies(team, season):
-    # 1. Get all rotation patterns for team
-    patterns = db.query("""
-        SELECT * FROM player_rotation_patterns
-        WHERE team_abbreviation = ? AND game_date >= ?
-    """, team, season_start_date)
-
-    # 2. Calculate averages
-    avg_first_rest = median([p['check_out_time'] for p in patterns if p['stint_number'] == 1])
-    avg_stint_length = mean([p['stint_duration_minutes'] for p in patterns])
-    rotation_depth = len(set([p['player_name'] for p in patterns if p['stint_duration_minutes'] > 10]))
-
-    # 3. Blowout analysis
-    blowout_games = get_blowout_games(team, season)
-    blowout_threshold = median([g['spread'] for g in blowout_games if starter_minutes_reduced(g)])
-
-    # 4. Save tendencies
-    db.upsert_coach_tendencies(team, season, {
-        'avg_starter_first_rest': avg_first_rest,
-        'avg_stint_length': avg_stint_length,
-        'rotation_depth': rotation_depth,
-        'blowout_threshold': blowout_threshold
-    })
-```
-
-#### Module C Integration
-
-**File:** `module_c.py` (line ~220)
-
-**Current:** Naive minutes
-```python
-"MIN": round(player.get('MIN', 0), 1)
-```
-
-**After:** Situational minutes projection
-```python
-def _project_situational_minutes(player, scenario):
-    """
-    Project minutes based on game situation, coach tendencies, and rotation patterns.
-    """
-    # Base minutes from recent games
-    base_minutes = player.get('MIN', 0)
-
-    # Get coach tendencies
-    team = player['TEAM_ABBREVIATION']
-    tendencies = get_coach_tendencies(team)
-
-    # Situational adjustments
-    adjusted_minutes = base_minutes
-
-    # 1. Blowout tax
-    if abs(scenario['spread']) > tendencies['blowout_threshold']:
-        if player['is_starter']:
-            adjusted_minutes *= 0.85  # Starters sit early
-        else:
-            adjusted_minutes *= 1.15  # Bench gets garbage time
-
-    # 2. Close game boost
-    if abs(scenario['spread']) < 3.0 and player['is_starter']:
-        adjusted_minutes *= 1.08  # Starters play more in close games
-
-    # 3. B2B rest management
-    if scenario.get('b2b') and player['is_starter']:
-        reduction = tendencies['b2b_rest_reduction_pct']
-        adjusted_minutes *= (1 - reduction)
-
-    # 4. Injury-driven rotation chaos
-    if scenario.get('injured_players'):
-        # Check if this player is beneficiary of injury
-        beneficiary_minutes = calculate_beneficiary_boost(player, scenario['injured_players'])
-        adjusted_minutes += beneficiary_minutes
-
-    return round(adjusted_minutes, 1)
-
-"MIN": _project_situational_minutes(player, scenario)
-```
-
-#### Daily Sync Script
-
-**Create:** `scripts/sync_daily_rotations.py`
-
-**Purpose:** Run after each game day to populate rotation patterns
-
-**Add to `.github/workflows/data_sync.yml`:**
-```yaml
-- name: Sync Rotation Patterns
-  run: |
-    source .venv/bin/activate
-    python scripts/sync_rotation_patterns.py --yesterday
-    python scripts/analyze_rotation_tendencies.py --all-teams
-```
-
-#### Verification
-
-**Query: Rotation patterns**
-```sql
--- Top players by stint efficiency
-SELECT player_name, AVG(stint_plus_minus) as avg_stint_pm, COUNT(*) as stints
-FROM player_rotation_patterns
-WHERE game_date >= date('now', '-30 days')
-GROUP BY player_name
-ORDER BY avg_stint_pm DESC
-LIMIT 20;
-```
-
-**Query: Coach tendencies**
-```sql
-SELECT team_abbreviation, avg_stint_length, rotation_depth, blowout_threshold
-FROM coach_rotation_tendencies
-WHERE season = '2025-26';
-```
-
----
-
-## Critical Files
-
-| File | Changes | Part |
-|------|---------|------|
-| `database.py` | Add `player_injuries`, `player_rotation_patterns`, `coach_rotation_tendencies` tables | Both |
-| `module_d.py` | Extract BDL injury metadata, persist to DB | A |
-| `module_c.py` | Replace naive MIN with `_project_situational_minutes()` | B |
-| `main.py` | Fix `get_active_roster()` for long-term injuries + recently returned | A |
-| `scripts/sync_injuries.py` | NEW — daily injury sync | A |
-| `scripts/sync_rotation_patterns.py` | NEW — parse PBP for rotation data | B |
-| `scripts/analyze_rotation_tendencies.py` | NEW — aggregate coach patterns | B |
-| `.github/workflows/data_sync.yml` | Add injury + rotation sync steps | Both |
-| `requirements.txt` | `nba_api==1.11.3` already installed, add `league_id="00"` to all endpoints | B |
-
----
-
-## Implementation Order (Recommended)
-
-**Part A first (Injury Intelligence):**
-1. Database schema (injuries table) — `database.py`
-2. Module D enhancement (persist BDL data) — `module_d.py`
-3. Pipeline integration (roster fixes) — `main.py`
-4. Sync script + workflow — `scripts/sync_injuries.py`, `data_sync.yml`
-
-**Part B second (Rotation Intelligence):**
-5. ~~Install `nba_api`~~ ✅ Already installed (v1.11.3) — verify league_id parameter added
-6. Database schema (rotation tables) — `database.py`
-7. PBP parsing script — `scripts/sync_rotation_patterns.py` using PlayByPlayV3 endpoint
-8. Coach tendency analyzer — `scripts/analyze_rotation_tendencies.py`
-9. Module C integration — `module_c.py`
-10. Sync script + workflow — `data_sync.yml`
-
-**Rationale:** Injury system is **CRITICAL** (blocking archetype cleanup). Rotation system is **HIGH PRIORITY** but not blocking. Build injury foundation first, then layer rotation intelligence on top.
+**NOT touched:** `module_d.py` (in-memory cache stays as-is)
 
 ---
 
 ## Acceptance Criteria
 
-### Injury Intelligence
-- [ ] `player_injuries` table exists with 10+ rows
-- [ ] Damian Lillard shows as OUT with `days_out > 30` and `return_date` populated
-- [ ] `players.current_injury_status` synced for all injured players
-- [ ] `get_active_roster()` logs dropped players with injury reasons
-- [ ] Jayson Tatum (recently returned) appears in Tier 2 roster even if <3 games in 30 days
-- [ ] BDL `description` field stored in database (not discarded)
-- [ ] Run dry run: Pipeline generates bets for recently returned players
-- [ ] No NULLs in `player_injuries.status`
-- [ ] GENERALIST count drops below 25% (currently 31.4%)
-- [ ] Phase 8.1 ready (injury descriptions stored for Claude input)
+### Pre-Work (Step 0)
+- [ ] `from utils.claude_client import HAIKU_MODEL, SONNET_MODEL` works
+- [ ] `from utils.claude_prompts import ROSTER_RULES, GAME_NOTES_TEMPLATE` works
+- [ ] `from config import CLAUDE_AUTH_TOKEN; bool(CLAUDE_AUTH_TOKEN)` is True locally and in Actions
 
-### Rotation Intelligence
-- [ ] `nba_api` package installed and tested
-- [ ] `player_rotation_patterns` table populated with 100+ recent games
-- [ ] Stint-level data captured (check-in/out times, stint +/-)
-- [ ] Coach tendencies calculated for all 30 teams
-- [ ] Situational minutes projection implemented in Module C
-- [ ] Minutes projections more accurate (measure RMSE before/after on 30-day sample)
-- [ ] Blowout scenarios correctly reduce starter minutes by ~15%
-- [ ] Close game scenarios correctly boost starter minutes by ~8%
-- [ ] B2B scenarios correctly reduce starter minutes by coach tendency %
-- [ ] Phase 8.2 ready (rotation patterns available for Claude reasoning)
+### Injury Intelligence (Steps 1–5)
+- [ ] `player_injuries` table exists with correct schema (`snapshot_time`, `is_game_day_report` columns present)
+- [ ] `players` table has `current_injury_status`, `injury_updated_at`, `injury_return_date`, `days_out_current` columns
+- [ ] 55-player canonical ID gap resolved (entity resolution audit shows 0 unmatched)
+- [ ] `sync_injuries.py --dry-run` completes without error
+- [ ] `sync_injuries.py` populates `player_injuries` with 10+ rows
+- [ ] Status-change detection works: re-running sync doesn't insert duplicates for same status
+- [ ] `players.current_injury_status` synced for all known injured players
+- [ ] Long-term injured players (days_out > 14) appear in Tier 3, NOT in simulation
+- [ ] Recently returned players (resolved_at last 7 days) appear in Tier 2 simulation
+- [ ] Smart vacuum correctly classifies: active (<4 days out), partial (4–14 days), absorbed (>14 days)
+- [ ] BDL `description` stored in DB (not discarded)
+- [ ] Phase 8.5 ready: `player_injuries.description` available for Claude sanity gate context
 
----
-
-## Phase 8.1+ Integration (Future)
-
-Once both systems are implemented, Claude (Phase 8.1+) will:
-
-**From Injury Intelligence:**
-- Reason about injury severity ("ankle sprain" vs "ACL tear")
-- Identify minutes-limit signals in descriptions
-- Flag beneficiaries when stars are out
-- Generate "welcome back" value plays for returning players
-- Detect recurring injury patterns (e.g., "3rd ankle injury this season")
-
-**From Rotation Intelligence:**
-- Adjust situational minutes predictions based on game context
-- Identify lineup combinations that maximize player performance
-- Flag games where rotation chaos is likely (multiple injuries, unusual matchups)
-- Warn when coach tendencies shift (new rotation patterns emerging)
-
-Both systems provide **deterministic data** that Claude will **reason about** — keeping math and AI layers cleanly separated.
+### SMA Audit Post-Implementation
+```bash
+python scripts/audit_temporal_integrity.py --db ludi.db   # must be clean
+python scripts/audit_feature_coverage.py --db ludi.db     # must be clean
+python scripts/audit_entity_resolution.py --db ludi.db    # 0 canonical gaps (was 55)
+```
 
 ---
 
 ## Dependencies
 
 **Required:**
-- BallDontLie API (GOAT tier, $39.99/mo) — injury data
-- Tank01 API (PAID) — injury fallback
-- `nba_api==1.11.3` Python package — PBP data (free, already installed) ✅
-  - **CRITICAL:** All endpoints must include `league_id="00"` parameter
-  - PlayByPlayV3 endpoint wrapper available in `utils/nba_api_client.py`
+- BallDontLie API (GOAT tier) — primary injury data with `return_date` + `description`
+- Tank01 API (PAID) — injury fallback via team roster embedded fields
+- `CLAUDE_CODE_OAUTH_TOKEN` — GitHub Actions secret (already exists ✅)
 
-**Nice-to-Have:**
-- RotoWire RSS feed — breaking injury news (already integrated)
-
----
-
-## Success Metrics
-
-**Injury Intelligence:**
-- GENERALIST archetype < 25% (down from 31.4%)
-- Long-term injured players explicitly tracked (not silently dropped)
-- Injury onset-to-return timeline queryable
-
-**Rotation Intelligence:**
-- Minutes projection RMSE improves by ≥10%
-- Blowout detection accuracy > 85%
-- Coach tendency detection for all 30 teams
+**Confirmed broken — do NOT use:**
+- NBA.com CDN `injury-report_{date}.json` → 403 Forbidden as of Feb 2026
+- NBA.com `ak-static.cms.nba.com` injury endpoint → empty/denied
 
 ---
 
-**For questions or updates, see:** `ROADMAP.md` Phase 8.0 or contact the development team.
+## Phase 8.5+ Integration (Next)
+
+Once Pre-Work and Steps 1–5 are complete:
+- **Phase 8.5 (Step 6):** `scripts/curate_plays.py` — Haiku sanity gate reads `player_injuries.description` to flag contradictions. Sonnet Top 5 reasons about correlation + diversification.
+- **Phase 8.2 (Step 7):** Game notes cards read `player_injuries.days_out` for injury impact section. Format: structured S.A.V.A.G.E. cards (not wall-of-text paragraphs).
+- **Phase 8.3 (Step 8):** Player spotlights read `player_injuries` to flag minutes limits.
+
+All Claude calls receive deterministic DB data — Claude reasons, never calculates.
+
+---
+
+## Residual Risks
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| OAuth token behavior in Python SDK may differ from API key | HIGH | Test in Step 0 acceptance; fallback to requesting API key from Max plan dashboard |
+| BDL `return_date` field NULL for some injuries | MEDIUM | NULL is fine; `days_out` calculated from `onset_date` → today |
+| 55 canonical ID gap causes sync failures | MEDIUM | Fix in Step 1 before any sync runs |
+| Smart vacuum needs `player_wowy_stats` populated | MEDIUM | Falls back to `player_game_logs` L10 if WOWY table sparse |
+| Game notes token cost higher on 15-game nights | LOW | Add per-game token limit; truncate low-priority games |
+
+---
+
+**For rotation intelligence (Phase 8.9), see:** `docs/PHASE_8_9_ROTATION_PLAN.md` (to be created)
+**For questions or updates, see:** `ROADMAP.md` Phase 8
