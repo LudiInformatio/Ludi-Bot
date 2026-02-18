@@ -18,6 +18,71 @@ class ScenarioBuilder:
         self.rotation_cache = {}
         self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
 
+    def _classify_vacuum_smart(self, out_player_name: str, team_abbr: str) -> dict:
+        """
+        Classify how much vacuum to apply for an absent player using DB data.
+        Returns: {'status': str, 'scale': float, 'reason': str}
+        
+        Graceful fallback: if player_injuries table missing, returns scale=1.0 (full vacuum).
+        """
+        import sqlite3
+        try:
+            conn = sqlite3.connect("ludi.db", timeout=30)
+            conn.execute("PRAGMA journal_mode=WAL")
+            c = conn.cursor()
+            c.execute("""
+                SELECT days_out FROM player_injuries
+                WHERE player_name = ? AND resolved_at IS NULL
+                ORDER BY snapshot_time DESC LIMIT 1
+            """, (out_player_name,))
+            row = c.fetchone()
+            conn.close()
+
+            if not row:
+                return {'status': 'active', 'scale': 1.0, 'reason': 'Not in injury table'}
+
+            days_out = row[0] or 0
+
+            if days_out > 14:
+                return {'status': 'absorbed', 'scale': 0.0, 'reason': f'{days_out} days — team adjusted'}
+            elif days_out <= 3:
+                return {'status': 'active', 'scale': 1.0, 'reason': f'Recent absence ({days_out}d)'}
+            else:
+                scale = round(1.0 - ((days_out - 3) / 11 * 0.7), 2)
+                return {'status': 'partial', 'scale': scale, 'reason': f'{days_out}d out — {int(scale*100)}% weight'}
+        except Exception as e:
+            print(f"[ScenarioBuilder] Smart vacuum fallback: {e}")
+            return {'status': 'active', 'scale': 1.0, 'reason': 'DB fallback'}
+
+    def _get_l10_stats(self, player_name: str, team_abbr: str) -> dict:
+        """Get last 10 games average stats from player_game_logs. Returns {} if unavailable."""
+        import sqlite3
+        try:
+            conn = sqlite3.connect("ludi.db", timeout=30)
+            conn.execute("PRAGMA journal_mode=WAL")
+            c = conn.cursor()
+            c.execute("""
+                SELECT AVG(pts), AVG(reb), AVG(ast), AVG(minutes), AVG(fga), AVG(fg3a), AVG(fta)
+                FROM (
+                    SELECT pts, reb, ast, minutes, fga, fg3a, fta
+                    FROM player_game_logs
+                    WHERE player_name = ? AND team_abbreviation = ?
+                    ORDER BY game_date DESC LIMIT 10
+                )
+            """, (player_name, team_abbr))
+            row = c.fetchone()
+            conn.close()
+            if not row or row[0] is None:
+                return {}
+            return {
+                'PTS': round(row[0] or 0, 1), 'REB': round(row[1] or 0, 1),
+                'AST': round(row[2] or 0, 1), 'MIN': round(row[3] or 0, 1),
+                'FGA': round(row[4] or 0, 1), 'FG3A': round(row[5] or 0, 1),
+                'FTA': round(row[6] or 0, 1)
+            }
+        except Exception:
+            return {}
+
     def generate_scenarios(self, processed_slate):
         """
         Input: List of Game Objects from Module B/Sim Engine.
@@ -70,8 +135,14 @@ class ScenarioBuilder:
             minutes_matrix = backup_data if isinstance(backup_data, dict) else {}
             wowy_confidence = None
         
-        vacated_usage = starter_out.get('base_usg', 0)
-        vacated_mins = starter_out.get('base_min', 0)
+        vacuum_info = self._classify_vacuum_smart(
+            starter_out.get('PLAYER_NAME', ''),
+            starter_out.get('TEAM_ABBREVIATION', '')
+        )
+        vacuum_scale = vacuum_info.get('scale', 1.0) if isinstance(vacuum_info, dict) else 1.0
+
+        vacated_usage = starter_out.get('base_usg', 0) * vacuum_scale
+        vacated_mins = starter_out.get('base_min', 0) * vacuum_scale
         
         raw_players = []
         
@@ -96,7 +167,18 @@ class ScenarioBuilder:
                 absorption_rate = minutes_matrix[p['PLAYER_NAME']]
                 added_min = vacated_mins * absorption_rate
                 
+                l10_stats = self._get_l10_stats(
+                    p.get('PLAYER_NAME', ''),
+                    p.get('TEAM_ABBREVIATION', '')
+                )
+                if l10_stats:
+                    for key in ['PTS', 'REB', 'AST', 'MIN', 'FGA', 'FG3A', 'FTA']:
+                        if key in l10_stats:
+                            new_p[key] = l10_stats[key]
+
                 old_min = p.get('base_min', 0)
+                if l10_stats and l10_stats.get('MIN') is not None:
+                    old_min = l10_stats.get('MIN', old_min)
                 # Cap minutes reasonable (max 38 or +12 bump)
                 new_min = min(old_min + added_min, 38.0, old_min + 12.0)
                 
