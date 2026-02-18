@@ -27,6 +27,15 @@ jobs:
       - name: Install dependencies
         run: pip3 install -r requirements.txt
 
+      - name: Sync Injuries (Pre-Tipoff Critical)
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_injuries.py
+        env:
+          IS_GAME_DAY_REPORT: "true"
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+
       - name: Capture closing lines
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

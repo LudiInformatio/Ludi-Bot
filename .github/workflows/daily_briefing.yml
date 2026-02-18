@@ -27,7 +27,14 @@ jobs:
         run: |
           python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
 
-
+      - name: Sync Injuries (Pre-Brief Refresh)
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_injuries.py
+        env:
+          IS_GAME_DAY_REPORT: "true"
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
       - name: Run Morning Briefing
         env:

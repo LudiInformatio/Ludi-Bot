@@ -737,6 +737,49 @@ class LudiHistorian:
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_team_scheme_type ON team_scheme_cache(scheme_type)')
 
+        # player_injuries table (Phase 8.0 - Injury Intelligence)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_injuries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name TEXT NOT NULL,
+                team_abbreviation TEXT,
+                status TEXT NOT NULL,
+                injury_type TEXT,
+                return_date TEXT,
+                days_out INTEGER,
+                onset_date TEXT,
+                description TEXT,
+                source TEXT,
+                snapshot_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                is_game_day_report BOOLEAN DEFAULT 0,
+                resolved_at TEXT
+            )
+        ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_player_latest ON player_injuries(player_name, snapshot_time DESC)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_game_day ON player_injuries(snapshot_time, is_game_day_report)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_active ON player_injuries(status, resolved_at)')
+
+        # Add injury columns to players table (Phase 8.0)
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN current_injury_status TEXT DEFAULT \'ACTIVE\'')
+        except:
+            pass
+
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN injury_updated_at TEXT')
+        except:
+            pass
+
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN injury_return_date TEXT')
+        except:
+            pass
+
+        try:
+            c.execute('ALTER TABLE players ADD COLUMN days_out_current INTEGER DEFAULT 0')
+        except:
+            pass
+
         # Create lineup_season_totals view (aggregates per-game lineup data)
         # This view aggregates team_lineups from per-game to full-season totals
         c.execute('''

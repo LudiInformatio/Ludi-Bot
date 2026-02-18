@@ -159,6 +159,15 @@ jobs:
         run: |
           python3 scripts/sync_team_leverage_profiles.py
 
+      - name: Sync Injuries (Overnight Refresh)
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_injuries.py
+        env:
+          IS_GAME_DAY_REPORT: "false"
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+
       - name: Sync BDL Clutch Usage
         continue-on-error: true
         timeout-minutes: 10
