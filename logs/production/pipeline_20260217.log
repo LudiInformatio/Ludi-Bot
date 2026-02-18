@@ -1,0 +1,100 @@
+
+==================================================
+   LUDI INFORMATIO | SYSTEM INITIALIZATION
+   Architecture: Modules A-H (Production v2.0)
+==================================================
+========================================
+LUDI INFORMATIO: MODULE A (GATEKEEPER) ONLINE
+   >>> PIPELINE: V9.4 (4-TIER LINE SHOPPING)
+   >>> TIERS: NC_LEGAL | SHARP | DFS | SOCIAL
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] 📡 No games found - auto-populating today's slate...
+   [ZEBRAS] ❌ Error populating games: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us&markets=h2h&oddsFormat=american
+   [ZEBRAS] ✅ Games populated successfully
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE H (HISTORIAN) ONLINE
+========================================
+   🛡️ API Budget: 200 requests
+
+========================================
+LUDI INFORMATIO: MODULE C (ORACLE V3.2) LIVE
+   >>> Hybrid Engine: Normal (High-Vol) + Poisson (Rare)
+   >>> Sim Count: 5000
+========================================
+   >>> Shot quality data loaded: 500 players
+   >>> Rolling TS% data loaded: 348 players
+   >>> Drives context data loaded: 382 players
+
+========================================
+LUDI INFORMATIO: MODULE D (YAK V3.5) ONLINE
+   >>> 15-MIN SYNC | PROBABLE & AVAILABLE ACTIVE
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE
+   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE
+========================================
+[Module E] Loaded clutch data for 0 teams, 0 CLUTCH_PERFORMERs
+[Module E] Speed/fatigue data loaded: 382 players
+[Module E] Touches data loaded: 545 players
+[Module E] Leverage profiles loaded: 30 teams
+[Module E] Player leverage usage loaded: 434 players
+
+========================================
+LUDI INFORMATIO: MODULE F (V5.2) ONLINE
+   >>> DETERMINISTIC REPORTING | NO SPECULATION
+   >>> BET LOGGING ENABLED
+========================================
+✅ BetLogger initialized (DB: ludi.db, Logs: logs/bets)
+✅ Bet logger connected
+✅ TagClassifier initialized with 2025-26 defensive schemes
+✅ Tag classifier connected
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] 📡 No games found - auto-populating today's slate...
+   [ZEBRAS] ❌ Error populating games: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us&markets=h2h&oddsFormat=american
+   [ZEBRAS] ✅ Games populated successfully
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE X (SCENARIO V3.7) ONLINE
+   >>> DYNAMIC ROSTERS | LIVE SCHEMA ACTIVE
+========================================
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...    [ZEBRAS] 🛡️ Cleaning UI and simulating human... Done.
+   [ZEBRAS] 🔽 Opening date dropdown... Done.
+   [ZEBRAS] 🔄 Toggling date to force refresh... Done.
+   [ZEBRAS] ⚠️ Timeout waiting for table rows.
+✅ Success. Found assignments for 0 games.
+
+==================================================
+   >>> STARTING DAILY SIMULATION CYCLE <<<
+   Mode: Production v2.0
+==================================================
+   📋 Daily Lock: 2026-01-14 | Mode: LIVE
+[1] 📡 Fetching Slate & Live Odds...
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...    [ZEBRAS] 🛡️ Cleaning UI and simulating human... Done.
+   [ZEBRAS] 🔽 Opening date dropdown... Done.
+   [ZEBRAS] 🔄 Toggling date to force refresh... Done.
+   [ZEBRAS] ⚠️ Timeout waiting for table rows.
+✅ Success. Found assignments for 0 games.
+      📊 ODDS_API: 0 credits remaining
+
+⚠️ WARNING: ODDS_API quota at 100.0% (0 remaining)
+
+   ⚠️  The-Odds-API Failed: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us%2Cus2&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american
+   📡 Falling back to BallDontLie for game lines...
+   📡 [BDL] Fetching game lines from BallDontLie...
+   ⚠️  [BDL] No games found for 2026-02-17
+[DAILY_LOCK] WARNING: Config date (2026-01-14) != Today (2026-02-17)
+[DAILY_LOCK] Running in LIVE mode (ignoring stale config)
+❌ No games found. Exiting.

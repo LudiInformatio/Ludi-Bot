@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-02-17T10:42:48.225925",
+  "checks": {
+    "data_integrity": {
+      "Synergy Playtypes": {
+        "status": "\u2705 OK",
+        "records_24h": 1848,
+        "last_update": "2026-02-17T04:22:12.866998"
+      },
+      "Tracking Stats": {
+        "status": "\u26a0\ufe0f STALE",
+        "records_24h": 0,
+        "total_records": 14152
+      },
+      "Shot Quality": {
+        "status": "\u2705 OK",
+        "records_24h": 500,
+        "last_update": "2026-02-17 08:56:29"
+      },
+      "WOWY Lineups": {
+        "status": "\u26a0\ufe0f STALE",
+        "records_24h": 0,
+        "total_records": 17368
+      },
+      "Referee Data": {
+        "status": "\u26a0\ufe0f STALE",
+        "records_24h": 0,
+        "total_records": 71
+      },
+      "Game Data": {
+        "status": "\u26a0\ufe0f STALE",
+        "records_24h": 0,
+        "total_records": 1850
+      }
+    },
+    "model_drift": {
+      "status": "\ud83d\udcca NO DATA",
+      "message": "No bet recommendations in last 24h"
+    },
+    "module_output": {
+      "status": "\u274c ERROR",
+      "error": "too many values to unpack (expected 2)"
+    },
+    "api_health": {
+      "the_odds_api": {
+        "status": "\u26a0\ufe0f HIGH",
+        "usage": "20000/20000 (100.0%)",
+        "last_check": "2026-02-17T10:42:45.406902"
+      }
+    },
+    "pf_coverage": {
+      "status": "\ud83d\udfe1 MONITOR",
+      "recent_7d": {
+        "coverage": "74.1%",
+        "with_pf": 340,
+        "total": 459,
+        "date_range": "2026-02-10 to 2026-02-12"
+      },
+      "full_season": {
+        "coverage": "79.1%",
+        "with_pf": 22657,
+        "total": 28644
+      }
+    },
+    "wowy_coverage": {
+      "status": "\u2705 OK",
+      "player_wowy": {
+        "players": 360,
+        "teams": "30/30",
+        "with_data": 360,
+        "coverage": "100.0%",
+        "last_sync": "2026-02-17T03:56:21.663280"
+      },
+      "lineup_fallback": {
+        "lineups": 898,
+        "teams": "30/30",
+        "max_possessions": 766
+      }
+    }
+  },
+  "summary": {
+    "total_alerts": 6,
+    "critical_alerts": 1,
+    "warning_alerts": 5,
+    "alerts": [
+      "\u26a0\ufe0f Tracking Stats: No updates in 24h",
+      "\u26a0\ufe0f WOWY Lineups: No updates in 24h",
+      "\u26a0\ufe0f Referee Data: No updates in 24h",
+      "\u26a0\ufe0f Game Data: No updates in 24h",
+      "\ud83d\udea8 Module output check failed: too many values to unpack (expected 2)",
+      "\u26a0\ufe0f The-Odds-API: 100.0% quota used"
+    ]
+  }
+}
