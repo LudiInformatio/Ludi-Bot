@@ -238,15 +238,36 @@ class MorningBriefEngine:
             print("\n📝 Generating S.A.V.A.G.E. Game Notes...")
             try:
                 conn = self._get_db_conn()
-                
-                # 1. Group all_bets by game_id
+
+                # 1. Group all bets by game_id
                 game_groups = {}
                 for bet in processed_bets:
                     gid = bet.get('game_id') or bet.get('matchup', 'UNKNOWN')
                     if gid not in game_groups: game_groups[gid] = []
                     game_groups[gid].append(bet)
-                
-                for gid, bets in game_groups.items():
+
+                # 2. Deterministic game selection — score by tier quality, pick top 4
+                # DIAMOND=4.0, BLUE CHIP=2.5, CORE ASSET=1.0, THE STEAL=0.5
+                # BENEFICIARY tag bonus=1.0 (usage vacuum games have high narrative value)
+                # Top 5 plays (curate_plays.py) are independent and board-wide — not tied to game selection
+                MAX_GAME_NOTES = 4
+                _tier_weights = {'DIAMOND': 4.0, 'BLUE CHIP': 2.5, 'CORE ASSET': 1.0, 'THE STEAL': 0.5}
+
+                def _score_game(bets):
+                    score = sum(
+                        _tier_weights.get(b.get('confidence_tier', 'THE STEAL'), 0.5)
+                        + (1.0 if 'BENEFICIARY' in str(b.get('tags', '')) else 0.0)
+                        for b in bets
+                    )
+                    return score
+
+                scored_games = sorted(game_groups.items(), key=lambda x: _score_game(x[1]), reverse=True)
+                top_games = scored_games[:MAX_GAME_NOTES]
+                skipped = len(scored_games) - len(top_games)
+                if skipped > 0:
+                    print(f"   ℹ️  {len(scored_games)} games on slate — generating notes for top {len(top_games)}, skipping {skipped} low-value games")
+
+                for gid, bets in top_games:
                     if not bets: continue
                     
                     # 2. Build Context
