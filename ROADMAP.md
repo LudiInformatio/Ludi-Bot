@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 19, 2026 @ 8:03 PM EST
+**Last Updated:** February 17, 2026 @ 11:24 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.5 — Play Curation Engine (first step with live Claude API calls)
-**Completed:** Phases 5–7 ✅ + Phase 8.0 (Pre-Work + 8.0-A/B/C/D) ✅ (see `docs/archive/phase_reports/` for details)
+**Active Work:** Phase 8.7 — Perplexity MCP (elevated to HIGH — feeds game scoring + Haiku sanity gate)
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6 ✅ (see `docs/archive/phase_reports/` for details)
 
 This is the single source of truth for project tasks and priorities.
 
@@ -26,7 +26,7 @@ This is the single source of truth for project tasks and priorities.
 **Status:** 🟡 ACTIVE — Phase 8.0 complete (Feb 19), starting Phase 8.5
 **Phase 8 Foundation Plan:** `docs/PHASE_8_FOUNDATION_PLAN.md` (Injury Intelligence + Phase 8 Pre-Work)
 **Design Doc:** `.claude/plans/curried-growing-toucan.md` (revised Feb 17 — Ludi-Lite review + SMA audit)
-**Estimated Daily Cost:** ~$0.73/day (~$22/month) — token-optimized with Haiku gates
+**Estimated Daily Cost:** ~$0.40/day (~$12/month) — game notes scoped to top 4 games (was $0.73)
 
 **Ground Rules:**
 - Claude handles reasoning/analysis ONLY — never factual NBA data (enforced by CLAUDE.md Critical Data Rules)
@@ -40,17 +40,18 @@ This is the single source of truth for project tasks and priorities.
 | # | Sub-Phase | Priority | Description | Daily Cost |
 |---|-----------|----------|-------------|------------|
 | **Pre** ✅ | **Shared Claude Infrastructure** | **DONE** | **`utils/claude_client.py` (OAuth-first auth, Haiku/Sonnet), `utils/claude_prompts.py` (ROSTER_RULES + templates), config.py update** | **$0** |
-| 8.0-A ✅ | Injury Schema + Sync | DONE | `player_injuries` table (intraday-safe), 4 `players` columns, `scripts/sync_injuries.py` standalone script. BDL primary, Tank01 fallback. 51/55 canonical IDs resolved. | $0 |
+| 8.0-A ✅ | Injury Schema + Sync | DONE | `player_injuries` table (intraday-safe), 4 `players` columns, `scripts/sync_injuries.py` standalone script. BDL primary, Tank01 fallback. All 4 canonical gaps resolved. | $0 |
 | 8.0-B ✅ | Three-Tier Active Roster | DONE | `main.py` roster fix: Tier 1 (active), Tier 2 (recently returned "WELCOME_BACK"), Tier 3 (long-term out logged). Graceful fallback if table empty. | $0 |
 | 8.0-C ✅ | Smart Vacuum Enhancement | DONE | `module_x_scenario.py` — DB-driven `days_out` lookup, `_classify_vacuum_smart()` (absorbed/active/partial scale), `_get_l10_stats()` from `player_game_logs`. | $0 |
-| 8.0-D ✅ | Workflow Wiring | DONE | `sync_injuries.py` wired into `data_sync.yml` (5AM, IS_GAME_DAY=0), `daily_briefing.yml` (11AM, IS_GAME_DAY=1), `capture_closing_lines.yml` (5:30PM, IS_GAME_DAY=1) | $0 |
-| 8.5 | Play Curation Engine | HIGH | Haiku sanity gate (~$0.02) + Sonnet Top 5 curation (~$0.06). Claude reasons about selection — never recalculates edge. | ~$0.08 |
-| 8.2 | Game Notes Generator | HIGH | Structured S.A.V.A.G.E. cards (tables + bullets) replacing wall-of-text. Morning brief + evening lock. | ~$0.35 |
-| 8.3 | Player Spotlight Cards | HIGH | 2-3 sentence narratives for DIAMOND/BLUE CHIP only (~5/day) | ~$0.15 |
-| 8.9 | **Rotation/Minutes Projection** | **MEDIUM** | **Track coach rotation patterns from PBP data (PlayByPlayV3), situational minutes modeling** | **TBD** |
-| 8.7 | Perplexity MCP | MEDIUM | Real-time search replacing DuckDuckGo | ~$0.10 |
-| 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude | ~$0.07 |
-| 8.6 | MCP Server Integration | LOW | BDL + Odds API MCP for Ops Hub | $0 |
+| 8.0-D ✅ | Workflow Wiring | DONE | `sync_injuries.py` wired into `data_sync.yml` (5AM), `daily_briefing.yml` (11AM), `capture_closing_lines.yml` (5:30PM) | $0 |
+| 8.5 ✅ | Play Curation Engine | DONE | Haiku sanity gate + Sonnet Top 5 curation. Board-wide, game-agnostic. MarkdownV2 escaping fixed. Max-2-per-game enforced in code. | ~$0.08 |
+| 8.2 ✅ | Game Notes Generator | DONE | S.A.V.A.G.E. cards. Smart selection: top 4 games by tier-weight score. Notes persisted to `game_notes_log`. | ~$0.10-0.14 |
+| 8.3 ✅ | Player Spotlight Cards | DONE | 2-3 sentence narratives for DIAMOND/BLUE CHIP only (~5/day). L10 + injury context injected. | ~$0.15 |
+| 8.6 ✅ | CLV + Retrospective | DONE | CLV extended to all 11 markets. `settle_bets.py` clv fixed. `weekly_retrospective.py` win+loss analysis (~$0.054/week, Tuesdays). | ~$0.01 |
+| **8.7** | **Perplexity MCP** | **HIGH ↑** | **Replaces DuckDuckGo in Module D. Feeds narrative context to BOTH game scoring AND Haiku sanity gate. Social sentiment + news = qualitative edge the math can't capture. Two jobs: injury nuance + game selection enrichment.** | **~$0.10** |
+| 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude, re-enable Module F archetype modifiers | ~$0.07 |
+| 8.9 | Rotation/Minutes Projection | MEDIUM | Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C | TBD |
+| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()` in `morning_brief.py`. Backtest vs CLV after Mar 2026 data accumulates. | $0 |
 
 **Shared Infrastructure (Pre-Work — COMPLETE ✅ Feb 19):**
 - [x] Create `utils/claude_client.py` — OAuth-first auth (CLAUDE_CODE_OAUTH_TOKEN → ~/.claude/config.json → ANTHROPIC_API_KEY), Haiku/Sonnet model selection, token tracking, graceful degradation ✅
@@ -79,17 +80,17 @@ This is the single source of truth for project tasks and priorities.
   - **Future:** Backtest game score formula vs CLV/win rate after 4-6 weeks of data (Mar 2026). Validate tier-weight formula produces better-performing game selections than random. Query: `game_notes_log JOIN bet_recommendations ON game_id` — compare avg CLV for selected vs skipped games.
 - [x] **8.3 (Step 8):** Player spotlight cards in `morning_brief.py`. DIAMOND + BLUE CHIP only. Helper methods `_get_db_conn()` + `_get_l10_for_spotlight()` added. ✅ (Feb 19)
 - [x] **8.6 (Step 9):** CLV capture extended to all 11 markets (PTS/REB/AST/3PM/STL/BLK/TOV/PRA/PR/PA/RA). `settle_bets.py` clv field now uses clv_cents. `game_notes_log` table persists Claude game cards. `scripts/weekly_retrospective.py` — win+loss pattern analysis over game-notes bets only (~$0.054/week, Tuesdays). ✅ (Feb 17)
-- [ ] 8.9: **Rotation/Minutes Projection Enhancement** — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
-- [ ] 8.7: Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`
-- [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F modifiers
-- [ ] 8.6: Configure BDL MCP server, add to Claude Ops Hub
+- [ ] **8.7 (Step 10) ← NEXT:** Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`. Expanded scope: feeds narrative context to (1) `_score_game()` game selection in `morning_brief.py` and (2) Haiku sanity gate in `curate_plays.py`. Social sentiment + injury nuance + coach/practice reports. Architecture: Perplexity fetches → Claude reasons → two downstream consumers.
+- [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F archetype modifiers (3 broken classification systems need audit first)
+- [ ] 8.9: Rotation/Minutes Projection Enhancement — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
+- [ ] 8.8: Game Score Formula v2 — add line movement delta + handle% to `_score_game()`. Blocked until Mar 2026 data accumulates for backtest validation.
 
 **Data Architecture Notes:**
 - Injury intraday: `player_injuries` stores multiple snapshots/day — only insert when status changes. `is_game_day_report=1` for snapshots <8h before tipoff. **LIVE ✅**
 - Smart vacuum: DB-driven `days_out` lookup. Scale: absorbed >14d→0.0, active ≤3d→1.0, partial 4-14d→interpolated. **LIVE ✅**
 - BDL injury endpoint quirk: returns `player.team_id` (int) only — no team object. Team abbreviation resolved from `players` table by name match. **Fixed (8e53fcf) ✅**
 - GENERALIST target: **Already achieved at 20.0%** ✅ (was incorrectly noted as 31.4% blocking)
-- SMA audit (Feb 17): Temporal ✅ Clean | Feature Coverage ✅ Clean | Entity Resolution ⚠️ 51/55 canonical IDs resolved (4 remaining: Nic Claxton likely "Nicolas Claxton" name mismatch)
+- SMA audit (Feb 17): Temporal ✅ Clean | Feature Coverage ✅ Clean | Entity Resolution ✅ Clean — all 4 gaps resolved (Nic Claxton → Nicolas Claxton, EJ Harkless → Elijah Harkless, Dom Barlow → Dominick Barlow, Nikola Djurisic added to canonical)
 
 **Competitive Research:** See `docs/FUTURE_DATA_SOURCES.md` §5 for UI/UX patterns from 6 betting analytics sites (PropsMadness, LandYourBets, BucketsToBucks, Outlier.bet, Props.cash, StraightBettin)
 
