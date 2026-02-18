@@ -120,6 +120,77 @@ class LudiOrchestrator:
                 'pbp_rim_freq': round(at_rim_freq, 3),
                 'pbp_corner3_freq': round(corner3_freq, 3)
             })
+
+        # --- Tier 2: Recently returned players (from player_injuries, last 7 days) ---
+        tier1_ids = {p['player_id'] for p in roster}
+        try:
+            conn2 = sqlite3.connect(self.db_path)
+            cursor2 = conn2.cursor()
+            cursor2.execute("""
+                SELECT DISTINCT pi.player_id
+                FROM player_injuries pi
+                JOIN players p ON p.player_id = pi.player_id
+                WHERE pi.resolved_at >= date('now', '-7 days')
+                  AND pi.resolved_at IS NOT NULL
+                  AND p.team = ?
+            """, (team_abbr,))
+            returned_ids = [r[0] for r in cursor2.fetchall() if r[0] not in tier1_ids]
+
+            for pid in returned_ids:
+                cursor2.execute("""
+                    SELECT pgl.player_id, pgl.player_name, pgl.team_abbreviation,
+                           AVG(pgl.pts), AVG(pgl.reb), AVG(pgl.ast),
+                           AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta),
+                           AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk),
+                           AVG(pgl.tov), AVG(pgl.minutes),
+                           NULL, NULL, NULL,
+                           CASE WHEN SUM(pgl.fga) > 0 THEN ROUND(1.0*SUM(pgl.fgm)/SUM(pgl.fga),4) ELSE 0.45 END,
+                           CASE WHEN SUM(pgl.fg3a) > 0 THEN ROUND(1.0*SUM(pgl.fg3m)/SUM(pgl.fg3a),4) ELSE 0.35 END,
+                           CASE WHEN SUM(pgl.fta) > 0 THEN ROUND(1.0*SUM(pgl.ftm)/SUM(pgl.fta),4) ELSE 0.75 END
+                    FROM player_game_logs pgl
+                    WHERE pgl.player_id = ? AND pgl.game_date >= date('now', '-30 days')
+                    GROUP BY pgl.player_id, pgl.player_name, pgl.team_abbreviation
+                    HAVING COUNT(pgl.player_id) >= 1
+                """, (pid,))
+                row = cursor2.fetchone()
+                if row:
+                    fga, fta, tov, mins = row[6] or 0, row[8] or 0, row[13] or 0, row[14] or 0
+                    base_usg = round(((fga + 0.44*fta + tov)/mins)/2.1, 3) if mins > 0 else 0
+                    roster.append({
+                        'player_id': row[0], 'PLAYER_NAME': row[1], 'TEAM_ABBREVIATION': row[2],
+                        'PTS': round(row[3] or 0, 1), 'REB': round(row[4] or 0, 1), 'AST': round(row[5] or 0, 1),
+                        'FGA': round(fga, 1), 'FG3A': round(row[7] or 0, 1), 'FTA': round(fta, 1),
+                        'OREB': round(row[9] or 0, 1), 'DREB': round(row[10] or 0, 1),
+                        'STL': round(row[11] or 0, 1), 'BLK': round(row[12] or 0, 1), 'TOV': round(tov, 1),
+                        'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1),
+                        'FG_PCT': row[18], 'FG3_PCT': row[19], 'FT_PCT': row[20],
+                        'pbp_shot_quality': 0.53, 'pbp_rim_freq': 0.0, 'pbp_corner3_freq': 0.0,
+                        'tier': 'WELCOME_BACK'
+                    })
+                    print(f"[ROSTER] Tier 2 (recently returned): {row[1]} ({row[2]})")
+            conn2.close()
+        except Exception:
+            print(f"[ROSTER] player_injuries table not ready — using Tier 1 only")
+
+        # --- Tier 3: Long-term injured (>14 days out) — log only, skip simulation ---
+        try:
+            conn3 = sqlite3.connect(self.db_path)
+            cursor3 = conn3.cursor()
+            cursor3.execute("""
+                SELECT p.name, p.team, p.days_out_current
+                FROM players p
+                JOIN player_injuries pi ON p.player_id = pi.player_id
+                WHERE pi.resolved_at IS NULL
+                  AND p.days_out_current > 14
+                GROUP BY p.player_id
+            """)
+            for row in cursor3.fetchall():
+                name, team, days_out = row[0], row[1] or 'UNK', row[2] or 0
+                print(f"[INJURY-TIER3] {name} ({team}) — {days_out}d out, skipped")
+            conn3.close()
+        except Exception:
+            pass  # Tier 3 is informational only — never blocks simulation
+
         return roster
 
     def get_opponent_stats(self, opponent_abbr: str) -> Dict:
