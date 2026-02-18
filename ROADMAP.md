@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 17, 2026 @ 11:24 PM EST
+**Last Updated:** February 18, 2026 @ 11:15 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.7 — Perplexity MCP (elevated to HIGH — feeds game scoring + Haiku sanity gate)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6 ✅ (see `docs/archive/phase_reports/` for details)
+**Active Work:** Phase 8.4 — Archetype Classifier Fix (next up)
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6/8.7 ✅ + Slate Date Fix ✅ (see `docs/archive/phase_reports/` for details)
 
 This is the single source of truth for project tasks and priorities.
 
@@ -48,7 +48,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.2 ✅ | Game Notes Generator | DONE | S.A.V.A.G.E. cards. Smart selection: top 4 games by tier-weight score. Notes persisted to `game_notes_log`. | ~$0.10-0.14 |
 | 8.3 ✅ | Player Spotlight Cards | DONE | 2-3 sentence narratives for DIAMOND/BLUE CHIP only (~5/day). L10 + injury context injected. | ~$0.15 |
 | 8.6 ✅ | CLV + Retrospective | DONE | CLV extended to all 11 markets. `settle_bets.py` clv fixed. `weekly_retrospective.py` win+loss analysis (~$0.054/week, Tuesdays). | ~$0.01 |
-| **8.7** | **Perplexity MCP** | **HIGH ↑** | **Replaces DuckDuckGo in Module D. Feeds narrative context to BOTH game scoring AND Haiku sanity gate. Social sentiment + news = qualitative edge the math can't capture. Two jobs: injury nuance + game selection enrichment.** | **~$0.10** |
+| 8.7 ✅ | Perplexity Integration | DONE | Sonar replaces DuckDuckGo in Module D. 4 injection points: injury nuance, game scoring bonus, game notes {schedule_notes}, Haiku soft-scratch gap. Module G referee fallback bonus. | ~$0.10 |
 | 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude, re-enable Module F archetype modifiers | ~$0.07 |
 | 8.9 | Rotation/Minutes Projection | MEDIUM | Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C | TBD |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()` in `morning_brief.py`. Backtest vs CLV after Mar 2026 data accumulates. | $0 |
@@ -80,10 +80,17 @@ This is the single source of truth for project tasks and priorities.
   - **Future:** Backtest game score formula vs CLV/win rate after 4-6 weeks of data (Mar 2026). Validate tier-weight formula produces better-performing game selections than random. Query: `game_notes_log JOIN bet_recommendations ON game_id` — compare avg CLV for selected vs skipped games.
 - [x] **8.3 (Step 8):** Player spotlight cards in `morning_brief.py`. DIAMOND + BLUE CHIP only. Helper methods `_get_db_conn()` + `_get_l10_for_spotlight()` added. ✅ (Feb 19)
 - [x] **8.6 (Step 9):** CLV capture extended to all 11 markets (PTS/REB/AST/3PM/STL/BLK/TOV/PRA/PR/PA/RA). `settle_bets.py` clv field now uses clv_cents. `game_notes_log` table persists Claude game cards. `scripts/weekly_retrospective.py` — win+loss pattern analysis over game-notes bets only (~$0.054/week, Tuesdays). ✅ (Feb 17)
-- [ ] **8.7 (Step 10) ← NEXT:** Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`. Expanded scope: feeds narrative context to (1) `_score_game()` game selection in `morning_brief.py` and (2) Haiku sanity gate in `curate_plays.py`. Social sentiment + injury nuance + coach/practice reports. Architecture: Perplexity fetches → Claude reasons → two downstream consumers.
+- [x] **8.7 (Step 10):** Perplexity Sonar integration. `utils/perplexity_client.py` (file-based cache, graceful fallback). 4 injection points: `module_d` injury nuance, `morning_brief._score_game()` narrative bonus, GAME_NOTES_TEMPLATE `{schedule_notes}`, `curate_plays` soft-scratch check. Module G referee Perplexity fallback (bonus). Commit: `a4ca3b3`. ✅ (Feb 18)
 - [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F archetype modifiers (3 broken classification systems need audit first)
 - [ ] 8.9: Rotation/Minutes Projection Enhancement — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
 - [ ] 8.8: Game Score Formula v2 — add line movement delta + handle% to `_score_game()`. Blocked until Mar 2026 data accumulates for backtest validation.
+
+**Slate Date Filter (Feb 18, 2026 — commit a4ca3b3):**
+- `module_a.py`: 9 PM EST cutoff — before 9 PM: today only, after 9 PM: today + tomorrow (early research)
+- `main.py`: `game_date` now uses actual `start_time` instead of hardcoded `get_est_today()` — fixes data corruption in `bet_recommendations`
+- `morning_brief.py` + `claude_prompts.py`: `{game_label}` in GAME_NOTES_TEMPLATE → "TONIGHT · Feb 19" / "TOMORROW · Feb 20"
+- `utils/bdl_client.py`: default `date=today` guard added to `get_odds()`
+- Full API audit: all other slate-fetching scripts already had correct date filters ✅
 
 **Data Architecture Notes:**
 - Injury intraday: `player_injuries` stores multiple snapshots/day — only insert when status changes. `is_game_day_report=1` for snapshots <8h before tipoff. **LIVE ✅**
