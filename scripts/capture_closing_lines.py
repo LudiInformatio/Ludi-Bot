@@ -114,7 +114,7 @@ def fetch_closing_lines(game_id: str) -> Dict:
     params = {
         'api_key': config.ODDS_API_KEY,
         'regions': 'us',
-        'markets': 'player_points,player_rebounds,player_assists',
+        'markets': 'player_points,player_rebounds,player_assists,player_threes,player_steals,player_blocks,player_turnovers,player_points_rebounds_assists,player_points_rebounds,player_points_assists,player_rebounds_assists',
         'oddsFormat': 'american'
     }
     
@@ -235,6 +235,10 @@ def match_closing_lines(bet: Dict, closing_data: Dict) -> Tuple[Optional[int], O
         'stl': 'player_steals',
         'blk': 'player_blocks',
         'tov': 'player_turnovers',
+        'pra': 'player_points_rebounds_assists',
+        'pr': 'player_points_rebounds',
+        'pa': 'player_points_assists',
+        'ra': 'player_rebounds_assists',
     }
     
     market_key = market_map.get(stat_cat, f'player_{stat_cat}')
@@ -280,6 +284,7 @@ def process_game(conn: sqlite3.Connection, game_id: str, bets: List[Dict],
         
         if closing_over is None and closing_under is None:
             skipped += 1
+            print(f"  SKIP bet {bet['id']}: {bet['player_name']} {bet['stat_category']} — no closing line match found")
             continue
         
         bet_decimal = american_to_decimal(bet.get('odds_over') or bet.get('odds_under'))

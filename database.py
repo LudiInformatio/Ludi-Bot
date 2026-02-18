@@ -798,6 +798,22 @@ class LudiHistorian:
             HAVING SUM(possessions) >= 25
         ''')
 
+        # game_notes_log: stores Claude-generated S.A.V.A.G.E. game notes (Phase 8.6)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS game_notes_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                run_date TEXT NOT NULL,
+                notes_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(game_id, run_date)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_game_notes_run_date
+                ON game_notes_log(run_date, game_id)
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

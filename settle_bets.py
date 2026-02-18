@@ -56,7 +56,8 @@ class BetSettler:
 
             # V5.2: Auto-void DNPs (0 minutes = player was inactive/benched)
             if actual_val is not None and minutes_played is not None and minutes_played == 0:
-                self.logger.update_outcome(bet_id, 'PUSH', -998, profit_loss=0.0, clv=0.0)
+                clv_cents_void = bet.get('clv_cents') or 0.0
+                self.logger.update_outcome(bet_id, 'PUSH', -998, profit_loss=0.0, clv=clv_cents_void)
                 print(f"   ↔️  VOID-DNP (0 min): {player_name} ({game_date})")
                 settled_count += 1
                 continue
@@ -65,9 +66,10 @@ class BetSettler:
                 # Auto-void: check if team played and player was DNP
                 void_reason = self._diagnose_missing_log(bet.get('team', ''), game_date, player_name)
                 if void_reason:
+                    clv_cents_void = bet.get('clv_cents') or 0.0
                     self.logger.update_outcome(bet_id, 'PUSH',
                         -999 if void_reason == 'NO_GAME' else -998,
-                        profit_loss=0.0, clv=0.0)
+                        profit_loss=0.0, clv=clv_cents_void)
                     print(f"   ↔️  VOID-{void_reason}: {player_name} ({game_date})")
                     settled_count += 1
                 else:
@@ -77,8 +79,9 @@ class BetSettler:
             # 3. Determine Outcome
             outcome, profit = self._grade_bet(side, line, actual_val, bet['units'], odds_over, odds_under)
             
-            # 4. Update Database
-            clv = 0.0 
+            # 4. Update Database — copy clv_cents to clv if available
+            clv_cents = bet.get('clv_cents')
+            clv = float(clv_cents) if clv_cents is not None and clv_cents != 0 else 0.0
             self.logger.update_outcome(bet_id, outcome, actual_val, profit_loss=profit, clv=clv)
             
             # Update Tracker

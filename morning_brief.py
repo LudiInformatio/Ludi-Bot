@@ -339,6 +339,17 @@ class MorningBriefEngine:
 
                         if response:
                             print(f"      ✅ Notes generated for {matchup}")
+                            # Persist game notes to DB (Phase 8.6)
+                            try:
+                                run_date_str = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
+                                conn.execute('''
+                                    INSERT OR REPLACE INTO game_notes_log (game_id, run_date, notes_text)
+                                    VALUES (?, ?, ?)
+                                ''', (gid, run_date_str, response))
+                                conn.commit()
+                                print(f"      💾 Game notes saved to DB for {matchup}")
+                            except Exception as e_db:
+                                print(f"      ⚠️ Failed to save game notes to DB: {e_db}")
                             if not self.dry_run:
                                 send_message(response, parse_mode="Markdown")
                             else:

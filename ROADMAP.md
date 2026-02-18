@@ -75,8 +75,9 @@ This is the single source of truth for project tasks and priorities.
 - [x] **8.0-C (Step 4):** Smart vacuum in `module_x_scenario.py` — `_classify_vacuum_smart()` (DB-driven days_out, absorbed/active/partial scale), `_get_l10_stats()` from `player_game_logs`. ✅ (Feb 19)
 - [x] **8.0-D (Step 5):** `sync_injuries.py` wired into `data_sync.yml` (5AM), `daily_briefing.yml` (11AM), `capture_closing_lines.yml` (5:30PM) with correct IS_GAME_DAY_REPORT flags. ✅ (Feb 19)
 - [x] **8.5 (Step 6):** `scripts/curate_plays.py` — Stage 1 Haiku sanity gate (injury contradictions, impossible lines) + Stage 2 Sonnet Top 5 (correlation-aware, diversified). Claude NEVER recalculates edge. ✅ (Feb 19)
-- [ ] **8.2 (Step 7):** Structured S.A.V.A.G.E. game cards in `morning_brief.py`. Format: Context table + Injury Impact + Scheme Edge + Key Edges. **← NEXT** (GAME_NOTES_TEMPLATE imported, logic not yet wired)
+- [x] **8.2 (Step 7):** Structured S.A.V.A.G.E. game cards in `morning_brief.py`. Context table + Injury Impact + Scheme Edge + Key Edges. Notes persisted to `game_notes_log` table. ✅ (Feb 17)
 - [x] **8.3 (Step 8):** Player spotlight cards in `morning_brief.py`. DIAMOND + BLUE CHIP only. Helper methods `_get_db_conn()` + `_get_l10_for_spotlight()` added. ✅ (Feb 19)
+- [x] **8.6 (Step 9):** CLV capture extended to all 11 markets (PTS/REB/AST/3PM/STL/BLK/TOV/PRA/PR/PA/RA). `settle_bets.py` clv field now uses clv_cents. `game_notes_log` table persists Claude game cards. `scripts/weekly_retrospective.py` — win+loss pattern analysis over game-notes bets only (~$0.054/week, Tuesdays). ✅ (Feb 17)
 - [ ] 8.9: **Rotation/Minutes Projection Enhancement** — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
 - [ ] 8.7: Perplexity MCP replacing Module D's DuckDuckGo `_nuance_check()`
 - [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F modifiers
