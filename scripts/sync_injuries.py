@@ -175,8 +175,9 @@ class InjurySync:
                 if not player_name:
                     continue
 
-                team_data = player.get('team', {})
-                team_abbreviation = team_data.get('abbreviation') if team_data else None
+                # BDL injury endpoint returns team_id only (no team object)
+                # Resolve abbreviation from our players table by name
+                team_abbreviation = None  # populated later in sync_to_database
 
                 bdl_status = item.get('status', 'Out')
                 normalized_status = self.STATUS_MAP.get(bdl_status, 'OUT')
@@ -329,6 +330,15 @@ class InjurySync:
                 description = injury.get('description', '')
                 injury_type = injury.get('injury_type')
                 source = injury.get('source', 'Unknown')
+
+                # Resolve team abbreviation from our players table (BDL doesn't return it)
+                team_abbreviation = injury.get('team_abbreviation')
+                if not team_abbreviation:
+                    for pname, team in all_db_players:
+                        if pname.lower() == player_name.lower():
+                            team_abbreviation = team
+                            break
+                injury['team_abbreviation'] = team_abbreviation
 
                 last_injury = self._get_last_injury_record(conn, player_name)
 
