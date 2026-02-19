@@ -341,9 +341,61 @@ class LudiRefEngine:
                     from utils.perplexity_client import PerplexityClient
                     perp = PerplexityClient()
                     today_str = datetime.now().strftime('%Y-%m-%d')
-                    news = perp._query(f"NBA referee crew assignments tonight {today_str}")
-                    if news:
-                        print(f"   [ZEBRAS] 🔍 Perplexity referee fallback: {news[:100]}...")
+
+                    # Load known referee names from referee_profiles (71-name roster)
+                    known_refs = []
+                    try:
+                        conn = sqlite3.connect(self.db_path)
+                        rows = conn.execute("SELECT referee_name FROM referee_profiles").fetchall()
+                        known_refs = [r[0] for r in rows]
+                        conn.close()
+                    except Exception:
+                        pass
+
+                    # Load today's games for per-game queries (more targeted than bulk)
+                    today_games = []
+                    try:
+                        conn = sqlite3.connect(self.db_path)
+                        rows = conn.execute(
+                            "SELECT game_id, home_team, away_team FROM games WHERE date = ?",
+                            (today_str,)
+                        ).fetchall()
+                        today_games = rows
+                        conn.close()
+                    except Exception:
+                        pass
+
+                    perp_count = 0
+                    for game_id, home_team, away_team in today_games:
+                        query = f"NBA referee crew assignment {home_team} vs {away_team} tonight {today_str}"
+                        news = perp._query(query)
+                        if not news or not known_refs:
+                            continue
+
+                        # Match known referee names found in the response text
+                        news_lower = news.lower()
+                        matched = [r for r in known_refs if r.lower() in news_lower]
+
+                        if matched:
+                            self.daily_assignments[home_team] = matched
+                            # Persist to games.referee_crew for future runs
+                            try:
+                                conn = sqlite3.connect(self.db_path)
+                                conn.execute(
+                                    "UPDATE games SET referee_crew = ? WHERE game_id = ?",
+                                    (', '.join(matched), game_id)
+                                )
+                                conn.commit()
+                                conn.close()
+                            except Exception:
+                                pass
+                            print(f"   [ZEBRAS] 🔍 Perplexity crew ({home_team}): {', '.join(matched)}")
+                            perp_count += 1
+
+                    if perp_count > 0:
+                        print(f"   [ZEBRAS] ✅ Perplexity fallback populated {perp_count} game crew(s)")
+                    else:
+                        print(f"   [ZEBRAS] ⚠️ Perplexity fallback returned no matchable ref names")
                 except Exception as e:
                     print(f"   [ZEBRAS] Perplexity referee fallback failed: {e}")
 

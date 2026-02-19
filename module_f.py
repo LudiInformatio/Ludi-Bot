@@ -208,14 +208,25 @@ class LudiReporter:
                                 decimal_odds = 1 + (100 / abs(bet_odds))
 
                             # EV Calculation using actual odds
-                            ev = round(((win_prob * decimal_odds) - 1) * 100, 2)
+                            ev_raw = round(((win_prob * decimal_odds) - 1) * 100, 2)
 
-                            # V4.6: Sanity check - flag unrealistic EV
+                            # Line source quality and consensus tracking (from prop_data dict)
+                            source_quality = prop_data.get('source_quality', 'UNKNOWN') if isinstance(prop_data, dict) else 'UNKNOWN'
+                            vendor_count = prop_data.get('vendor_count', 0) if isinstance(prop_data, dict) else 0
+
+                            # Sanity gate: if EV > 100%, line quality is suspect
+                            # Cap display at 99.9% — math is preserved in DB, display is readable
+                            ev_capped = ev_raw > 100
+                            ev = min(ev_raw, 99.9)
+
+                            # EV quality flags (updated per industry thresholds)
                             ev_flag = ""
-                            if ev > 25:
-                                ev_flag = "⚠️ VERIFY LINE"
-                            elif ev > 15:
-                                ev_flag = "📊 EXCEPTIONAL"
+                            if ev_capped:
+                                ev_flag = "⚠️ DATA QUALITY"  # >100% EV → line source issue
+                            elif ev_raw > 25:
+                                ev_flag = "⚠️ VERIFY LINE"   # 25-100% EV → review before betting
+                            elif ev_raw > 15:
+                                ev_flag = "📊 EXCEPTIONAL"   # 15-25% → strong edge
 
                             # V5.2: Composite confidence tier (edge + gold combos)
                             confidence_tier = self._calculate_confidence_tier(
@@ -277,9 +288,17 @@ class LudiReporter:
                             if p.get('decision_note'):
                                 note_elements.append(p['decision_note'])
 
-                            # G) EV Sanity Flag (V4.6)
+                            # G) EV Sanity Flag + Consensus Quality Note
                             if ev_flag:
                                 note_elements.append(ev_flag)
+                            # H) Line Source & Consensus Strength
+                            if source_quality == 'BDL_FALLBACK':
+                                consensus_note = f"[BDL:{vendor_count}bk]" if vendor_count else "[BDL]"
+                                note_elements.append(consensus_note)
+                            elif source_quality == 'ODDS_API' and vendor_count >= 4:
+                                note_elements.append(f"[{vendor_count}bk consensus]")
+                            elif source_quality == 'ODDS_API' and vendor_count > 0:
+                                note_elements.append(f"[{vendor_count}bk]")
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
@@ -345,7 +364,7 @@ class LudiReporter:
                                         'fair_prob': round(fair_prob, 4),
                                         'model_prob': round(model_prob, 4),
                                         'true_edge': edge,
-                                        'ev': ev,
+                                        'ev': ev_raw,   # Store raw EV in DB (not capped)
                                         'units': units,
                                         'confidence_tier': confidence_tier,
                                         'note': " | ".join(note_elements),
@@ -353,6 +372,8 @@ class LudiReporter:
                                         'referee_impact': ref_pace,
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
+                                        'source_quality': source_quality,
+                                        'vendor_count': vendor_count,
                                         'bookmaker': book_over if bet_direction == 'over' else book_under  # Line Shopping V2.0
                                     }
                                     bet_id = self.bet_logger.log_recommendation(rec_data)
@@ -379,7 +400,11 @@ class LudiReporter:
                                 "total": game.get('total', 0),
                                 "confidence_tier": confidence_tier,
                                 "archetype": p.get('archetype', ''),
-                                "opponent": game.get('opponent', '')
+                                "opponent": game.get('opponent', ''),
+                                "book_over": book_over,
+                                "book_under": book_under,
+                                "odds_over": odds_over,
+                                "odds_under": odds_under,
                             })
 
                 # --- 4. CORRELATION CHECK (SGP TARGETS) ---
@@ -634,7 +659,12 @@ class LudiReporter:
             report += f"\n🏀 {matchup}\n"
             for bet in top_plays:
                 report += f"   💎 {bet['name']} | {bet['bet_on']} {bet['line']} {bet['stat']}\n"
-                report += f"      Proj: {bet['proj']} | EV: +{bet['ev']}% | {bet['units']}u\n"
+                # Best price: show which book and at what odds to place the bet
+                bet_book = bet.get('book_under') if bet['bet_on'] == 'UNDER' else bet.get('book_over')
+                bet_odds = bet.get('odds_under') if bet['bet_on'] == 'UNDER' else bet.get('odds_over')
+                odds_str = f"+{bet_odds}" if bet_odds and bet_odds > 0 else str(bet_odds or '')
+                price_str = f" | {bet_book} {odds_str}" if bet_book and bet_book not in ('consensus', '') else ""
+                report += f"      Proj: {bet['proj']} | Edge: +{bet['edge']}% | {bet['units']}u{price_str}\n"
                 
                 # Display tags
                 if bet.get('tags') and self.tag_classifier:

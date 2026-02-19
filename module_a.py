@@ -505,6 +505,13 @@ class Gatekeeper:
                                 continue
 
                             prop['line'] = main_line
+                            # Track consensus strength: how many unique NC legal books agreed on this line
+                            nc_books_at_main = sum(
+                                1 for book in nc_legal
+                                if book in prop.get('_all_books', {}) and main_line in prop['_all_books'][book]
+                            )
+                            prop['vendor_count'] = nc_books_at_main
+                            prop['source_quality'] = 'ODDS_API'
 
                             # Find best NC Legal at main line (FOR BETTING)
                             for book in nc_legal:
@@ -661,11 +668,43 @@ class Gatekeeper:
             line_counts = Counter(e[0] for e in pool)
             main_line = line_counts.most_common(1)[0][0]
 
-            # Average odds across all vendors at the main line (from filtered pool)
+            # Best odds across vendors at the main line.
+            # Use BEST decimal odds (highest payout) per side — not arithmetic average
+            # of American odds (which produces nonsense when mixing +/- values).
             main_entries = [e for e in pool if e[0] == main_line]
-            avg_over = round(sum(e[2] for e in main_entries) / len(main_entries))
-            avg_under = round(sum(e[3] for e in main_entries) / len(main_entries))
-            best_vendor = main_entries[0][1]  # First vendor at main line (for book label)
+
+            def _to_decimal(american):
+                if american is None: return 1.909  # -110 default
+                if american > 0: return 1 + (american / 100)
+                return 1 + (100 / abs(american))
+
+            def _best_american(entries_list, side_idx):
+                """Return the American odds with the highest decimal value for this side."""
+                best = max(entries_list, key=lambda e: _to_decimal(e[side_idx]))
+                return best[side_idx], best[1]  # (odds, vendor_name)
+
+            best_over_odds, best_over_vendor = _best_american(main_entries, 2)
+            best_under_odds, best_under_vendor = _best_american(main_entries, 3)
+            # Use the vendor with better over odds for the book label (bet to place)
+            best_vendor = best_over_vendor
+
+            # Quality gate: require minimum real-odds vendor coverage by market type.
+            # Markets with thinner coverage have higher risk of line quality issues.
+            # Note: real_odds_entries may be empty for some markets → fallback pool used.
+            real_count = len(real_odds_entries)
+            MIN_REAL_VENDORS = {
+                # High-volume markets: main line is well-defined, 2+ books minimum
+                'points': 2, 'rebounds': 2, 'assists': 2,
+                # Combo markets: thinner, allow 1 real-odds vendor
+                'pra': 1, 'pr': 1, 'pa': 1, 'ra': 1,
+                # Rare-event markets: prone to extreme odds, require 2+ real-odds vendors
+                'blocks': 2, 'steals': 2, 'threes': 2,
+                # Turnovers: moderate volume
+                'turnovers': 1,
+            }
+            min_required = MIN_REAL_VENDORS.get(internal_key, 1)
+            if real_odds_entries and real_count < min_required:
+                continue  # Skip — insufficient market consensus for reliable line
 
             # Only write if Odds-API hasn't already set this player/stat
             if player_name not in self.games[game_id]['props']:
@@ -673,9 +712,10 @@ class Gatekeeper:
             if internal_key not in self.games[game_id]['props'][player_name]:
                 self.games[game_id]['props'][player_name][internal_key] = {
                     'line': main_line,
-                    'odds_over': avg_over, 'book_over': best_vendor,
-                    'odds_under': avg_under, 'book_under': best_vendor,
-                    'vendor_count': len(main_entries),  # audit trail
+                    'odds_over': best_over_odds, 'book_over': best_over_vendor,
+                    'odds_under': best_under_odds, 'book_under': best_under_vendor,
+                    'vendor_count': len(main_entries),  # consensus strength
+                    'source_quality': 'BDL_FALLBACK',   # marks line source for grading
                 }
 
     def _build_bdl_player_cache(self):

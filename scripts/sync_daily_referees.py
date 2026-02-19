@@ -403,9 +403,47 @@ class DailyRefereeSync:
         print()
         print(f"✅ Summary: {matched}/{len(games)} games updated")
         
+        # --- PERPLEXITY FALLBACK (when Playwright returns 0 assignments) ---
+        if matched == 0 and len(games) > 0 and not dry_run:
+            perplexity_key = os.environ.get('PERPLEXITY_API_KEY')
+            if perplexity_key:
+                print("\n⚠️  Playwright returned 0 assignments — attempting Perplexity fallback...")
+                try:
+                    from utils.perplexity_client import PerplexityClient
+                    perp = PerplexityClient()
+                    today_str = datetime.now().strftime('%Y-%m-%d')
+
+                    # Known referee names from referee_profiles table
+                    conn = sqlite3.connect(self.db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT referee_name FROM referee_profiles")
+                    known_refs = [r[0] for r in cursor.fetchall()]
+
+                    for game_id, home_team, away_team in games:
+                        query = f"NBA referee crew assignment {home_team} vs {away_team} tonight {today_str}"
+                        news = perp._query(query)
+                        if not news:
+                            continue
+                        news_lower = news.lower()
+                        found = [r for r in known_refs if r.lower() in news_lower]
+                        if found:
+                            cursor.execute(
+                                "UPDATE games SET referee_crew = ? WHERE game_id = ?",
+                                (', '.join(found), game_id)
+                            )
+                            matched += 1
+                            print(f"   ✅ Perplexity crew ({home_team}): {', '.join(found)}")
+
+                    conn.commit()
+                    conn.close()
+                    print(f"   Perplexity fallback matched {matched} game(s)")
+                except Exception as e:
+                    print(f"   ⚠️ Perplexity fallback failed: {e}")
+        # ---------------------------------------------------------------
+
         # --- VALIDATION GUARDRAIL ---
         if not dry_run and len(games) > 0 and matched == 0:
-            error_msg = f"CRITICAL: Found 0 referee assignments for {len(games)} games.\nCheck official.nba.com for changes or blocking."
+            error_msg = f"CRITICAL: Found 0 referee assignments for {len(games)} games.\nPlaywright and Perplexity both failed. Check official.nba.com for changes or blocking."
             print(f"\n❌ {error_msg}")
             
             # Send Telegram Alert

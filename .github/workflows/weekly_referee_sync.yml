@@ -47,6 +47,8 @@ jobs:
           caffeinate -i python3 scripts/sync_external_intelligence.py
 
       - name: Sync WOWY Lineup Data
+        continue-on-error: true   # WOWY is enrichment — don't block Covers/OddsShark data commit
+        timeout-minutes: 20
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
@@ -62,7 +64,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: weekly intelligence logs $(date +'%Y-%m-%d %H:%M')"
-            git pull --rebase origin main
+            git pull --rebase --autostash origin main
             git push
           fi
 
