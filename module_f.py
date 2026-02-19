@@ -1,3 +1,5 @@
+import json
+import re
 import pandas as pd
 from datetime import datetime
 import config
@@ -648,133 +650,189 @@ class LudiReporter:
         # Clamp to reasonable bounds (no bet should be 99%+ or 1%-)
         return max(0.05, min(0.95, prob_over))
 
+    # --- S.A.V.A.G.E. Card Formatting Helpers ---
+    # Promoted from nested functions for reuse by format_bet_card(), Phase 8.13 bot, Ludi Lens.
+
+    @staticmethod
+    def _tier_icon(tier: str) -> str:
+        return {
+            'DIAMOND': '💎', 'BLUE CHIP': '🔷',
+            'CORE ASSET': '🔹', 'THE STEAL': '⭐',
+        }.get(tier, '⭐')
+
+    @staticmethod
+    def _format_units(units) -> str:
+        try:
+            u = float(units)
+            return f"{u:.1f}" if u.is_integer() else f"{u:.2f}".rstrip('0').rstrip('.')
+        except (TypeError, ValueError):
+            return str(units)
+
+    @staticmethod
+    def _format_edge(edge) -> str:
+        try:
+            e = float(edge)
+            edge_str = f"{e:+.1f}".rstrip('0').rstrip('.')
+            return f"{edge_str}%"
+        except (TypeError, ValueError):
+            return f"{edge}%"
+
+    @staticmethod
+    def _format_proj(proj) -> str:
+        try:
+            p = float(proj)
+            return f"{p:.2f}".rstrip('0').rstrip('.')
+        except (TypeError, ValueError):
+            return str(proj)
+
+    @staticmethod
+    def _format_odds(odds) -> str:
+        try:
+            o = float(odds)
+            if o > 0:
+                return f"+{int(o)}" if o.is_integer() else f"+{o:g}"
+            return f"{int(o)}" if o.is_integer() else f"{o:g}"
+        except (TypeError, ValueError):
+            return ""
+
+    def _parse_tags(self, tags_str: str) -> list:
+        if not tags_str:
+            return []
+        if self.tag_classifier:
+            try:
+                return self.tag_classifier.parse_tags_from_db(tags_str)
+            except Exception:
+                pass
+        try:
+            return json.loads(tags_str)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @staticmethod
+    def _extract_scheme(tags_list: list, note_str: str) -> str:
+        for tag in tags_list:
+            if isinstance(tag, str) and tag.startswith('vs_'):
+                return tag.replace('vs_', '').replace('_', ' ')
+        for token in ['PERIMETER', 'PAINT_PACK', 'FUNNEL', 'BLITZ', 'NEUTRAL']:
+            if token.lower() in (note_str or '').lower():
+                return token.replace('_', ' ')
+        return "STANDARD"
+
+    @staticmethod
+    def _extract_key_signals(note_str: str) -> list:
+        if not note_str:
+            return []
+        parts = [p.strip() for p in note_str.split('|') if p.strip()]
+        skip_phrases = [
+            "low rim pressure", "low corner volume",
+            "low rim frequency", "low corner 3", "low corner 3s",
+        ]
+        skip_flags = ["DATA QUALITY", "VERIFY LINE", "EXCEPTIONAL"]
+        signals = []
+        seen = set()
+        for part in parts:
+            cleaned = re.sub(r"^[^A-Za-z0-9\[]+\s*", "", part).strip()
+            cleaned = re.sub(r"\s*\[[^\]]+\]\s*", "", cleaned).strip()
+            if not cleaned:
+                continue
+            lower = cleaned.lower()
+            if any(phrase in lower for phrase in skip_phrases):
+                continue
+            if any(flag in cleaned for flag in skip_flags):
+                continue
+            if "bdl" in lower or "consensus" in lower or re.search(r"\bbk\b", lower):
+                continue
+            if re.fullmatch(r"[A-Z0-9_\-]+", cleaned):
+                continue
+            key = cleaned.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            signals.append(cleaned)
+            if len(signals) >= 2:
+                break
+        return signals
+
+    @staticmethod
+    def _scenario_tag(tags_list: list, scenario: str):
+        for tag in tags_list:
+            if not isinstance(tag, str):
+                continue
+            if tag == "NEW_TO_TEAM" or tag.startswith("BENEFICIARY"):
+                return tag
+        if "NEW_TO_TEAM" in (scenario or ""):
+            return "NEW_TO_TEAM"
+        if "WITHOUT" in (scenario or ""):
+            return "BENEFICIARY"
+        return None
+
+    def format_bet_card(self, bet: dict) -> str:
+        """Format a single bet as a S.A.V.A.G.E. structured card.
+
+        Reusable by: create_daily_briefing(), Phase 8.13 bot, Ludi Lens.
+        """
+        tier_icon = self._tier_icon(bet.get('confidence_tier', 'THE STEAL'))
+        player_name = (bet.get('name') or '').upper()
+        bet_on = (bet.get('bet_on') or '').upper()
+        stat = (bet.get('stat') or '').upper()
+        line = bet.get('line', '')
+        matchup = bet.get('matchup', '')
+
+        card = f"   {tier_icon} {player_name} — {bet_on} {line} {stat}\n"
+        card += (
+            f"   📊 {matchup}  |  Proj: {self._format_proj(bet.get('proj'))}  |  "
+            f"Edge: {self._format_edge(bet.get('edge'))}  |  {self._format_units(bet.get('units'))}u\n"
+        )
+
+        bet_book = bet.get('book_under') if bet_on == 'UNDER' else bet.get('book_over')
+        bet_odds = bet.get('odds_under') if bet_on == 'UNDER' else bet.get('odds_over')
+        book_label = bet_book if bet_book and bet_book != 'consensus' else "Consensus"
+        odds_label = self._format_odds(bet_odds)
+        price_str = f"{book_label} {odds_label}".strip()
+
+        consensus_tag = ""
+        source_quality = bet.get('source_quality', '')
+        vendor_count = bet.get('vendor_count', 0)
+        if source_quality == 'BDL_FALLBACK':
+            consensus_tag = f"[BDL:{vendor_count}bk]" if vendor_count else "[BDL]"
+        elif source_quality == 'ODDS_API' and vendor_count >= 4:
+            consensus_tag = f"[{vendor_count}bk consensus]"
+        elif source_quality == 'ODDS_API' and vendor_count > 0:
+            consensus_tag = f"[{vendor_count}bk]"
+
+        line3 = f"   💰 Best Bet: {price_str}".rstrip()
+        if consensus_tag:
+            line3 += f"  |  {consensus_tag}"
+        card += f"{line3}\n"
+
+        tags_list = self._parse_tags(bet.get('tags', ''))
+        archetype = (bet.get('archetype') or 'GENERALIST').upper()
+        scheme = self._extract_scheme(tags_list, bet.get('note', '')).upper()
+        card += f"   🎯 Archetype: {archetype} vs {scheme} defense\n"
+
+        key_signals = self._extract_key_signals(bet.get('note', ''))
+        if key_signals:
+            card += f"   📝 Key Signal: {', '.join(key_signals)}\n"
+        else:
+            card += "   📝 Key Signal: None\n"
+
+        scenario_tag = self._scenario_tag(tags_list, bet.get('scenario', ''))
+        if scenario_tag:
+            card += f"   ⚡ SCENARIO: {scenario_tag}\n"
+
+        return card
+
     def create_daily_briefing(self, props):
         """Formats the final briefing output for bot and console display."""
         report = f"\n📰 LUDI ELITE BRIEFING ({format_est_date('%b %d, %Y')})\n"
         report += "================================\n"
 
         # BDL Fallback notice — set by Gatekeeper when Odds-API quota is exhausted.
-        # Signals that edge values are estimated from non-consensus lines.
         if getattr(self, '_bdl_fallback_active', False):
             report += "⚠️  ODDS SOURCE: BDL Fallback (Odds-API quota exhausted)\n"
             report += "   Lines estimated — verify at your book before betting.\n"
             report += "   Full accuracy resumes March 1.\n"
             report += "================================\n"
-        
-        import json
-        import re
-
-        def _tier_icon(tier: str) -> str:
-            return {
-                'DIAMOND': '💎',
-                'BLUE CHIP': '🔷',
-                'CORE ASSET': '🔹',
-                'THE STEAL': '⭐',
-            }.get(tier, '⭐')
-
-        def _format_units(units) -> str:
-            try:
-                u = float(units)
-                if u.is_integer():
-                    return f"{u:.1f}"
-                return f"{u:.2f}".rstrip('0').rstrip('.')
-            except (TypeError, ValueError):
-                return str(units)
-
-        def _format_edge(edge) -> str:
-            try:
-                e = float(edge)
-                edge_str = f"{e:+.1f}".rstrip('0').rstrip('.')
-                return f"{edge_str}%"
-            except (TypeError, ValueError):
-                return f"{edge}%"
-
-        def _format_proj(proj) -> str:
-            try:
-                p = float(proj)
-                return f"{p:.2f}".rstrip('0').rstrip('.')
-            except (TypeError, ValueError):
-                return str(proj)
-
-        def _format_odds(odds) -> str:
-            try:
-                o = float(odds)
-                if o > 0:
-                    return f"+{int(o)}" if o.is_integer() else f"+{o:g}"
-                return f"{int(o)}" if o.is_integer() else f"{o:g}"
-            except (TypeError, ValueError):
-                return ""
-
-        def _parse_tags(tags_str: str) -> list:
-            if not tags_str:
-                return []
-            if self.tag_classifier:
-                try:
-                    return self.tag_classifier.parse_tags_from_db(tags_str)
-                except Exception:
-                    pass
-            try:
-                return json.loads(tags_str)
-            except (json.JSONDecodeError, TypeError):
-                return []
-
-        def _extract_scheme(tags_list: list, note_str: str) -> str:
-            for tag in tags_list:
-                if isinstance(tag, str) and tag.startswith('vs_'):
-                    return tag.replace('vs_', '').replace('_', ' ')
-            for token in ['PERIMETER', 'PAINT_PACK', 'FUNNEL', 'BLITZ', 'NEUTRAL']:
-                if token.lower() in (note_str or '').lower():
-                    return token.replace('_', ' ')
-            return "STANDARD"
-
-        def _extract_key_signals(note_str: str) -> list:
-            if not note_str:
-                return []
-            parts = [p.strip() for p in note_str.split('|') if p.strip()]
-            skip_phrases = [
-                "low rim pressure",
-                "low corner volume",
-                "low rim frequency",
-                "low corner 3",
-                "low corner 3s",
-            ]
-            skip_flags = ["DATA QUALITY", "VERIFY LINE", "EXCEPTIONAL"]
-            signals = []
-            seen = set()
-            for part in parts:
-                cleaned = re.sub(r"^[^A-Za-z0-9\\[]+\\s*", "", part).strip()
-                cleaned = re.sub(r"\s*\[[^\]]+\]\s*", "", cleaned).strip()
-                if not cleaned:
-                    continue
-                lower = cleaned.lower()
-                if any(phrase in lower for phrase in skip_phrases):
-                    continue
-                if any(flag in cleaned for flag in skip_flags):
-                    continue
-                if "bdl" in lower or "consensus" in lower or re.search(r"\\bbk\\b", lower):
-                    continue
-                if re.fullmatch(r"[A-Z0-9_\\-]+", cleaned):
-                    continue
-                key = cleaned.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                signals.append(cleaned)
-                if len(signals) >= 2:
-                    break
-            return signals
-
-        def _scenario_tag(tags_list: list, scenario: str):
-            for tag in tags_list:
-                if not isinstance(tag, str):
-                    continue
-                if tag == "NEW_TO_TEAM" or tag.startswith("BENEFICIARY"):
-                    return tag
-            if "NEW_TO_TEAM" in (scenario or ""):
-                return "NEW_TO_TEAM"
-            if "WITHOUT" in (scenario or ""):
-                return "BENEFICIARY"
-            return None
 
         # 1. Group by Game
         grouped = {}
@@ -782,70 +840,19 @@ class LudiReporter:
             matchup = p.get('matchup', 'Unknown')
             if matchup not in grouped: grouped[matchup] = []
             grouped[matchup].append(p)
-            
+
         report += f"💎 TOP TARGETS BY GAME\n"
-        
-        # Sort games alphabetically
+
         for matchup in sorted(grouped.keys()):
             plays = grouped[matchup]
-            # Sort by EV descending
             plays.sort(key=lambda x: x['ev'], reverse=True)
-            
-            # Filter for Diamond (1.2u+) or High Gold (0.8u+)
-            top_plays = [p for p in plays if p['units'] >= 0.8][:3] # Top 3 per GAME
-            
+            top_plays = plays[:3]
             if not top_plays: continue
-            
+
             report += f"\n🏀 {matchup}\n"
             for bet in top_plays:
-                tier_icon = _tier_icon(bet.get('confidence_tier', 'THE STEAL'))
-                player_name = (bet.get('name') or '').upper()
-                bet_on = (bet.get('bet_on') or '').upper()
-                stat = (bet.get('stat') or '').upper()
-                line = bet.get('line', '')
+                report += self.format_bet_card(bet)
 
-                report += f"   {tier_icon} {player_name} — {bet_on} {line} {stat}\n"
-                report += (
-                    f"   📊 {matchup}  |  Proj: {_format_proj(bet.get('proj'))}  |  "
-                    f"Edge: {_format_edge(bet.get('edge'))}  |  {_format_units(bet.get('units'))}u\n"
-                )
-
-                bet_book = bet.get('book_under') if bet_on == 'UNDER' else bet.get('book_over')
-                bet_odds = bet.get('odds_under') if bet_on == 'UNDER' else bet.get('odds_over')
-                book_label = bet_book if bet_book and bet_book != 'consensus' else "Consensus"
-                odds_label = _format_odds(bet_odds)
-                price_str = f"{book_label} {odds_label}".strip()
-
-                consensus_tag = ""
-                source_quality = bet.get('source_quality', '')
-                vendor_count = bet.get('vendor_count', 0)
-                if source_quality == 'BDL_FALLBACK':
-                    consensus_tag = f"[BDL:{vendor_count}bk]" if vendor_count else "[BDL]"
-                elif source_quality == 'ODDS_API' and vendor_count >= 4:
-                    consensus_tag = f"[{vendor_count}bk consensus]"
-                elif source_quality == 'ODDS_API' and vendor_count > 0:
-                    consensus_tag = f"[{vendor_count}bk]"
-
-                line3 = f"   💰 Best Bet: {price_str}".rstrip()
-                if consensus_tag:
-                    line3 += f"  |  {consensus_tag}"
-                report += f"{line3}\n"
-
-                tags_list = _parse_tags(bet.get('tags', ''))
-                archetype = (bet.get('archetype') or 'GENERALIST').upper()
-                scheme = _extract_scheme(tags_list, bet.get('note', '')).upper()
-                report += f"   🎯 Archetype: {archetype} vs {scheme} defense\n"
-
-                key_signals = _extract_key_signals(bet.get('note', ''))
-                if key_signals:
-                    report += f"   📝 Key Signal: {', '.join(key_signals)}\n"
-                else:
-                    report += "   📝 Key Signal: None\n"
-
-                scenario_tag = _scenario_tag(tags_list, bet.get('scenario', ''))
-                if scenario_tag:
-                    report += f"   ⚡ SCENARIO: {scenario_tag}\n"
-        
         return report
 
 # --- STANDALONE PRODUCTION TEST ---

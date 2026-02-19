@@ -23,6 +23,17 @@ class PerplexityClient:
         query = f"NBA {away_team} at {home_team} tonight injury lineup news"
         return self._query(query)
 
+    def search_game_context(self, home_team: str, away_team: str,
+                            out_players: list = None) -> str:
+        """Combined query: injuries + lineup changes + role shifts.
+        Same API cost as search_game_news (one call), richer context."""
+        out_str = f" Key absences: {', '.join(out_players[:3])}." if out_players else ""
+        query = (
+            f"NBA {away_team} at {home_team} tonight: "
+            f"injury updates, lineup changes, rotation adjustments, role changes.{out_str}"
+        )
+        return self._query(query)
+
     def _query(self, query: str) -> str:
         key = hashlib.md5(query.encode()).hexdigest()
         if key in self._cache:

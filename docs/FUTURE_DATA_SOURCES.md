@@ -1,10 +1,10 @@
 # Future Data Sources Roadmap
 
 **Discovered:** January 20, 2026
-**Last Audited:** February 14, 2026
+**Last Audited:** February 19, 2026
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
 
-**Status:** ~60% implemented. Remaining items folded into `ROADMAP.md` under "Dormant Data Activation", "Missing PBP Stats Endpoints", and "Data Pipeline Improvements". Section 5 added Feb 15 with competitive UI/UX research for Phase 8.
+**Status:** ~75% implemented (as of Feb 19, 2026). Section 4.2 dormant data fully activated. Section 4.4 endpoints wired. Section 5.2 trend/beneficiary patterns implemented in Phase 8.15. Remaining: pipeline consolidation (4.3), competitive UI patterns (5.2), PlayerRebounding (1), Phase 8.10/8.11.
 
 The following endpoints were discovered in the unofficial NBA Sense documentation and represent high-value opportunities for enhancing other Ludi-Bot modules.
 
@@ -12,29 +12,19 @@ The following endpoints were discovered in the unofficial NBA Sense documentatio
 
 ## 1. Module E (Calibrator) Opportunities
 
-### Synergy PlayType Data
+### Synergy PlayType Data ✅ DONE
 Granular efficiency data for specific play types. Crucial for matchup modeling.
 
-*   **Endpoints:**
-    *   `PlayerPlayTypePickAndRollBallHandler`
-    *   `PlayerPlayTypeIsolation`
-    *   `PlayerPlayTypePostup`
-    *   `PlayerPlayTypeSpotup`
-*   **Use Case:**
-    *   Adjust player projections based on defensive matchup efficiency (e.g., "Curry P&R vs Gobert drop coverage").
-    *   Identify mismatch exploitations.
+*   **Endpoints:** `PlayerPlayTypePickAndRollBallHandler`, `PlayerPlayTypeIsolation`, `PlayerPlayTypePostup`, `PlayerPlayTypeSpotup`
+*   **Status:** `player_synergy_playtypes` (1,326 records) synced and actively used in module_e.py (PPP efficiency, playtype matchup modifiers).
 
-### SportVu Tracking
+### SportVu Tracking ✅ MOSTLY DONE
 Player tracking data for deeper behavioral analysis.
 
-*   **Endpoints:**
-    *   `PlayerDrives`: Drives per game, FG% on drives, Pass% on drives.
-    *   `PlayerTouches`: Time of possession, avg seconds per touch.
-    *   `PlayerSpeed`: Avg speed, distance traveled (good for fatigue monitoring).
-    *   `PlayerRebounding`: Contested vs Uncontested rebound %.
-*   **Use Case:**
-    *   Refine "Usage" metrics beyond simple USG%.
-    *   Detect fatigue (slower speed + lower shot quality) for finding "Under" props.
+*   **PlayerDrives:** ✅ `player_drives` + `player_game_tracking` tables used in archetype classification and module_c drives data.
+*   **PlayerTouches:** ✅ `player_touches` (505 records) now active in module_e.py `_apply_touches_context()` — quick decision-makers, paint presence, post-ups.
+*   **PlayerSpeed:** ✅ `player_speed` (512 records) now active in module_e.py `_apply_speed_fatigue_context()` — guard hustle boosts, fatigue detection.
+*   **PlayerRebounding:** ❌ NOT DONE — No table, no sync script. Still in ROADMAP as low-priority ("Sync PlayerRebounding tracking data — contested vs uncontested %).
 
 ---
 
@@ -83,22 +73,17 @@ Defensive impact metrics.
 | Rate limit handling | `pbp_stats_client.py` | Add 429 to retry list |
 | Retry optimization | `pbp_stats_client.py` | `total=3, backoff_factor=2` |
 
-### 4.2 Data Synced But NEVER Used (Quick Wins)
+### 4.2 Data Synced But NEVER Used (Quick Wins) ✅ RESOLVED
 
-**Analysis found valuable data sitting unused in the database:**
+**All major dormant data sources are now active:**
 
-| Table | Records | Synced | Used in Sims | Effort | Impact |
-|-------|---------|--------|--------------|--------|--------|
-| `player_shot_quality` | 499 | ✅ Daily | ❌ NEVER | 30 min | +1-2% RMSE |
-| `player_game_advanced` | 12,179 | ✅ Weekly | ❌ NEVER | 1 hr | Rolling TS% |
-| `player_speed` | 512 | ✅ Weekly | ❌ NEVER | 30 min | Guard context |
-| `player_drives` | 512 | ✅ Weekly | ⚠️ Archetype only | 1 hr | Drives AST boost |
-| `player_touches` | 505 | ✅ Weekly | ❌ NEVER | Future | Usage refinement |
-
-**Integration Points:**
-- **Module C**: Integrate `shot_quality_avg` for FG% simulation adjustment
-- **Module E**: Add speed context for guards (+8% FTA, +5% AST)
-- **Module E**: Use rolling 5-game TS% from `player_game_advanced`
+| Table | Records | Synced | Used in Sims | Status |
+|-------|---------|--------|--------------|--------|
+| `player_shot_quality` | 499 | ✅ Daily | ✅ module_c (sq_mod FG%) + module_e (rim/corner freq) | DONE |
+| `player_game_advanced` | 12,179 | ✅ Weekly | ✅ module_c (rolling 30d TS%) | DONE |
+| `player_speed` | 512 | ✅ Weekly | ✅ module_e (guard hustle, fatigue) | DONE |
+| `player_drives` | 512 | ✅ Weekly | ⚠️ Archetype only (drives loaded from player_game_tracking) | PARTIAL |
+| `player_touches` | 505 | ✅ Weekly | ✅ module_e (touch context modifiers) | DONE |
 
 ### 4.3 Pipeline Redundancy (Efficiency Gains)
 
@@ -111,27 +96,15 @@ Defensive impact metrics.
 | WOWY from 2 sources | `sync_wowy_hybrid.py` + `sync_pbp_wowy.py` | 20 min/day | Keep API |
 | JSON anti-pattern | Module H → JSON → SQLite | 2-5 min/day | Direct SQLite |
 
-### 4.4 Missing High-Value Endpoints
+### 4.4 Missing High-Value Endpoints ✅ PARTIALLY DONE
 
-**PBP Stats endpoints that would unlock new capabilities:**
-
-| Endpoint | Impact | Fixes |
-|----------|--------|-------|
-| `get_assist_combo_summary` | **CRITICAL** | Phase 6.2 BENEFICIARY (99.9% NULL) |
-| `get_four_factor_on_off` | HIGH | Better WOWY (4 dimensions vs 1) |
-| `get_possessions` | HIGH | Clutch detection, blowout tax validation |
-| `get_shot_query_summary` | MEDIUM | Context-aware shot quality |
-| `get_lineup_player_stats` | MEDIUM | Lineup-specific projections (Phase 7+) |
-
-**Assist Combo Summary (Fixes BENEFICIARY):**
-```python
-# Returns passer→scorer assist combinations
-# When star OUT, calculate who benefits:
-star_assists = query_assist_combos(passer_id=star_id)
-for teammate in teammates:
-    teammate_share = teammate_assists_from_star / total_assists
-    proj_pts *= (1 + 0.15 * teammate_share)  # BENEFICIARY boost
-```
+| Endpoint | Impact | Status |
+|----------|--------|--------|
+| `get_assist_combo_summary` | **CRITICAL** | ✅ `scripts/sync_assist_combos.py` wired in data_sync.yml |
+| `get_four_factor_on_off` | HIGH | ✅ `scripts/sync_four_factor_wowy.py` wired in data_sync.yml |
+| `get_possessions` | HIGH | ❌ Not done — clutch detection, blowout tax validation |
+| `get_shot_query_summary` | MEDIUM | ❌ Not done — context-aware shot quality |
+| `get_lineup_player_stats` | MEDIUM | ❌ Not done — lineup-specific projections |
 
 ### 4.5 Performance Optimizations
 
@@ -188,24 +161,25 @@ Contains all 40+ PBP Stats endpoints documented with:
 ### 5.2 High-Value Patterns for Phase 8
 
 **For Game Notes (8.2):**
-| Pattern | Source | Implementation |
-|---------|--------|---------------|
-| Key Advantage callouts | BucketsToBucks | Auto-identify #1 matchup advantage per game (e.g., "Spot Up #3 off vs #29 def") |
-| Offense vs Defense matrix | BucketsToBucks | Top 3 O-vs-D rankings per game: Paint, 3PT, Pace, Playtype |
-| Injury beneficiary table | LandYourBets | Per OUT player: who benefits with Mins+, Pts+, Reb+, Ast+, Usg+ |
-| WOWY comparison table | StraightBettin | Teammate stat deltas when key player is OFF (green=up, red=down) |
-| Defensive funneling | StraightBettin | "Teams that ALLOW the most" — auto-surface OVER targets by weakness zone |
-| Line movement tracking | Outlier.bet | Evening mode: show how lines moved since morning |
+| Pattern | Source | Status | Implementation |
+|---------|--------|--------|---------------|
+| Key Advantage callouts | BucketsToBucks | ❌ | Auto-identify #1 matchup advantage per game |
+| Offense vs Defense matrix | BucketsToBucks | ❌ | Top 3 O-vs-D rankings per game |
+| Injury beneficiary table | LandYourBets | ✅ Phase 8.15 | `get_beneficiary_context()` in `utils/trend_engine.py` |
+| WOWY comparison table | StraightBettin | ✅ Phase 8.15 | `get_stagger_context()` in `utils/trend_engine.py` |
+| Defensive funneling | StraightBettin | ❌ | Auto-surface OVER targets by weakness zone |
+| Line movement tracking | Outlier.bet | ❌ | Evening mode: show how lines moved since morning |
 
 **For Player Spotlights (8.3):**
-| Pattern | Source | Implementation |
-|---------|--------|---------------|
-| Playtype Analysis table | PropsMadness | Per-player: Isolation, PnR, Spot Up, Transition with PPP% and Opp Def Rank |
-| Similar Players comparison | PropsMadness | "Players with similar profiles hit this line X% of the time" |
-| Hit Rate badges | BucketsToBucks, Props.cash | L10 Hit Rate %, Season Hit Rate % — simple visual indicators |
-| DVP ranking | BucketsToBucks | Defense vs Position rank (1-30) for the specific stat category |
-| Matchup edge notes | LandYourBets | "Post Scorer — POR allows 1st most FGA to Post Scorers" |
-| On/Off per-36 stats | StraightBettin | Full per-36 stat table with ON/OFF toggles per teammate |
+| Pattern | Source | Status | Implementation |
+|---------|--------|--------|---------------|
+| Playtype Analysis table | PropsMadness | ❌ | Per-player Synergy data as visual table |
+| Similar Players comparison | PropsMadness | ❌ | Profile-similarity hit rate |
+| Hit Rate badges | BucketsToBucks, Props.cash | ✅ Phase 8.15 | `hit_rate_l10` in `get_player_trends()` |
+| Trend indicators | Multiple | ✅ Phase 8.15 | L7/L10/L15 + trend labels in `player_trends` table |
+| DVP ranking | BucketsToBucks | ❌ | Defense vs Position rank (1-30) |
+| Matchup edge notes | LandYourBets | ❌ | Archetype-vs-scheme notes |
+| On/Off per-36 stats | StraightBettin | ❌ | Full per-36 stat table with ON/OFF toggles |
 
 **For Play Curation (8.5):**
 | Pattern | Source | Implementation |
@@ -253,9 +227,9 @@ Contains all 40+ PBP Stats endpoints documented with:
 
 ---
 
-## Phase 8.10: League Rankings Module
+## Phase 8.10: League Rankings Module ❌ NOT DONE
 
-**Status:** Ready for implementation (data already in ludi.db)
+**Status:** Ready for implementation (data already in ludi.db). LOW priority per ROADMAP.
 
 ### Data Sources
 | Table | Records | Used For |
@@ -276,9 +250,9 @@ Contains all 40+ PBP Stats endpoints documented with:
 
 ---
 
-## Phase 8.11: Ludi Power Ratings
+## Phase 8.11: Ludi Power Ratings ❌ NOT DONE
 
-**Status:** Design phase
+**Status:** Design phase. **NOTE:** `team_four_factors` table was never created. `team_leverage_profiles` exists as partial substitute (has pace/EFG/OREB by game state, but NOT Ortg/Drtg directly). Full team rankings require `pbp_stats_client.get_totals(entity_type="Team")` — deferred to Phase 8.10 implementation.
 
 ### Formula Concept
 ```
@@ -286,7 +260,7 @@ Power = 0.4 × Ortg + 0.3 × Drtg + 0.15 × PaceAdj + 0.15 × RecentForm
 ```
 
 Where:
-- **Ortg/Drg:** Season averages from `team_four_factors`
+- **Ortg/Drg:** Needs `team_four_factors` (not yet created) or PBP Stats Team Totals
 - **PaceAdj:** Pace deviation from league average (100 = neutral)
 - **RecentForm:** 14d weighted win% with recency decay
 

@@ -51,6 +51,7 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 |--------|-------|--------|
 | Spread | {spread} | {blowout_risk} |
 | Total | {total} | {env_note} |
+| Pace | {matchup_pace_note} | Context |
 | Schedule | {schedule_notes} | {fatigue_flag} |
 
 **Situational Intel:**
@@ -58,6 +59,7 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 
 **Injury Impact:**
 {injury_intel_block}
+{beneficiary_block}
 [Format: "OUT: {player} ({days_out}d {injury_type}) → {beneficiary} +{boost} {stat} proj"]
 [Or: "GTD: {player} ({injury_type}) — {update_time} update critical"]
 
@@ -81,8 +83,12 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 - Archetype: {archetype}
 - Opponent scheme: {opp_scheme}
 - Injury status: {injury_context}
+- Trend: {trend_line}
+- Minutes: {minutes_trend}
 - L10 avg: {l10_avg} ({hit_rate_l10} hit rate)
+- Streak: {streak_note}
 - Edge: {edge_pct}% above line
+{stagger_note}
 
 **Why this play:**
 {player} → vs {opponent} {opp_scheme} defense → in this game context.

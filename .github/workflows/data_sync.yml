@@ -238,6 +238,12 @@ jobs:
         run: |
           python3 scripts/build_rotation_profiles.py --window-days 21 --min-games 3
 
+      - name: Build Player Trends (Phase 8.15)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          python3 scripts/build_player_trends.py
+
       - name: Update Team Scheme Cache
         continue-on-error: true
         timeout-minutes: 5

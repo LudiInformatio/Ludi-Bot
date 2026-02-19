@@ -21,6 +21,7 @@ from utils.claude_prompts import (
 )
 import main
 from utils.perplexity_client import PerplexityClient
+from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -71,8 +72,8 @@ class MorningBriefEngine:
     def _get_l10_for_spotlight(self, conn, player_name: str, stat_col: str, line: float) -> dict:
         """Returns {'avg': float, 'hit_rate': float} from player_game_logs last 10 games."""
         stat_col_map = {
-            'PTS': 'points', 'REB': 'total_rebounds', 'AST': 'assists',
-            '3PM': 'three_pointers_made', 'BLK': 'blocks', 'STL': 'steals'
+            'PTS': 'pts', 'REB': 'reb', 'AST': 'ast',
+            '3PM': 'fg3m', 'BLK': 'blk', 'STL': 'stl', 'TOV': 'tov',
         }
         db_col = stat_col_map.get(stat_col.upper())
         if not db_col:
@@ -239,6 +240,9 @@ class MorningBriefEngine:
         
         # Module F handles Bet Logging, Tagging, and Image Generation
         # V5.2 Update: Returns processed_bets (list of dicts) as 3rd element
+        # Transfer BDL fallback flag so the briefing banner shows when active
+        self.reporter._bdl_fallback_active = getattr(self.gate, '_using_bdl_fallback', False)
+
         try:
             text_report, image_path, processed_bets = self.reporter.generate_report(all_bets, title=report_title)
         except ValueError:
@@ -279,7 +283,14 @@ class MorningBriefEngine:
                             home = first.get('home_team', '')
                             away = first.get('away_team', '')
                             if home and away:
-                                game_news_cache[gid] = perp_client.search_game_news(home, away)
+                                # Combined Perplexity query: injuries + lineup + role changes
+                                cursor_p = conn.cursor()
+                                cursor_p.execute("""
+                                    SELECT player_name FROM player_injuries
+                                    WHERE team_abbreviation IN (?, ?) AND resolved_at IS NULL AND status = 'OUT'
+                                """, (home, away))
+                                out_names = [r[0] for r in cursor_p.fetchall()]
+                                game_news_cache[gid] = perp_client.search_game_context(home, away, out_names)
                     except Exception as e:
                         print(f"   ℹ️  Perplexity game news fetch failed: {e}")
 
@@ -334,6 +345,28 @@ class MorningBriefEngine:
                         injury_lines.append(f"{row[1]}: {row[0]} ({row[3]})")
                     injury_intel_block = "\n".join(injury_lines) if injury_lines else "No major injuries reported."
 
+                    # 3b. Beneficiary context (Phase 8.15)
+                    beneficiary_block = get_beneficiary_context(home_team, away_team)
+
+                    # 3c. Team pace note from team_leverage_profiles
+                    matchup_pace_note = "Average"
+                    try:
+                        cursor.execute("""
+                            SELECT team_abbr, overall_pace
+                            FROM team_leverage_profiles WHERE team_abbr IN (?, ?)
+                        """, (home_team, away_team))
+                        pace_rows = cursor.fetchall()
+                        if pace_rows:
+                            avg_pace = sum(r[1] for r in pace_rows if r[1]) / max(len(pace_rows), 1)
+                            if avg_pace >= 101.0:
+                                matchup_pace_note = f"FAST (avg {avg_pace:.1f})"
+                            elif avg_pace <= 96.0:
+                                matchup_pace_note = f"SLOW (avg {avg_pace:.1f})"
+                            else:
+                                matchup_pace_note = f"Average ({avg_pace:.1f})"
+                    except Exception:
+                        pass
+
                     # 4. Opponent Scheme
                     # Fetch for both teams
                     schemes = {}
@@ -359,12 +392,12 @@ class MorningBriefEngine:
                     # 6. Build Prompt
                     # Handle template placeholders that are for Claude (e.g., {player}) by preserving them
                     # We pass them as literal strings "{key}" so python's .format() keeps them
+                    # Keys that Claude fills in — preserved as literal {key} in the template
                     preservation_keys = {
-                        k: "{" + k + "}" 
-                        for k in ["player", "stat", "edge_reason", "edge_pct", 
-                                  "days_out", "injury_type", "beneficiary", 
-                                  "boost", "proj", "update_time", "one_sentence",
-                                  "situational_context"]
+                        k: "{" + k + "}"
+                        for k in ["player", "stat", "edge_reason", "edge_pct",
+                                  "days_out", "injury_type", "beneficiary",
+                                  "boost", "proj", "update_time", "one_sentence"]
                     }
                     
                     _TEAM_SITUATION_NOTES = {
@@ -414,9 +447,11 @@ class MorningBriefEngine:
                             blowout_risk=blowout_risk,
                             total=total,
                             env_note=env_note,
+                            matchup_pace_note=matchup_pace_note,
                             schedule_notes=schedule_notes,
                             fatigue_flag="None",
                             injury_intel_block=injury_intel_block,
+                            beneficiary_block=beneficiary_block,
                             away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),
                             home_def_scheme=schemes.get(home_team, "UNK"),
                             home_archetype_summary="Style: " + schemes.get(home_team, "UNK"),
@@ -469,7 +504,7 @@ class MorningBriefEngine:
         try:
             if processed_bets:
                 # 1. Filter for top-tier bets
-                top_bets = [b for b in processed_bets if b.get('confidence_tier') in ('DIAMOND', 'BLUE CHIP')][:5]
+                top_bets = [b for b in processed_bets if b.get('confidence_tier') in ('DIAMOND', 'BLUE CHIP', 'CORE ASSET')][:5]
                 
                 if top_bets:
                     conn = self._get_db_conn()
@@ -481,31 +516,53 @@ class MorningBriefEngine:
                             opponent = bet.get('opponent')
                             stat_cat = bet.get('stat_category') or bet.get('stat', 'PTS')
                             line = bet.get('line', 0.0)
-                            
+
                             print(f"   > Spotlight analysis for {player_name} ({stat_cat})...")
 
-                            # 2a. Get L10 Stats
-                            l10_data = self._get_l10_for_spotlight(conn, player_name, stat_cat, line)
-                            
-                            # 2b. Get Injury Context
+                            # 2a. Get trend data (Phase 8.15 — replaces _get_l10_for_spotlight)
+                            trend_data = get_player_trends(player_name, stat_cat, team, line=line)
+                            l10_avg = trend_data.get('l10_avg', 0)
+                            hit_rate_l10 = trend_data.get('hit_rate_l10', 0)
+                            trend_line_str = format_trend_line(trend_data)
+                            minutes_trend_str = format_minutes_line(trend_data)
+
+                            # Streak note
+                            streak_line = trend_data.get('streak_vs_line')
+                            if streak_line and streak_line != 0:
+                                direction = "over" if streak_line > 0 else "under"
+                                streak_note = f"{abs(streak_line)}-game {direction} streak vs line"
+                            else:
+                                streak_note = "No active streak"
+
+                            # 2a2. Stagger context (when teammate is OUT)
                             cursor = conn.cursor()
                             cursor.execute("""
-                                SELECT status, injury_type, days_out 
-                                FROM player_injuries 
+                                SELECT player_name FROM player_injuries
+                                WHERE team_abbreviation = ? AND resolved_at IS NULL AND status = 'OUT'
+                            """, (team,))
+                            out_teammates = [r[0] for r in cursor.fetchall()]
+                            stagger_note = get_stagger_context(player_name, team, out_teammates) if out_teammates else ""
+                            if stagger_note:
+                                stagger_note = f"- Stagger: {stagger_note}"
+
+                            # 2b. Get Injury Context
+                            cursor.execute("""
+                                SELECT status, injury_type, days_out
+                                FROM player_injuries
                                 WHERE player_name = ? AND status != 'ACTIVE'
                                 ORDER BY snapshot_time DESC LIMIT 1
                             """, (player_name,))
                             inj_row = cursor.fetchone()
                             injury_context = f"{inj_row[0]} - {inj_row[1]}" if inj_row else "Healthy"
-                            
+
                             # 2c. Get Opponent Scheme
                             cursor.execute("""
-                                SELECT active_style FROM team_scheme_cache 
+                                SELECT active_style FROM team_scheme_cache
                                 WHERE team_abbr = ? AND scheme_type = 'DEFENSIVE'
                             """, (opponent,))
                             scheme_row = cursor.fetchone()
                             opp_scheme = scheme_row[0] if scheme_row else "Standard"
-                            
+
                             # 2d. Build Prompt
                             prompt = SPOTLIGHT_TEMPLATE.format(
                                 player=player_name,
@@ -517,10 +574,14 @@ class MorningBriefEngine:
                                 archetype=bet.get('archetype', 'Unknown'),
                                 opp_scheme=opp_scheme,
                                 injury_context=injury_context,
-                                l10_avg=l10_data['avg'],
-                                hit_rate_l10=l10_data['hit_rate'],
-                                edge_pct=round((bet.get('edge', 0)), 1), # Edge is already % in module_f? Check. module_f says "edge": edge (float). If >5.0, it's %.
-                                analysis_block="" # Let Claude fill this based on system prompt
+                                trend_line=trend_line_str or "No trend data",
+                                minutes_trend=minutes_trend_str or "No minutes data",
+                                l10_avg=l10_avg,
+                                hit_rate_l10=f"{hit_rate_l10:.0f}%" if hit_rate_l10 else "N/A",
+                                streak_note=streak_note,
+                                stagger_note=stagger_note,
+                                edge_pct=round((bet.get('edge', 0)), 1),
+                                analysis_block=""
                             )
                             
                             # 2e. Call Claude
@@ -547,7 +608,7 @@ class MorningBriefEngine:
                             
                     conn.close()
                 else:
-                    print("   ℹ️ No DIAMOND/BLUE CHIP bets for spotlights.")
+                    print("   ℹ️ No DIAMOND/BLUE CHIP/CORE ASSET bets for spotlights.")
             else:
                 print("   ℹ️ No processed bets available for spotlights.")
                 

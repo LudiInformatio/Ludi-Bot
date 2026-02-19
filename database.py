@@ -954,6 +954,32 @@ class LudiHistorian:
                 ON nba_calendar(season_phase, date)
         ''')
 
+        # Player Trends Table (Phase 8.15)
+        # Pre-computed daily: L7/L10/L15 averages, season avg, trend labels, streak vs season avg.
+        # Stat types: PTS, REB, AST, 3PM, BLK, STL, TOV, PRA, PA, PR, RA, MIN
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_trends (
+                player_id          TEXT NOT NULL,
+                player_name        TEXT NOT NULL,
+                team_abbreviation  TEXT NOT NULL,
+                stat               TEXT NOT NULL,
+                l7_avg             REAL,
+                l10_avg            REAL,
+                l15_avg            REAL,
+                season_avg         REAL,
+                trend_delta        REAL,
+                trend_label        TEXT,
+                streak_vs_avg      INTEGER,
+                games_found        INTEGER,
+                computed_at        TEXT NOT NULL,
+                UNIQUE(player_id, stat, team_abbreviation)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_player_trends_lookup
+                ON player_trends(player_name, team_abbreviation, stat)
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

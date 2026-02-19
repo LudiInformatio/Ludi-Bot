@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 19, 2026
+**Last Updated:** February 19, 2026 5:45 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.10 — League Rankings (next up)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.12/8.14 ✅ + Slate Date Fix ✅
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.12/8.14/8.15 ✅ + Slate Date Fix ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -50,6 +50,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.9 ✅ | Rotation/Minutes Projection | DONE | `rotation_profiles` (396), `beneficiary_minutes` (789), stagger stats (2,282 pairs), stint profiles (163) | $0 |
 | 8.12 ✅ | Roster Intelligence | DONE | Tier 1.5 freshly-traded detection, stale profile cleanup, NEW_TO_TEAM 0.95 dampener | $0 |
 | 8.14 ✅ | Scoring Environment Intelligence | DONE | Dynamic 14d OVER hit rate tracker, 4 data-proven OVER filters, opponent NULL bug fixed, Claude env context | $0 |
+| 8.15 ✅ | Trend Engine + Enriched Briefings | DONE | `player_trends` table (4,500+ rows), `trend_engine.py` (hybrid pre-computed + live), `format_bet_card()` reusable method, enriched game notes (beneficiary/pace/combined Perplexity), enriched spotlights (L7/L10/L15 trends, minutes, hit rate, streaks, stagger context, combo props) | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
 | 8.10 | League Rankings Module | LOW | Weekly SQL ranking tables (PPP by playtype, defense by scheme) via Telegram. Data ready in `ludi.db` | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
