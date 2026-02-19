@@ -389,7 +389,7 @@ def format_minutes_line(trend_data: dict) -> str:
         return f"MINS DOWN {delta:.1f} ({l15:.1f} -> {l7:.1f})"
 
 
-def get_matchup_analysis(player_id, opponent_abbr, cursor):
+def get_matchup_analysis(player_name, opponent_abbr, cursor):
     """
     Build a structured archetype-vs-scheme matchup block for Spotlight cards.
     Returns a 1-2 line string, or empty string if data unavailable.
@@ -400,9 +400,9 @@ def get_matchup_analysis(player_id, opponent_abbr, cursor):
         playtypes = cursor.execute("""
             SELECT playtype, ppp, freq_pct, percentile
             FROM player_synergy_playtypes
-            WHERE player_id = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
+            WHERE player_name = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
             ORDER BY freq_pct DESC LIMIT 2
-        """, (player_id,)).fetchall()
+        """, (player_name,)).fetchall()
 
         if not playtypes:
             return ""

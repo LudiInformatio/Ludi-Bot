@@ -21,7 +21,7 @@ from utils.claude_prompts import (
 )
 import main
 from utils.perplexity_client import PerplexityClient
-from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line
+from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line, get_matchup_analysis
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -639,7 +639,11 @@ class MorningBriefEngine:
                                 streak_note=streak_note,
                                 stagger_note=stagger_note,
                                 edge_pct=round((bet.get('edge', 0)), 1),
-                                analysis_block=""
+                                analysis_block=get_matchup_analysis(
+                                    player_name,
+                                    opponent,
+                                    cursor
+                                ),
                             )
                             
                             # 2e. Call Claude
