@@ -1011,6 +1011,11 @@ class LudiCalibrator:
         if total > 238.0: self._apply_factor(calibrated, 1.03)
         elif total > 0 and total < 218.0: self._apply_factor(calibrated, config.GAME_TOTAL_LOW_FACTOR)
 
+        _scoring_env = config.get_scoring_environment()
+        _over_rate = _scoring_env.get('over_hit_rate_14d', 0.50)
+        if 0 < _over_rate < config.SCORING_ENV_OVER_THRESHOLD:
+            self._apply_factor(calibrated, config.SCORING_ENV_DAMPENER)
+
         # 5. MATCHUP LOGIC (Primary Archetypes)
         opponent = calibrated.get('opponent', 'UNK') 
         def_style = self.DEFENSIVE_STYLES.get(opponent, "NEUTRAL")

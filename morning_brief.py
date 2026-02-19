@@ -363,8 +363,33 @@ class MorningBriefEngine:
                         k: "{" + k + "}" 
                         for k in ["player", "stat", "edge_reason", "edge_pct", 
                                   "days_out", "injury_type", "beneficiary", 
-                                  "boost", "proj", "update_time", "one_sentence"]
+                                  "boost", "proj", "update_time", "one_sentence",
+                                  "situational_context"]
                     }
+                    
+                    _TEAM_SITUATION_NOTES = {
+                        'WAS': "WAS 0-9 SU on B2B (1-36 over 3yr, -18 PPG avg loss)",
+                        'NYK': "NYK 19-9 home ATS (67.9% — best in NBA)",
+                        'MIA': "MIA 20-7 ATS off a loss (Spo 57.1% over 15 seasons)",
+                        'CLE': "CLE -20.2% ROI as favorite; 23-32 ATS overall",
+                        'LAL': "LAL 10 straight ATS losses as underdog",
+                        'DET': "DET 9-1 SU as underdog (only team with this mark)",
+                        'CHA': "CHA 23-12 ATS since Dec 1 (best in NBA, playoff hunt)",
+                        'HOU': "HOU opponents hit OVERs at 57.5% in our data (best target)",
+                        'SAC': "SAC opponents hit OVERs at only 26.3% in our data (worst target)",
+                        'IND': "IND opponents hit OVERs at only 29.8% in our data",
+                    }
+                    
+                    env = config.get_scoring_environment()
+                    over_rate = env.get('over_hit_rate_14d', 0)
+                    env_label = env.get('environment', 'NEUTRAL')
+                    env_note = f"{env_label} ({over_rate:.0%} 14d OVER rate)" if over_rate else "Normal"
+                    
+                    sit_notes = [
+                        note for team, note in _TEAM_SITUATION_NOTES.items()
+                        if team in (home_team, away_team)
+                    ]
+                    situational_context = "\n".join(f"• {n}" for n in sit_notes) if sit_notes else "No specific situational flags."
                     
                     game_news = game_news_cache.get(gid, "")
                     schedule_notes = game_news[:200] if game_news else "Standard rest"
@@ -388,7 +413,7 @@ class MorningBriefEngine:
                             spread=spread,
                             blowout_risk=blowout_risk,
                             total=total,
-                            pace_context="Normal",
+                            env_note=env_note,
                             schedule_notes=schedule_notes,
                             fatigue_flag="None",
                             injury_intel_block=injury_intel_block,
@@ -397,6 +422,7 @@ class MorningBriefEngine:
                             home_archetype_summary="Style: " + schemes.get(home_team, "UNK"),
                             away_def_scheme=schemes.get(away_team, "UNK"),
                             edges_block=edges_block,
+                            situational_context=situational_context,
                             **preservation_keys
                         )
                         

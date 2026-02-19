@@ -188,6 +188,9 @@ def _haiku_sanity_check(bet: dict, injury: dict | None, verbose: bool = False) -
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
 
     perplexity_block = f"\n\nRECENT NEWS (Perplexity):\n{perp_news}" if perp_news else ""
+    
+    env = config.get_scoring_environment()
+    env_note = f"\nSCORING ENVIRONMENT: {env.get('environment','NEUTRAL')} — OVER bets hitting {env.get('over_hit_rate_14d',0):.0%} last 14 days.\n" if env else ""
 
     user_prompt = f"""Sanity check this bet. Return JSON only, no other text:
 {{"result": "PASS" or "FLAG", "reason": "<one sentence max>"}}
@@ -199,7 +202,7 @@ BET:
 - True Edge: {bet.get('true_edge', 'N/A')}%
 
 INJURY DATA (from official report, fetched today):
-{injury_text}{perplexity_block}
+{injury_text}{perplexity_block}{env_note}
 
 FLAG this bet ONLY if:
 1. Player is OUT or DOUBTFUL AND bet_side is OVER a volume stat (PTS, REB, AST, MIN)
@@ -285,6 +288,11 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
 
     bets_text = _format_bets_for_prompt(passing_bets)
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+    
+    env = config.get_scoring_environment()
+    over_rate = env.get('over_hit_rate_14d', 0)
+    env_label = env.get('environment', 'NEUTRAL')
+    env_context = f"\nSCORING ENVIRONMENT TODAY: {env_label} ({over_rate:.0%} 14d OVER hit rate). When in doubt between two OVER plays, prefer the one with stronger UNDER characteristics.\n" if env else ""
 
     user_prompt = f"""You are selecting the TOP 5 plays from today's NBA player prop slate.
 
@@ -295,6 +303,8 @@ HARD RULES:
 - DO NOT recalculate, adjust, or question any edge/probability/projection values — they are authoritative outputs from a deterministic simulation model
 - Return ONLY a valid JSON array, no other text:
   [{{"bet_id": 123, "rank": 1, "reasoning": "one sentence explaining the pick"}}]
+
+{env_context}
 
 TODAY'S CLEAN BETS ({len(passing_bets)} total, already passed injury sanity gate):
 {bets_text}

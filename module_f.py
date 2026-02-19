@@ -162,6 +162,26 @@ class LudiReporter:
                             if player_3pa_avg < 5.0:
                                 continue  # Skip low-volume shooters
 
+                        # Filter 3: TWO_WAY_WING OVER — systematically over-projected (35.7%, n=314)
+                        if p.get('archetype') == 'TWO_WAY_WING' and bet_direction == 'over':
+                            continue
+
+                        # Filter 4: PTS OVER on high lines — high-scorer over-projection
+                        if stat_key.lower() == 'pts' and bet_direction == 'over' and line >= 25.0:
+                            model_prob = model_prob * 0.85
+
+                        # Filter 5: SAC/IND/CLE — OVER graveyard defenders (26-34% hit rate, 700+ bets combined)
+                        _OVER_KILL_DEFENSES = {'SAC', 'IND', 'CLE'}
+                        _opp = p.get('opponent', '')
+                        if bet_direction == 'over' and _opp in _OVER_KILL_DEFENSES:
+                            continue
+
+                        # Filter 6: REB OVER home player — systematic home rebound over-projection
+                        if stat_key.lower() == 'reb' and bet_direction == 'over':
+                            _is_home = p.get('team') == p.get('home_team')
+                            if _is_home:
+                                model_prob = model_prob * 0.82
+
                         # --- END CALIBRATION FILTERS ---
 
                         # --- Filter 3: PROJECTION/LINE SANITY GATE (BDL Fallback) ---
@@ -316,7 +336,7 @@ class LudiReporter:
                                 try:
                                     # Build game context for classifier
                                     game_ctx = {
-                                        'opponent': game.get('opponent', ''),
+                                        'opponent': p.get('opponent', game.get('opponent', '')),
                                         'spread': game.get('spread', 0),
                                         'players': game.get('players', [])
                                     }
@@ -361,7 +381,7 @@ class LudiReporter:
                                         'total': game.get('total', 0),
                                         'player_name': p['name'],
                                         'team': p['team'],
-                                        'opponent': game.get('opponent', ''),
+                                        'opponent': p.get('opponent', game.get('opponent', '')),
                                         'archetype': p.get('archetype', ''),
                                         'status': p.get('status', 'Active'),
                                         'scenario': p.get('scenario', 'BASE'),

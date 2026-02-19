@@ -50,8 +50,11 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 | Factor | Value | Impact |
 |--------|-------|--------|
 | Spread | {spread} | {blowout_risk} |
-| Total | {total} | {pace_context} |
+| Total | {total} | {env_note} |
 | Schedule | {schedule_notes} | {fatigue_flag} |
+
+**Situational Intel:**
+{situational_context}
 
 **Injury Impact:**
 {injury_intel_block}

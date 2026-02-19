@@ -123,6 +123,11 @@ jobs:
           conn.close()
           exit(1)
           "
+      - name: Refresh Scoring Environment Cache
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          python3 scripts/sync_scoring_environment.py
 
       - name: Run Daily Simulation Pipeline
         env:
@@ -155,6 +160,7 @@ jobs:
 
           # Run main pipeline
           echo "Starting pipeline at $(date)"
+          
           python main.py --send-telegram 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
           
           # Check if pipeline completed successfully

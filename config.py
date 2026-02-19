@@ -4,6 +4,8 @@
 # Updated: January 4, 2026
 
 import os
+import json
+import functools
 from dotenv import load_dotenv
 
 # Load environment variables from .env file ONLY if not in production/CI
@@ -232,6 +234,21 @@ def validate_config():
         print(f"⚠️  Optional keys not set: {', '.join(missing_optional)}")
     else:
         print("✅ All optional API keys loaded")
+
+# ====================================================
+# SCORING ENVIRONMENT (Phase 8.14)
+# ====================================================
+SCORING_ENV_PATH = 'cache/scoring_environment.json'
+SCORING_ENV_OVER_THRESHOLD = 0.48
+SCORING_ENV_DAMPENER = 0.97
+
+@functools.lru_cache(maxsize=1)
+def get_scoring_environment():
+    try:
+        with open(SCORING_ENV_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
 
 # Run validation ONLY when executed directly, not on import
 if __name__ == "__main__":
