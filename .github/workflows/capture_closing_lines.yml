@@ -2,7 +2,7 @@ name: Capture Closing Lines
 
 on:
   schedule:
-    - cron: '30 23,0,1,2,3 * * *'  # 7:30 PM, 8 PM, 9 PM, 10 PM, 11 PM EST on game nights
+    - cron: '30 23,0,1,2,3 * * *'  # 7:30, 8:30, 9:30, 10:30, 11:30 PM EST on game nights
   workflow_dispatch:
     inputs:
       game_date:
@@ -10,8 +10,41 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: capture-closing-lines
+  cancel-in-progress: false  # Never cancel — each run captures different game windows
+
 jobs:
+  check-slate:
+    runs-on: self-hosted
+    outputs:
+      has_games: ${{ steps.check.outputs.has_games }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Check today's NBA slate
+        id: check
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          set +e
+          python scripts/check_slate.py
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "has_games=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_games=true" >> $GITHUB_OUTPUT
+          fi
+
   capture-clv:
+    needs: [check-slate]
+    if: needs.check-slate.outputs.has_games == 'true'
     runs-on: self-hosted
     timeout-minutes: 5
     env:

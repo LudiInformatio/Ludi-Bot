@@ -8,8 +8,39 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  briefing:
+  check-slate:
     runs-on: self-hosted
+    outputs:
+      has_games: ${{ steps.check.outputs.has_games }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Check today's NBA slate
+        id: check
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          set +e
+          python scripts/check_slate.py
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "has_games=false" >> $GITHUB_OUTPUT
+          else
+            # exit 0 = games today; any unexpected error = fail-open (assume games)
+            echo "has_games=true" >> $GITHUB_OUTPUT
+          fi
+
+  briefing:
+    needs: [check-slate]
+    if: needs.check-slate.outputs.has_games == 'true'
+    runs-on: self-hosted
+    timeout-minutes: 30
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -62,3 +93,20 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
           python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} - Check GitHub Actions')" || echo "Telegram notification failed"
+
+  notify-off-day:
+    needs: [check-slate]
+    if: needs.check-slate.outputs.has_games == 'false'
+    # Runs on ubuntu-latest (no checkout needed — just a curl)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send no-games Telegram notification
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          DATE_LABEL=$(date '+%b %-d')
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="Markdown" \
+            -d text="📅 *No NBA games today (${DATE_LABEL})*%0APipeline sleeping\." || echo "Telegram notification failed"

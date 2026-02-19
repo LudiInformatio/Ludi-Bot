@@ -17,7 +17,65 @@ on:
           - debug-failures
 
 jobs:
+  # Always runs — schema validation is a daily health gate, not optional
+  validate-schema:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    outputs:
+      schema_status: ${{ steps.schema.outputs.status }}
+      schema_details: ${{ steps.schema.outputs.details }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          fetch-depth: 1
+
+      - name: Setup Python
+        run: |
+          if [ ! -d ".venv" ]; then python3.11 -m venv .venv; fi
+          source .venv/bin/activate
+          pip install --quiet -r requirements.txt
+
+      - name: Validate Schema
+        id: schema
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=$PWD
+
+          # Run schema validation — capture output and exit code separately
+          set +e
+          SCHEMA_OUT=$(python scripts/validate_schema.py --verbose 2>&1)
+          SCHEMA_EXIT=$?
+
+          # Run canonical ID validation
+          CANONICAL_OUT=$(python scripts/validate_canonical_ids.py -v 2>&1)
+          CANONICAL_EXIT=$?
+          set -e
+
+          # Determine overall status
+          if [ $SCHEMA_EXIT -eq 0 ] && [ $CANONICAL_EXIT -eq 0 ]; then
+            echo "status=PASS" >> $GITHUB_OUTPUT
+          else
+            echo "status=FAIL" >> $GITHUB_OUTPUT
+          fi
+
+          # Capture details for Claude prompt (first 30 lines of each)
+          DETAILS="Schema: $(echo "$SCHEMA_OUT" | head -30)"$'\n'"Canonical IDs: $(echo "$CANONICAL_OUT" | head -20)"
+          echo "details<<DETAILSEOF" >> $GITHUB_OUTPUT
+          echo "$DETAILS" >> $GITHUB_OUTPUT
+          echo "DETAILSEOF" >> $GITHUB_OUTPUT
+
+          echo "--- Schema Validation ---"
+          echo "$SCHEMA_OUT"
+          echo "--- Canonical ID Validation ---"
+          echo "$CANONICAL_OUT"
+
+  # Runs only when failures exist or full scope requested
   claude-qa:
+    needs: [validate-schema]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,24 +96,39 @@ jobs:
           # Get failed workflows from last 24 hours
           # NOTE: Do NOT mask gh failures with || echo — if this step can't query GitHub,
           # the workflow should FAIL so Claude Ops Hub detects a broken QA layer.
-          FAILURES=$(gh run list --limit 20 --json name,conclusion,startedAt,databaseId \
+          FAILURES=$(gh run list --limit 25 --json name,conclusion,startedAt,databaseId \
             --jq '[.[] | select(.conclusion == "failure")] | map("\(.name) (ID: \(.databaseId))") | join(", ")')
 
-          # Handle empty result (no failures = good)
           if [ -z "$FAILURES" ]; then
             FAILURES="none"
           fi
           echo "failures=$FAILURES" >> $GITHUB_OUTPUT
 
-          # Count failures
-          FAIL_COUNT=$(gh run list --limit 20 --json conclusion \
+          FAIL_COUNT=$(gh run list --limit 25 --json conclusion \
             --jq '[.[] | select(.conclusion == "failure")] | length')
           echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check for duplicate daily QA issue
+        id: dedup
+        run: |
+          TODAY=$(date +%Y-%m-%d)
+          EXISTING=$(gh issue list \
+            --label "daily-qa" \
+            --state open \
+            --search "Daily QA Report - $TODAY" \
+            --json number \
+            --jq '.[0].number // ""')
+          echo "existing_issue=$EXISTING" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Claude QA Check
-        if: steps.failures.outputs.fail_count != '0' || github.event.inputs.scope == 'full'
+        if: |
+          steps.failures.outputs.fail_count != '0' ||
+          needs.validate-schema.outputs.schema_status == 'FAIL' ||
+          github.event.inputs.scope == 'full'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -68,43 +141,58 @@ jobs:
             - Repository: ${{ github.repository }}
             - Recent workflow failures: ${{ steps.failures.outputs.failures }}
             - Failure count: ${{ steps.failures.outputs.fail_count }}
+            - Schema validation status: ${{ needs.validate-schema.outputs.schema_status }}
+            - Schema details: ${{ needs.validate-schema.outputs.schema_details }}
             - Scope: ${{ github.event.inputs.scope || 'workflows' }}
+            - Existing QA issue for today (if any): ${{ steps.dedup.outputs.existing_issue }}
 
             ## Your Task
+
+            ### Deduplication
+            If `existing_issue` is NOT empty, do NOT create a new issue.
+            Instead, add a comment to issue #${{ steps.dedup.outputs.existing_issue }} with today's update.
+
+            ### If no existing issue (create new):
+            Create a GitHub issue titled "Daily QA Report - $(date +%Y-%m-%d)" with label `daily-qa` and include:
+            - Workflow status summary (failures found)
+            - Schema health: PASS or FAIL with details if failed
+            - Any failures and their likely causes
+            - Recommended fixes (if any)
+
+            ### Always investigate:
             1. If there are workflow failures:
                - Analyze the failure logs using `gh run view <ID> --log-failed`
                - Identify root causes
-               - Check if the issue is in the code or infrastructure
-               - Create a GitHub issue summarizing findings if the failure is non-trivial
+            2. If schema status is FAIL:
+               - Report which tables or constraints are missing
+               - This is HIGH priority — missing Phase 8 tables cause silent pipeline degradation
 
-            2. For 'full' scope:
-               - Run `python scripts/validate_schema.py --verbose` to check database health
-               - Run `python scripts/validate_canonical_ids.py -v` to check data quality
-               - Review recent commits for potential issues
-
-            3. Create a summary issue titled "Daily QA Report - $(date +%Y-%m-%d)" with:
-               - Workflow status summary
-               - Any failures and their likely causes
-               - Recommended fixes (if any)
-               - Health check results
-
-            Keep the report concise and actionable.
+            Keep the report concise and actionable. Label issues with `daily-qa` and appropriate severity.
 
       - name: Send Telegram notification (failures found)
-        if: steps.failures.outputs.fail_count != '0'
+        if: steps.failures.outputs.fail_count != '0' || needs.validate-schema.outputs.schema_status == 'FAIL'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FAIL_COUNT: ${{ steps.failures.outputs.fail_count }}
           FAILURES: ${{ steps.failures.outputs.failures }}
+          SCHEMA_STATUS: ${{ needs.validate-schema.outputs.schema_status }}
           REPO: ${{ github.repository }}
         run: |
+          SCHEMA_LINE=""
+          if [ "$SCHEMA_STATUS" = "FAIL" ]; then
+            SCHEMA_LINE="⚠️ Schema validation: FAILED"
+          else
+            SCHEMA_LINE="✅ Schema validation: OK"
+          fi
+
           MESSAGE=$(cat <<EOF
           🤖 *Claude QA Report*
 
           ⚠️ *${FAIL_COUNT} workflow failure(s) detected*
 
           Failed: ${FAILURES}
+          ${SCHEMA_LINE}
 
           Claude is analyzing and will create a GitHub issue.
 
@@ -117,17 +205,18 @@ jobs:
             -d text="${MESSAGE}" || echo "Telegram notification failed"
 
       - name: No failures - send success notification
-        if: steps.failures.outputs.fail_count == '0' && github.event.inputs.scope != 'full'
+        if: steps.failures.outputs.fail_count == '0' && needs.validate-schema.outputs.schema_status == 'PASS' && github.event.inputs.scope != 'full'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           REPO: ${{ github.repository }}
         run: |
-          echo "✅ No workflow failures in last 24 hours. Skipping QA check."
+          echo "✅ No workflow failures in last 24 hours and schema is healthy. Skipping Claude QA."
           MESSAGE=$(cat <<EOF
           🤖 *Claude QA Report*
 
-          ✅ All workflows healthy - no failures in last 24 hours.
+          ✅ All workflows healthy — no failures in last 24 hours.
+          ✅ Schema validation: all tables present.
 
           [View Actions](https://github.com/${REPO}/actions)
           EOF

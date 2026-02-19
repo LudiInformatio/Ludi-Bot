@@ -2,8 +2,8 @@ name: Daily Production Pipeline
 
 on:
   schedule:
-    # Daily at 11:00 AM EST (15:00 UTC)
-    - cron: '0 15 * * 1-5'
+    # Daily at 11:00 AM EST (15:00 UTC) — 7 days (NBA has weekend games)
+    - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
       test_mode:
@@ -12,8 +12,41 @@ on:
         default: 'false'
         type: string
 
+concurrency:
+  group: production-pipeline
+  cancel-in-progress: false
+
 jobs:
+  check-slate:
+    runs-on: self-hosted
+    outputs:
+      has_games: ${{ steps.check.outputs.has_games }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Check today's NBA slate
+        id: check
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          set +e
+          python scripts/check_slate.py
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "has_games=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_games=true" >> $GITHUB_OUTPUT
+          fi
+
   run-production-pipeline:
+    needs: [check-slate]
+    if: needs.check-slate.outputs.has_games == 'true'
     runs-on: self-hosted
     timeout-minutes: 30
     

@@ -50,6 +50,18 @@ class MorningBriefEngine:
         self.scenario_builder = self.orch.scenario_builder
         self.reporter = self.orch.reporter
 
+    def _notify_no_games(self):
+        """Send a brief Telegram message when there are no NBA games today."""
+        try:
+            date_label = datetime.datetime.now().strftime("%b %-d")
+            msg = (
+                f"📅 *No NBA games today \\({date_label}\\)*\n\n"
+                f"Pipeline sleeping\\. Back when the slate is live\\."
+            )
+            send_message(msg, parse_mode="MarkdownV2")
+        except Exception:
+            pass  # Never let notification failure crash the briefing
+
     def _get_db_conn(self):
         """WAL-mode SQLite connection."""
         conn = sqlite3.connect(config.DB_PATH, timeout=30)
@@ -139,7 +151,8 @@ class MorningBriefEngine:
             self.gate.games = filtered
             
         if not self.gate.games:
-            print("❌ No matching games found on today's slate. Aborting.")
+            print("📅 No NBA games on today's slate — skipping briefing.")
+            self._notify_no_games()
             return
 
         print(f"✅ Processing {len(self.gate.games)} games.")

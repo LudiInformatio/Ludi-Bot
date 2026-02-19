@@ -935,6 +935,25 @@ class LudiHistorian:
                 ON player_stint_profiles(player_id, team_abbreviation)
         ''')
 
+        # NBA Calendar Table (Phase 8 — Schedule Awareness)
+        # Separate from `games` table (which is analytics/results).
+        # This is schedule metadata only — has rows for EVERY date including off-days.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS nba_calendar (
+                date         TEXT PRIMARY KEY,
+                season       TEXT NOT NULL,
+                has_games    INTEGER NOT NULL DEFAULT 0,
+                game_count   INTEGER DEFAULT 0,
+                season_phase TEXT NOT NULL DEFAULT 'regular',
+                notes        TEXT,
+                synced_at    TEXT NOT NULL
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_nba_calendar_phase
+                ON nba_calendar(season_phase, date)
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

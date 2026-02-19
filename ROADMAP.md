@@ -54,6 +54,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()` in `morning_brief.py`. Backtest vs CLV after Mar 2026 data accumulates. | $0 |
 | 8.10 | League Rankings Module | LOW | Weekly SQL ranking tables for player/team types via Telegram | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
+| 8.13 | Ask Ludi — Interactive Telegram Bot | MEDIUM | Two-way Telegram bot: user sends message → bot parses intent → pulls from ludi.db + Claude → responds. Commands: `gamenote HOU CHA`, `profile DEN 14d`, `props Luka PTS`, `slate`, `rotation Tatum`. Nickname/alias handling (e.g. "Joker" → Jokic, "KD" → Durant). New: `scripts/run_telegram_bot.py` daemon + `utils/telegram_bot_handler.py`. Haiku for intent classification, Sonnet for analysis. Bridges gap until Ludi Lens web app. | ~$0.05/day |
 
 **Shared Infrastructure (Pre-Work — COMPLETE ✅ Feb 19):**
 - [x] Create `utils/claude_client.py` — OAuth-first auth (CLAUDE_CODE_OAUTH_TOKEN → ~/.claude/config.json → ANTHROPIC_API_KEY), Haiku/Sonnet model selection, token tracking, graceful degradation ✅

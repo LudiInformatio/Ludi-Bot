@@ -21,7 +21,8 @@ on:
 jobs:
   work-notes:
     runs-on: self-hosted
-    
+    permissions:
+      contents: write  # Required for git push of settlement logs
     # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
     if: github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
     
@@ -96,9 +97,15 @@ jobs:
 
   bet-summary:
     runs-on: self-hosted
-
-    # Run at 6am EST (11am UTC) or when triggered manually with bet_summary/both
-    if: github.event.schedule == '0 11 * * *' || github.event.inputs.report_type == 'bet_summary' || github.event.inputs.report_type == 'both'
+    # When 'both' is dispatched, wait for work-notes (settle_bets.py) to finish
+    # before reading settlement data. Prevents read-before-write on bet_recommendations.
+    needs: [work-notes]
+    if: |
+      always() && (
+        github.event.schedule == '0 11 * * *' ||
+        github.event.inputs.report_type == 'bet_summary' ||
+        (github.event.inputs.report_type == 'both' && needs.work-notes.result != 'skipped')
+      )
     
     steps:
       - name: Checkout repository

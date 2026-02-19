@@ -5,6 +5,10 @@ on:
     - cron: '0 8 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: data-sync
+  cancel-in-progress: false  # Never cancel a running sync — data integrity risk
+
 jobs:
   sync-data:
     runs-on: self-hosted
@@ -93,7 +97,39 @@ jobs:
         run: |
           python3 scripts/validate_schema.py --verbose
 
+      - name: Sync Season Schedule (weekly, Sundays)
+        # Keeps nba_calendar fresh for check_slate.py gate used by downstream workflows.
+        # Run only on Sunday syncs (or manual dispatch) to avoid redundant BDL calls.
+        if: ${{ github.event.schedule == '0 8 * * 0' || github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true  # Never let schedule sync block other data sync steps
+        timeout-minutes: 5
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_season_schedule.py --days 30
+
+      - name: Check slate for extended break
+        # Sets is_extended_break output — heavy API steps are skipped during off-season / All-Star break.
+        # Fail-open: if this step fails, heavy steps run anyway (assume active season).
+        id: slate_check
+        continue-on-error: true
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          set +e
+          python scripts/check_slate.py
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "is_extended_break=true" >> $GITHUB_OUTPUT
+            echo "📅 Extended break detected — skipping API-heavy sync steps"
+          else
+            echo "is_extended_break=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Module H (Fetch recent games)
+        if: steps.slate_check.outputs.is_extended_break != 'true'
         timeout-minutes: 10
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -117,6 +153,7 @@ jobs:
           python3 scripts/sync_pbp_totals.py
 
       - name: Sync PBP Stats WOWY Data
+        if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true  # Non-critical: partial success is acceptable
         timeout-minutes: 30
         env:
@@ -171,6 +208,7 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
       - name: Sync BDL Clutch Usage
+        if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true
         timeout-minutes: 10
         env:
@@ -179,12 +217,14 @@ jobs:
           python3 scripts/sync_bdl_clutch_usage.py
 
       - name: Sync Assist Combos
+        if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true
         timeout-minutes: 10
         run: |
           python3 scripts/sync_assist_combos.py
 
       - name: Sync BDL Tracking Data
+        if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true
         timeout-minutes: 10
         env:

@@ -6,12 +6,45 @@ on:
     - cron: '30 14 * * *'
   workflow_dispatch:  # Allow manual trigger for testing
 
+concurrency:
+  group: referee-sync
+  cancel-in-progress: false
+
 jobs:
-  sync-referees:
+  check-slate:
     runs-on: self-hosted
+    outputs:
+      has_games: ${{ steps.check.outputs.has_games }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Check today's NBA slate
+        id: check
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          set +e
+          python scripts/check_slate.py
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "has_games=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_games=true" >> $GITHUB_OUTPUT
+          fi
+
+  sync-referees:
+    needs: [check-slate]
+    if: needs.check-slate.outputs.has_games == 'true'
+    runs-on: self-hosted
+    timeout-minutes: 30
     permissions:
-      contents: write
-    
+      contents: read  # No git push in this workflow
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

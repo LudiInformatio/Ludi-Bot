@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database Schema Validation Script (Phase 6.5b)
+Database Schema Validation Script (Phase 8.12)
 
 Pre-flight check for data_sync.yml workflow to catch schema mismatches
 before they cause silent failures.
@@ -13,7 +13,7 @@ Exit Codes:
     1 = One or more validations failed
 
 Author: Ludi Informatio
-Date: February 3, 2026 (Phase 6.5b Step 3)
+Date: February 3, 2026 (Phase 8.12)
 """
 
 import argparse
@@ -35,6 +35,7 @@ REQUIRED_UNIQUE_INDEXES = [
 
 # Required tables
 REQUIRED_TABLES = [
+    # Core tables
     'players',
     'games',
     'player_game_logs',
@@ -43,6 +44,15 @@ REQUIRED_TABLES = [
     'player_season_wowy',
     'player_canonical_ids',
     'depth_charts',
+    # Phase 8 tables — if any of these are missing, pipeline degrades silently
+    'player_injuries',        # Phase 8.0-A: injury sync
+    'rotation_profiles',      # Phase 8.9-A: minutes projection
+    'beneficiary_minutes',    # Phase 8.9-A: usage vacuum beneficiaries
+    'player_stagger_stats',   # Phase 8.9-B: stagger pair analysis
+    'player_stint_profiles',  # Phase 8.9-B: PBP substitution profiles
+    'game_notes_log',         # Phase 8.6: Claude game card persistence
+    'team_scheme_cache',      # Phase 8.4: team defense scheme cache
+    'nba_calendar',           # Phase 8 Schedule Awareness: forward-looking game calendar
 ]
 
 
@@ -190,6 +200,30 @@ def validate_schema(db_path: str, verbose: bool = False) -> Tuple[bool, List[str
             print(f"   ⚠️  referee_profiles: {ref_count} records (low)")
     elif verbose:
         print(f"   ✅ referee_profiles: {ref_count} records")
+
+    # Check nba_calendar freshness (must be synced within 8 days)
+    if check_table_exists(conn, 'nba_calendar'):
+        cursor.execute("SELECT MAX(synced_at) FROM nba_calendar")
+        last_sync_row = cursor.fetchone()
+        last_sync = last_sync_row[0] if last_sync_row else None
+        if last_sync is None:
+            warnings.append("nba_calendar is empty — run scripts/sync_season_schedule.py")
+            if verbose:
+                print("   ⚠️  nba_calendar: empty (run sync_season_schedule.py)")
+        else:
+            from datetime import datetime, timezone
+            try:
+                sync_dt = datetime.fromisoformat(last_sync.replace('Z', '+00:00'))
+                now_dt = datetime.now(timezone.utc)
+                days_stale = (now_dt - sync_dt).days
+                if days_stale > 8:
+                    warnings.append(f"nba_calendar is stale ({days_stale}d since sync) — run sync_season_schedule.py")
+                    if verbose:
+                        print(f"   ⚠️  nba_calendar: stale ({days_stale}d since sync)")
+                elif verbose:
+                    print(f"   ✅ nba_calendar: fresh ({days_stale}d ago)")
+            except (ValueError, TypeError):
+                warnings.append("nba_calendar: could not parse synced_at timestamp")
 
     conn.close()
 
