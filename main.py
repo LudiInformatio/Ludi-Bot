@@ -636,7 +636,7 @@ class LudiOrchestrator:
 
         # STEP 5: REPORT
         print("[step 5] Generating Daily Briefing (Module F)...")
-        briefing, image_path = self.reporter.generate_report(processed_slate)
+        briefing, image_path, _ = self.reporter.generate_report(processed_slate)
         print("\n" + "="*50)
         print("DAILY BRIEFING GENERATED")
         print("="*50)
