@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 18, 2026 @ 11:15 PM EST
+**Last Updated:** February 18, 2026
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.4 — Archetype Classifier Fix (next up)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6/8.7 ✅ + Slate Date Fix ✅ (see `docs/archive/phase_reports/` for details)
+**Active Work:** Phase 8.10 — League Rankings (next up)
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6/8.7 ✅ + Phase 8.4 ✅ + Phase 8.9 ✅ + Phase 8.12 ✅ + Slate Date Fix ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -49,9 +49,11 @@ This is the single source of truth for project tasks and priorities.
 | 8.3 ✅ | Player Spotlight Cards | DONE | 2-3 sentence narratives for DIAMOND/BLUE CHIP only (~5/day). L10 + injury context injected. | ~$0.15 |
 | 8.6 ✅ | CLV + Retrospective | DONE | CLV extended to all 11 markets. `settle_bets.py` clv fixed. `weekly_retrospective.py` win+loss analysis (~$0.054/week, Tuesdays). | ~$0.01 |
 | 8.7 ✅ | Perplexity Integration | DONE | Sonar replaces DuckDuckGo in Module D. 4 injection points: injury nuance, game scoring bonus, game notes {schedule_notes}, Haiku soft-scratch gap. Module G referee fallback bonus. | ~$0.10 |
-| 8.4 | Archetype Classifier Fix | MEDIUM | Weekly batch classification via Claude, re-enable Module F archetype modifiers | ~$0.07 |
-| 8.9 | Rotation/Minutes Projection | MEDIUM | Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C | TBD |
+| 8.4 ✅ | Archetype Classifier Fix | DONE | `scripts/classify_archetypes.py` — weekly Claude Haiku batch (players + team schemes). Two-gate Synergy validation. Wired into `weekly_validation.yml`. | ~$0.03/wk |
+| 8.9 ✅ | Rotation/Minutes Projection | DONE | `rotation_profiles` (396), `beneficiary_minutes` (789), `player_stagger_stats` (2,282 pairs), `player_stint_profiles` (163). `_get_projected_minutes()` in Module C, Tier 0 in Module X. | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()` in `morning_brief.py`. Backtest vs CLV after Mar 2026 data accumulates. | $0 |
+| 8.10 | League Rankings Module | LOW | Weekly SQL ranking tables for player/team types via Telegram | $0 |
+| 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 
 **Shared Infrastructure (Pre-Work — COMPLETE ✅ Feb 19):**
 - [x] Create `utils/claude_client.py` — OAuth-first auth (CLAUDE_CODE_OAUTH_TOKEN → ~/.claude/config.json → ANTHROPIC_API_KEY), Haiku/Sonnet model selection, token tracking, graceful degradation ✅
@@ -81,8 +83,10 @@ This is the single source of truth for project tasks and priorities.
 - [x] **8.3 (Step 8):** Player spotlight cards in `morning_brief.py`. DIAMOND + BLUE CHIP only. Helper methods `_get_db_conn()` + `_get_l10_for_spotlight()` added. ✅ (Feb 19)
 - [x] **8.6 (Step 9):** CLV capture extended to all 11 markets (PTS/REB/AST/3PM/STL/BLK/TOV/PRA/PR/PA/RA). `settle_bets.py` clv field now uses clv_cents. `game_notes_log` table persists Claude game cards. `scripts/weekly_retrospective.py` — win+loss pattern analysis over game-notes bets only (~$0.054/week, Tuesdays). ✅ (Feb 17)
 - [x] **8.7 (Step 10):** Perplexity Sonar integration. `utils/perplexity_client.py` (file-based cache, graceful fallback). 4 injection points: `module_d` injury nuance, `morning_brief._score_game()` narrative bonus, GAME_NOTES_TEMPLATE `{schedule_notes}`, `curate_plays` soft-scratch check. Module G referee Perplexity fallback (bonus). Commit: `a4ca3b3`. ✅ (Feb 18)
-- [ ] 8.4: `scripts/classify_archetypes.py` weekly batch, re-enable Module F archetype modifiers (3 broken classification systems need audit first)
-- [ ] 8.9: Rotation/Minutes Projection Enhancement — Parse PBP (PlayByPlayV3), coach tendency models, situational minutes in Module C
+- [x] **8.4:** `scripts/classify_archetypes.py` — weekly Claude Haiku classification. Part A: player archetypes (19 types, two-gate Synergy validation). Part B: team scheme conflict resolution. Wired into `weekly_validation.yml`. ✅ (Feb 18)
+- [x] **8.9-A:** Core rotation system live ✅ (Feb 18) — `rotation_profiles` (396 players), `beneficiary_minutes` (789 pairs, e.g. Embiid OUT → Drummond +18.3 min). `_get_projected_minutes()` in `module_c.py`, Tier 0 in `module_x_scenario.py`. `USE_MINUTES_PROJECTION` feature flag in `config.py`. Rotation trends: Jaxson Hayes +16.8 min, Bronny -7.2 min.
+- [x] **8.9-B:** `player_stagger_stats` (2,282 pairs, game-log SQL — PBP Stats endpoint doesn't exist) + `player_stint_profiles` (163 profiles, 80 games, PlayByPlayV3 subs). Wired into `weekly_validation.yml`. ✅ (Feb 18)
+- [x] **8.12:** Roster Intelligence — trade/waiver awareness. Tier 1.5 freshly-traded roster (5 players detected: Coby White/CHA, Zubac/IND, Kuminga/ATL, Cole Anthony/PHX, Minott/BKN). 26 stale profiles + 102 stale bene rows removed. `games_on_current_team` column + NEW_TO_TEAM 0.95 dampener (15 players). `_classify_vacuum_smart()` team filter. ✅ (Feb 18)
 - [ ] 8.8: Game Score Formula v2 — add line movement delta + handle% to `_score_game()`. Blocked until Mar 2026 data accumulates for backtest validation.
 
 **Slate Date Filter (Feb 18, 2026 — commit a4ca3b3):**
@@ -177,6 +181,20 @@ Production automation live. Final validation pending Feb 19. See `docs/archive/p
 - [ ] Strength of Schedule (SOS) adjustment
 - [ ] Shooting Luck Deviation signals
 - [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
+
+### Phase 8.10 — League Rankings Module (Future)
+**Data ready now in ludi.db**
+- Weekly SQL ranking tables: top P&R ball-handlers by PPP, top FUNNEL defenses by drive FG% allowed, etc.
+- Source: player_synergy_playtypes, team_scheme_cache, player_game_tracking
+- Output: Telegram table Tuesdays alongside validation report
+- Cost: $0 (pure SQL, no API calls)
+
+### Phase 8.11 — Ludi Power Ratings (Future)
+**Builds on team_four_factors + team_leverage_profiles**
+- Blended rating: ortg + drtg + pace adjustment + 14d recent form
+- Advanced: opponent quality (SOS), margin-of-victory curves
+- Feeds: morning_brief._score_game() + future Ludi Lens dashboard
+- Cost: $0 (deterministic math)
 
 ---
 

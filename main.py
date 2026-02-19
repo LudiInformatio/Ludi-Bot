@@ -121,8 +121,75 @@ class LudiOrchestrator:
                 'pbp_corner3_freq': round(corner3_freq, 3)
             })
 
-        # --- Tier 2: Recently returned players (from player_injuries, last 7 days) ---
+        # --- Tier 1.5: Freshly Traded (on team per players table but no new-team logs yet) ---
+        # Phase 8.12: catch players traded in last 1-2 days who haven't played for new team
         tier1_ids = {p['player_id'] for p in roster}
+        try:
+            conn15 = sqlite3.connect(self.db_path)
+            cursor15 = conn15.cursor()
+            cursor15.execute("""
+                SELECT p.player_id, p.name
+                FROM players p
+                WHERE p.team = ?
+                  AND p.is_active = 1
+                  AND p.player_id NOT IN (
+                      SELECT player_id FROM player_game_logs
+                      WHERE team_abbreviation = ? AND game_date >= date('now', '-30 days')
+                  )
+                  AND EXISTS (
+                      SELECT 1 FROM player_game_logs pgl2
+                      WHERE pgl2.player_id = p.player_id
+                        AND pgl2.game_date >= date('now', '-30 days')
+                  )
+            """, (team_abbr, team_abbr))
+            traded_players = cursor15.fetchall()
+
+            for pid, pname in traded_players:
+                if pid in tier1_ids:
+                    continue
+                # Pull L10 from their most recent (old) team's game logs
+                cursor15.execute("""
+                    SELECT AVG(pts), AVG(reb), AVG(ast), AVG(fga), AVG(fg3a), AVG(fta),
+                           AVG(oreb), AVG(dreb), AVG(stl), AVG(blk), AVG(tov), AVG(minutes),
+                           CASE WHEN SUM(fga)>0 THEN ROUND(1.0*SUM(fgm)/SUM(fga),4) ELSE 0.45 END,
+                           CASE WHEN SUM(fg3a)>0 THEN ROUND(1.0*SUM(fg3m)/SUM(fg3a),4) ELSE 0.35 END,
+                           CASE WHEN SUM(fta)>0 THEN ROUND(1.0*SUM(ftm)/SUM(fta),4) ELSE 0.75 END,
+                           team_abbreviation
+                    FROM (
+                        SELECT pts, reb, ast, fga, fg3a, fta, fgm, fg3m, ftm,
+                               oreb, dreb, stl, blk, tov, minutes, team_abbreviation
+                        FROM player_game_logs
+                        WHERE player_id = ? AND game_date >= date('now', '-30 days')
+                        ORDER BY game_date DESC LIMIT 10
+                    )
+                """, (pid,))
+                row = cursor15.fetchone()
+                if not row or row[0] is None:
+                    continue
+                fga, fta, tov, mins = row[3] or 0, row[5] or 0, row[10] or 0, row[11] or 0
+                base_usg = round(((fga + 0.44*fta + tov)/mins)/2.1, 3) if mins > 0 else 0
+                old_team = row[15] or 'UNK'
+
+                roster.append({
+                    'player_id': pid, 'PLAYER_NAME': pname, 'TEAM_ABBREVIATION': team_abbr,
+                    'PTS': round(row[0] or 0, 1), 'REB': round(row[1] or 0, 1), 'AST': round(row[2] or 0, 1),
+                    'FGA': round(fga, 1), 'FG3A': round(row[4] or 0, 1), 'FTA': round(fta, 1),
+                    'OREB': round(row[6] or 0, 1), 'DREB': round(row[7] or 0, 1),
+                    'STL': round(row[8] or 0, 1), 'BLK': round(row[9] or 0, 1), 'TOV': round(tov, 1),
+                    'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1),
+                    'FG_PCT': row[12], 'FG3_PCT': row[13], 'FT_PCT': row[14],
+                    'pbp_shot_quality': 0.53, 'pbp_rim_freq': 0.0, 'pbp_corner3_freq': 0.0,
+                    'tier': 'NEWLY_TRADED',
+                    'NEWLY_TRADED': True,
+                    'NEW_TEAM_GAMES': 0,
+                })
+                tier1_ids.add(pid)
+                print(f"[ROSTER] Tier 1.5 (freshly traded): {pname} → {team_abbr} (pre-trade stats from {old_team})")
+            conn15.close()
+        except Exception as e:
+            print(f"[ROSTER] Tier 1.5 lookup error: {e}")
+
+        # --- Tier 2: Recently returned players (from player_injuries, last 7 days) ---
         try:
             conn2 = sqlite3.connect(self.db_path)
             cursor2 = conn2.cursor()
@@ -282,6 +349,13 @@ class LudiOrchestrator:
             pc['days_rest'] = away_days_rest
             players.append(pc)
 
+        # Phase 8.9: include spread so module_c._get_projected_minutes() can apply blowout context
+        vegas_spread = game_data.get('vegas', {}).get('spread', 0)
+        try:
+            vegas_spread = float(vegas_spread) if vegas_spread not in (None, 'N/A', '') else 0.0
+        except (ValueError, TypeError):
+            vegas_spread = 0.0
+
         return {
             'scenario_name': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_').replace(' ', '_'),
             'ref_data': ref_data,  # Pass full dict for pace AND whistle impact
@@ -290,6 +364,7 @@ class LudiOrchestrator:
             'days_rest': min(home_days_rest, away_days_rest),
             'home_team': home_team,
             'away_team': away_team,
+            'spread': vegas_spread,   # Phase 8.9: situational minutes context
             'players': players
         }
 

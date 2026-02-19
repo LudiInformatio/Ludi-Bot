@@ -190,6 +190,12 @@ class LudiOracle:
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
 
+                # Phase 8.9: build game_context for minutes projection
+                game_context = {
+                    'spread': scenario.get('spread', 0.0),
+                    'is_b2b': player_days_rest == 0,
+                }
+
                 player_team = player.get('TEAM_ABBREVIATION', '')
                 if player_team == scenario.get('home_team'):
                     opp_team = scenario.get('away_team')
@@ -211,13 +217,30 @@ class LudiOracle:
                 sim_profile['USG_PCT'] = self._calculate_usage(sim_profile, player, team_totals, player_mods)
                 sim_profile['FANTASY_PTS'] = self._calculate_fantasy_score(sim_profile)
 
+                # Phase 8.9: situational minutes projection
+                if getattr(config, 'USE_MINUTES_PROJECTION', True):
+                    proj_min, min_conf = self._get_projected_minutes(player, game_context)
+                    if proj_min > 0 and player.get('MIN', 0) > 0:
+                        min_scale = proj_min / player['MIN']
+                        min_scale = max(0.70, min(1.30, min_scale))  # cap at ±30%
+                        player['FGA'] = player.get('FGA', 0) * min_scale
+                        player['FG3A'] = player.get('FG3A', 0) * min_scale
+                        player['FTA'] = player.get('FTA', 0) * min_scale
+                    else:
+                        proj_min = player.get('MIN', 0)
+                        min_conf = 'LOW'
+                else:
+                    proj_min = player.get('MIN', 0)
+                    min_conf = 'OFF'
+
                 sim_profile.update({
                     "PLAYER_NAME": player.get('PLAYER_NAME'),
                     "TEAM": player.get('TEAM_ABBREVIATION'),
                     "SCENARIO": scen_name,
                     "PACE_MOD": round(player_mods['pace'], 3),
                     "REST": f"{player_days_rest}D",
-                    "MIN": round(player.get('MIN', 0), 1)
+                    "MIN": round(proj_min, 1),
+                    "MIN_CONF": min_conf
                 })
 
                 simulated_results.append(sim_profile)
@@ -230,6 +253,87 @@ class LudiOracle:
         if days_rest >= 4:
             return config.FATIGUE_RUST_TAX
         return 1.0
+
+    def _get_projected_minutes(self, player: dict, game_context: dict) -> tuple:
+        """
+        Phase 8.9 — Situational minutes projection.
+        Queries rotation_profiles for the player and applies spread/B2B context.
+
+        Args:
+            player:       Player dict (must have 'MIN' and 'player_id' / 'PLAYER_ID')
+            game_context: Dict with optional 'spread' (float) and 'is_b2b' (bool)
+
+        Returns:
+            (projected_minutes: float, confidence: str)  where confidence in HIGH/MEDIUM/LOW
+        """
+        historical_avg = player.get('MIN', 0.0)
+        if not historical_avg:
+            return (0.0, 'LOW')
+
+        player_id = str(player.get('player_id') or player.get('PLAYER_ID') or '')
+        if not player_id:
+            return (historical_avg, 'LOW')
+
+        try:
+            conn = sqlite3.connect('ludi.db')
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM rotation_profiles WHERE player_id = ? AND window_days = 21 LIMIT 1",
+                (player_id,)
+            ).fetchone()
+            conn.close()
+        except Exception:
+            return (historical_avg, 'LOW')
+
+        if not row:
+            return (historical_avg, 'LOW')
+
+        games_played = row['games_played'] or 0
+        if games_played >= 10:
+            confidence = 'HIGH'
+        elif games_played >= 5:
+            confidence = 'MEDIUM'
+        else:
+            confidence = 'LOW'
+
+        # Phase 8.12: downgrade confidence for recently-traded players (< 5 games on current team)
+        newly_traded = False
+        try:
+            games_on_team = row['games_on_current_team']
+            if games_on_team is not None and games_on_team < 5:
+                confidence = 'LOW'
+                newly_traded = True
+                print(f"   [NEW TO TEAM] {player.get('PLAYER_NAME', '?')}: "
+                      f"{games_on_team} games on current team — LOW confidence, 5% dampener")
+        except (IndexError, KeyError):
+            pass  # Column not yet in DB; silently skip
+
+        spread = game_context.get('spread', 0.0) or 0.0
+        is_b2b = game_context.get('is_b2b', False)
+        is_close = abs(spread) < 3.0
+
+        # Pick situational column; fall back to avg_minutes if column is NULL
+        chosen = None
+        if spread < -12:
+            chosen = row['avg_min_blowout_win']
+        elif spread > 12:
+            chosen = row['avg_min_blowout_loss']
+        elif is_close:
+            chosen = row['avg_min_close_game']
+
+        if is_b2b and row['avg_min_b2b']:
+            # B2B overrides other situational contexts (most predictive for fatigue)
+            chosen = row['avg_min_b2b']
+
+        proj = chosen if chosen else row['avg_minutes']
+        if not proj:
+            return (historical_avg, 'LOW')
+
+        # Phase 8.12: apply 5% dampener for players new to their current team
+        if newly_traded:
+            proj = float(proj) * 0.95
+
+        return (float(proj), confidence)
 
     def _simulate_volume(self, player, mods):
         """Returns full distribution arrays for FGA/FG3A/FTA."""

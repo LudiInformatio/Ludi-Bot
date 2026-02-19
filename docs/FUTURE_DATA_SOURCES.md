@@ -250,3 +250,60 @@ Contains all 40+ PBP Stats endpoints documented with:
 *   **Rate Limits:** Generous but recommend 120s timeout for WOWY queries
 *   **Best Practice:** Cache responses locally with 24h TTL
 *   **Helper:** `utils/pbp_stats_api_reference.py` for endpoint discovery
+
+---
+
+## Phase 8.10: League Rankings Module
+
+**Status:** Ready for implementation (data already in ludi.db)
+
+### Data Sources
+| Table | Records | Used For |
+|-------|---------|----------|
+| `player_synergy_playtypes` | ~500 | PPP rankings by playtype |
+| `team_scheme_cache` | 60 (30 teams × 2) | Defensive scheme rankings |
+| `player_game_tracking` | ~12K | Drives, catch-shoot, pull-up rankings |
+
+### Ranking Types
+- **Player rankings:** Top P&R ball-handlers by PPP, top spot-up shooters by PPP, top ISO scorers by PPP
+- **Team defensive rankings:** FUNNEL teams by drive FG% allowed, PAINT_PACK by 3PA allowed
+- **Team offensive rankings:** MOTION teams by AST/FGM ratio, ISO_HEAVY by isolation frequency
+
+### Implementation
+- Weekly SQL queries via `scripts/generate_rankings.py` (new)
+- Output: Markdown table via Telegram Tuesdays
+- Cost: $0 (pure SQL, no API calls)
+
+---
+
+## Phase 8.11: Ludi Power Ratings
+
+**Status:** Design phase
+
+### Formula Concept
+```
+Power = 0.4 × Ortg + 0.3 × Drtg + 0.15 × PaceAdj + 0.15 × RecentForm
+```
+
+Where:
+- **Ortg/Drg:** Season averages from `team_four_factors`
+- **PaceAdj:** Pace deviation from league average (100 = neutral)
+- **RecentForm:** 14d weighted win% with recency decay
+
+### Advanced Extensions
+- **Opponent Quality (SOS):** Strength-adjusted based on opponent power ratings
+- **Margin of Victory Curves:** Weight wins by margin (close wins = 1.0, blowouts = 1.5)
+- **Injury Adjusted:** Temporarily downgrade team rating when starters out
+
+### Integration Points
+- `morning_brief._score_game()` — add power rating differential as factor
+- Future Ludi Lens dashboard — display team power bars
+- Game selection — favor matchups with >5 point power differential
+
+### Data Sources
+- `team_four_factors` (ortg, drtg, pace)
+- `team_leverage_profiles` (recent form)
+- `player_injuries` (injury adjustments)
+
+### Cost
+- $0 (deterministic math, no API calls)

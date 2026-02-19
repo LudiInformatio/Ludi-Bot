@@ -814,6 +814,127 @@ class LudiHistorian:
                 ON game_notes_log(run_date, game_id)
         ''')
 
+        # rotation_profiles: per-player situational minutes profile (Phase 8.9)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS rotation_profiles (
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                team_abbreviation TEXT NOT NULL,
+                avg_minutes REAL,
+                std_minutes REAL,
+                min_minutes REAL,
+                max_minutes REAL,
+                games_started INTEGER,
+                games_played INTEGER,
+                start_rate REAL,
+                avg_min_as_starter REAL,
+                avg_min_off_bench REAL,
+                avg_min_blowout_win REAL,
+                avg_min_blowout_loss REAL,
+                avg_min_close_game REAL,
+                avg_min_b2b REAL,
+                depth_order INTEGER,
+                position TEXT,
+                window_days INTEGER DEFAULT 21,
+                games_on_current_team INTEGER DEFAULT NULL,
+                computed_at TEXT NOT NULL,
+                UNIQUE(player_id, team_abbreviation, window_days)
+            )
+        ''')
+        # Migration guard for existing installs (Phase 8.12)
+        try:
+            c.execute('ALTER TABLE rotation_profiles ADD COLUMN games_on_current_team INTEGER DEFAULT NULL')
+        except Exception:
+            pass  # Column already exists
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_rotation_profiles_player
+                ON rotation_profiles(player_id, window_days)
+        ''')
+
+        # beneficiary_minutes: when player X is out, who gets extra minutes? (Phase 8.9)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS beneficiary_minutes (
+                out_player_id TEXT NOT NULL,
+                out_player_name TEXT NOT NULL,
+                team_abbreviation TEXT NOT NULL,
+                beneficiary_player_id TEXT NOT NULL,
+                beneficiary_player_name TEXT NOT NULL,
+                games_without INTEGER,
+                avg_minutes_without REAL,
+                avg_minutes_with REAL,
+                minutes_delta REAL,
+                sample_start TEXT,
+                sample_end TEXT,
+                computed_at TEXT NOT NULL,
+                UNIQUE(out_player_id, beneficiary_player_id, team_abbreviation)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_beneficiary_out_player
+                ON beneficiary_minutes(out_player_id, team_abbreviation)
+        ''')
+
+        # Phase 8.9-B: Stagger stats — two-man pairing on/off splits
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_stagger_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                team_abbreviation TEXT NOT NULL,
+                partner_player_id TEXT NOT NULL,
+                partner_player_name TEXT NOT NULL,
+                season TEXT DEFAULT '2025-26',
+                min_with REAL,
+                pts_with REAL,
+                ast_with REAL,
+                reb_with REAL,
+                usg_with REAL,
+                ortg_with REAL,
+                min_without REAL,
+                pts_without REAL,
+                ast_without REAL,
+                reb_without REAL,
+                usg_without REAL,
+                ortg_without REAL,
+                pts_delta REAL,
+                ast_delta REAL,
+                reb_delta REAL,
+                usg_delta REAL,
+                games_sample INTEGER,
+                synced_at TEXT NOT NULL,
+                UNIQUE(player_id, partner_player_id, team_abbreviation, season)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_stagger_player
+                ON player_stagger_stats(player_id, team_abbreviation)
+        ''')
+
+        # Phase 8.9-B: Stint profiles — aggregated substitution patterns per player
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_stint_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                team_abbreviation TEXT NOT NULL,
+                season TEXT DEFAULT '2025-26',
+                avg_stints_per_game REAL,
+                avg_first_stint_min REAL,
+                avg_stint_length REAL,
+                pct_games_q4_starter REAL,
+                avg_min_q4 REAL,
+                avg_min_q4_when_close REAL,
+                avg_min_q4_blowout REAL,
+                games_sample INTEGER,
+                synced_at TEXT NOT NULL,
+                UNIQUE(player_id, team_abbreviation, season)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_stint_player
+                ON player_stint_profiles(player_id, team_abbreviation)
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

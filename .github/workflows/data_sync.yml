@@ -190,6 +190,12 @@ jobs:
         run: |
           python3 scripts/sync_bdl_tracking.py --all
 
+      - name: Build Rotation Profiles (Phase 8.9)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          python3 scripts/build_rotation_profiles.py --window-days 21 --min-games 3
+
       - name: Update Team Scheme Cache
         timeout-minutes: 5
         run: |

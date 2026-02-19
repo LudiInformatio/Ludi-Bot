@@ -116,6 +116,9 @@ IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'false').lower() == 'true'
 # ====================================================
 # 5c. SIMULATION SETTINGS (MODULE C)
 # ====================================================
+# Phase 8.9: Rotation/minutes projection feature flag (True by default)
+USE_MINUTES_PROJECTION = os.getenv('USE_MINUTES_PROJECTION', 'true').lower() == 'true'
+
 SIM_COUNT = 5000
 SIM_VARIANCE = 0.35
 SIM_POISSON_THRESHOLD = 3.0

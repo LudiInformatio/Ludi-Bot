@@ -30,11 +30,13 @@ class ScenarioBuilder:
             conn = sqlite3.connect("ludi.db", timeout=30)
             conn.execute("PRAGMA journal_mode=WAL")
             c = conn.cursor()
+            # Phase 8.12: filter by team to avoid stale injury from old team post-trade
             c.execute("""
                 SELECT days_out FROM player_injuries
                 WHERE player_name = ? AND resolved_at IS NULL
+                  AND (team_abbreviation = ? OR team_abbreviation IS NULL)
                 ORDER BY snapshot_time DESC LIMIT 1
-            """, (out_player_name,))
+            """, (out_player_name, team_abbr))
             row = c.fetchone()
             conn.close()
 
@@ -234,24 +236,74 @@ class ScenarioBuilder:
         
         return scenario
 
+    def _lookup_beneficiary_minutes(self, out_player_id: str, team_abbr: str) -> list:
+        """
+        Phase 8.9 Tier 0: Query beneficiary_minutes table for data-driven backup estimation.
+
+        Returns list of dicts sorted by minutes_delta DESC:
+          [{'player_id': str, 'name': str, 'minutes_delta': float, 'games_without': int}]
+        Returns [] on any error (graceful degradation).
+        """
+        if not out_player_id or not team_abbr:
+            return []
+        try:
+            conn = sqlite3.connect('ludi.db')
+            rows = conn.execute("""
+                SELECT beneficiary_player_id, beneficiary_player_name,
+                       minutes_delta, games_without
+                FROM beneficiary_minutes
+                WHERE out_player_id = ? AND team_abbreviation = ? AND minutes_delta > 1.0
+                ORDER BY minutes_delta DESC
+                LIMIT 5
+            """, (str(out_player_id), team_abbr)).fetchall()
+            conn.close()
+            return [
+                {
+                    'player_id': r[0],
+                    'name': r[1],
+                    'minutes_delta': r[2],
+                    'games_without': r[3],
+                }
+                for r in rows
+            ]
+        except Exception:
+            return []
+
     def _infer_dynamic_backup(self, all_players, starter_out):
         """
         Scans the game roster to find the most likely backup.
-        
+
         V3.8 UPGRADE: Uses WOWY data when available (350+ poss confidence),
         falls back to heuristic 60/30 split for insufficient samples.
-        
+
         Phase 7.4: Also sets wowy_confidence for all players in the game
         by querying player_season_wowy table.
-        
+
+        Phase 8.9: TIER 0 — beneficiary_minutes table (data-driven absence cross-join).
+
         Returns:
             dict with 'matrix' (name:absorption_rate) and 'confidence' (high/medium/low/None)
         """
         team_abbr = starter_out.get('TEAM_ABBREVIATION')
-        
+
         # Phase 7.4: Set wowy_confidence for all players in game
         self._set_wowy_confidence_for_players(all_players)
-        
+
+        # TIER 0: beneficiary_minutes — data-driven absence analysis (Phase 8.9)
+        bene_data = self._lookup_beneficiary_minutes(
+            starter_out.get('PLAYER_ID', ''), team_abbr
+        )
+        if bene_data and sum(b['games_without'] for b in bene_data) >= 3:
+            base_min = starter_out.get('base_min', 1) or 1
+            absorption = {}
+            for b in bene_data:
+                if b['minutes_delta'] > 0:
+                    absorption[b['name']] = round(b['minutes_delta'] / base_min, 3)
+            if absorption:
+                print(f"[Module X] TIER 0 beneficiary data for {starter_out.get('PLAYER_NAME', '?')}: "
+                      f"{list(absorption.keys())[:3]}")
+                return {'matrix': absorption, 'confidence': 'high'}
+
         # TRY WOWY FIRST (real lineup data)
         try:
             from utils.wowy_calculator import WOWYCalculator

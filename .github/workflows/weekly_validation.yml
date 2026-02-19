@@ -129,6 +129,31 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+      - name: Weekly Classification (Phase 8.4)
+        run: |
+          source .venv/bin/activate
+          echo "Running Weekly Archetype Classification..."
+          python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Sync Stagger Stats (Phase 8.9-B)
+        run: |
+          source .venv/bin/activate
+          echo "Running Stagger Stats Sync..."
+          python scripts/sync_stagger_stats.py --days 60 || echo "WARNING: Stagger stats sync failed -- continuing"
+        continue-on-error: true
+
+      - name: Sync Stint Profiles (Phase 8.9-B)
+        run: |
+          source .venv/bin/activate
+          echo "Running Stint Profiles Sync..."
+          # Use 60-day window: nba_game_id is only populated through early Feb 2026
+          # 21-day window has ~38 games which is insufficient for 5+ games/player
+          python scripts/sync_stint_profiles.py --days 60 || echo "WARNING: Stint profiles sync failed -- continuing"
+        continue-on-error: true
+
       - name: Archive Backtest Logs
         run: |
           # Compress logs
