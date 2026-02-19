@@ -132,7 +132,7 @@ def format_scheme_table(rows):
     for row in rows:
         scheme = row[0]
         count = row[1]
-        teams = row[2]
+        teams = row[2] if row[2] else ""
         lines.append(f"• {scheme}: {count} teams ({teams[:50]}{'...' if len(teams) > 50 else ''})")
     
     return "\n".join(lines)
