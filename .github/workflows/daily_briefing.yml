@@ -28,6 +28,7 @@ jobs:
           python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
 
       - name: Sync Injuries (Pre-Brief Refresh)
+        timeout-minutes: 5
         run: |
           source .venv/bin/activate
           python scripts/sync_injuries.py
@@ -46,6 +47,9 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
           export PYTHONPATH=$PWD
           python3 -m morning_brief
