@@ -26,6 +26,33 @@ from utils.trend_engine import get_player_trends, get_beneficiary_context, get_s
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
 
+
+def _get_team_situation_note(team_abbr, cursor):
+    """
+    Build a live situational note for a team from team_leverage_profiles + games.
+    Replaces the hardcoded _TEAM_SITUATION_NOTES dict.
+    """
+    notes = []
+    try:
+        row = cursor.execute("""
+            SELECT clutch_factor, garbage_time_boost, overall_ft_rate, overall_oreb_pct
+            FROM team_leverage_profiles WHERE team_abbr = ?
+        """, (team_abbr,)).fetchone()
+
+        if row:
+            clutch, garbage, ft_rate, oreb = row
+            if clutch and clutch >= 1.5:
+                notes.append(f"Clutch-heavy ({clutch:.1f}x late-game rate)")
+            if garbage and garbage >= 1.2:
+                notes.append(f"Garbage-time upside ({garbage:.1f}x boost)")
+            if ft_rate and ft_rate >= 0.27:
+                notes.append(f"High FT rate ({ft_rate:.2f})")
+            if oreb and oreb >= 0.30:
+                notes.append(f"Strong OREB ({oreb:.2f})")
+    except Exception:
+        pass
+    return " | ".join(notes) if notes else ""
+
 import argparse
 
 class MorningBriefEngine:
@@ -348,11 +375,12 @@ class MorningBriefEngine:
                     # 3b. Beneficiary context (Phase 8.15)
                     beneficiary_block = get_beneficiary_context(home_team, away_team)
 
-                    # 3c. Team pace note from team_leverage_profiles
+                    # 3c. Team pace + leverage note from team_leverage_profiles
                     matchup_pace_note = "Average"
+                    blowout_close_note = ""
                     try:
                         cursor.execute("""
-                            SELECT team_abbr, overall_pace
+                            SELECT team_abbr, overall_pace, vh_ortg, l_ortg, clutch_factor, garbage_time_boost
                             FROM team_leverage_profiles WHERE team_abbr IN (?, ?)
                         """, (home_team, away_team))
                         pace_rows = cursor.fetchall()
@@ -364,6 +392,13 @@ class MorningBriefEngine:
                                 matchup_pace_note = f"SLOW (avg {avg_pace:.1f})"
                             else:
                                 matchup_pace_note = f"Average ({avg_pace:.1f})"
+                            
+                            for row in pace_rows:
+                                team, pace, vh_ortg, l_ortg, clutch, garbage = row
+                                if clutch and clutch >= 1.6:
+                                    blowout_close_note += f"{team} clutch-heavy. "
+                                if garbage and garbage >= 1.3:
+                                    blowout_close_note += f"{team} bench upside in blowouts. "
                     except Exception:
                         pass
 
@@ -400,29 +435,24 @@ class MorningBriefEngine:
                                   "boost", "proj", "update_time", "one_sentence"]
                     }
                     
-                    _TEAM_SITUATION_NOTES = {
-                        'WAS': "WAS 0-9 SU on B2B (1-36 over 3yr, -18 PPG avg loss)",
-                        'NYK': "NYK 19-9 home ATS (67.9% — best in NBA)",
-                        'MIA': "MIA 20-7 ATS off a loss (Spo 57.1% over 15 seasons)",
-                        'CLE': "CLE -20.2% ROI as favorite; 23-32 ATS overall",
-                        'LAL': "LAL 10 straight ATS losses as underdog",
-                        'DET': "DET 9-1 SU as underdog (only team with this mark)",
-                        'CHA': "CHA 23-12 ATS since Dec 1 (best in NBA, playoff hunt)",
-                        'HOU': "HOU opponents hit OVERs at 57.5% in our data (best target)",
-                        'SAC': "SAC opponents hit OVERs at only 26.3% in our data (worst target)",
-                        'IND': "IND opponents hit OVERs at only 29.8% in our data",
-                    }
+                    # B2: Replace hardcoded _TEAM_SITUATION_NOTES with data-driven version
+                    home_situation = _get_team_situation_note(home_team, cursor)
+                    away_situation = _get_team_situation_note(away_team, cursor)
+                    situational_context = f"{home_team}: {home_situation}" if home_situation else ""
+                    if away_situation:
+                        situational_context += (f" | {away_team}: {away_situation}" 
+                                             if situational_context else f"{away_team}: {away_situation}")
+                    if not situational_context:
+                        situational_context = "No specific situational flags."
                     
                     env = config.get_scoring_environment()
                     over_rate = env.get('over_hit_rate_14d', 0)
                     env_label = env.get('environment', 'NEUTRAL')
                     env_note = f"{env_label} ({over_rate:.0%} 14d OVER rate)" if over_rate else "Normal"
                     
-                    sit_notes = [
-                        note for team, note in _TEAM_SITUATION_NOTES.items()
-                        if team in (home_team, away_team)
-                    ]
-                    situational_context = "\n".join(f"• {n}" for n in sit_notes) if sit_notes else "No specific situational flags."
+                    # B3: Append blowout/close context to pace note
+                    matchup_pace_note = f"{matchup_pace_note} | {blowout_close_note}".strip(" |") \
+                        if blowout_close_note else matchup_pace_note
                     
                     game_news = game_news_cache.get(gid, "")
                     schedule_notes = game_news[:200] if game_news else "Standard rest"
@@ -438,6 +468,34 @@ class MorningBriefEngine:
                     except Exception:
                         game_label = f"TONIGHT · {_est_now.strftime('%b %d').replace(' 0', ' ')}"
 
+                    # B1: B2B detection — check if either team played yesterday
+                    fatigue_flag = "None"
+                    try:
+                        _game_date = _game_date_str if _game_date_str else _est_now.strftime('%Y-%m-%d')
+                        
+                        _home_b2b = cursor.execute("""
+                            SELECT 1 FROM games
+                            WHERE (home_team = ? OR away_team = ?)
+                            AND date = date(?, '-1 day')
+                            LIMIT 1
+                        """, (home_team, home_team, _game_date)).fetchone() is not None
+
+                        _away_b2b = cursor.execute("""
+                            SELECT 1 FROM games
+                            WHERE (home_team = ? OR away_team = ?)
+                            AND date = date(?, '-1 day')
+                            LIMIT 1
+                        """, (away_team, away_team, _game_date)).fetchone() is not None
+
+                        if _home_b2b and _away_b2b:
+                            fatigue_flag = f"BOTH teams on B2B"
+                        elif _home_b2b:
+                            fatigue_flag = f"{home_team} on B2B (home)"
+                        elif _away_b2b:
+                            fatigue_flag = f"{away_team} on B2B (road)"
+                    except Exception:
+                        fatigue_flag = "None"
+
                     try:
                         prompt = GAME_NOTES_TEMPLATE.format(
                             away_team=away_team,
@@ -449,7 +507,7 @@ class MorningBriefEngine:
                             env_note=env_note,
                             matchup_pace_note=matchup_pace_note,
                             schedule_notes=schedule_notes,
-                            fatigue_flag="None",
+                            fatigue_flag=fatigue_flag,
                             injury_intel_block=injury_intel_block,
                             beneficiary_block=beneficiary_block,
                             away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),

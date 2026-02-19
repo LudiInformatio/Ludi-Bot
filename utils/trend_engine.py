@@ -387,3 +387,62 @@ def format_minutes_line(trend_data: dict) -> str:
         return f"MINS UP +{abs(delta):.1f} ({l15:.1f} -> {l7:.1f})"
     else:
         return f"MINS DOWN {delta:.1f} ({l15:.1f} -> {l7:.1f})"
+
+
+def get_matchup_analysis(player_id, opponent_abbr, cursor):
+    """
+    Build a structured archetype-vs-scheme matchup block for Spotlight cards.
+    Returns a 1-2 line string, or empty string if data unavailable.
+    Example output: "P&R Ball Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ defense"
+    """
+    try:
+        # Pull player's top 2 Synergy playtypes by frequency
+        playtypes = cursor.execute("""
+            SELECT playtype, ppp, freq_pct, percentile
+            FROM player_synergy_playtypes
+            WHERE player_id = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
+            ORDER BY freq_pct DESC LIMIT 2
+        """, (player_id,)).fetchall()
+
+        if not playtypes:
+            return ""
+
+        # Pull opponent's current defensive scheme
+        scheme_row = cursor.execute("""
+            SELECT active_style
+            FROM team_scheme_cache
+            WHERE team_abbreviation = ?
+            ORDER BY updated_at DESC LIMIT 1
+        """, (opponent_abbr,)).fetchone()
+
+        scheme = scheme_row[0] if scheme_row else "NEUTRAL"
+
+        # Format: "P&R Ball Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ"
+        pt_parts = []
+        for row in playtypes:
+            playtype, ppp, freq_pct, percentile = row
+
+            # Clean up verbose NBA playtype names
+            clean_name = (playtype
+                          .replace("PlayerPlayType", "")
+                          .replace("PickAndRollBallHandler", "P&R Handler")
+                          .replace("PickAndRollRollMan", "P&R Roll Man")
+                          .replace("Isolation", "ISO")
+                          .replace("Spotup", "Spot-Up")
+                          .replace("Transition", "Transition")
+                          .replace("Postup", "Post-Up")
+                          .replace("Handoff", "Handoff")
+                          .replace("OffScreen", "Off-Screen")
+                          .replace("Cut", "Cut")
+                          .strip())
+
+            ppp_str = f"{ppp:.2f}" if ppp else "N/A"
+            freq_str = f"{freq_pct:.0f}%" if freq_pct else "N/A"
+
+            pt_parts.append(f"{clean_name} ({ppp_str} PPP, {freq_str})")
+
+        playtype_str = " | ".join(pt_parts)
+        return f"{playtype_str} vs {scheme} defense"
+
+    except Exception:
+        return ""

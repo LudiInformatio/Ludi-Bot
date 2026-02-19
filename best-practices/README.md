@@ -55,14 +55,8 @@ Comprehensive guide covering:
 All categories below have folder structure and placeholder READMEs. Ready to be populated as patterns are discovered.
 
 ### 🔧 Coding Best Practices (`coding/`)
-**Status:** 📋 Initialized (placeholder README created)
-**Topics:**
-- Python style guide (project-specific conventions)
-- Module design patterns
-- Error handling standards
-- Code organization and imports
-- Documentation standards (docstrings, comments)
-- Type hints and validation
+**Status:** ✅ Complete (updated Feb 19, 2026)
+**Reference:** `coding/README.md` — 6 patterns covering error handling, tuple unpacking, bash defaults, lazy imports
 
 ### 🐛 Debugging Best Practices (`debugging/`)
 **Status:** 📋 Initialized (placeholder README created)
@@ -95,14 +89,8 @@ All categories below have folder structure and placeholder READMEs. Ready to be 
 - Production monitoring
 
 ### 📊 Data Modeling Best Practices (`data-modeling/`)
-**Status:** 📋 Initialized (placeholder README created)
-**Topics:**
-- Schema design principles
-- Index optimization
-- Data normalization
-- Canonical ID systems
-- ETL pipeline patterns
-- Data validation strategies
+**Status:** ✅ Complete (updated Feb 19, 2026)
+**Reference:** See `data-modeling/README.md` — 8 patterns covering schema design, canonical IDs, indexes, freshness validation, self-healing rebuilds
 
 ---
 
@@ -175,6 +163,7 @@ When you discover a new pattern or lesson:
 
 ---
 
-**Last Updated:** February 17, 2026
-**Total Documentation:** 69 KB across 1 category (API)
-**Categories Planned:** 5 (coding, debugging, testing, deployment, data-modeling)
+**Last Updated:** February 19, 2026
+**Total Documentation:** ~100 KB across 2 categories (API, data-modeling, coding)
+**Categories Complete:** 3 (api, data-modeling, coding)
+**Categories Planned:** 2 (debugging, testing, deployment)

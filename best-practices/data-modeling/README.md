@@ -17,6 +17,7 @@ This guide covers SQLite schema design, data integrity, and ETL patterns for the
 | `players.team` vs `player_game_logs.team_abbreviation` | Snapshot vs historical truth — never mix |
 | Self-healing daily rebuild | Some tables are cheaper to rebuild daily than track incrementally |
 | `IF NOT EXISTS` on ALTER TABLE | Safe migration — check with `PRAGMA table_info(table_name)` |
+| `player_trends` table | See `scripts/build_player_trends.py` — 12 stat types, L7/L10/L15/season averages |
 
 ---
 
@@ -326,8 +327,8 @@ def rebuild_rotation_profiles(conn, window_days=21, min_games=3):
 ```
 
 **When to use self-healing rebuild vs incremental:**
-- ✅ Rebuild: Derived/aggregated data (rotation profiles, beneficiary minutes, team scheme cache)
-- ✅ Rebuild: Tables where staleness = just recompute from source data (zero API cost)
+- ✅ Rebuild: Derived/aggregated data (rotation profiles, beneficiary_minutes, team_scheme_cache, player_trends)
+- ✅ Rebuild: Tables where staleness = just recompute from source data (zero API cost) — see `scripts/build_player_trends.py`
 - ❌ Rebuild: Tables that hold raw API responses (player_game_logs, games, odds) — incremental only
 - ❌ Rebuild: Tables with expensive API calls to re-populate — too slow daily
 
