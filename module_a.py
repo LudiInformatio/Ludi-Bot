@@ -399,9 +399,9 @@ class Gatekeeper:
                     
                     # --- V8.14: 5-TIER BOOK STRUCTURE ---
                     # Tier 0: Sharps (CLV) | Tier 1: P2P | Tier 2: NC Legal | Tier 3: DFS | Tier 4: Other
-                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet', 'Fanatics', 'TheScore Bet', 'Onyx Odds']
-                    sharps = ['Pinnacle', 'Circa', 'Bovada', 'BetOnline.ag']
-                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Sleeper', 'Betr', 'Fliff', 'Dabble']
+                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet', 'Fanatics', 'TheScore Bet']
+                    sharps = ['Pinnacle', 'Bovada', 'BetOnline.ag']
+                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Betr', 'Fliff']
                     peer_to_peer = ['Novig', 'ProphetX', 'Rebet']
 
                     target_books = nc_legal + sharps + dfs + peer_to_peer
@@ -628,6 +628,9 @@ class Gatekeeper:
             'draftkings': 'DraftKings', 'fanduel': 'FanDuel',
             'betmgm': 'BetMGM', 'caesars': 'Caesars',
             'bet365': 'bet365',
+            'fanatics': 'Fanatics',        # NC Legal — confirmed returning props via BDL
+            'rebet': 'Rebet',              # P2P near-zero vig — confirmed returning props via BDL
+            'espnbet': 'TheScore Bet',     # Rebranded from ESPN Bet Dec 2025; Odds-API key still 'espnbet'
         }
         COMBO_MAP = {
             'points_rebounds_assists': 'pra',
