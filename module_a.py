@@ -604,7 +604,19 @@ class Gatekeeper:
             print(f"      ⚠️ [BDL] Error: {e}")
 
     def _parse_bdl_props(self, game_id, raw_props):
-        """Parse BDL player_props into standard pipeline format."""
+        """Parse BDL player_props into standard pipeline format.
+
+        Two-pass consensus approach — mirrors The-Odds-API path's _line_votes logic:
+          Pass 1: Collect all (line, vendor, odds) entries per (player, stat)
+          Pass 2: Pick the modal (most common) line value as the main line,
+                  average odds across all vendors that posted that line.
+
+        This prevents alt lines (e.g. 6.5 PTS when market main is 9.5) from
+        being used as the primary line due to first-write-wins ordering.
+        Only writes props that Odds-API hasn't already populated (BDL fills gaps).
+        """
+        from collections import Counter
+
         BDL_VENDOR_MAP = {
             'draftkings': 'DraftKings', 'fanduel': 'FanDuel',
             'betmgm': 'BetMGM', 'caesars': 'Caesars',
@@ -616,7 +628,9 @@ class Gatekeeper:
             'points_rebounds': 'pr',
             'rebounds_assists': 'ra',
         }
-        
+
+        # --- Pass 1: Accumulate all entries per (player, stat) ---
+        raw = {}  # {(player_name, internal_key): [(line, vendor, over_odds, under_odds)]}
         for prop in raw_props:
             if prop.get('market', {}).get('type') != 'over_under':
                 continue
@@ -630,14 +644,38 @@ class Gatekeeper:
             vendor = BDL_VENDOR_MAP.get(prop.get('vendor', ''), prop.get('vendor', ''))
             over_odds = prop.get('market', {}).get('over_odds', -110)
             under_odds = prop.get('market', {}).get('under_odds', -110)
+            key = (player_name, internal_key)
+            if key not in raw:
+                raw[key] = []
+            raw[key].append((line, vendor, over_odds, under_odds))
 
+        # --- Pass 2: Consensus line selection, write only gaps ---
+        for (player_name, internal_key), entries in raw.items():
+            # BDL posts the full alt-line ladder at flat -110/-110 for every sportsbook.
+            # The main market line always has REAL market odds (asymmetric, not both -110).
+            # Filter: prefer entries where at least one side is NOT exactly -110.
+            real_odds_entries = [e for e in entries if e[2] != -110 or e[3] != -110]
+            pool = real_odds_entries if real_odds_entries else entries  # fallback to all
+
+            # Find modal line in the filtered pool = main market line
+            line_counts = Counter(e[0] for e in pool)
+            main_line = line_counts.most_common(1)[0][0]
+
+            # Average odds across all vendors at the main line (from filtered pool)
+            main_entries = [e for e in pool if e[0] == main_line]
+            avg_over = round(sum(e[2] for e in main_entries) / len(main_entries))
+            avg_under = round(sum(e[3] for e in main_entries) / len(main_entries))
+            best_vendor = main_entries[0][1]  # First vendor at main line (for book label)
+
+            # Only write if Odds-API hasn't already set this player/stat
             if player_name not in self.games[game_id]['props']:
                 self.games[game_id]['props'][player_name] = {}
             if internal_key not in self.games[game_id]['props'][player_name]:
                 self.games[game_id]['props'][player_name][internal_key] = {
-                    'line': line,
-                    'odds_over': over_odds, 'book_over': vendor,
-                    'odds_under': under_odds, 'book_under': vendor,
+                    'line': main_line,
+                    'odds_over': avg_over, 'book_over': best_vendor,
+                    'odds_under': avg_under, 'book_under': best_vendor,
+                    'vendor_count': len(main_entries),  # audit trail
                 }
 
     def _build_bdl_player_cache(self):
