@@ -164,6 +164,16 @@ class LudiReporter:
 
                         # --- END CALIBRATION FILTERS ---
 
+                        # --- Filter 3: PROJECTION/LINE SANITY GATE (BDL Fallback) ---
+                        # BDL posts the full alt-line ladder. If our projection is >40% away
+                        # from the line, it's almost certainly an alt line (e.g. 14.5 PR when
+                        # the player projects at 9.75). These produce 60%+ edges that aren't real.
+                        # Only applies in BDL fallback mode — Odds-API lines are market consensus.
+                        _src_quality = prop_data.get('source_quality', 'UNKNOWN') if isinstance(prop_data, dict) else 'UNKNOWN'
+                        _gap = abs(final_proj - line) / final_proj if final_proj > 0 else 0
+                        if _gap > 0.40 and _src_quality == 'BDL_FALLBACK':
+                            continue  # Skip: projection vs line gap >40% in BDL fallback = alt line
+
                         # Calculate TRUE edge using devigged fair probability
                         edge = calculate_true_edge(
                             model_prob,
@@ -619,6 +629,14 @@ class LudiReporter:
         """Formats the final briefing output for bot and console display."""
         report = f"\n📰 LUDI ELITE BRIEFING ({format_est_date('%b %d, %Y')})\n"
         report += "================================\n"
+
+        # BDL Fallback notice — set by Gatekeeper when Odds-API quota is exhausted.
+        # Signals that edge values are estimated from non-consensus lines.
+        if getattr(self, '_bdl_fallback_active', False):
+            report += "⚠️  ODDS SOURCE: BDL Fallback (Odds-API quota exhausted)\n"
+            report += "   Lines estimated — verify at your book before betting.\n"
+            report += "   Full accuracy resumes March 1.\n"
+            report += "================================\n"
         
         # 1. Group by Game
         # We need game info which might not be in the flat 'props' list?

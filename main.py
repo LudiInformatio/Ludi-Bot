@@ -636,6 +636,8 @@ class LudiOrchestrator:
 
         # STEP 5: REPORT
         print("[step 5] Generating Daily Briefing (Module F)...")
+        # Pass BDL fallback status so Module F can display the appropriate banner
+        self.reporter._bdl_fallback_active = getattr(self.gate, '_using_bdl_fallback', False)
         briefing, image_path, _ = self.reporter.generate_report(processed_slate)
         print("\n" + "="*50)
         print("DAILY BRIEFING GENERATED")
