@@ -39,6 +39,10 @@ class Gatekeeper:
         # [BDL FALLBACK] Flag for when The-Odds-API quota is exhausted
         self._using_bdl_fallback = False
 
+        # [BDL PLAYER CACHE] Lazy-loaded map of bdl_id → full_name
+        # Built on first call to _resolve_bdl_player so we don't pay the cost unless needed
+        self._bdl_player_cache = {}  # {bdl_player_id: "First Last"}
+
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -636,19 +640,50 @@ class Gatekeeper:
                     'odds_under': under_odds, 'book_under': vendor,
                 }
 
+    def _build_bdl_player_cache(self):
+        """Fetch all active BDL players and build {bdl_id: full_name} cache.
+        Uses cursor-based pagination. Called once on first resolution attempt."""
+        import requests as _requests
+        print("   [BDL] Building player ID cache (one-time)...")
+        cache = {}
+        cursor = None
+        per_page = 100
+        try:
+            while True:
+                params = {'per_page': per_page}
+                if cursor:
+                    params['cursor'] = cursor
+                resp = _requests.get(
+                    'https://api.balldontlie.io/v1/players/active',
+                    headers={'Authorization': self.bdl.api_key},
+                    params=params,
+                    timeout=10
+                )
+                if resp.status_code != 200:
+                    break
+                data = resp.json()
+                for p in data.get('data', []):
+                    full_name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
+                    if full_name and p.get('id'):
+                        cache[p['id']] = full_name
+                next_cursor = data.get('meta', {}).get('next_cursor')
+                if not next_cursor:
+                    break
+                cursor = next_cursor
+        except Exception as e:
+            print(f"   [BDL] Cache build warning: {e}")
+        print(f"   [BDL] Player cache built: {len(cache)} players")
+        return cache
+
     def _resolve_bdl_player(self, player_id):
-        """Resolve BDL player_id to player name using canonical IDs."""
+        """Resolve BDL player_id to player name using in-memory cache.
+        Cache is built lazily on first call from BDL active players endpoint."""
         if not player_id:
             return None
-        try:
-            c = self.db_conn.cursor()
-            c.execute("SELECT player_name FROM player_canonical_ids WHERE bdl_id = ?", (player_id,))
-            row = c.fetchone()
-            if row:
-                return row[0]
-        except Exception as e:
-            pass
-        return None
+        # Lazy-load the cache on first call
+        if not self._bdl_player_cache:
+            self._bdl_player_cache = self._build_bdl_player_cache()
+        return self._bdl_player_cache.get(player_id)
 
     def fetch_full_sim_packet(self):
         """ [4] GET SIM INPUTS (Same as before) """

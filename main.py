@@ -194,9 +194,9 @@ class LudiOrchestrator:
             conn2 = sqlite3.connect(self.db_path)
             cursor2 = conn2.cursor()
             cursor2.execute("""
-                SELECT DISTINCT pi.player_id
+                SELECT DISTINCT p.player_id
                 FROM player_injuries pi
-                JOIN players p ON p.player_id = pi.player_id
+                JOIN players p ON p.name = pi.player_name
                 WHERE pi.resolved_at >= date('now', '-7 days')
                   AND pi.resolved_at IS NOT NULL
                   AND p.team = ?
@@ -246,7 +246,7 @@ class LudiOrchestrator:
             cursor3.execute("""
                 SELECT p.name, p.team, p.days_out_current
                 FROM players p
-                JOIN player_injuries pi ON p.player_id = pi.player_id
+                JOIN player_injuries pi ON p.name = pi.player_name
                 WHERE pi.resolved_at IS NULL
                   AND p.days_out_current > 14
                 GROUP BY p.player_id

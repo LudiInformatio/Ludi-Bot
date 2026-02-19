@@ -368,6 +368,7 @@ class LudiReporter:
                                 "line": line,
                                 "proj": round(final_proj, 2),
                                 "edge": edge,  # True devigged edge percentage
+                                "ev": ev,      # Expected value for sorting
                                 "units": units,
                                 "note": " | ".join(note_elements),
                                 "tags": tags_formatted,  # Week 2, Days 3-4: Tag classification
