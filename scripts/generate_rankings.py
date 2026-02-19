@@ -37,6 +37,13 @@ def get_pr_ball_handler_rankings(conn):
         FROM player_synergy_playtypes psp
         WHERE psp.playtype = 'PR_BALL_HANDLER'
             AND psp.freq_pct >= 15.0
+            AND psp.player_name IN (
+                SELECT player_name
+                FROM player_game_logs
+                WHERE game_date >= date('now', '-30 days')
+                GROUP BY player_name
+                HAVING COUNT(*) >= 10
+            )
         ORDER BY psp.ppp DESC
         LIMIT 15
     """
@@ -54,6 +61,13 @@ def get_spot_up_rankings(conn):
         FROM player_synergy_playtypes psp
         WHERE psp.playtype = 'SPOT_UP'
             AND psp.freq_pct >= 20.0
+            AND psp.player_name IN (
+                SELECT player_name
+                FROM player_game_logs
+                WHERE game_date >= date('now', '-30 days')
+                GROUP BY player_name
+                HAVING COUNT(*) >= 10
+            )
         ORDER BY psp.ppp DESC
         LIMIT 15
     """
@@ -71,6 +85,13 @@ def get_iso_rankings(conn):
         FROM player_synergy_playtypes psp
         WHERE psp.playtype = 'ISO'
             AND psp.freq_pct >= 10.0
+            AND psp.player_name IN (
+                SELECT player_name
+                FROM player_game_logs
+                WHERE game_date >= date('now', '-30 days')
+                GROUP BY player_name
+                HAVING COUNT(*) >= 10
+            )
         ORDER BY psp.ppp DESC
         LIMIT 15
     """
