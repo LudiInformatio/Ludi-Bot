@@ -723,7 +723,7 @@ class LudiReporter:
             seen = set()
             for part in parts:
                 cleaned = re.sub(r"^[^A-Za-z0-9\\[]+\\s*", "", part).strip()
-                cleaned = re.sub(r"\\s*\\[[^\\]]+\\]\\s*", "", cleaned).strip()
+                cleaned = re.sub(r"\s*\[[^\]]+\]\s*", "", cleaned).strip()
                 if not cleaned:
                     continue
                 lower = cleaned.lower()
