@@ -415,6 +415,9 @@ class LudiReporter:
                                 "book_under": book_under,
                                 "odds_over": odds_over,
                                 "odds_under": odds_under,
+                                "source_quality": source_quality,
+                                "vendor_count": vendor_count,
+                                "scenario": p.get('scenario', 'BASE'),
                             })
 
                 # --- 4. CORRELATION CHECK (SGP TARGETS) ---
@@ -638,23 +641,122 @@ class LudiReporter:
             report += "   Full accuracy resumes March 1.\n"
             report += "================================\n"
         
+        import json
+        import re
+
+        def _tier_icon(tier: str) -> str:
+            return {
+                'DIAMOND': '💎',
+                'BLUE CHIP': '🔷',
+                'CORE ASSET': '🔹',
+                'THE STEAL': '⭐',
+            }.get(tier, '⭐')
+
+        def _format_units(units) -> str:
+            try:
+                u = float(units)
+                if u.is_integer():
+                    return f"{u:.1f}"
+                return f"{u:.2f}".rstrip('0').rstrip('.')
+            except (TypeError, ValueError):
+                return str(units)
+
+        def _format_edge(edge) -> str:
+            try:
+                e = float(edge)
+                edge_str = f"{e:+.1f}".rstrip('0').rstrip('.')
+                return f"{edge_str}%"
+            except (TypeError, ValueError):
+                return f"{edge}%"
+
+        def _format_proj(proj) -> str:
+            try:
+                p = float(proj)
+                return f"{p:.2f}".rstrip('0').rstrip('.')
+            except (TypeError, ValueError):
+                return str(proj)
+
+        def _format_odds(odds) -> str:
+            try:
+                o = float(odds)
+                if o > 0:
+                    return f"+{int(o)}" if o.is_integer() else f"+{o:g}"
+                return f"{int(o)}" if o.is_integer() else f"{o:g}"
+            except (TypeError, ValueError):
+                return ""
+
+        def _parse_tags(tags_str: str) -> list:
+            if not tags_str:
+                return []
+            if self.tag_classifier:
+                try:
+                    return self.tag_classifier.parse_tags_from_db(tags_str)
+                except Exception:
+                    pass
+            try:
+                return json.loads(tags_str)
+            except (json.JSONDecodeError, TypeError):
+                return []
+
+        def _extract_scheme(tags_list: list, note_str: str) -> str:
+            for tag in tags_list:
+                if isinstance(tag, str) and tag.startswith('vs_'):
+                    return tag.replace('vs_', '').replace('_', ' ')
+            for token in ['PERIMETER', 'PAINT_PACK', 'FUNNEL', 'BLITZ', 'NEUTRAL']:
+                if token.lower() in (note_str or '').lower():
+                    return token.replace('_', ' ')
+            return "STANDARD"
+
+        def _extract_key_signals(note_str: str) -> list:
+            if not note_str:
+                return []
+            parts = [p.strip() for p in note_str.split('|') if p.strip()]
+            skip_phrases = [
+                "low rim pressure",
+                "low corner volume",
+                "low rim frequency",
+                "low corner 3",
+                "low corner 3s",
+            ]
+            skip_flags = ["DATA QUALITY", "VERIFY LINE", "EXCEPTIONAL"]
+            signals = []
+            seen = set()
+            for part in parts:
+                cleaned = re.sub(r"^[^A-Za-z0-9\\[]+\\s*", "", part).strip()
+                cleaned = re.sub(r"\\s*\\[[^\\]]+\\]\\s*", "", cleaned).strip()
+                if not cleaned:
+                    continue
+                lower = cleaned.lower()
+                if any(phrase in lower for phrase in skip_phrases):
+                    continue
+                if any(flag in cleaned for flag in skip_flags):
+                    continue
+                if "bdl" in lower or "consensus" in lower or re.search(r"\\bbk\\b", lower):
+                    continue
+                if re.fullmatch(r"[A-Z0-9_\\-]+", cleaned):
+                    continue
+                key = cleaned.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                signals.append(cleaned)
+                if len(signals) >= 2:
+                    break
+            return signals
+
+        def _scenario_tag(tags_list: list, scenario: str):
+            for tag in tags_list:
+                if not isinstance(tag, str):
+                    continue
+                if tag == "NEW_TO_TEAM" or tag.startswith("BENEFICIARY"):
+                    return tag
+            if "NEW_TO_TEAM" in (scenario or ""):
+                return "NEW_TO_TEAM"
+            if "WITHOUT" in (scenario or ""):
+                return "BENEFICIARY"
+            return None
+
         # 1. Group by Game
-        # We need game info which might not be in the flat 'props' list?
-        # Ah, 'props' only has player/team. We need to pass game context or infer it.
-        # Wait, the generate_report loop builds 'all_props'. It loses game_id.
-        # I need to modify generate_report to attach game_id/matchup to each prop first.
-        # But 'all_props' is a list of dicts. I can add 'matchup' there easily.
-        
-        # ... Wait, I can't modify generate_report in this replace block easily.
-        # Let's assume I modify generate_report to add 'matchup' to player_props.
-        
-        # Wait, I'll do this in two steps. First, let's just group by TEAM for now as a proxy for game.
-        # Or better: Group by "Team vs Opponent" if opponent is available.
-        # 'player_props' has 'team'. It doesn't have 'opponent' or 'matchup'.
-        
-        # I will regroup by Team for now, then sort.
-        # Actually, let's just sort by EV and take top 3 per TEAM.
-        
         grouped = {}
         for p in props:
             matchup = p.get('matchup', 'Unknown')
@@ -676,26 +778,53 @@ class LudiReporter:
             
             report += f"\n🏀 {matchup}\n"
             for bet in top_plays:
-                report += f"   💎 {bet['name']} | {bet['bet_on']} {bet['line']} {bet['stat']}\n"
-                # Best price: show which book and at what odds to place the bet
-                bet_book = bet.get('book_under') if bet['bet_on'] == 'UNDER' else bet.get('book_over')
-                bet_odds = bet.get('odds_under') if bet['bet_on'] == 'UNDER' else bet.get('odds_over')
-                odds_str = f"+{bet_odds}" if bet_odds and bet_odds > 0 else str(bet_odds or '')
-                price_str = f" | {bet_book} {odds_str}" if bet_book and bet_book not in ('consensus', '') else ""
-                report += f"      Proj: {bet['proj']} | Edge: +{bet['edge']}% | {bet['units']}u{price_str}\n"
-                
-                # Display tags
-                if bet.get('tags') and self.tag_classifier:
-                    try:
-                        tags_list = self.tag_classifier.parse_tags_from_db(bet['tags'])
-                        if tags_list:
-                            tags_display = " | ".join(tags_list)
-                            report += f"      🏷️  {tags_display}\n"
-                    except Exception as e:
-                        print(f"   >>> [Module F] Tag parse error: {e}")
+                tier_icon = _tier_icon(bet.get('confidence_tier', 'THE STEAL'))
+                player_name = (bet.get('name') or '').upper()
+                bet_on = (bet.get('bet_on') or '').upper()
+                stat = (bet.get('stat') or '').upper()
+                line = bet.get('line', '')
 
-                if bet['note']:
-                    report += f"      📝 {bet['note']}\n"
+                report += f"   {tier_icon} {player_name} — {bet_on} {line} {stat}\n"
+                report += (
+                    f"   📊 {matchup}  |  Proj: {_format_proj(bet.get('proj'))}  |  "
+                    f"Edge: {_format_edge(bet.get('edge'))}  |  {_format_units(bet.get('units'))}u\n"
+                )
+
+                bet_book = bet.get('book_under') if bet_on == 'UNDER' else bet.get('book_over')
+                bet_odds = bet.get('odds_under') if bet_on == 'UNDER' else bet.get('odds_over')
+                book_label = bet_book if bet_book and bet_book != 'consensus' else "Consensus"
+                odds_label = _format_odds(bet_odds)
+                price_str = f"{book_label} {odds_label}".strip()
+
+                consensus_tag = ""
+                source_quality = bet.get('source_quality', '')
+                vendor_count = bet.get('vendor_count', 0)
+                if source_quality == 'BDL_FALLBACK':
+                    consensus_tag = f"[BDL:{vendor_count}bk]" if vendor_count else "[BDL]"
+                elif source_quality == 'ODDS_API' and vendor_count >= 4:
+                    consensus_tag = f"[{vendor_count}bk consensus]"
+                elif source_quality == 'ODDS_API' and vendor_count > 0:
+                    consensus_tag = f"[{vendor_count}bk]"
+
+                line3 = f"   💰 Best Bet: {price_str}".rstrip()
+                if consensus_tag:
+                    line3 += f"  |  {consensus_tag}"
+                report += f"{line3}\n"
+
+                tags_list = _parse_tags(bet.get('tags', ''))
+                archetype = (bet.get('archetype') or 'GENERALIST').upper()
+                scheme = _extract_scheme(tags_list, bet.get('note', '')).upper()
+                report += f"   🎯 Archetype: {archetype} vs {scheme} defense\n"
+
+                key_signals = _extract_key_signals(bet.get('note', ''))
+                if key_signals:
+                    report += f"   📝 Key Signal: {', '.join(key_signals)}\n"
+                else:
+                    report += "   📝 Key Signal: None\n"
+
+                scenario_tag = _scenario_tag(tags_list, bet.get('scenario', ''))
+                if scenario_tag:
+                    report += f"   ⚡ SCENARIO: {scenario_tag}\n"
         
         return report
 
