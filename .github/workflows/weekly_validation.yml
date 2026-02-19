@@ -70,8 +70,9 @@ jobs:
           
           # Check B2B differential from results
           if [ -f "logs/backtest/fatigue_21day_$(date +%Y%m%d).log" ]; then
-            B2B_DIFF=$(grep "B2B Differential" logs/backtest/fatigue_21day_$(date +%Y%m%d).log | grep -o "[+-]*[0-9]*\.[0-9]*" | head -1 || echo "0.0")
-            
+            B2B_DIFF=$(grep "B2B Differential" logs/backtest/fatigue_21day_$(date +%Y%m%d).log | grep -o "[+-]*[0-9]*\.[0-9]*" | head -1 || true)
+            B2B_DIFF="${B2B_DIFF:-0.0}"  # default to 0.0 if grep returned empty
+
             # Convert to absolute value for comparison
             B2B_ABS=$(echo "$B2B_DIFF" | sed 's/[-+]//g')
             
@@ -84,6 +85,9 @@ jobs:
           fi
           
       - name: Generate Weekly Validation Report
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           source .venv/bin/activate
           export PYTHONPATH=$PWD
