@@ -59,9 +59,14 @@ good alternative to manually devigging Pinnacle: [unabated.com/nba/odds](https:/
 - **NC Status:** Yes (44 states, sweepstakes model)
 - **URL:** [dimers.com — Rebet Guide](https://www.dimers.com/social-sportsbooks/rebet/betting-guide)
 
-### Oxyn Odds
-- Research found no verified results for this platform as of Feb 2026. May be new/regional.
-- Verify directly before adding to pipeline.
+### Onyx Odds
+- **Structure:** Sweepstakes sportsbook (NOT a P2P exchange — P2P is on roadmap, not live yet)
+- **Currency:** Onyx Cash redeems at 1:1 USD, min $20 + 1x playthrough
+- **Vig:** Standard consumer-grade (~4-5%), same as FanDuel/BetMGM — devig required
+- **NC Status:** Yes (40+ states, sweepstakes model)
+- **Model treatment:** Tier 2 NC Legal — include in line shopping, run devig_multiplicative()
+- **Do NOT use as CLV benchmark or sharp reference**
+- **URL:** [onyxodds.com](https://www.onyxodds.com)
 
 ---
 
