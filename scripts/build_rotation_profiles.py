@@ -16,7 +16,7 @@ import argparse
 import sqlite3
 import sys
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 # Allow running from repo root or scripts/
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,20 +31,48 @@ def _get_conn():
     return conn
 
 
+def _resolve_canonical_id(conn, player_id) -> str:
+    """
+    Resolve Tank01 composite IDs (12-digit) to canonical NBA IDs (7-digit).
+    Uses players table as the source of truth.
+    """
+    if not player_id:
+        return str(player_id)
+    
+    player_id_str = str(player_id)
+    
+    row = conn.execute("SELECT player_id FROM players WHERE player_id = ?", (player_id_str,)).fetchone()
+    if row:
+        return row['player_id']
+    
+    if len(player_id_str) >= 10:
+        row = conn.execute("""
+            SELECT p.player_id FROM players p
+            JOIN player_game_logs pgl ON pgl.player_name = p.name
+            WHERE pgl.player_id = ? AND p.is_active = 1
+            LIMIT 1
+        """, (player_id_str,)).fetchone()
+        if row:
+            return row['player_id']
+    
+    return player_id_str
+
+
 # ---------------------------------------------------------------------------
 # PART A — rotation_profiles
 # ---------------------------------------------------------------------------
 
-def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: bool) -> int:
+def build_rotation_profiles(conn, window_days: int, situational_window_days: int, min_games: int, dry_run: bool) -> int:
     """
     For each player with >= min_games in the window, compute:
-      - overall avg/std/min/max minutes
-      - situational avgs: starter vs bench, blowout win/loss, close game, B2B
+      - overall avg/std/min/max minutes (from window_days)
+      - situational avgs: blowout win/loss, close game, B2B (from situational_window_days)
       - depth_order and position from depth_charts
 
     Returns number of profiles upserted.
     """
     cutoff = f"date('now', '-{window_days} days')"
+    situational_cutoff = f"date('now', '-{situational_window_days} days')"
     computed_at = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Pull all qualifying player-game rows joined with game outcome data.
@@ -66,7 +94,7 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
         JOIN games g
             ON pgl.game_date = g.date
             AND (g.home_team = pgl.team_abbreviation OR g.away_team = pgl.team_abbreviation)
-        WHERE pgl.game_date >= {cutoff}
+        WHERE pgl.game_date >= {situational_cutoff}
         ORDER BY pgl.player_id, pgl.team_abbreviation, pgl.game_date
     """
     rows = conn.execute(sql).fetchall()
@@ -75,11 +103,19 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
         print("  [WARNING] No player_game_logs rows found — nothing to process.")
         return 0
 
+    # Resolve IDs at row level before grouping
+    resolved_rows = []
+    for r in rows:
+        resolved_id = _resolve_canonical_id(conn, r['player_id'])
+        row_dict = dict(r)
+        row_dict['player_id'] = resolved_id
+        resolved_rows.append(row_dict)
+
     # Group by (player_id, team_abbreviation)
     from collections import defaultdict
     groups = defaultdict(list)
-    for r in rows:
-        groups[(r['player_id'], r['team_abbreviation'])].append(dict(r))
+    for r in resolved_rows:
+        groups[(r['player_id'], r['team_abbreviation'])].append(r)
 
     # Pull depth_charts for depth_order + position lookup
     dc_lookup = {}  # (player_id) -> (depth_order, position)
@@ -123,7 +159,7 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
             except Exception:
                 pass
 
-        all_minutes = [r['minutes'] for r in game_rows]
+        all_minutes = [r['minutes'] for r in game_rows if r['minutes'] is not None]
         played_minutes = [m for m in all_minutes if m > 0]
 
         if not played_minutes:
@@ -135,12 +171,25 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
         variance = sum((x - avg_m) ** 2 for x in played_minutes) / n if n > 1 else 0.0
         std_m = variance ** 0.5
 
+        # Filter to window_days for core minutes stats
+        window_cutoff_date = (date.today() - timedelta(days=window_days)).isoformat()
+        recent_games = [r for r in game_rows if r['minutes'] is not None and r['minutes'] > 0 and r['game_date'] >= window_cutoff_date]
+        recent_minutes = [r['minutes'] for r in recent_games]
+        
+        # Use recent games for avg_minutes, all situational games for splits
+        avg_m = sum(recent_minutes) / len(recent_minutes) if recent_minutes else (sum(played_minutes) / n if played_minutes else 0)
+        variance = sum((x - avg_m) ** 2 for x in recent_minutes) / len(recent_minutes) if len(recent_minutes) > 1 else 0.0
+        std_m = variance ** 0.5
+        
+        played_minutes_for_stats = recent_minutes if recent_minutes else played_minutes
+        n = len(played_minutes_for_stats)
+
         # Situational: blowout win (margin > 15), blowout loss (< -15), close (|margin| <= 5), B2B
-        blowout_win_mins = [r['minutes'] for r in game_rows if r['team_margin'] > 15 and r['minutes'] > 0]
-        blowout_loss_mins = [r['minutes'] for r in game_rows if r['team_margin'] < -15 and r['minutes'] > 0]
+        blowout_win_mins = [r['minutes'] for r in game_rows if r['team_margin'] is not None and r['team_margin'] > 15 and r['minutes'] is not None and r['minutes'] > 0]
+        blowout_loss_mins = [r['minutes'] for r in game_rows if r['team_margin'] is not None and r['team_margin'] < -15 and r['minutes'] is not None and r['minutes'] > 0]
         close_mins = [r['minutes'] for r, b2b in zip(game_rows, is_b2b_flags)
-                      if abs(r['team_margin']) <= 5 and r['minutes'] > 0]
-        b2b_mins = [r['minutes'] for r, b2b in zip(game_rows, is_b2b_flags) if b2b and r['minutes'] > 0]
+                      if r['team_margin'] is not None and abs(r['team_margin']) <= 5 and r['minutes'] is not None and r['minutes'] > 0]
+        b2b_mins = [r['minutes'] for r, b2b in zip(game_rows, is_b2b_flags) if b2b and r['minutes'] is not None and r['minutes'] > 0]
 
         def safe_avg(lst):
             return round(sum(lst) / len(lst), 2) if lst else None
@@ -175,8 +224,8 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
             'team_abbreviation': team_abbr,
             'avg_minutes': round(avg_m, 2),
             'std_minutes': round(std_m, 2),
-            'min_minutes': round(min(played_minutes), 1),
-            'max_minutes': round(max(played_minutes), 1),
+            'min_minutes': round(min(played_minutes_for_stats), 1) if played_minutes_for_stats else 0,
+            'max_minutes': round(max(played_minutes_for_stats), 1) if played_minutes_for_stats else 0,
             'games_started': games_started,
             'games_played': n,
             'start_rate': start_rate,
@@ -251,7 +300,7 @@ def build_rotation_profiles(conn, window_days: int, min_games: int, dry_run: boo
 # PART B — beneficiary_minutes
 # ---------------------------------------------------------------------------
 
-def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: bool) -> int:
+def build_beneficiary_minutes(conn, window_days: int, situational_window_days: int, min_games: int, dry_run: bool) -> int:
     """
     For each player who was absent on a team game day (DNP / injured),
     measure how much extra time their teammates got vs when they played.
@@ -260,7 +309,7 @@ def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: b
     Returns number of beneficiary relationships upserted.
     """
     computed_at = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-    cutoff_date = f"date('now', '-{window_days} days')"
+    cutoff_date = f"date('now', '-{situational_window_days} days')"
 
     # Step 0 — get all team game dates in window
     all_team_games = conn.execute(f"""
@@ -294,6 +343,8 @@ def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: b
     beneficiary_rows = []
 
     for (out_player_id, team_abbr), played_dates in player_presence.items():
+        resolved_out_player_id = _resolve_canonical_id(conn, out_player_id)
+        
         team_dates = team_game_dates.get(team_abbr, [])
         if not team_dates:
             continue
@@ -318,8 +369,11 @@ def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: b
                 WHERE game_date = ? AND team_abbreviation = ? AND player_id != ? AND minutes > 0
             """, (absent_date, team_abbr, out_player_id)).fetchall()
             for r in rows:
-                teammate_without[str(r['player_id'])].append(r['minutes'])
-                player_name_map[str(r['player_id'])] = r['player_name']
+                raw_beneficiary_id = str(r['player_id'])
+                resolved_beneficiary_id = _resolve_canonical_id(conn, raw_beneficiary_id)
+                teammate_without[resolved_beneficiary_id].append(r['minutes'])
+                player_name_map[raw_beneficiary_id] = r['player_name']
+                player_name_map[resolved_beneficiary_id] = r['player_name']
 
         if not teammate_without:
             continue
@@ -338,7 +392,10 @@ def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: b
             GROUP BY player_id
         """, (*played_dates_list, team_abbr, out_player_id)).fetchall()
         for r in rows:
-            teammate_with[str(r['player_id'])] = r['avg_with']
+            raw_id = str(r['player_id'])
+            resolved_id = _resolve_canonical_id(conn, raw_id)
+            teammate_with[resolved_id] = r['avg_with']
+            player_name_map[resolved_id] = player_name_map.get(raw_id, raw_id)
 
         # Step 4 — compute delta, filter noise
         out_player_name = player_name_map.get(out_player_id, out_player_id)
@@ -356,7 +413,7 @@ def build_beneficiary_minutes(conn, window_days: int, min_games: int, dry_run: b
 
             sample_dates = sorted(absent_dates)
             beneficiary_rows.append({
-                'out_player_id': out_player_id,
+                'out_player_id': resolved_out_player_id,
                 'out_player_name': out_player_name,
                 'team_abbreviation': team_abbr,
                 'beneficiary_player_id': beneficiary_id,
@@ -542,21 +599,22 @@ def main():
     parser.add_argument('--dry-run', action='store_true', help='Print output without writing to DB')
     parser.add_argument('--window-days', type=int, default=21, help='Lookback window in days (default: 21)')
     parser.add_argument('--min-games', type=int, default=3, help='Minimum games required (default: 3)')
+    parser.add_argument('--situational-window-days', type=int, default=45, help='Window for blowout/close/B2B splits (default: 45)')
     args = parser.parse_args()
 
     print(f"\n{'[DRY RUN] ' if args.dry_run else ''}Building rotation profiles "
-          f"(window={args.window_days}d, min_games={args.min_games})")
+          f"(window={args.window_days}d, situational={args.situational_window_days}d, min_games={args.min_games})")
 
     conn = _get_conn()
 
     # Part A
     print("\n--- Part A: rotation_profiles ---")
-    n_profiles = build_rotation_profiles(conn, args.window_days, args.min_games, args.dry_run)
+    n_profiles = build_rotation_profiles(conn, args.window_days, args.situational_window_days, args.min_games, args.dry_run)
     print(f"  {'Would write' if args.dry_run else 'Wrote'} {n_profiles} rotation profiles")
 
     # Part B
     print("\n--- Part B: beneficiary_minutes ---")
-    n_bene = build_beneficiary_minutes(conn, args.window_days, args.min_games, args.dry_run)
+    n_bene = build_beneficiary_minutes(conn, args.window_days, args.situational_window_days, args.min_games, args.dry_run)
     print(f"  {'Would write' if args.dry_run else 'Wrote'} {n_bene} beneficiary relationships")
 
     # Part C — trends (only meaningful after profiles are written)
