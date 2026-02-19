@@ -397,14 +397,14 @@ class Gatekeeper:
                     found_books = [b['title'] for b in data.get('bookmakers', [])]
                     print(f"      ↳ Found Books: {found_books}")
                     
-                    # --- V9.4: 4-TIER BOOK STRUCTURE ---
-                    # Tier 1: NC Legal (betting) | Tier 2: Sharp (CLV) | Tier 3: DFS | Tier 4: Social/Exchange
-                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet']
-                    sharps = ['Pinnacle', 'Bovada', 'BetOnline.ag']
-                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Dabble']
-                    social = ['Novig', 'ProphetX', 'Fliff']
+                    # --- V8.14: 5-TIER BOOK STRUCTURE ---
+                    # Tier 0: Sharps (CLV) | Tier 1: P2P | Tier 2: NC Legal | Tier 3: DFS | Tier 4: Other
+                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet', 'Fanatics', 'TheScore Bet', 'Onyx Odds']
+                    sharps = ['Pinnacle', 'Circa', 'Bovada', 'BetOnline.ag']
+                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Sleeper', 'Betr', 'Fliff', 'Dabble']
+                    peer_to_peer = ['Novig', 'ProphetX', 'Rebet']
 
-                    target_books = nc_legal + sharps + dfs + social
+                    target_books = nc_legal + sharps + dfs + peer_to_peer
                     priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars']  # For consensus line
 
                     # Helper function for odds comparison
@@ -545,7 +545,7 @@ class Gatekeeper:
                                         break
 
                             # Find Social/Exchange odds (zero-vig benchmark)
-                            for book in social:
+                            for book in peer_to_peer:
                                 if book in prop['_all_books'] and main_line in prop['_all_books'][book]:
                                     odds = prop['_all_books'][book][main_line]
                                     if odds.get('over'):
