@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 18, 2026
+**Last Updated:** February 19, 2026
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.10 — League Rankings (next up)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6/8.7 ✅ + Phase 8.4 ✅ + Phase 8.9 ✅ + Phase 8.12 ✅ + Slate Date Fix ✅
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.5/8.2/8.3/8.6/8.7 ✅ + Phase 8.4 ✅ + Phase 8.9 ✅ + Phase 8.12 ✅ + Phase 8.14 ✅ + Slate Date Fix ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -51,6 +51,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.7 ✅ | Perplexity Integration | DONE | Sonar replaces DuckDuckGo in Module D. 4 injection points: injury nuance, game scoring bonus, game notes {schedule_notes}, Haiku soft-scratch gap. Module G referee fallback bonus. | ~$0.10 |
 | 8.4 ✅ | Archetype Classifier Fix | DONE | `scripts/classify_archetypes.py` — weekly Claude Haiku batch (players + team schemes). Two-gate Synergy validation. Wired into `weekly_validation.yml`. | ~$0.03/wk |
 | 8.9 ✅ | Rotation/Minutes Projection | DONE | `rotation_profiles` (396), `beneficiary_minutes` (789), `player_stagger_stats` (2,282 pairs), `player_stint_profiles` (163). `_get_projected_minutes()` in Module C, Tier 0 in Module X. | $0 |
+| 8.14 ✅ | Scoring Environment Intelligence | DONE | Dynamic 14d OVER hit rate tracker. 4 data-proven OVER filters (TWO_WAY_WING, PTS 25+, SAC/IND/CLE, REB home). Opponent NULL bug fixed. Claude gets env label + team situational context in game notes + curation. | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()` in `morning_brief.py`. Backtest vs CLV after Mar 2026 data accumulates. | $0 |
 | 8.10 | League Rankings Module | LOW | Weekly SQL ranking tables for player/team types via Telegram | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
@@ -88,6 +89,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] **8.9-A:** Core rotation system live ✅ (Feb 18) — `rotation_profiles` (396 players), `beneficiary_minutes` (789 pairs, e.g. Embiid OUT → Drummond +18.3 min). `_get_projected_minutes()` in `module_c.py`, Tier 0 in `module_x_scenario.py`. `USE_MINUTES_PROJECTION` feature flag in `config.py`. Rotation trends: Jaxson Hayes +16.8 min, Bronny -7.2 min.
 - [x] **8.9-B:** `player_stagger_stats` (2,282 pairs, game-log SQL — PBP Stats endpoint doesn't exist) + `player_stint_profiles` (163 profiles, 80 games, PlayByPlayV3 subs). Wired into `weekly_validation.yml`. ✅ (Feb 18)
 - [x] **8.12:** Roster Intelligence — trade/waiver awareness. Tier 1.5 freshly-traded roster (5 players detected: Coby White/CHA, Zubac/IND, Kuminga/ATL, Cole Anthony/PHX, Minott/BKN). 26 stale profiles + 102 stale bene rows removed. `games_on_current_team` column + NEW_TO_TEAM 0.95 dampener (15 players). `_classify_vacuum_smart()` team filter. ✅ (Feb 18)
+- [x] **8.14:** Scoring Environment Intelligence. `scripts/sync_scoring_environment.py` — nightly 14d OVER hit rate tracker → `cache/scoring_environment.json`. Dynamic env label (UNDER_FAVORED/NEUTRAL/OVER_FAVORED). Module E 3% dampener when OVER < 48%. 4 OVER filters in Module F: TWO_WAY_WING skip (35.7%), PTS 25+ dampen (30.5%), SAC/IND/CLE skip (26-34%), REB home dampen (31.1%). Fixed `opponent` NULL bug (module_f.py lines 319/364/413). Claude context: `{env_note}` + `{situational_context}` in GAME_NOTES_TEMPLATE; env note in Haiku + Sonnet curation. Both workflows wired. Current env: NEUTRAL (48.6%, n=932). commit: `33e3039`. ✅ (Feb 19)
 - [ ] 8.8: Game Score Formula v2 — add line movement delta + handle% to `_score_game()`. Blocked until Mar 2026 data accumulates for backtest validation.
 
 **Slate Date Filter (Feb 18, 2026 — commit a4ca3b3):**
@@ -113,8 +115,8 @@ This is the single source of truth for project tasks and priorities.
 **Status:** All sub-phases 7.1–7.9.5 complete. Full details: `docs/archive/phase_reports/PHASE_7_COMPLETION_SUMMARY.md`
 
 **Remaining (unblocked Feb 19 — first game day back):**
-- [ ] Run full pipeline dry run with all new data sources active
-- [ ] Validate all workflows via manual trigger on live game day
+- [x] Run full pipeline dry run with all new data sources active ✅ (Feb 19)
+- [x] Validate all workflows via manual trigger on live game day ✅ (Feb 19)
 
 **Key outcomes:** Module C/E/F overhauls (V4.0/V4.0/V5.2) · OVER bias fixed (46.1%→target) · GENERALIST 20.7% ✅ · 5 defensive archetypes · 10,780 duplicate rows removed · nba_api 10 endpoints integrated · API best practices guide created (69 KB)
 
