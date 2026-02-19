@@ -68,6 +68,7 @@ cache/pbp_stats/*.json
 cache/perplexity/
 cache/bdl/*.json
 cache/nba_api/
+cache/scoring_environment.json
 ludi_history_db.json
 
 # Tool logs (MCP, opencode, etc.)
