@@ -168,6 +168,10 @@ class LudiReporter:
                         if p.get('archetype') == 'TWO_WAY_WING' and bet_direction == 'over':
                             continue
 
+                        # Filter: BLK OVER hard skip (33.6% WR on 378 bets — books price this well)
+                        if stat_key.lower() in ('blk', 'blocks') and bet_direction == 'over':
+                            continue
+
                         # Filter 4: PTS OVER on high lines — high-scorer over-projection
                         if stat_key.lower() == 'pts' and bet_direction == 'over' and line >= 25.0:
                             model_prob = model_prob * 0.85
@@ -177,12 +181,6 @@ class LudiReporter:
                         _opp = p.get('opponent', '')
                         if bet_direction == 'over' and _opp in _OVER_KILL_DEFENSES:
                             continue
-
-                        # Filter 6: REB OVER home player — systematic home rebound over-projection
-                        if stat_key.lower() == 'reb' and bet_direction == 'over':
-                            _is_home = p.get('team') == p.get('home_team')
-                            if _is_home:
-                                model_prob = model_prob * 0.82
 
                         # --- END CALIBRATION FILTERS ---
 
