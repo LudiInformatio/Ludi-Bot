@@ -190,6 +190,37 @@ Contains all 40+ PBP Stats endpoints documented with:
 | DVP + Hit Rate filters | BucketsToBucks | Surface plays where DVP rank <= 5 AND L10 hit rate >= 70% |
 | Funneling targets | StraightBettin | Auto-identify players who exploit specific defensive weakness zones |
 
+### 5.2-B Additional Claude Use Cases (Feb 20, 2026 — Not Yet Captured)
+
+Lower-priority ideas from session research + competitive landscape audit. Top 3 flagged as high-value near-term additions.
+
+**⭐ High-value, low-effort additions:**
+
+| Use Case | Model | Integration Point | Value |
+|----------|-------|-------------------|-------|
+| **Edge type labeling** ⭐ | Haiku | `module_f.py` bet card | Label each bet: `Projection` / `Matchup` / `Injury-Vacuum` / `Hot-Streak` — product differentiator, $0 extra |
+| **Key Advantage callout** ⭐ | Haiku | `morning_brief._score_game()` | Per-game: auto-surface #1 exploitable angle ("IND allows 38% rim FG% — strong Embiid OVER angle") — 1 Haiku call/game |
+| **Correlated props flagging** ⭐ | Python+Haiku | `morning_brief` curation | Scan Top 5 for 2+ same-game bets → flag SGP correlation risk for users |
+
+**Medium-value, moderate-effort:**
+
+| Use Case | Model | Integration Point | Value |
+|----------|-------|-------------------|-------|
+| **Defensive funneling narrative** | Haiku | Game Notes (8.2) | Auto-identify players who exploit a specific defensive weakness zone (StraightBettin pattern) |
+| **Similar players hit rate** | Haiku | Player Spotlight (8.3) | "3 players with this archetype+line went 8/10 L10" — pattern-match historical similar setups |
+| **Trade impact note** | Haiku | `main.py` Tier 1.5 | Detect freshly-traded player → 1-sentence role/minutes impact note in spotlight |
+| **CLV narrative in PM Bot** | Sonnet | `utils/pm_bot.py` debrief | 2-sentence CLV summary prose instead of raw numbers in daily debrief |
+
+**Future / web app phase:**
+
+| Use Case | Model | Integration Point | Value |
+|----------|-------|-------------------|-------|
+| **Ludi Lens Q&A layer** | Haiku+Sonnet | Streamlit (`app.py`) | Same `ask_ludi_core.py` powers chat panel in web UI — zero extra code |
+| **Monthly/season narrative** | Sonnet | Manual trigger or `weekly_retrospective.py` | Sonnet writes performance summary from settled bets — great for monthly Slack recap |
+| **PR review** | `claude-code-action@v1` | `.github/workflows/` | Auto review comments on PRs touching `module_*.py` — catches regressions before merge |
+
+---
+
 ### 5.3 Anti-Patterns to Avoid
 
 | Anti-Pattern | Source | Lesson |
