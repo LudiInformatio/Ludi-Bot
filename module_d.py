@@ -302,7 +302,31 @@ class LudiYak:
         """
         [YAK ENHANCEMENT] Executes deep-dive searches for specific intel.
         Targets coach quotes and beat writer tweets.
+
+        Cache-first: checks player_news_cache (synced daily from Tank01) before
+        hitting external search (Perplexity → DuckDuckGo). This avoids burning
+        Tank01/Perplexity credits for already-cached news.
         """
+        # --- Cache-first: check today's player_news_cache before external search ---
+        try:
+            today = datetime.now().strftime('%Y-%m-%d')
+            conn = sqlite3.connect(config.DATABASE if hasattr(config, 'DATABASE') else config.DB_PATH)
+            news_rows = conn.execute("""
+                SELECT headline, content FROM player_news_cache
+                WHERE player_name LIKE ? AND fetched_date = ?
+                ORDER BY published_at DESC
+                LIMIT 3
+            """, (f"%{player_name}%", today)).fetchall()
+            conn.close()
+            if news_rows:
+                cached = " | ".join(
+                    f"{r[0]}: {(r[1] or '')[:120]}" for r in news_rows
+                )
+                return {"items": [{"snippet": f"[Cached News] {cached}", "link": "tank01"}]}
+        except Exception:
+            pass  # cache miss or DB error — fall through to live search
+        # --- End cache-first block ---
+
         queries = [
             f'{player_name} {team_name} coach quotes injury twitter',
             f'{player_name} {team_name} beat writer update'

@@ -980,6 +980,76 @@ class LudiHistorian:
                 ON player_trends(player_name, team_abbreviation, stat)
         ''')
 
+        # ---------------------------------------------------------------------------
+        # Tank01 Enrichment Tables (Phase 8 expansion)
+        # ---------------------------------------------------------------------------
+
+        # Tank01 fantasy projections — READ-ONLY benchmark, never fed into SAVAGE model
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS tank01_projections (
+                player_id    TEXT NOT NULL,
+                game_date    TEXT NOT NULL,
+                pts          REAL,
+                reb          REAL,
+                ast          REAL,
+                stl          REAL,
+                blk          REAL,
+                tov          REAL,
+                fantasy_pts  REAL,
+                fetched_at   TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (player_id, game_date)
+            )
+        ''')
+
+        # Team standings + win/loss streaks — synced daily from getNBACurrentInfo
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS team_current_info (
+                team_abv          TEXT PRIMARY KEY,
+                wins              INTEGER,
+                losses            INTEGER,
+                win_streak        INTEGER,
+                loss_streak       INTEGER,
+                conference_rank   INTEGER,
+                next_game_date    TEXT,
+                fetched_at        TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Daily player/team news cache — synced once/day from getNBATopNews
+        # Deduplication handled by (headline, published_at) uniqueness at insert time
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_news_cache (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name  TEXT,
+                team_abv     TEXT,
+                headline     TEXT,
+                content      TEXT,
+                published_at TEXT,
+                fetched_date TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_player_news_lookup
+                ON player_news_cache(player_name, fetched_date)
+        ''')
+
+        # Historical injury records — synced weekly from getNBAInjuryListHistory
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_injury_history (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id    TEXT,
+                injury_date  TEXT,
+                return_date  TEXT,
+                injury_type  TEXT,
+                status       TEXT,
+                games_missed INTEGER
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_injury_history_player
+                ON player_injury_history(player_id, injury_date)
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")

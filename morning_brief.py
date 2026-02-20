@@ -51,6 +51,22 @@ def _get_team_situation_note(team_abbr, cursor):
                 notes.append(f"Strong OREB ({oreb:.2f})")
     except Exception:
         pass
+
+    # Win/loss streak from team_current_info (synced daily by sync_team_current_info.py)
+    try:
+        info_row = cursor.execute("""
+            SELECT wins, losses, win_streak, loss_streak
+            FROM team_current_info WHERE team_abv = ?
+        """, (team_abbr,)).fetchone()
+        if info_row:
+            wins, losses, win_streak, loss_streak = info_row
+            if win_streak and int(win_streak) >= 3:
+                notes.append(f"{win_streak}-game win streak")
+            elif loss_streak and int(loss_streak) >= 3:
+                notes.append(f"{loss_streak}-game skid")
+    except Exception:
+        pass
+
     return " | ".join(notes) if notes else ""
 
 import argparse

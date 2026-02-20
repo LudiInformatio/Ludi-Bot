@@ -128,6 +128,22 @@ jobs:
             echo "is_extended_break=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Populate Today's Games (with fallback)
+        # Ensures the games table has today's slate before Module H and the simulation run.
+        # Tries: The Odds API → Tank01 → BDL. Sends Slack alert + exits 1 if all fail.
+        if: steps.slate_check.outputs.is_extended_break != 'true'
+        continue-on-error: false
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          source .venv/bin/activate
+          python scripts/populate_todays_games.py
+
       - name: Run Module H (Fetch recent games)
         if: steps.slate_check.outputs.is_extended_break != 'true'
         timeout-minutes: 10
@@ -141,6 +157,17 @@ jobs:
           python3 module_h_historian.py
 
       # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
+
+      - name: Pre-Pipeline Data Check
+        # Phase 3B: Canary check that Module H wrote fresh data before the 11 AM simulation
+        # continue-on-error so the rest of data_sync (WOWY, depth charts, etc.) still runs
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=$PWD
+          python scripts/validate_pipeline_output.py --mode pre
 
       - name: Sync PBP Stats Season Totals
         timeout-minutes: 15
@@ -356,6 +383,39 @@ jobs:
           TANK01_TIER: paid
         run: |
           python3 scripts/analyze_star_bias.py
+
+      - name: Sync Team Current Info (Tank01)
+        if: steps.slate_check.outputs.is_extended_break != 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_team_current_info.py
+
+      - name: Sync Tank01 Projections (Benchmark)
+        if: steps.slate_check.outputs.is_extended_break != 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_tank01_projections.py
+
+      - name: Sync Player News Cache (Tank01)
+        if: steps.slate_check.outputs.is_extended_break != 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_player_news.py
 
       - name: Commit and push if changes
         run: |

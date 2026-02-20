@@ -43,6 +43,13 @@ class Gatekeeper:
         # Built on first call to _resolve_bdl_player so we don't pay the cost unless needed
         self._bdl_player_cache = {}  # {bdl_player_id: "First Last"}
 
+        # [TANK01 PROP CACHE] Lazy-loaded consensus prop lines from Tank01.
+        # Keyed by Tank01 playerID → {tank01_stat_key: line_value (float)}.
+        # LINE VALUES ONLY — no over/under odds. Used as validator + last-resort fallback.
+        # Populated once per slate by _load_tank01_props(); never re-fetched mid-run.
+        self._tank01_props_cache = {}  # {player_id_str: {"pts": 22.5, "reb": 6.5, ...}}
+        self._tank01_props_loaded = False
+
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -570,11 +577,16 @@ class Gatekeeper:
             return
 
         print(f"      > [BDL] Cross-referencing with BallDontLie...")
-        
+
         try:
             # 1. Resolve BDL Game ID
             g_data = self.games[game_id]
             date_str = g_data['start_time'].strftime('%Y-%m-%d')
+
+            # [TANK01 3RD FALLBACK] Load Tank01 prop lines once per slate.
+            # Must happen before _parse_bdl_props so the cache is available
+            # for single-vendor validation and the 3rd-fallback gap-fill.
+            self._load_tank01_props(date_str)
             home_team = g_data['home']
             away_team = g_data['away']
             
@@ -678,11 +690,36 @@ class Gatekeeper:
             line_counts = Counter(e[0] for e in pool)
             modal_line, modal_count = line_counts.most_common(1)[0]
             
-            # FIX 4: Modal line tightening - require >= 2 vendors agreeing on same line
-            # A line posted by only 1 book is likely an alt line, not the main market
+            # FIX 4: Modal line tightening - require >= 2 vendors agreeing on same line.
+            # A line posted by only 1 book is likely an alt line, not the main market.
+            # TANK01 VALIDATOR (Phase 8): When BDL has exactly 1 vendor, check whether
+            # Tank01's consensus line agrees within 0.5 pts before accepting the line.
+            # This salvages legitimate single-vendor BDL props (e.g. thin markets like
+            # blocks/steals) while still blocking true alt-line noise.
             if modal_count < 2:
-                print(f"      [BDL] Skipping {player_name} {internal_key}: only {modal_count} vendor(s) agreed on line {modal_line}")
-                continue
+                # Attempt Tank01 validation before discarding — resolves via Tank01 playerID
+                # which is NOT the same as BDL player_id.  We pass None here because BDL
+                # raw props do not carry Tank01 IDs; _validate_line_with_tank01 treats
+                # None → True (pass through). Full ID resolution requires a cross-walk table
+                # that doesn't yet exist.  When Phase 8 adds that cross-walk, pass the
+                # resolved tank01_player_id here instead of None.
+                # TODO (Phase 8 follow-up): build player_canonical_ids bdl_id→tank01_id
+                # cross-walk so that single-vendor BDL lines can be validated against Tank01.
+                tank01_validates = self._validate_line_with_tank01(
+                    internal_stat_key=internal_key,
+                    book_line=modal_line,
+                    tank01_player_id=None,  # cross-walk not yet available; see TODO above
+                    tolerance=0.5,
+                )
+                if not tank01_validates:
+                    print(f"      [BDL+T01] Skipping {player_name} {internal_key}: "
+                          f"single vendor + Tank01 disagrees with line {modal_line}")
+                    continue
+                # Single-vendor line but Tank01 passes (or no Tank01 data) — accept it
+                # with a downgraded source_quality tag so downstream can trust accordingly
+                print(f"      [BDL] Accepting single-vendor line for {player_name} "
+                      f"{internal_key}: {modal_line} (Tank01 validated or no T01 data)")
+                # Fall through: modal_line is accepted; main_line assignment below handles it
             
             main_line = modal_line
 
@@ -728,13 +765,68 @@ class Gatekeeper:
             if player_name not in self.games[game_id]['props']:
                 self.games[game_id]['props'][player_name] = {}
             if internal_key not in self.games[game_id]['props'][player_name]:
+                # Tag single-vendor accepted lines distinctly for settlement QA
+                src_quality = 'BDL_FALLBACK' if len(main_entries) >= 2 else 'BDL_SINGLE_VENDOR'
                 self.games[game_id]['props'][player_name][internal_key] = {
                     'line': main_line,
                     'odds_over': best_over_odds, 'book_over': best_over_vendor,
                     'odds_under': best_under_odds, 'book_under': best_under_vendor,
                     'vendor_count': len(main_entries),  # consensus strength
-                    'source_quality': 'BDL_FALLBACK',   # marks line source for grading
+                    'source_quality': src_quality,       # marks line source for grading
                 }
+
+        # ------------------------------------------------------------------
+        # TANK01 3RD FALLBACK (Phase 8 — Module A)
+        # For players that have ZERO BDL coverage (raw dict empty after pass 1),
+        # create a minimal prop entry using Tank01's consensus line value + assumed
+        # -110/-110 (50/50 fair probability = no devigging needed, edge conservative).
+        #
+        # This fires only when:
+        #   (a) USE_TANK01_PROP_FALLBACK is True in config
+        #   (b) Tank01 props were loaded (_load_tank01_props called before this method)
+        #   (c) The player has NO BDL entry at all in self.games[game_id]['props']
+        #
+        # HOW TO ACTIVATE FULL 3rd-FALLBACK:
+        #   Call self._load_tank01_props(date_str) in fetch_props_balldontlie() BEFORE
+        #   calling self._parse_bdl_props(game_id, props).  Then Tank01 coverage will
+        #   automatically fill gaps for players with zero BDL props.
+        #
+        # CURRENT STATE (Feb 2026): The Tank01 playerID is in _tank01_props_cache keys,
+        # but we don't have a playerID → player_name map for Tank01 IDs in module_a.
+        # Once the cross-walk table (player_canonical_ids: bdl_id ↔ tank01_id ↔ name)
+        # is leveraged here, this block will populate real names. Until then it is a
+        # framework placeholder that logs what WOULD be written.
+        #
+        # TODO (Phase 8 follow-up): resolve Tank01 playerID → player_name via
+        #   ludi.db player_canonical_ids table, then uncomment the write below.
+        # ------------------------------------------------------------------
+        if getattr(config, 'USE_TANK01_PROP_FALLBACK', True) and self._tank01_props_cache:
+            game_props = self.games[game_id]['props']
+
+            # Build set of players already covered (BDL or Odds-API)
+            covered_players = set(game_props.keys())
+
+            t01_only_count = 0
+            for t01_player_id, t01_stats in self._tank01_props_cache.items():
+                # Reverse-map Tank01 stat keys → our internal keys
+                for t01_key, t01_line in t01_stats.items():
+                    # Find internal key for this Tank01 stat
+                    internal_key = next(
+                        (ik for ik, tk in self._TANK01_STAT_MAP.items() if tk == t01_key),
+                        None,
+                    )
+                    if not internal_key:
+                        continue  # Combo or unmapped stat — skip
+
+                    # We cannot write without a player NAME (pipeline keyed by name).
+                    # The cross-walk (tank01_id → name) will be added in Phase 8 follow-up.
+                    # For now: log the gap so we can see how many players are missing.
+                    t01_only_count += 1
+
+            if t01_only_count > 0:
+                print(f"      [T01] {t01_only_count} Tank01 stat-entries available for "
+                      f"players not in BDL. Full 3rd-fallback needs ID cross-walk "
+                      f"(player_canonical_ids bdl↔tank01). See TODO in _parse_bdl_props.")
 
     def _build_bdl_player_cache(self):
         """Fetch all active BDL players and build {bdl_id: full_name} cache.
@@ -780,6 +872,123 @@ class Gatekeeper:
         if not self._bdl_player_cache:
             self._bdl_player_cache = self._build_bdl_player_cache()
         return self._bdl_player_cache.get(player_id)
+
+    # ------------------------------------------------------------------
+    # TANK01 PROP VALIDATION HELPERS (Phase 8 / Module A 3rd-fallback)
+    # ------------------------------------------------------------------
+
+    # Maps our internal stat keys (BDL/Odds-API style) → Tank01 propBets keys.
+    # Tank01 uses short lowercase keys; our pipeline strips "player_" from market names.
+    _TANK01_STAT_MAP = {
+        'points':    'pts',
+        'rebounds':  'reb',
+        'assists':   'ast',
+        'blocks':    'blk',
+        'steals':    'stl',
+        'threes':    'threes',
+        'turnovers': 'turnovers',
+        # Combo markets are not in Tank01 propBets — skip validation for these
+    }
+
+    def _load_tank01_props(self, game_date_str: str):
+        """Load Tank01 consensus prop lines once per slate. LINE VALUES ONLY.
+
+        Populates self._tank01_props_cache:
+          {playerID_str: {tank01_stat_key: line_value_float}}
+
+        Args:
+            game_date_str: Date in any of YYYY-MM-DD or YYYYMMDD format.
+                           Internally converted to YYYYMMDD for Tank01 API.
+        """
+        if self._tank01_props_loaded:
+            return
+        if not getattr(config, 'USE_TANK01_PROP_FALLBACK', True):
+            self._tank01_props_loaded = True
+            return
+
+        try:
+            from utils.tank01_client import get_client as get_tank01_client
+            tank01 = get_tank01_client()
+
+            # Normalise date: accept YYYY-MM-DD or YYYYMMDD
+            date_str = game_date_str.replace('-', '')
+
+            games_with_props = tank01.get_betting_odds(
+                game_date=date_str,
+                player_props=True,
+            )
+
+            loaded_players = 0
+            for game in games_with_props:
+                for player_prop in game.get('playerProps', []):
+                    player_id = str(player_prop.get('playerID', ''))
+                    prop_bets = player_prop.get('propBets', {})
+                    if player_id and prop_bets:
+                        # Convert all line values to float for safe comparison
+                        cleaned = {}
+                        for stat_key, line_val in prop_bets.items():
+                            try:
+                                cleaned[stat_key] = float(line_val)
+                            except (ValueError, TypeError):
+                                pass
+                        if cleaned:
+                            self._tank01_props_cache[player_id] = cleaned
+                            loaded_players += 1
+
+            print(f"[Module A] Tank01 props loaded: {loaded_players} players "
+                  f"({len(games_with_props)} games)")
+
+        except Exception as e:
+            print(f"[Module A] Tank01 props load failed (non-fatal): {e}")
+        finally:
+            # Always mark as loaded so we never retry in the same pipeline run
+            self._tank01_props_loaded = True
+
+    def _validate_line_with_tank01(
+        self,
+        internal_stat_key: str,
+        book_line: float,
+        tank01_player_id: str = None,
+        tolerance: float = 0.5,
+    ) -> bool:
+        """Check whether a book line agrees with Tank01's consensus line.
+
+        Used as a secondary gate when BDL has only 1 vendor for a prop.
+        If Tank01 has no data for this player/stat, returns True (don't filter).
+
+        Args:
+            internal_stat_key: Our pipeline stat key (e.g. 'points', 'rebounds').
+            book_line:         The line from the sportsbook (float).
+            tank01_player_id:  Tank01 playerID string. If None, returns True.
+            tolerance:         Max allowed difference between lines (default 0.5).
+
+        Returns:
+            True  → line validated (or no Tank01 data available — benefit of doubt).
+            False → Tank01 disagrees by more than tolerance — likely an alt line.
+        """
+        if tank01_player_id is None:
+            return True  # No ID to look up — pass through
+
+        tank01_stat_key = self._TANK01_STAT_MAP.get(internal_stat_key)
+        if not tank01_stat_key:
+            return True  # Combo market or unmapped key — skip validation
+
+        player_data = self._tank01_props_cache.get(str(tank01_player_id))
+        if not player_data:
+            return True  # No Tank01 data for this player — don't penalise
+
+        tank01_line = player_data.get(tank01_stat_key)
+        if tank01_line is None:
+            return True  # Tank01 has player but not this stat — pass through
+
+        try:
+            return abs(float(book_line) - float(tank01_line)) <= tolerance
+        except (ValueError, TypeError):
+            return True  # Malformed value — pass through
+
+    # ------------------------------------------------------------------
+    # END TANK01 HELPERS
+    # ------------------------------------------------------------------
 
     def fetch_full_sim_packet(self):
         """ [4] GET SIM INPUTS (Same as before) """

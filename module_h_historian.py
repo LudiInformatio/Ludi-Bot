@@ -169,8 +169,8 @@ class LudiHistorian:
                         game_id, game_date, player_id, player_name,
                         team_abbreviation, pts, ast, reb, minutes,
                         stl, blk, tov, fgm, fga, fg3m, fg3a,
-                        ftm, fta, oreb, dreb, pf, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ftm, fta, oreb, dreb, pf, fantasy_pts, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(player_id, game_date) DO UPDATE SET
                         pts = excluded.pts,
                         ast = excluded.ast,
@@ -188,6 +188,7 @@ class LudiHistorian:
                         oreb = excluded.oreb,
                         dreb = excluded.dreb,
                         pf = excluded.pf,
+                        fantasy_pts = excluded.fantasy_pts,
                         created_at = excluded.created_at
                 """, (
                     record['GAME_ID'],
@@ -211,6 +212,7 @@ class LudiHistorian:
                     int(record.get('OREB', 0)),
                     int(record.get('DREB', 0)),
                     int(record.get('PF', 0)),
+                    float(record.get('FANTASY_PTS', 0) or 0),
                     datetime.now().isoformat()
                 ))
                 success_count += 1
@@ -594,8 +596,8 @@ class LudiHistorian:
             return
 
         url_box = f"https://{self.TANK_HOST}/getNBABoxScore"
-        # We need fantasyPoints=true or false, doesn't matter, but standard box is safer
-        params_box = {"gameID": game_id, "fantasyPoints": "false"}
+        # fantasyPoints=true enables the fantasyPoints field per player in the response
+        params_box = {"gameID": game_id, "fantasyPoints": "true"}
         
         try:
             r = requests.get(url_box, headers=headers, params=params_box)
@@ -646,8 +648,39 @@ class LudiHistorian:
 
                     # Personal Fouls (Tank01 uses uppercase 'PF')
                     "PF": float(stats.get('PF', 0)),
+
+                    # Fantasy Points (available when fantasyPoints=true in request)
+                    "FANTASY_PTS": float(stats.get('fantasyPoints', 0) or 0),
                 }
                 storage_list.append(record)
+
+            # Phase 6 Bridge: write game result to games table so downstream modules
+            # (Module A, referee sync) can find it even when Odds API is down.
+            try:
+                team_stats = body.get('teamStats', {})
+                home_data = team_stats.get('home', {})
+                away_data = team_stats.get('away', {})
+                home_team = home_data.get('teamAbv')
+                away_team = away_data.get('teamAbv')
+                home_score = home_data.get('pts') or home_data.get('totalPts')
+                away_score = away_data.get('pts') or away_data.get('totalPts')
+
+                if home_team and away_team and home_score is not None and away_score is not None:
+                    # Convert date from YYYYMMDD to YYYY-MM-DD for games table
+                    game_date_fmt = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                    bridge_conn = self.get_db_connection()
+                    bridge_cursor = bridge_conn.cursor()
+                    bridge_cursor.execute("""
+                        INSERT INTO games (game_id, date, home_team, away_team, home_score, away_score)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(game_id) DO UPDATE SET
+                            home_score = excluded.home_score,
+                            away_score = excluded.away_score
+                    """, (game_id, game_date_fmt, home_team, away_team, int(home_score), int(away_score)))
+                    bridge_conn.commit()
+                    bridge_conn.close()
+            except Exception as bridge_err:
+                print(f"   [Module H] Games bridge warning for {game_id}: {bridge_err}")
 
             time.sleep(0.1)
 

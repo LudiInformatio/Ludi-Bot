@@ -9,6 +9,37 @@
 
 ---
 
+## Implementation Status — Feb 20, 2026
+
+| Phase | Task | Status | Notes |
+|-------|------|--------|-------|
+| 0 | `utils/tank01_client.py` — central client, 12 public methods | ✅ DONE | Smoke tested: 72 injuries, lazy singleton |
+| 1 | `module_h_historian.py` — `fantasyPoints=true` + `fantasy_pts` INSERT | ✅ DONE | `fantasy_pts` column was pre-existing in schema |
+| 2 | `module_c.py` — STL/BLK weights 2→3 | ✅ DONE | Line 482 |
+| 3 | `config.py` — `SIM_COUNT` 5000→10000 | ✅ DONE | Line 129 |
+| 4 | `scripts/populate_todays_games.py` — 3-source fallback chain | ✅ DONE | Odds API→Tank01→BDL. Tank01 fallback fired live Feb 20 (Odds API quota exhausted) |
+| 5 | `scripts/validate_pipeline_output.py` — output assertion gate | ✅ DONE | 5 checks. Detected 93.4% DIAMOND ratio (real drift) |
+| 6 | `module_h_historian.py` — games table UPSERT bridge | ✅ DONE | `teamStats.home/away.pts` → `games.home_score/away_score` |
+| 7 | `module_a.py` — Tank01 props validator + fallback framework | ✅ DONE | `_load_tank01_props()`, `_validate_line_with_tank01()` added. Full 3rd-fallback deferred pending Tank01↔BDL player ID cross-walk |
+| 8 | `scripts/sync_team_current_info.py` + `morning_brief.py` | ✅ DONE | Uses `getNBATeams` (not `getNBACurrentInfo` — that returns metadata only). Streak notes in morning brief |
+| 9 | `scripts/sync_tank01_projections.py` + `database.py` | ✅ DONE | `tank01_projections` table. `body` is flat dict (no `playerProjections` nesting) |
+| 10 | `scripts/sync_player_news.py` + `module_d.py` | ✅ DONE (partial) | `player_news_cache` table. `getNBATopNews` returned 0 items — endpoint under investigation |
+| 11 | `docs/projects/TANK01_DATA_EXPANSION.md` | ✅ THIS FILE | — |
+| 12 | `ROADMAP.md` update | ✅ DONE | — |
+
+### Open Items
+- **Phase 7 full 3rd-fallback**: Needs Tank01 playerID → player_name cross-walk in `module_a.py` context. Recommend adding to `player_canonical_ids` table.
+- **`getNBATopNews` endpoint**: Returned 0 items on Feb 20 test. Need to investigate if endpoint name differs, requires parameters, or was throttled. `sync_player_news.py` exits cleanly on empty response — no pipeline impact.
+- **DIAMOND ratio drift**: `validate_pipeline_output.py` flagged 93.4% DIAMOND today (threshold 80%). Module F tier thresholds need review separately.
+
+### Key Discoveries
+- `getNBACurrentInfo` returns season metadata only (not per-team standings). Standings come from `getNBATeams`.
+- `tank01_projections` response: `body` is flat playerID-keyed dict (spec said `playerProjections` nested key — incorrect).
+- `games.home_score`, `games.away_score`, `player_game_logs.fantasy_pts` all pre-existed in schema.
+- Tank01 uses `NO`/`GS`/`NY`/`PHO`/`SA` short codes (same as BDL) — normalized via `SHORT_ABBREV_MAP`.
+
+---
+
 ## Overview
 
 Tank01 provides 17 NBA API endpoints. We currently use 6. This document covers the expansion plan for the remaining 11, prioritized by value and implementation effort.

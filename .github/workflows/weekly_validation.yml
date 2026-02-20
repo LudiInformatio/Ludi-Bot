@@ -171,6 +171,16 @@ jobs:
           python scripts/sync_stint_profiles.py --days 60 || echo "WARNING: Stint profiles sync failed -- continuing"
         continue-on-error: true
 
+      - name: Sync Injury History (Weekly)
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_injury_history.py --days 30
+
       - name: Archive Backtest Logs
         run: |
           # Compress logs

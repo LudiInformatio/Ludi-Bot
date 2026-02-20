@@ -171,6 +171,16 @@ jobs:
             exit 1
           fi
 
+      - name: Validate Pipeline Output
+        # Phase 3B: Output assertion gate — 5 canary checks on bet quality/count/edge
+        # continue-on-error so archive/notify steps still run even if checks flag issues
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=$PWD
+          python scripts/validate_pipeline_output.py --mode post
 
       - name: Curate Top Plays (Claude AI Gate)
         # Phase 8.5: Two-stage AI curation — Haiku sanity gate + Sonnet Top 5 selection

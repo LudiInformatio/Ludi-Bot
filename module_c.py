@@ -479,7 +479,7 @@ class LudiOracle:
 
     def _calculate_fantasy_score(self, sim):
         return round((sim['PTS'] * 1) + (sim['FG3M'] * 0.5) + (sim['REB'] * 1.25) +
-                     (sim['AST'] * 1.5) + (sim['STL'] * 2) + (sim['BLK'] * 2) - (sim['TOV'] * 0.5), 2)
+                     (sim['AST'] * 1.5) + (sim['STL'] * 3) + (sim['BLK'] * 3) - (sim['TOV'] * 0.5), 2)
 
     def _sum_team_projections(self, players, pace=1.0):
         return {

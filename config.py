@@ -126,7 +126,13 @@ IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'false').lower() == 'true'
 # Phase 8.9: Rotation/minutes projection feature flag (True by default)
 USE_MINUTES_PROJECTION = os.getenv('USE_MINUTES_PROJECTION', 'true').lower() == 'true'
 
-SIM_COUNT = 5000
+# Phase 8 / Module A: Use Tank01 consensus prop lines as 3rd fallback + line validator.
+# When True: (1) single-vendor BDL lines are validated against Tank01 before being
+# accepted, and (2) players with zero BDL coverage get a Tank01-only entry at -110/-110.
+# Set to False to disable entirely (reverts to pre-Tank01 BDL-only behavior).
+USE_TANK01_PROP_FALLBACK = True
+
+SIM_COUNT = 10000
 SIM_VARIANCE = 0.35
 SIM_POISSON_THRESHOLD = 3.0
 LEAGUE_AVG_TOTAL = 224.5

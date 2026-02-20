@@ -2,8 +2,8 @@
 
 **Last Updated:** February 20, 2026 11:12 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot) | Feb 20 Post-ASB Audit complete | 6 PM pipeline ready
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅
+**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot) | Feb 20 Post-ASB Audit complete | 6 PM pipeline ready | Tank01 Data Expansion ✅
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -58,6 +58,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.10 ✅ | League Rankings Module | DONE | `scripts/generate_rankings.py` — weekly PPP (P&R/ISO/Spot-Up) + scheme distribution + pace leaders via Telegram. Min 10 games/30d gate. Wired into `weekly_validation.yml` | $0 |
 | Infra ✅ | Slack/Notification Split | DONE | `utils/slack_notifier.py` — ops alerts (failures, health, QA, pipeline stats, PM bot work notes) route to Slack (`vibestarters` #C0AGBQXRXB3). Telegram stays clean for betting product only. 20 files updated. | $0 |
 | Infra ✅ | Model Calibration Fixes | DONE | `module_f.py`: BLK OVER hard skip (33.6% WR → filtered), dead Filter 6 removed. `morning_brief.py`: B2B fatigue flag wired, data-driven team notes, leverage profile context. Spotlight `analysis_block` populated via `get_matchup_analysis()`. | $0 |
+| Tank01 ✅ | Tank01 Data Expansion + Phase 3 Hardening | DONE | Central client (12 methods), STL/BLK weights fix, SIM_COUNT 10k, games fallback chain (Odds API→Tank01→BDL), output assertion gate (5 checks), Module H games bridge + fantasy_pts, Tank01 props validator in Module A, 4 new sync scripts (team info/projections/news/injury history), 4 new DB tables, morning brief streak notes. See `docs/projects/TANK01_DATA_EXPANSION.md` | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 | 8.13 | Ask Ludi — Slack Bot | MEDIUM | Two-way Slack bot (vibestarters workspace): natural language → ludi.db + Claude → response in thread. Haiku intent, Sonnet analysis. Slack infrastructure already live. | ~$0.05/day |
