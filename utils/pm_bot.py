@@ -234,8 +234,9 @@ Tomorrow's focus: {next_task}
             )
             briefing_text = response.text
 
-            # Route work notes to Slack ops channel (not Telegram)
-            return send_slack_message(briefing_text)
+            # Send to both — Telegram keeps image + formatting, Slack gets text for ops context
+            send_slack_message(briefing_text)
+            return send_photo(header_img, caption=briefing_text, parse_mode=None)
 
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")
@@ -284,8 +285,9 @@ Go touch grass. Context saved.
                 model=self.model_id,
                 contents=prompt
             )
-            # Route break/state messages to Slack ops channel
-            return send_slack_message(response.text)
+            # Send to both — Telegram keeps image + formatting, Slack gets text for ops context
+            send_slack_message(response.text)
+            return send_photo(header_img, caption=response.text, parse_mode=None)
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
             return False
