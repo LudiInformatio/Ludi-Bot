@@ -510,7 +510,7 @@ def test_pipeline():
     # === STEP 7: Generate Briefing ===
     print("[STEP 7] Generating Daily Briefing...")
     try:
-        briefing = reporter.generate_report(processed_slate)
+        briefing, _, _ = reporter.generate_report(processed_slate)
 
         # Write to file
         with open('daily_briefing.txt', 'w') as f:

@@ -27,9 +27,17 @@ class BetSettler:
         print("="*60)
         
         # 1. Get Pending Bets
-        pending_bets = self.logger.get_pending_bets(target_date)
+        if target_date:
+            print(f"🔄 Re-settling ALL bets for {target_date}...")
+            c = self.conn.cursor()
+            c.row_factory = sqlite3.Row
+            c.execute("SELECT * FROM bet_recommendations WHERE game_date = ?", (target_date,))
+            pending_bets = [dict(row) for row in c.fetchall()]
+        else:
+            pending_bets = self.logger.get_pending_bets(target_date)
+
         if not pending_bets:
-            print("✅ No pending bets found.")
+            print("✅ No bets found.")
             return
 
         print(f"📊 Processing {len(pending_bets)} pending bets...")
@@ -252,6 +260,11 @@ class BetSettler:
             
         # 2. Calculate Profit
         profit = 0.0
+        
+        # Guard: Check for corrupt odds before calculating profit
+        if abs(price) < 100:
+            return 'VOID', 0.0
+
         if outcome == 'WIN':
             # Convert American Odds to Decimal Multiplier
             if price > 0:
@@ -266,7 +279,28 @@ class BetSettler:
 
 import config
 
+import argparse
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Settle bets for a specific date or all pending.')
+    parser.add_argument('--date', type=str, help='Target date (YYYY-MM-DD) to settle/re-settle')
+    args = parser.parse_args()
+
     config.validate_config()
     settler = BetSettler()
-    settler.run_settlement()
+    
+    # If date is provided, we might need to override the default "pending only" logic
+    # inside run_settlement or by modifying how we call it.
+    # Since run_settlement calls get_pending_bets internally, we need to modify run_settlement
+    # to handle the override.
+    
+    # Actually, let's just modify the class method in place (via the tool) 
+    # but since we are in the __main__ block here, we need to apply the change 
+    # to the class logic itself in a separate step or just do it all here if the tool allows.
+    
+    # Wait, I cannot modify the class logic from inside the __main__ block easily without
+    # touching the class definition above. 
+    # The tool "replace" works on text chunks. I should have modified the class method first.
+    # But since I'm rewriting the main block, I'll just pass the date.
+    
+    settler.run_settlement(target_date=args.date)

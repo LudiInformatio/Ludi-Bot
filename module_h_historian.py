@@ -65,7 +65,7 @@ class LudiHistorian:
         try:
             cursor.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique
-                ON player_game_logs(game_id, player_id)
+                ON player_game_logs(player_id, game_date)
             """)
             conn.commit()
         except sqlite3.Error as e:
@@ -171,7 +171,7 @@ class LudiHistorian:
                         stl, blk, tov, fgm, fga, fg3m, fg3a,
                         ftm, fta, oreb, dreb, pf, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(game_id, player_id) DO UPDATE SET
+                    ON CONFLICT(player_id, game_date) DO UPDATE SET
                         pts = excluded.pts,
                         ast = excluded.ast,
                         reb = excluded.reb,

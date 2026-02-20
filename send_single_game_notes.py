@@ -126,7 +126,7 @@ def send_specific_game_notes(home_team=None, away_team=None):
     
     # Handle tuple return (text, image_path) from updated Module F
     if isinstance(report_result, tuple):
-        standard_report, image_path = report_result
+        standard_report, image_path, _ = report_result
     else:
         standard_report = report_result
         image_path = None

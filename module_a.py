@@ -598,7 +598,9 @@ class Gatekeeper:
                 return
 
             # 2. Fetch Props
-            props = self.bdl.get_player_props(bdl_game_id)
+            # FIX 3: Vendor quality filter - only high-quality vendors
+            high_quality_vendors = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm']
+            props = self.bdl.get_player_props(bdl_game_id, vendors=high_quality_vendors)
             
             if props:
                 print(f"      ✅ [BDL] Retrieved {len(props)} props")
@@ -654,6 +656,11 @@ class Gatekeeper:
             vendor = BDL_VENDOR_MAP.get(prop.get('vendor', ''), prop.get('vendor', ''))
             over_odds = prop.get('market', {}).get('over_odds', -110)
             under_odds = prop.get('market', {}).get('under_odds', -110)
+
+            if abs(over_odds) < 100 or abs(under_odds) < 100:
+                print(f"Skipping corrupt odds: {over_odds}/{under_odds} for {player_name}")
+                continue # Skip this prop — corrupt/truncated odds value
+
             key = (player_name, internal_key)
             if key not in raw:
                 raw[key] = []
@@ -669,7 +676,15 @@ class Gatekeeper:
 
             # Find modal line in the filtered pool = main market line
             line_counts = Counter(e[0] for e in pool)
-            main_line = line_counts.most_common(1)[0][0]
+            modal_line, modal_count = line_counts.most_common(1)[0]
+            
+            # FIX 4: Modal line tightening - require >= 2 vendors agreeing on same line
+            # A line posted by only 1 book is likely an alt line, not the main market
+            if modal_count < 2:
+                print(f"      [BDL] Skipping {player_name} {internal_key}: only {modal_count} vendor(s) agreed on line {modal_line}")
+                continue
+            
+            main_line = modal_line
 
             # Best odds across vendors at the main line.
             # Use BEST decimal odds (highest payout) per side — not arithmetic average

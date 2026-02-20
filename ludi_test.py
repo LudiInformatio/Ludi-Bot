@@ -34,4 +34,5 @@ if __name__ == "__main__":
         }
     ]
 
-    print(rep.generate_report(test_slate))
+    briefing, _, _ = rep.generate_report(test_slate)
+    print(briefing)

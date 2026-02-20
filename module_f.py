@@ -896,7 +896,8 @@ if __name__ == "__main__":
     print(f"Vig removed: {vig*100:.2f}%")
     print("=" * 60)
 
-    print(rep.generate_report(test_data))
+    briefing, _, _ = rep.generate_report(test_data)
+    print(briefing)
 
     # Legacy format test (backwards compatibility)
     print("\n" + "=" * 60)
@@ -916,4 +917,5 @@ if __name__ == "__main__":
             }
         ]
     }]
-    print(rep.generate_report(legacy_test))
+    briefing, _, _ = rep.generate_report(legacy_test)
+    print(briefing)

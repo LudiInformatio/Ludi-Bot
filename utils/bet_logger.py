@@ -357,8 +357,8 @@ class BetLogger:
             profit_loss: Profit/loss in units (optional, can be calculated)
             clv: Closing Line Value (optional, calculated by comparing final line)
         """
-        if outcome not in ['WIN', 'LOSS', 'PUSH']:
-            raise ValueError(f"Invalid outcome: {outcome}. Must be WIN, LOSS, or PUSH")
+        if outcome not in ['WIN', 'LOSS', 'PUSH', 'VOID']:
+            raise ValueError(f"Invalid outcome: {outcome}. Must be WIN, LOSS, PUSH, or VOID")
 
         conn = self._get_conn()
         c = conn.cursor()

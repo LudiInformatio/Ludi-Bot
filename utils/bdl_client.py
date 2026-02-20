@@ -334,12 +334,17 @@ class BDLClient:
     # Props & Odds (v2)
     # ------------------------------------------------------------------
 
-    def get_player_props(self, game_id: int) -> List[Dict]:
-        """Fetch player props from BDL v2 Odds API."""
+    def get_player_props(self, game_id: int, vendors: List[str] = None) -> List[Dict]:
+        """Fetch player props from BDL v2 Odds API.
+        
+        Args:
+            game_id: BDL game ID
+            vendors: Optional list of vendor keys to filter (e.g., ['draftkings', 'fanduel'])
+        """
         if not self.api_key:
             return []
 
-        cache_path = _get_cache_path(f"player_props_{game_id}", {})
+        cache_path = _get_cache_path(f"player_props_{game_id}", {"vendors": vendors})
         cached = _read_cache(cache_path, ttl_hours=0.5)  # 30 min TTL
         if cached is not None:
             return cached
@@ -347,7 +352,11 @@ class BDLClient:
         self._wait_for_rate_limit()
         try:
             url = f"{self.BASE_URL_V2}/odds/player_props"
-            response = self.session.get(url, params={"game_id": game_id}, timeout=10)
+            params: Dict[str, Any] = {"game_id": game_id}
+            # Vendor quality filter: only high-quality books
+            if vendors:
+                params["vendors[]"] = vendors
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             result = data.get("data", [])

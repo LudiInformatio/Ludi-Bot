@@ -45,6 +45,13 @@ def get_settlement_summary():
         return None
 
     total, wins, losses, pushes, net_units = row
+
+    if abs(net_units) > 50:
+        anomaly_msg = f"⚠️ P&L ANOMALY: {net_units:.1f}u exceeds ±50u threshold — verify before trusting"
+        print(anomaly_msg)
+        from utils.slack_notifier import send_slack_alert
+        send_slack_alert("P&L Anomaly Detected", anomaly_msg)
+
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
     roi = (net_units / total * 100) if total > 0 else 0
 
