@@ -25,14 +25,21 @@ DEFAULT_MAX_TOKENS = 1500
 
 
 def _get_claude_auth_token() -> str:
-    """Get Claude auth token with OAuth-first priority."""
-    # Priority 1: explicit CI token (GitHub Actions secret)
-    if os.getenv('CLAUDE_CODE_OAUTH_TOKEN'):
-        return os.getenv('CLAUDE_CODE_OAUTH_TOKEN')
+    """
+    Get Claude auth token.
 
-    # Priority 2: local dev OAuth — SKIP in GitHub Actions.
-    # Self-hosted runner runs on local Mac, so ~/.claude/config.json exists
-    # but its oauthToken may be expired, causing 401s in CI.
+    Priority order:
+      1. ANTHROPIC_API_KEY env var — long-lived API key, works everywhere
+      2. ~/.claude/config.json oauthToken — local dev Max plan (skipped in CI)
+      3. CLAUDE_CODE_OAUTH_TOKEN — fallback (intended for claude-code-action,
+         expires frequently, do not rely on for SDK calls)
+    """
+    # Priority 1: proper API key — always prefer this when set
+    if os.getenv('ANTHROPIC_API_KEY'):
+        return os.getenv('ANTHROPIC_API_KEY')
+
+    # Priority 2: local dev OAuth — skip in GitHub Actions (self-hosted runner
+    # has ~/.claude/config.json but its token expires and would cause 401s in CI)
     if not os.getenv('GITHUB_ACTIONS'):
         config_path = os.path.expanduser('~/.claude/config.json')
         if os.path.exists(config_path):
@@ -43,8 +50,8 @@ def _get_claude_auth_token() -> str:
             except Exception:
                 pass
 
-    # Priority 3: API key (always used in CI when ANTHROPIC_API_KEY secret is set)
-    return os.getenv('ANTHROPIC_API_KEY', '')
+    # Priority 3: OAuth CI token (expires frequently — last resort only)
+    return os.getenv('CLAUDE_CODE_OAUTH_TOKEN', '')
 
 
 def get_claude_analysis(
