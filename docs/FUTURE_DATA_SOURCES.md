@@ -4,7 +4,7 @@
 **Last Audited:** February 19, 2026
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
 
-**Status:** ~75% implemented (as of Feb 19, 2026). Section 4.2 dormant data fully activated. Section 4.4 endpoints wired. Section 5.2 trend/beneficiary patterns implemented in Phase 8.15. Remaining: pipeline consolidation (4.3), competitive UI patterns (5.2), PlayerRebounding (1), Phase 8.10/8.11.
+**Status:** ~80% implemented (as of Feb 19, 2026 7:39 PM EST). Section 4.2 dormant data fully activated. Section 4.4 endpoints wired. Section 5.2 trend/beneficiary/matchup patterns implemented in Phase 8.15 + calibration fixes. Phase 8.10 League Rankings DONE. Remaining: pipeline consolidation (4.3), DVP rankings, PlayerRebounding (1), Phase 8.11.
 
 The following endpoints were discovered in the unofficial NBA Sense documentation and represent high-value opportunities for enhancing other Ludi-Bot modules.
 
@@ -173,12 +173,12 @@ Contains all 40+ PBP Stats endpoints documented with:
 **For Player Spotlights (8.3):**
 | Pattern | Source | Status | Implementation |
 |---------|--------|--------|---------------|
-| Playtype Analysis table | PropsMadness | ❌ | Per-player Synergy data as visual table |
+| Playtype Analysis table | PropsMadness | ✅ Feb 19 | `get_matchup_analysis()` in `trend_engine.py` — top 2 Synergy playtypes × opponent scheme in `analysis_block` |
 | Similar Players comparison | PropsMadness | ❌ | Profile-similarity hit rate |
 | Hit Rate badges | BucketsToBucks, Props.cash | ✅ Phase 8.15 | `hit_rate_l10` in `get_player_trends()` |
 | Trend indicators | Multiple | ✅ Phase 8.15 | L7/L10/L15 + trend labels in `player_trends` table |
-| DVP ranking | BucketsToBucks | ❌ | Defense vs Position rank (1-30) |
-| Matchup edge notes | LandYourBets | ❌ | Archetype-vs-scheme notes |
+| DVP ranking | BucketsToBucks | ❌ | Defense vs Position rank (1-30) — `defender_matchups` table exists (0 rows), needs sync script |
+| Matchup edge notes | LandYourBets | ✅ Feb 19 | `get_matchup_analysis()` — archetype-vs-scheme injected into every Spotlight `analysis_block` |
 | On/Off per-36 stats | StraightBettin | ❌ | Full per-36 stat table with ON/OFF toggles |
 
 **For Play Curation (8.5):**
@@ -227,9 +227,10 @@ Contains all 40+ PBP Stats endpoints documented with:
 
 ---
 
-## Phase 8.10: League Rankings Module ❌ NOT DONE
+## Phase 8.10: League Rankings Module ✅ DONE (Feb 19, 2026)
 
-**Status:** Ready for implementation (data already in ludi.db). LOW priority per ROADMAP.
+**Status:** Complete. `scripts/generate_rankings.py` ships weekly via `weekly_validation.yml`.
+**Commit:** `dbe3a98` + min-games patch.
 
 ### Data Sources
 | Table | Records | Used For |

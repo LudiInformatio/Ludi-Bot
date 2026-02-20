@@ -1,9 +1,10 @@
 # Phase 8 Foundation Plan: Shared Claude Infrastructure + Injury Intelligence
 
-**Status:** 🟡 ACTIVE — Ready for implementation
-**Priority:** CRITICAL (blocking all Phase 8.1+ AI integration)
+**Status:** ✅ COMPLETE — All steps shipped (Phases 8.0-A through 8.0-D)
+**Completed:** February 2026
+**Priority:** ~~CRITICAL~~ ARCHIVED — no longer blocking
 **Related:** See `ROADMAP.md` Phase 8 | Design doc: `.claude/plans/curried-growing-toucan.md`
-**Last Revised:** February 19, 2026 (post Ludi-Lite review + SMA audit + user corrections)
+**Last Revised:** February 19, 2026 7:39 PM EST
 
 ---
 
@@ -372,24 +373,24 @@ sqlite3 ludi.db "SELECT status, COUNT(*) FROM player_injuries WHERE resolved_at 
 
 ## Acceptance Criteria
 
-### Pre-Work (Step 0)
-- [ ] `from utils.claude_client import HAIKU_MODEL, SONNET_MODEL` works
-- [ ] `from utils.claude_prompts import ROSTER_RULES, GAME_NOTES_TEMPLATE` works
-- [ ] `from config import CLAUDE_AUTH_TOKEN; bool(CLAUDE_AUTH_TOKEN)` is True locally and in Actions
+### Pre-Work (Step 0) ✅
+- [x] `from utils.claude_client import HAIKU_MODEL, SONNET_MODEL` works
+- [x] `from utils.claude_prompts import ROSTER_RULES, GAME_NOTES_TEMPLATE` works
+- [x] `from config import CLAUDE_AUTH_TOKEN; bool(CLAUDE_AUTH_TOKEN)` is True locally and in Actions
 
-### Injury Intelligence (Steps 1–5)
-- [ ] `player_injuries` table exists with correct schema (`snapshot_time`, `is_game_day_report` columns present)
-- [ ] `players` table has `current_injury_status`, `injury_updated_at`, `injury_return_date`, `days_out_current` columns
-- [ ] 55-player canonical ID gap resolved (entity resolution audit shows 0 unmatched)
-- [ ] `sync_injuries.py --dry-run` completes without error
-- [ ] `sync_injuries.py` populates `player_injuries` with 10+ rows
-- [ ] Status-change detection works: re-running sync doesn't insert duplicates for same status
-- [ ] `players.current_injury_status` synced for all known injured players
-- [ ] Long-term injured players (days_out > 14) appear in Tier 3, NOT in simulation
-- [ ] Recently returned players (resolved_at last 7 days) appear in Tier 2 simulation
-- [ ] Smart vacuum correctly classifies: active (<4 days out), partial (4–14 days), absorbed (>14 days)
-- [ ] BDL `description` stored in DB (not discarded)
-- [ ] Phase 8.5 ready: `player_injuries.description` available for Claude sanity gate context
+### Injury Intelligence (Steps 1–5) ✅
+- [x] `player_injuries` table exists with correct schema (`snapshot_time`, `is_game_day_report` columns present)
+- [x] `players` table has `current_injury_status`, `injury_updated_at`, `injury_return_date`, `days_out_current` columns
+- [x] 55-player canonical ID gap resolved (entity resolution audit shows 0 unmatched)
+- [x] `sync_injuries.py --dry-run` completes without error
+- [x] `sync_injuries.py` populates `player_injuries` with 10+ rows
+- [x] Status-change detection works: re-running sync doesn't insert duplicates for same status
+- [x] `players.current_injury_status` synced for all known injured players
+- [x] Long-term injured players (days_out > 14) appear in Tier 3, NOT in simulation
+- [x] Recently returned players (resolved_at last 7 days) appear in Tier 2 simulation
+- [x] Smart vacuum correctly classifies: active (<4 days out), partial (4–14 days), absorbed (>14 days)
+- [x] BDL `description` stored in DB (not discarded)
+- [x] Phase 8.5 ready: `player_injuries.description` available for Claude sanity gate context
 
 ### SMA Audit Post-Implementation
 ```bash
