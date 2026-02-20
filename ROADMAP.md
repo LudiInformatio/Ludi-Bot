@@ -7,6 +7,10 @@
 
 This is the single source of truth for project tasks and priorities.
 
+**Active Project Docs:**
+- **Tank01 Data Expansion:** `docs/projects/TANK01_DATA_EXPANSION.md` — 17-endpoint audit, O/U vs alt line parsing guide, model calibration findings, implementation phases
+- **Best-Practices API Guide:** `best-practices/api/API_BEST_PRACTICES.md` — BDL + Tank01 complete endpoint reference, lessons learned
+
 ---
 
 ## Legend
