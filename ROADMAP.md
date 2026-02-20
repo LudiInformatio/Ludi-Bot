@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 20, 2026 11:12 AM EST
+**Last Updated:** February 20, 2026 4:59 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot) | Feb 20 Post-ASB Audit complete | 6 PM pipeline ready | Tank01 Data Expansion ✅
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅
+**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot)
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -59,6 +59,7 @@ This is the single source of truth for project tasks and priorities.
 | Infra ✅ | Slack/Notification Split | DONE | `utils/slack_notifier.py` — ops alerts (failures, health, QA, pipeline stats, PM bot work notes) route to Slack (`vibestarters` #C0AGBQXRXB3). Telegram stays clean for betting product only. 20 files updated. | $0 |
 | Infra ✅ | Model Calibration Fixes | DONE | `module_f.py`: BLK OVER hard skip (33.6% WR → filtered), dead Filter 6 removed. `morning_brief.py`: B2B fatigue flag wired, data-driven team notes, leverage profile context. Spotlight `analysis_block` populated via `get_matchup_analysis()`. | $0 |
 | Tank01 ✅ | Tank01 Data Expansion + Phase 3 Hardening | DONE | Central client (12 methods), STL/BLK weights fix, SIM_COUNT 10k, games fallback chain (Odds API→Tank01→BDL), output assertion gate (5 checks), Module H games bridge + fantasy_pts, Tank01 props validator in Module A, 4 new sync scripts (team info/projections/news/injury history), 4 new DB tables, morning brief streak notes. See `docs/projects/TANK01_DATA_EXPANSION.md` | $0 |
+| Infra ✅ | Injury Intelligence Hardening | DONE | RealGM RSS dual-source corroboration in `_nuance_check()` (confidence 0.95 when RotoWire + RealGM agree). AI blurb prompt hardened: `INJURY_BLURB_SYSTEM` + `INJURY_BLURB_PARSE_PROMPT` (5 few-shot examples, `tonight_available`, `blurb_is_stale`, `temperature=0.0`). Intraday refresh: `injury_refresh.yml` (4 daytime + 15 evening 20-min runs, staleness guard prevents API waste). Evening lock: `--force` pre-sync captures late scratches before 6 PM cards. `module_d.get_refresh_interval()` aligned: 120 min day / 20 min game-time. | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 | 8.13 | Ask Ludi — Slack Bot | MEDIUM | Two-way Slack bot (vibestarters workspace): natural language → ludi.db + Claude → response in thread. Haiku intent, Sonnet analysis. Slack infrastructure already live. | ~$0.05/day |
@@ -89,6 +90,20 @@ First game day back exposed 9 critical/high issues. Full recovery + hardening co
 - BDL API best-practices docs — comprehensive endpoint reference + audit lessons
 
 **Remaining (next sprint):** Games table fallback chain (3A), output assertion gate (3B), Module H→games bridge (3C), Perplexity/Claude prompt enrichment (2H)
+
+---
+
+### Injury Intelligence Hardening ✅ COMPLETE (Feb 20, 2026 PM)
+
+Second sprint of Feb 20 — closed remaining injury pipeline gaps and built intraday refresh infrastructure.
+
+**New Capabilities:**
+- **RealGM RSS** added as 2nd corroboration source alongside RotoWire. `_nuance_check()` compares both; when they agree → confidence bumped to 0.95 (`[2-source confirmed]`)
+- **AI blurb prompt** hardened: centralized `INJURY_BLURB_SYSTEM` + `INJURY_BLURB_PARSE_PROMPT` with 5 few-shot examples, `tonight_available` field (true/false/uncertain), `blurb_is_stale` flag, `temperature=0.0` for deterministic classification
+- **`injury_refresh.yml`**: new GitHub Actions workflow — 4 daytime runs (every 2 hr, 11 AM–5 PM EST) + 15 evening runs (every 20 min, 6–10:40 PM EST). Staleness guard in `sync_injuries.py` exits early if DB is already fresh — protects Tank01/BDL quota
+- **Evening slate lock**: `--force` injury sync step before `morning_brief --mode evening` captures 4–6 PM late scratches in DB before 6 PM cards generate
+- **`--force` flag** on `sync_injuries.py` for on-demand overrides (web app, bot, evening lock)
+- **Downstream ready**: Telegram bot (8.13) and Ludi Lens web app query `player_injuries` directly — always ≤20 min stale during game time
 
 ---
 
