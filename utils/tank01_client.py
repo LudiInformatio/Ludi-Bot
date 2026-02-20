@@ -244,30 +244,6 @@ class Tank01Client:
         data = self._get("getNBACurrentInfo", {"date": date})
         return data.get("body", {})
 
-    def get_injury_history(
-        self,
-        player_id: str = None,
-        days: int = 30,
-    ) -> List[Dict]:
-        """
-        GET /getNBAInjuryListHistory — historical injury records.
-
-        Args:
-            player_id: Tank01 player ID string — filter to one player.
-                       Omit for league-wide history (expensive, use sparingly).
-            days:      How many days of history to retrieve (default 30)
-
-        NOTE: NBA suspensions do NOT appear in the injury history endpoint.
-        Use Phase 8.16 (Perplexity → sync_suspensions.py) for suspension data.
-
-        Returns list of historical injury dicts.
-        """
-        params: dict = {"days": days}
-        if player_id:
-            params["playerID"] = player_id
-        data = self._get("getNBAInjuryListHistory", params)
-        return data.get("body", [])
-
     def get_top_news(self, team_abv: str = None, recent: bool = True) -> List[Dict]:
         """
         GET /getNBANews — player/team news headlines.

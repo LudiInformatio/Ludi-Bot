@@ -18,6 +18,9 @@ from utils.api_helpers import retry_with_backoff
 # [NEW] BallDontLie Client
 from utils.bdl_client import BDLClient
 
+# [Tank01] Player ID Resolution
+from utils.player_id_resolver import PlayerIDResolver
+
 # ==========================================
 # LUDI INFORMATIO | MODULE D: THE YAK
 # V3.5 - FULL STATUS SPECTRUM (2025-26)
@@ -48,6 +51,9 @@ class LudiYak:
         
         # [NEW] Initialize BDL Client
         self.bdl = BDLClient()
+        
+        # [Tank01] Player ID Resolver
+        self._id_resolver = PlayerIDResolver()
         
         # [PHASE 3] Load Keyword Taxonomy
         self.keywords_config = self._load_keyword_config()
@@ -94,11 +100,36 @@ class LudiYak:
 
             if r.status_code == 200 and 'body' in data:
                 self.official_injuries = {}
+                self._injury_blurbs = {}
                 for item in data['body']:
-                    p_name = item.get('longName', 'Unknown')
+                    pid = item.get('playerID', '')
+                    if not pid:
+                        continue
+
+                    try:
+                        info = self._id_resolver.get_player_info(pid)
+                        p_name = info.get('full_name', '')
+                    except (ValueError, KeyError):
+                        desc = item.get('description', '')
+                        import re
+                        match = re.search(r':\s*(\w[\w\s\'-]+?)\s*\(', desc)
+                        p_name = match.group(1).strip() if match else ''
+
+                    if not p_name:
+                        continue
+
                     clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
-                    # Designation handles: Out, Doubtful, Questionable, Probable, Available
-                    self.official_injuries[clean_name] = item.get('designation', 'Available')
+                    designation = item.get('designation', 'Available')
+                    description = item.get('description', '')
+                    # injReturnDate format: YYYYMMDD — convert to YYYY-MM-DD for readability
+                    raw_ret = item.get('injReturnDate', '')
+                    inj_return_date = f"{raw_ret[:4]}-{raw_ret[4:6]}-{raw_ret[6:]}" if len(raw_ret) == 8 else ''
+
+                    self.official_injuries[clean_name] = designation
+                    self._injury_blurbs[clean_name] = {
+                        'description': description,
+                        'inj_return_date': inj_return_date,
+                    }
                 
                 tank_success = True
                 self.last_official_refresh = datetime.now()
@@ -503,8 +534,83 @@ class LudiYak:
         
         return final_status
 
+    def _ai_parse_blurb(self, description, player_name, inj_return_date=''):
+        """
+        Use Claude Haiku to extract structured injury intelligence from news blurb.
+        Only called for GTD/Day-To-Day players where nuance matters.
+
+        Args:
+            description:     Raw Tank01 blurb text (e.g. "Feb 5: Herro (ribs) is not traveling...")
+            player_name:     Human-readable name for context
+            inj_return_date: YYYY-MM-DD expected return from Tank01 injReturnDate field
+
+        Returns dict with parsed fields, or {} on failure (caller falls through to keyword logic).
+        """
+        if not description:
+            return {}
+
+        try:
+            from utils.claude_client import get_claude_analysis, HAIKU_MODEL
+            from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
+            import json
+
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            prompt = INJURY_BLURB_PARSE_PROMPT.format(
+                description=description,
+                player_name=player_name,
+                today_date=today_date,
+                inj_return_date=inj_return_date or 'unknown',
+            )
+
+            result_text = get_claude_analysis(
+                prompt=prompt,
+                system_prompt=INJURY_BLURB_SYSTEM,
+                model=HAIKU_MODEL,
+                temperature=0.0,   # deterministic — classification, not generation
+                max_tokens=150
+            )
+
+            if not result_text:
+                return {}
+
+            result = json.loads(result_text)
+            return result
+        except Exception as e:
+            print(f"   [YAK] AI blurb parse failed for {player_name}: {e}")
+            return {}
+
     def _nuance_check(self, player_name, team_name, primary_status, official_tag):
         """Internal helper to scan for 'Limits' or 'Scratch' news using Enhanced Yak logic."""
+        
+        # AI blurb parsing for richer intelligence
+        clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()
+        blurb_data = getattr(self, '_injury_blurbs', {}).get(clean_name, {})
+        blurb = blurb_data.get('description', '') if isinstance(blurb_data, dict) else blurb_data
+        inj_return_date = blurb_data.get('inj_return_date', '') if isinstance(blurb_data, dict) else ''
+        if blurb:
+            ai_parsed = self._ai_parse_blurb(blurb, player_name, inj_return_date=inj_return_date)
+            if ai_parsed:
+                tonight = ai_parsed.get('tonight_available')
+                context = ai_parsed.get('context')
+                severity = ai_parsed.get('severity')
+                body = ai_parsed.get('body_part', '?')
+                games_est = ai_parsed.get('games_out_estimate', '?')
+
+                # Recently traded = not injured, flag as active
+                if context == 'recently_traded':
+                    return {"status": "ACTIVE", "note": "[AI] Recently traded — not injured", "confidence": 0.85}
+
+                # Tonight definitively unavailable (moderate/severe)
+                if tonight is False and severity in ('moderate', 'severe'):
+                    return {"status": "DOUBTFUL", "note": f"[AI] {body} — {games_est}", "confidence": 0.85}
+
+                # Minutes risk — probable but limited
+                if ai_parsed.get('minutes_risk') and primary_status in ('PROBABLE', 'GTD') and tonight is not False:
+                    return {"status": "MINUTES_LIMIT", "note": f"[AI] {body} — minutes risk", "confidence": 0.8}
+
+                # Mid-game exit = fresh injury, likely out or limited next game
+                if context == 'mid_game_exit':
+                    return {"status": "DOUBTFUL", "note": f"[AI] Mid-game exit ({body})", "confidence": 0.85}
         
         # Use Targeted Search for deep intel
         news = self.targeted_search(player_name, team_name)

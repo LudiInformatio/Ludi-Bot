@@ -131,6 +131,9 @@ USE_MINUTES_PROJECTION = os.getenv('USE_MINUTES_PROJECTION', 'true').lower() == 
 # accepted, and (2) players with zero BDL coverage get a Tank01-only entry at -110/-110.
 # Set to False to disable entirely (reverts to pre-Tank01 BDL-only behavior).
 USE_TANK01_PROP_FALLBACK = True
+# Controls Tank01 consensus cross-check on BDL single-vendor lines.
+# Independent of full fallback — allows validation-only or fallback-only modes.
+USE_TANK01_LINE_VALIDATION = True
 
 SIM_COUNT = 10000
 SIM_VARIANCE = 0.35

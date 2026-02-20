@@ -29,11 +29,13 @@ from datetime import date
 sys.path.insert(0, '.')
 import config
 from utils.tank01_client import get_client as get_tank01_client
+from utils.player_id_resolver import PlayerIDResolver
 
 
 def sync_player_news() -> int:
     today = date.today().strftime('%Y-%m-%d')
     client = get_tank01_client()
+    resolver = PlayerIDResolver()
 
     news_items = client.get_top_news()
     if not news_items:
@@ -52,12 +54,18 @@ def sync_player_news() -> int:
             headline    = item.get('title', '') or ''
             content     = item.get('link', '') or ''  # link = the source URL
             published_at = today  # recentNews has no publishedAt field
-            team_abv    = ''
 
-            # playerIDs = Tank01 composite IDs (e.g. "28698616399")
-            # Store raw ID as player_name for now — resolved by module_d at query time
-            player_ids  = item.get('playerIDs', [])
-            player_name = player_ids[0] if player_ids else ''  # raw Tank01 ID
+            player_ids = item.get('playerIDs', [])
+            player_name = ''
+            team_abv = ''
+
+            if player_ids:
+                try:
+                    player_info = resolver.get_player_info(player_ids[0])
+                    player_name = player_info.get('full_name', '')
+                    team_abv = player_info.get('team', '')
+                except ValueError:
+                    pass  # Resolution failed, keep empty player_name
 
             if not headline:
                 continue  # skip empty records

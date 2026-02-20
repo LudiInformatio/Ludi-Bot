@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 from utils.bdl_client import BDLClient
+from utils.player_id_resolver import PlayerIDResolver
 
 
 class InjurySync:
@@ -248,13 +249,27 @@ class InjurySync:
                     "errors": ["Tank01 response missing 'body' key"]
                 }
 
+            resolver = PlayerIDResolver()
+
             parsed_injuries = []
             for item in data['body']:
-                player_name = item.get('longName', '').strip()
+                # Tank01 getNBAInjuryList has no 'longName' field.
+                # Resolve player name from playerID via canonical ID table.
+                player_id = item.get('playerID', '')
+                player_name = ''
+                team_abbreviation = item.get('teamAbv', '')
+
+                if player_id:
+                    try:
+                        player_info = resolver.get_player_info(player_id)
+                        player_name = player_info.get('full_name', '')
+                        if not team_abbreviation:
+                            team_abbreviation = player_info.get('team', '')
+                    except (ValueError, Exception):
+                        pass  # name stays empty → skipped below
+
                 if not player_name:
                     continue
-
-                team_abbreviation = item.get('teamAbv')
 
                 designation = item.get('designation', 'Available')
                 normalized_status = self.STATUS_MAP.get(designation, 'ACTIVE')
@@ -262,13 +277,23 @@ class InjurySync:
                 if normalized_status == 'ACTIVE':
                     continue
 
+                # injReturnDate is YYYYMMDD; convert to YYYY-MM-DD
+                raw_ret = item.get('injReturnDate', '')
+                return_date = (
+                    f"{raw_ret[:4]}-{raw_ret[4:6]}-{raw_ret[6:]}"
+                    if len(raw_ret) == 8 else None
+                )
+
+                description = item.get('description', '')
+                injury_type = self._parse_injury_type(description)
+
                 parsed_injuries.append({
                     'player_name': player_name,
                     'team_abbreviation': team_abbreviation,
                     'status': normalized_status,
-                    'return_date': None,
-                    'description': item.get('injury', ''),
-                    'injury_type': item.get('injury', ''),
+                    'return_date': return_date,
+                    'description': description,
+                    'injury_type': injury_type,
                     'source': 'Tank01'
                 })
 

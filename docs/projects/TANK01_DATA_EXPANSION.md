@@ -31,6 +31,10 @@
 - **Phase 7 full 3rd-fallback**: Needs Tank01 playerID → player_name cross-walk in `module_a.py` context. Recommend adding to `player_canonical_ids` table. *(deferred — medium priority)*
 
 ### Resolved Items (Feb 20, 2026)
+- **`player_injury_history` table** ✅: Added `player_name` column + UNIQUE constraint on `(player_id, injury_date, injury_type)`. Sync script now uses `INSERT OR IGNORE` for dedup. Schema matches Phase 8.14 spec.
+- **`player_news_cache` player_name resolution** ✅: Tank01 returns numeric player IDs. Added `PlayerIDResolver` integration in `module_d.py` to resolve Tank01 IDs → human names before caching. Enables `targeted_search()` cache hits.
+- **`USE_TANK01_LINE_VALIDATION` config flag** ✅: Added to `config.py`. Controls whether module_a.py validates prop lines against Tank01 consensus. Default `True`. Enables gradual rollout.
+- **`daily_briefing.yml` team sync wiring** ✅: Added `sync_team_current_info` step before morning briefing. Fetches live standings/streaks for all 30 teams → `team_current_info` table → `morning_brief.py` uses live data instead of hardcoded dict.
 - **`getNBATopNews` endpoint** ✅: Earlier "0 items" was a timing artifact (endpoint queried before daily news populated). Confirmed working: 50 items returned on second test. `player_news_cache` table created via `database.py` run. Endpoint is `/getNBANews?recentNews=true` (mapped as `get_top_news()` in Tank01Client).
 - **DIAMOND ratio drift** ✅: Root cause — model consistently produces 30-44% average edges on Odds API days (not BDL fallback). No corrupt odds (insane_edges check = 0). Fixed in two steps:
   1. `module_f.py` — Added minimum edge floors: DIAMOND requires ≥10% edge, BLUE CHIP requires ≥7% edge. Prevents composite bonus (archetype + gold combo) from double-bumping low-edge bets to DIAMOND.
@@ -64,7 +68,7 @@ Tank01 provides 17 NBA API endpoints. We currently use 6. This document covers t
 | 6 | Get General Game Information | `getNBAGameInfo` | **NO** | LOW | ~1 |
 | 7 | Get Daily Schedule | `getNBASchedule` | **NO** | MEDIUM | ~1 |
 | 8 | Get Team Roster | `getNBATeamRoster` | ✅ YES | Core | ~30/week |
-| 9 | Get Injury List History | `getNBAInjuryListHistory` | **NO** | MEDIUM | ~50/week |
+| 9 | Get Injury List History | `getNBAInjuryListHistory` | ❌ DEAD (404) | — | — |
 | 10 | Get Player Information | `getNBAPlayerInfo` | **NO** | LOW | ~0 |
 | 11 | Get Player List | `getNBAPlayerList` | **NO** | LOW | ~0 |
 | 12 | Get Team Schedule | `getNBATeamSchedule` | **NO** | LOW | ~0 |
@@ -308,30 +312,11 @@ if cached_news:
 
 ### Priority 6: `getNBAInjuryListHistory` — Historical Injury Records
 
-**Weekly batch** (Tuesdays, `weekly_validation.yml`). Returns historical injury records per player.
+**⚠️ DEAD ENDPOINT — confirmed 404 as of Feb 20, 2026**
 
-**Important:** NBA suspensions do NOT appear in Tank01/BDL injury feeds. Suspensions use a separate NBA disciplinary channel. Phase 8.16 (Perplexity detection) remains required for suspension intelligence.
+The Tank01 API no longer supports this endpoint. Historical injury tracking table (`player_injury_history`) is retained for potential future BDL/Perplexity-sourced data.
 
-**New table:**
-```sql
-CREATE TABLE IF NOT EXISTS player_injury_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id TEXT,
-    player_name TEXT,
-    injury_date TEXT,
-    return_date TEXT,
-    injury_type TEXT,
-    status TEXT,
-    games_missed INTEGER,
-    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(player_id, injury_date, injury_type)
-);
-```
-
-**Use cases:**
-- WELCOME_BACK detection (see how long player was actually out, not just designation)
-- Chronic injury patterns (player misses games with knee injury every 30 days?)
-- Validate Module D injury duration estimates
+**Current working alternative:** Module D uses `getNBAInjuryList` (current injuries) with proper playerID resolution, plus AI-powered blurb parsing for GTD/Day-To-Day nuance.
 
 ---
 
@@ -375,7 +360,6 @@ class Tank01Client:
                          player_props: bool = False) -> Dict: ...
     def get_projections(self, num_days: int = 7, **scoring_weights) -> Dict: ...
     def get_current_info(self, date: str) -> Dict: ...
-    def get_injury_history(self, player_id: str = None, days: int = 30) -> List[Dict]: ...
     def get_top_news(self, team_abv: str = None) -> List[Dict]: ...
     def get_games_for_player(self, player_id: str, season: str = "2024-25") -> List[Dict]: ...
 ```

@@ -1033,16 +1033,19 @@ class LudiHistorian:
                 ON player_news_cache(player_name, fetched_date)
         ''')
 
-        # Historical injury records — synced weekly from getNBAInjuryListHistory
+        # Historical injury records — Tank01 getNBAInjuryListHistory confirmed dead (404)
+        # Table kept for potential future BDL/Perplexity-sourced historical data
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_injury_history (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 player_id    TEXT,
+                player_name  TEXT,
                 injury_date  TEXT,
                 return_date  TEXT,
                 injury_type  TEXT,
                 status       TEXT,
-                games_missed INTEGER
+                games_missed INTEGER,
+                UNIQUE(player_id, injury_date, injury_type)
             )
         ''')
         c.execute('''

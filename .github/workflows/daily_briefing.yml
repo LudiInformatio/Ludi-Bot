@@ -68,6 +68,15 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
+      - name: Sync Team Current Info (Tank01)
+        timeout-minutes: 3
+        continue-on-error: true
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_team_current_info.py
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+
       - name: Run Morning Briefing
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
