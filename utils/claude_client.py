@@ -26,18 +26,24 @@ DEFAULT_MAX_TOKENS = 1500
 
 def _get_claude_auth_token() -> str:
     """Get Claude auth token with OAuth-first priority."""
+    # Priority 1: explicit CI token (GitHub Actions secret)
     if os.getenv('CLAUDE_CODE_OAUTH_TOKEN'):
         return os.getenv('CLAUDE_CODE_OAUTH_TOKEN')
-    
-    config_path = os.path.expanduser('~/.claude/config.json')
-    if os.path.exists(config_path):
-        try:
-            data = json.load(open(config_path))
-            if data.get('oauthToken'):
-                return data['oauthToken']
-        except Exception:
-            pass
-    
+
+    # Priority 2: local dev OAuth — SKIP in GitHub Actions.
+    # Self-hosted runner runs on local Mac, so ~/.claude/config.json exists
+    # but its oauthToken may be expired, causing 401s in CI.
+    if not os.getenv('GITHUB_ACTIONS'):
+        config_path = os.path.expanduser('~/.claude/config.json')
+        if os.path.exists(config_path):
+            try:
+                data = json.load(open(config_path))
+                if data.get('oauthToken'):
+                    return data['oauthToken']
+            except Exception:
+                pass
+
+    # Priority 3: API key (always used in CI when ANTHROPIC_API_KEY secret is set)
     return os.getenv('ANTHROPIC_API_KEY', '')
 
 
