@@ -46,6 +46,11 @@ class LudiYak:
         self.rss_cache = []
         self.last_rss_refresh = None
 
+        # [PHASE 2.5] RealGM RSS Config
+        self.realgm_url = "https://basketball.realgm.com/rss/wiretap/0/0.xml"
+        self.realgm_cache = []
+        self.last_realgm_refresh = None
+
         # [PAID TIER] Initialize API Monitor
         self.monitor = get_monitor()
         
@@ -303,6 +308,68 @@ class LudiYak:
                     }
                     
         return None
+
+    def refresh_realgm_rss(self):
+        """[PHASE 2.5] Fetch RealGM RSS Feed with dynamic cache."""
+        interval = self.get_refresh_interval()
+        
+        if self.last_realgm_refresh:
+            elapsed = datetime.now() - self.last_realgm_refresh
+            if elapsed < timedelta(minutes=interval):
+                return self.realgm_cache
+        
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+            r = requests.get(self.realgm_url, headers=headers, timeout=10)
+            
+            if r.status_code != 200:
+                print(f"   [YAK] ⚠️ RealGM RSS Fetch Fail: {r.status_code}")
+                return self.realgm_cache
+
+            feed = feedparser.parse(r.content)
+            new_cache = []
+            
+            for entry in feed.entries:
+                entry_title = entry.title if isinstance(entry.title, str) else str(entry.title)
+                new_cache.append({
+                    'player_name': entry_title,
+                    'headline': entry_title,
+                    'description': getattr(entry, 'description', ''),
+                    'pub_date': getattr(entry, 'published', ''),
+                    'link': getattr(entry, 'link', '')
+                })
+            
+            self.realgm_cache = new_cache
+            self.last_realgm_refresh = datetime.now()
+            return self.realgm_cache
+            
+        except Exception as e:
+            print(f"   [YAK] ⚠️ RealGM RSS Sync Error: {e}")
+            return self.realgm_cache
+
+    def get_realgm_intel(self, player_name):
+        """[PHASE 2.5] Check RealGM for recent player news."""
+        try:
+            self.refresh_realgm_rss()
+            clean_query = player_name.lower().strip()
+            
+            for item in self.realgm_cache:
+                if clean_query in item['player_name'].lower():
+                    full_text = f"{item['headline']} {item['description']}"
+                    classification = self.classify_headline(full_text)
+                    
+                    if classification:
+                        return {
+                            'status': classification['status'],
+                            'note': f"[REALGM] {item['headline']}",
+                            'confidence': classification['confidence'],
+                            'category': classification['category']
+                        }
+                        
+            return None
+        except Exception as e:
+            print(f"   [YAK] ⚠️ RealGM Intel Error: {e}")
+            return None
 
     def search_news(self, query):
         if query in self.cache:
@@ -581,6 +648,25 @@ class LudiYak:
 
     def _nuance_check(self, player_name, team_name, primary_status, official_tag):
         """Internal helper to scan for 'Limits' or 'Scratch' news using Enhanced Yak logic."""
+        
+        roto_intel = self.get_rotowire_intel(player_name)
+        realgm_intel = self.get_realgm_intel(player_name)
+        intel_sources = [x for x in [roto_intel, realgm_intel] if x]
+
+        if intel_sources:
+            STATUS_PRIORITY = {'OUT': 0, 'DOUBTFUL': 1, 'MINUTES_LIMIT': 2, 'ACTIVE': 3}
+            best = min(intel_sources, key=lambda x: STATUS_PRIORITY.get(x['status'], 99))
+            statuses = [s['status'] for s in intel_sources]
+
+            if len(intel_sources) >= 2 and len(set(statuses)) == 1:
+                best = dict(best)
+                best['confidence'] = 0.95
+                best['note'] = best.get('note', '') + ' [2-source confirmed]'
+
+            if best['status'] in ['OUT', 'DOUBTFUL']:
+                return best
+            if best['status'] == 'ACTIVE':
+                return best
         
         # AI blurb parsing for richer intelligence
         clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()

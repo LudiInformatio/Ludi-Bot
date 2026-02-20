@@ -109,6 +109,51 @@ class InjurySync:
         words = description.split()[:3]
         return ' '.join(words) if words else None
 
+    def _classify_rss_headline(self, text):
+        """Classify RSS headline text into injury status."""
+        t = text.lower()
+        if any(k in t for k in ['ruled out', "won't play", 'will not play',
+                                  'not traveling', 'sit out', ' out ', 'out for',
+                                  'out friday', 'out saturday', 'out sunday',
+                                  'out monday', 'out tuesday', 'out wednesday',
+                                  'out thursday', 'out tonight', 'out indefinitely']):
+            return 'OUT'
+        if 'doubtful' in t:
+            return 'DOUBTFUL'
+        if any(k in t for k in ['questionable', 'day-to-day', 'game-time decision',
+                                  'game time decision', 'gtd']):
+            return 'QUESTIONABLE'
+        if any(k in t for k in ['probable', 'expected to play', 'cleared',
+                                  're-evaluated', 'return from']):
+            return 'PROBABLE'
+        return None
+
+    def _extract_player_from_realgm_title(self, title):
+        """Extract player name from free-form RealGM sentence headlines."""
+        TEAM_WORDS = {
+            'cavaliers','warriors','lakers','celtics','nets','knicks','76ers',
+            'raptors','bulls','bucks','pacers','pistons','wizards','hornets',
+            'heat','magic','hawks','spurs','suns','nuggets','thunder','trail',
+            'blazers','jazz','clippers','kings','timberwolves','grizzlies',
+            'mavericks','pelicans','rockets','nba','report','sources'
+        }
+        first_word = title.split()[0].lower().rstrip(',') if title.split() else ''
+        if first_word in TEAM_WORDS:
+            return None
+
+        ACTION_WORDS = [' Out ', ' Will ', ' Is ', ' Has ', ' To ', " Won't ",
+                        ' Not ', ' Returns ', ' Ruled ', ' Expected ', ' Listed ']
+        name_part = title
+        for verb in ACTION_WORDS:
+            if verb in title:
+                name_part = title[:title.index(verb)].strip()
+                break
+
+        words = name_part.split()
+        if 2 <= len(words) <= 4 and ',' not in name_part:
+            return name_part
+        return None
+
     def _get_last_injury_record(self, conn, player_name):
         """Get the most recent injury record for a player"""
         cursor = conn.cursor()
@@ -311,6 +356,64 @@ class InjurySync:
                 "injuries": [],
                 "errors": [str(e)]
             }
+
+    def fetch_injuries_rss(self):
+        """Fetch injuries from RotoWire + RealGM RSS feeds."""
+        self._log("🔍 Fetching injuries from RSS feeds (RotoWire + RealGM)...")
+        try:
+            import feedparser
+        except ImportError:
+            return {"success": False, "injuries": [], "errors": ["feedparser not installed"]}
+
+        parsed_injuries = []
+        feeds = [
+            ("RotoWire", "https://www.rotowire.com/rss/news.php?sport=NBA", "rotowire"),
+            ("RealGM", "https://basketball.realgm.com/rss/wiretap/0/0.xml", "realgm"),
+        ]
+
+        for feed_name, feed_url, source_key in feeds:
+            try:
+                headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+                r = requests.get(feed_url, headers=headers, timeout=10)
+                if r.status_code != 200:
+                    self._log(f"   ⚠️  {feed_name} RSS returned {r.status_code}")
+                    continue
+
+                feed = feedparser.parse(r.content)
+
+                for entry in feed.entries:
+                    title = entry.title if isinstance(entry.title, str) else str(entry.title)
+
+                    if source_key == "rotowire":
+                        parts = title.split(': ', 1)
+                        player_name = parts[0].strip() if len(parts) > 1 else None
+                        headline = parts[1] if len(parts) > 1 else title
+                    else:
+                        player_name = self._extract_player_from_realgm_title(title)
+                        headline = title
+
+                    if not player_name:
+                        continue
+
+                    status = self._classify_rss_headline(f"{headline} {getattr(entry, 'description', '')}")
+                    if status not in ('OUT', 'DOUBTFUL'):
+                        continue
+
+                    parsed_injuries.append({
+                        'player_name': player_name,
+                        'team_abbreviation': None,
+                        'status': status,
+                        'return_date': None,
+                        'description': headline[:500],
+                        'injury_type': self._parse_injury_type(headline),
+                        'source': f'RSS_{feed_name.upper()}'
+                    })
+
+            except Exception as e:
+                self._log(f"   ⚠️  {feed_name} RSS error: {e}")
+
+        self._log(f"✅ RSS feeds: {len(parsed_injuries)} OUT/DOUBTFUL found")
+        return {"success": True, "injuries": parsed_injuries, "errors": []}
 
     def sync_to_database(self, injury_data):
         """
@@ -549,6 +652,23 @@ def main():
     print(f"Injuries synced: {result['injuries_synced']}")
     print(f"Status changes: {result['status_changes']}")
     print(f"Resolved: {result['resolved']}")
+    print()
+
+    print("Step 4: Enriching from RSS feeds (RotoWire + RealGM)...")
+    rss_data = syncer.fetch_injuries_rss()
+    if rss_data["success"] and rss_data["injuries"]:
+        existing_names = {inj['player_name'].lower() for inj in injury_data["injuries"]}
+        new_from_rss = [
+            i for i in rss_data["injuries"]
+            if i['player_name'].lower() not in existing_names
+        ]
+        if new_from_rss:
+            print(f"   📰 {len(new_from_rss)} new OUT/DOUBTFUL from RSS → writing to DB")
+            rss_result = syncer.sync_to_database({"success": True, "injuries": new_from_rss, "errors": []})
+            print(f"   Synced: {rss_result['injuries_synced']} | Changes: {rss_result['status_changes']}")
+        else:
+            print("   No additional injuries from RSS feeds")
+    print()
 
     if args.dry_run:
         print("\n⚠️  DRY RUN - No changes saved to database")
