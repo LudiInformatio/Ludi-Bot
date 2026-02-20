@@ -236,12 +236,12 @@ class LudiYak:
         # Late Night / Morning (12 AM - 10:59 AM)
         if 0 <= now.hour < 11:
             return 30
-        # Day (11 AM - 4:59 PM)
-        elif 11 <= now.hour < 17:
-            return 20
-        # Game Time (5 PM - 11:59 PM)
+        # Day (11 AM - 5:59 PM) — DB refreshed every 2 hrs by injury_refresh.yml
+        elif 11 <= now.hour < 18:
+            return 120
+        # Game Time (6 PM - 11:59 PM) — DB refreshed every 20 min
         else:
-            return 10
+            return 20
 
     def refresh_rotowire_rss(self):
         """[PHASE 2] Fetch RotoWire RSS Feed with dynamic cache."""

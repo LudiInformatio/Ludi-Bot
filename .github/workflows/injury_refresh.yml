@@ -1,0 +1,58 @@
+name: Injury Refresh (Intraday)
+
+# Keeps player_injuries DB fresh throughout game day.
+# The sync script self-throttles via staleness check — if data is already
+# current (< threshold minutes old) the script exits early without hitting APIs.
+#
+# Schedule design:
+#   11 AM - 6 PM EST:  every 2 hours   (4 runs, low API pressure)
+#   6 PM  - 11 PM EST: every 20 min    (15 runs, game-time accuracy)
+#
+# All times in UTC (EST = UTC-5, EDT = UTC-4)
+# Runs are intentionally slightly offset from other workflows to avoid DB lock.
+
+on:
+  schedule:
+    # --- Daytime: every 2 hours (11 AM, 1 PM, 3 PM, 5 PM EST) ---
+    - cron: '2 16 * * *'   # 11:02 AM EST
+    - cron: '2 18 * * *'   # 1:02  PM EST
+    - cron: '2 20 * * *'   # 3:02  PM EST
+    - cron: '2 22 * * *'   # 5:02  PM EST
+
+    # --- Evening: every 20 min (6 PM - 10:40 PM EST) ---
+    - cron: '2,22,42 23 * * *'   # 6:02, 6:22, 6:42 PM EST
+    - cron: '2,22,42 0 * * *'    # 7:02, 7:22, 7:42 PM EST
+    - cron: '2,22,42 1 * * *'    # 8:02, 8:22, 8:42 PM EST
+    - cron: '2,22,42 2 * * *'    # 9:02, 9:22, 9:42 PM EST
+    - cron: '2,22,42 3 * * *'    # 10:02, 10:22, 10:42 PM EST
+
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force refresh even if data is already fresh'
+        type: boolean
+        default: false
+
+jobs:
+  refresh-injuries:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Sync Injuries
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          export PYTHONPATH=$PWD
+          source .venv/bin/activate 2>/dev/null || true
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python3 scripts/sync_injuries.py --force
+          else
+            python3 scripts/sync_injuries.py
+          fi

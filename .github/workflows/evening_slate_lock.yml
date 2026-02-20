@@ -58,6 +58,17 @@ jobs:
 
 
 
+      - name: Refresh Injuries (Late Scratches)
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Force refresh so any late scratches (4-6 PM window) are in DB
+          # before evening cards generate. Non-fatal if it fails.
+          export PYTHONPATH=$PWD
+          python3 scripts/sync_injuries.py --force || echo "⚠️ Injury refresh warning (non-fatal)"
+
       - name: Run Evening Lock Briefing
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

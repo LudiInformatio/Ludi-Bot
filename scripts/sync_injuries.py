@@ -583,12 +583,58 @@ class InjurySync:
         }
 
 
+def _get_stale_threshold_minutes():
+    """
+    Time-of-day threshold for considering DB injury data stale.
+    Matches the intraday refresh schedule in injury_refresh.yml.
+    """
+    hour = datetime.now().hour
+    if 18 <= hour < 23:   # 6 PM - 11 PM: game time — refresh every 20 min
+        return 20
+    elif 11 <= hour < 18: # 11 AM - 6 PM: daytime — refresh every 2 hrs
+        return 120
+    else:                  # overnight (11 PM - 11 AM): only scheduled 5 AM run matters
+        return 480
+
+
+def _is_db_fresh(db_path='ludi.db'):
+    """
+    Returns True if player_injuries was synced within the current stale threshold.
+    Prevents redundant Tank01/BDL API calls when data is already current.
+    """
+    threshold = _get_stale_threshold_minutes()
+    try:
+        conn = sqlite3.connect(db_path, timeout=10)
+        row = conn.execute(
+            "SELECT MAX(snapshot_time) FROM player_injuries"
+        ).fetchone()
+        conn.close()
+        if not row or not row[0]:
+            return False
+        last = datetime.fromisoformat(row[0])
+        age_minutes = (datetime.now() - last).total_seconds() / 60
+        return age_minutes < threshold
+    except Exception:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sync NBA injuries to database")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
     parser.add_argument("--verbose", action="store_true", help="Enable debug output")
+    parser.add_argument("--force", action="store_true",
+                        help="Force sync even if DB is already fresh (bypass staleness check)")
 
     args = parser.parse_args()
+
+    # Staleness guard: skip if DB was synced recently — unless --force is passed.
+    # This lets the workflow run frequently (every 20 min during game time)
+    # without hammering Tank01/BDL quota when data is already current.
+    if not args.force and not args.dry_run and _is_db_fresh():
+        threshold = _get_stale_threshold_minutes()
+        print(f"✅ Injury data is fresh (< {threshold} min old). Skipping sync.")
+        print("   Pass --force to override.")
+        sys.exit(0)
 
     syncer = InjurySync(verbose=args.verbose, dry_run=args.dry_run)
 
