@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Send workflow summary to Telegram.
+Send workflow summary to Slack ops channel.
 Used by GitHub Actions to report pipeline results.
 """
 import argparse
@@ -10,7 +10,7 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, '.')
 
-from utils.telegram_notifier import send_message
+from utils.slack_notifier import send_slack_message
 
 
 def main():
@@ -33,8 +33,8 @@ def main():
     msg += f"Time: {time_str}"
     
     try:
-        send_message(msg)
-        print(f"✅ Summary sent: {args.games} games, {args.bets} bets, {args.errors} errors")
+        send_slack_message(msg)
+        print(f"✅ Summary sent to Slack: {args.games} games, {args.bets} bets, {args.errors} errors")
     except Exception as e:
         print(f"⚠️ Could not send summary: {e}")
         # Don't fail the workflow for notification issues

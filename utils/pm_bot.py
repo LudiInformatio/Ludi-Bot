@@ -11,6 +11,7 @@ except ModuleNotFoundError:
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 from utils.telegram_notifier import send_photo, send_message
+from utils.slack_notifier import send_slack_message
 
 class ProjectManagerBot:
     """
@@ -232,9 +233,10 @@ Tomorrow's focus: {next_task}
                 contents=prompt
             )
             briefing_text = response.text
-            
-            return send_photo(header_img, caption=briefing_text, parse_mode=None)
-            
+
+            # Route work notes to Slack ops channel (not Telegram)
+            return send_slack_message(briefing_text)
+
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")
             return False
@@ -282,7 +284,8 @@ Go touch grass. Context saved.
                 model=self.model_id,
                 contents=prompt
             )
-            return send_photo(header_img, caption=response.text, parse_mode=None)
+            # Route break/state messages to Slack ops channel
+            return send_slack_message(response.text)
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
             return False

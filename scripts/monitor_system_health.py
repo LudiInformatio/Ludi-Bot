@@ -21,7 +21,7 @@ from typing import Dict, List, Tuple, Any
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import project modules
-from utils.telegram_notifier import send_alert
+from utils.slack_notifier import send_slack_alert as send_alert
 
 
 class SystemHealthMonitor:

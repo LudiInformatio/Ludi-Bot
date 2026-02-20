@@ -96,9 +96,14 @@ GOOGLE_SEARCH_CX = os.getenv('GOOGLE_SEARCH_CX')
 # 4. ALERTS & REPORTING
 # ====================================================
 
-# TELEGRAM BOT (Morning Briefing)
+# TELEGRAM BOT (Morning Briefing — betting product only)
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
+# SLACK (Ops/Work Notes — pipeline alerts, diagnostics, GitHub links)
+# Workspace: vibestarters.slack.com | Channel: C0AGBQXRXB3
+# Get webhook URL from app settings (A0AD1RWU6TG) → Incoming Webhooks
+SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '')
 
 # ====================================================
 # 5. GLOBAL SETTINGS (Non-Sensitive)

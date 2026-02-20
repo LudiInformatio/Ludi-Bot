@@ -173,8 +173,7 @@ jobs:
       - name: Send Telegram notification (failures found)
         if: steps.failures.outputs.fail_count != '0' || needs.validate-schema.outputs.schema_status == 'FAIL'
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           FAIL_COUNT: ${{ steps.failures.outputs.fail_count }}
           FAILURES: ${{ steps.failures.outputs.failures }}
           SCHEMA_STATUS: ${{ needs.validate-schema.outputs.schema_status }}
@@ -200,16 +199,14 @@ jobs:
           [View Actions](https://github.com/${REPO}/actions)
           EOF
           )
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d parse_mode="Markdown" \
-            -d text="${MESSAGE}" || echo "Telegram notification failed"
+          curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+            -H 'Content-type: application/json' \
+            --data "{\"text\":\"${MESSAGE}\"}" || echo "Slack notification failed"
 
       - name: No failures - send success notification
         if: steps.failures.outputs.fail_count == '0' && needs.validate-schema.outputs.schema_status == 'PASS' && github.event.inputs.scope != 'full'
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
         run: |
           echo "✅ No workflow failures in last 24 hours and schema is healthy. Skipping Claude QA."
@@ -222,7 +219,6 @@ jobs:
           [View Actions](https://github.com/${REPO}/actions)
           EOF
           )
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d parse_mode="Markdown" \
-            -d text="${MESSAGE}" || echo "Telegram notification failed"
+          curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+            -H 'Content-type: application/json' \
+            --data "{\"text\":\"${MESSAGE}\"}" || echo "Slack notification failed"
