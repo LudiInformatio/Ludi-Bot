@@ -1,0 +1,128 @@
+
+==================================================
+   LUDI INFORMATIO | SYSTEM INITIALIZATION
+   Architecture: Modules A-H (Production v2.0)
+==================================================
+========================================
+LUDI INFORMATIO: MODULE A (GATEKEEPER) ONLINE
+   >>> PIPELINE: V9.4 (4-TIER LINE SHOPPING)
+   >>> TIERS: NC_LEGAL | SHARP | DFS | SOCIAL
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] 📡 No games found - auto-populating today's slate...
+   [ZEBRAS] ❌ Error populating games: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us&markets=h2h&oddsFormat=american
+   [ZEBRAS] ✅ Games populated successfully
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE H (HISTORIAN) ONLINE
+========================================
+   🛡️ API Budget: 200 requests
+
+========================================
+LUDI INFORMATIO: MODULE C (ORACLE V4.0) LIVE
+   >>> Hybrid Engine: Normal (High-Vol) + Poisson (Rare)
+   >>> Sim Count: 5000
+========================================
+   >>> Shot quality data loaded: 500 players
+   >>> Rolling TS% data loaded: 339 players
+   >>> Drives context data loaded: 367 players
+   >>> Team defense data loaded: 30 teams
+
+========================================
+LUDI INFORMATIO: MODULE D (YAK V3.5) ONLINE
+   >>> 15-MIN SYNC | PROBABLE & AVAILABLE ACTIVE
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE
+   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE
+========================================
+[Module E] DB clutch fallback loaded: 30 teams
+[Module E] Speed/fatigue data loaded: 367 players
+[Module E] Touches data loaded: 545 players
+[Module E] Leverage profiles loaded: 30 teams
+[Module E] Player leverage usage loaded: 434 players
+
+========================================
+LUDI INFORMATIO: MODULE F (V5.2) ONLINE
+   >>> DETERMINISTIC REPORTING | NO SPECULATION
+   >>> BET LOGGING ENABLED
+========================================
+✅ BetLogger initialized (DB: ludi.db, Logs: logs/bets)
+✅ Bet logger connected
+✅ TagClassifier initialized with synced defensive schemes
+✅ Tag classifier connected
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] 📡 No games found - auto-populating today's slate...
+   [ZEBRAS] ❌ Error populating games: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us&markets=h2h&oddsFormat=american
+   [ZEBRAS] ✅ Games populated successfully
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE X (SCENARIO V3.7) ONLINE
+   >>> DYNAMIC ROSTERS | LIVE SCHEMA ACTIVE
+========================================
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...    [ZEBRAS] 🛡️ Cleaning UI and simulating human... Done.
+   [ZEBRAS] 🔽 Opening date dropdown... Done.
+   [ZEBRAS] 🔄 Toggling date to force refresh... Done.
+✅ Success. Found assignments for 10 games.
+
+==================================================
+   >>> STARTING DAILY SIMULATION CYCLE <<<
+   Mode: Production v2.0
+==================================================
+   📋 Daily Lock: 2026-01-14 | Mode: LIVE
+[1] 📡 Fetching Slate & Live Odds...
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...    [ZEBRAS] 🛡️ Cleaning UI and simulating human... Done.
+   [ZEBRAS] 🔽 Opening date dropdown... Done.
+   [ZEBRAS] 🔄 Toggling date to force refresh... Done.
+✅ Success. Found assignments for 10 games.
+      📊 ODDS_API: 0 credits remaining
+
+⚠️ WARNING: ODDS_API quota at 100.0% (0 remaining)
+
+   ⚠️  The-Odds-API Failed: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us%2Cus2&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american
+   📡 Falling back to BallDontLie for game lines...
+   📡 [BDL] Fetching game lines from BallDontLie...
+   ✅ [BDL] Found 10 games
+   ----------------------------------------
+   === 2026-02-19 (TONIGHT) ===
+   🏀 Houston Rockets @ Charlotte Hornets
+      > Time: 07:00 PM ET | Line: 4.5 | Total: 216.5 | Pace: 0.958x | Whistle: 0.9x (100% conf)
+   🏀 Brooklyn Nets @ Cleveland Cavaliers
+      > Time: 07:00 PM ET | Line: -16.5 | Total: 230.5 | Pace: 1.006x | Whistle: 0.965x (67% conf)
+   🏀 Atlanta Hawks @ Philadelphia 76ers
+      > Time: 07:00 PM ET | Line: -1.5 | Total: 237.5 | Pace: 0.989x | Whistle: 0.934x (100% conf)
+   ----------------------------------------
+   ✅ [BDL] Loaded 3 games with lines
+[DAILY_LOCK] WARNING: Config date (2026-01-14) != Today (2026-02-19)
+[DAILY_LOCK] Running in LIVE mode (ignoring stale config)
+   📡 [BDL] Using BallDontLie for props (fallback mode)...
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 1834 props
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 2534 props
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 2712 props
+✅ Props loaded.
+[step 3] Building Scenarios & Rosters...
+[step 4] Running Monte Carlo Simulations (0 scenarios)...
+[step 5] Generating Daily Briefing (Module F)...
+[FONTS] ✅ Using bundled Liberation fonts
+✅ Visual briefing generated: /Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/assets/generated/ludi_generated_briefing.png
+Traceback (most recent call last):
+  File "/Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/main.py", line 666, in <module>
+    app.run_daily_cycle()
+  File "/Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/main.py", line 639, in run_daily_cycle
+    briefing, image_path = self.reporter.generate_report(processed_slate)
+    ^^^^^^^^^^^^^^^^^^^^
+ValueError: too many values to unpack (expected 2)
