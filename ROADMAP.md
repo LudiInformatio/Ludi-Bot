@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 19, 2026 7:39 PM EST
+**Last Updated:** February 20, 2026 5:00 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot) | Infrastructure stable, calibration current
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅
+**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot) | Feb 20 Post-ASB Audit complete | 6 PM pipeline ready
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -57,6 +57,33 @@ This is the single source of truth for project tasks and priorities.
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 | 8.13 | Ask Ludi — Slack Bot | MEDIUM | Two-way Slack bot (vibestarters workspace): natural language → ludi.db + Claude → response in thread. Haiku intent, Sonnet analysis. Slack infrastructure already live. | ~$0.05/day |
+| 8.16 | Suspension Intelligence | MEDIUM | `sync_suspensions.py` (Perplexity → Claude Haiku → auto-insert into `player_injuries` as SUSPENDED). Module D + Module X pick up automatically. Three injection points: morning sync, game context query, Module D `get_injuries()`. | ~$0.02/day |
+| 8.17 | Foul Intelligence | MEDIUM | Extend `sync_stint_profiles.py` to parse foul events from PlayByPlayV3 (same API, same loop, no extra cost). New `player_foul_splits` table (period, clock, foul_number, ref_name). Unlocks: early foul trouble → Module C minutes dampener, ref-player bias rebuild, weekly Claude context. | $0 |
+
+---
+
+### Feb 20 Post-All-Star Break Audit ✅ COMPLETE (Feb 20, 2026)
+
+First game day back exposed 9 critical/high issues. Full recovery + hardening completed before 6 PM pipeline.
+
+**Bugs Fixed:**
+- Module H `ON CONFLICT` mismatch → 8 days of silent game log insert failures (all game logs now syncing)
+- `anthropic` missing from `requirements.txt` → all Phase 8 AI features were silently disabled in CI since launch
+- Health monitor false failures → exited 1 on stale data, pipeline marked failed daily despite generating 213+ bets
+- BDL milestone market type → corrupt odds (-2, -4, -9) produced 50× payout multiplier (+269u phantom P&L)
+- `generate_report()` 3-tuple callers → 4 files, 6 callers fixed
+- `player_game_logs` settle → 1,947 PUSH bets settled to 998W/863L/81V after backfill
+- Referee sync → NBA.com consent popup blocked Playwright; skips date toggle for today's slate
+
+**Hardening Added:**
+- BDL vendor quality filter (DK/FD/Caesars/BetRivers/BetMGM only) + modal line ≥2 vendor requirement
+- `scripts/backfill_games_bdl.py` — reusable when Odds API is down
+- P&L sanity gate in settlement summary (±50u triggers Slack alert)
+- `team_lineups.created_at` backfilled (17,368 rows had NULL)
+- 4 missing packages added to `requirements.txt` (anthropic, PyYAML, schedule, tabulate)
+- BDL API best-practices docs — comprehensive endpoint reference + audit lessons
+
+**Remaining (next sprint):** Games table fallback chain (3A), output assertion gate (3B), Module H→games bridge (3C), Perplexity/Claude prompt enrichment (2H)
 
 ---
 
