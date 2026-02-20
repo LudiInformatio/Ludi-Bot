@@ -258,6 +258,30 @@ player_id = api_response['id']  # Changed from "1629029" to "28398804489"
 canonical_id = resolve_to_nba_id(api_response['id'], api_response['name'])
 ```
 
+### BDL Milestone Market → Phantom P&L (Feb 2026)
+```python
+# ❌ Reading over_odds from milestone market → gets -2, -4, -9
+# 100/abs(-2) = 50x payout. Reported +269u when actual = -41u.
+over_odds = market.get('over_odds')  # None or garbage on milestone market
+
+# ✅ Fix: Always check market type first
+if market.get('type') != 'over_under': continue
+if abs(over_odds) < 100 or abs(under_odds) < 100: continue
+```
+
+### UPSERT Conflict Target Mismatch (8 days data loss, Feb 2026)
+```python
+# ❌ Wrong conflict target — inserts silently fail for 8 days
+ON CONFLICT(game_id, player_id) ...  # actual unique key is (player_id, game_date)
+
+# ✅ Fix: verify with PRAGMA index_info(idx_name) before writing ON CONFLICT
+ON CONFLICT(player_id, game_date) DO UPDATE SET pts = excluded.pts
+```
+
+### Single API Population Path → Table Frozen When API Down (Feb 2026)
+- `games` table had ONE path: Odds API. When quota hit, table froze for 8 days.
+- Fix: Add BDL/Tank01 fallback. Any critical table needs ≥ 2 independent population paths.
+
 ---
 
 ## Pre-Integration Checklist
@@ -275,8 +299,42 @@ canonical_id = resolve_to_nba_id(api_response['id'], api_response['name'])
 
 ---
 
+---
+
+## BDL Quick Reference (GOAT Tier, Feb 2026)
+
+| What | Endpoint | Key Params |
+|------|----------|------------|
+| Games | `GET /v1/games` | `dates[]`, `team_ids[]`, `start_date`/`end_date` |
+| Box scores (live) | `GET /v1/box_scores/live` | none |
+| Box scores (historical) | `GET /v1/box_scores` | `date` (required) |
+| Player game stats | `GET /v1/stats` | `dates[]`, `player_ids[]`, `game_ids[]` |
+| Advanced stats (V2) | `GET /nba/v2/stats/advanced` | `dates[]`, `player_ids[]`, `period` (0-4) |
+| Season averages (general) | `GET /v1/season_averages/general?type=base` | `season`, `season_type`, `player_ids[]` |
+| **Season averages (playtype)** | `GET /v1/season_averages/playtype?type=isolation` | — replaces Synergy scraping |
+| **Season averages (tracking)** | `GET /v1/season_averages/tracking?type=drives` | — replaces Ghost Protocol |
+| Team season averages | `GET /nba/v1/team_season_averages/general?type=opponent` | Defensive stats |
+| Game odds | `GET /v2/odds` | `dates[]` or `game_ids[]` (one required) |
+| **Player props** | `GET /v2/odds/player_props` | `game_id` (required), `vendors[]`, `prop_type` |
+| Player injuries | `GET /v1/player_injuries` | `player_ids[]`, `team_ids[]` |
+| Leaders | `GET /v1/leaders` | `stat_type`, `season` |
+| Plays (PBP) | `GET /v1/plays` | `game_id` (required) |
+
+**Props must-do:**
+1. `if market.get('type') != 'over_under': continue` — skip milestone markets
+2. `if abs(over_odds) < 100: continue` — skip corrupt/truncated odds
+3. Add `vendors[]=['draftkings','fanduel','caesars']` to filter low-quality books
+
+**Pagination:** `meta.next_cursor` → pass as `?cursor=VALUE`. Always `per_page=100`.
+
+**⚡ Strategic opportunities:**
+- `/v1/season_averages/playtype` = Synergy data via clean API (replace NBA.com scraping)
+- `/nba/v2/stats/advanced` = tracking + hustle + defensive matchup per game (replace Ghost Protocol)
+
+---
+
 ## Remember
 
 > "The best API integration is one that fails loudly, degrades gracefully, and logs everything."
 
-**Full guide:** `docs/API_BEST_PRACTICES.md` (1,847 lines)
+**Full guide:** `best-practices/api/API_BEST_PRACTICES.md`

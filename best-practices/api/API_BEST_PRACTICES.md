@@ -982,6 +982,47 @@ def check_alerts():
         send_critical_alert(f"Error rate: {error_rate*100:.1f}%")
 ```
 
+### P&L Sanity Gate
+
+**Problem:** Corrupt odds data (from BDL fallback sources) can produce impossible payout multipliers that inflate P&L by 10-100x. Standard monitoring doesn't catch this.
+
+```python
+# In settlement summary script — validate before reporting
+total_pnl = sum(bet.profit_loss for bet in settled_bets)
+
+# Sanity gate: single-day P&L > ±50u is anomalous (flag immediately)
+if abs(total_pnl) > 50:
+    msg = f"⚠️ P&L ANOMALY: {total_pnl:.1f}u on {len(settled_bets)} bets — investigate before trusting"
+    print(msg)
+    from utils.slack_notifier import send_slack_alert
+    send_slack_alert("P&L Anomaly Detected", msg)
+
+# Also validate no single bet has > 10u profit (catches 50x multiplier bug)
+outliers = [b for b in settled_bets if abs(b.profit_loss) > 10]
+if outliers:
+    send_slack_alert("Bet Outliers", f"{len(outliers)} bets with >10u P&L — check odds data")
+```
+
+> **Real example (Feb 19, 2026):** Reported +269u was actually -41u. Root cause: BDL milestone market types produced corrupt odds (-2, -4, -9). Settlement formula `100/abs(-2) = 50x` per win.
+
+### Notification Routing: Telegram vs Slack
+
+**Pattern (Ludi-Bot Feb 2026):** Separate ops alerts from betting product.
+
+```python
+# Ops/system alerts → Slack (webhook, channel C0AGBQXRXB3)
+# Includes: quota warnings, P&L anomalies, API failures, workflow errors
+from utils.slack_notifier import send_slack_alert
+send_slack_alert("Quota Warning", f"{api_name} at {pct:.1f}% — {remaining} remaining")
+
+# Betting product → Telegram (stays clean for bettors)
+# Includes: Diamond plays, P&L summaries, game notes, spotlights
+from utils.telegram_notifier import send_message
+send_message("💎 DIAMOND: Player Props Brief")
+```
+
+**Why separate:** Mixing ops alerts (workflow failures, API errors) with betting output clutters the betting experience. Ops team monitors Slack; bettors see clean Telegram.
+
 ### Telegram Notifications
 
 **Pattern:** Real-time alerts to mobile.
@@ -1183,6 +1224,37 @@ def validate_game_schedule():
 ---
 
 ## 10. Common Pitfalls & Anti-Patterns
+
+### ❌ UPSERT Conflict Target Doesn't Match Unique Constraint
+
+**Anti-Pattern:**
+```python
+# BAD: ON CONFLICT target doesn't match the actual unique index
+cursor.execute("""
+    INSERT INTO player_game_logs (player_id, game_date, pts)
+    VALUES (?, ?, ?)
+    ON CONFLICT(game_id, player_id) DO UPDATE SET pts = excluded.pts
+""")
+# If actual unique constraint is (player_id, game_date):
+# → No conflict is ever detected
+# → Inserts either silently succeed as duplicates OR fail with ConstraintError
+# → Days/weeks of data missing with NO ERROR MESSAGE
+```
+
+**Correct Pattern:**
+```python
+# GOOD: Verify conflict target against actual unique constraint FIRST
+# Check with: sqlite3 db.db ".indexes" then "PRAGMA index_info(idx_name);"
+cursor.execute("""
+    INSERT INTO player_game_logs (player_id, game_date, pts)
+    VALUES (?, ?, ?)
+    ON CONFLICT(player_id, game_date) DO UPDATE SET pts = excluded.pts
+""")
+```
+
+> **Lessons from Ludi-Bot (Feb 19, 2026):** `module_h_historian.py` had `ON CONFLICT(game_id, player_id)` but the actual unique constraint is `(player_id, game_date)`. All game log inserts silently failed for 8 days — zero data from Feb 12–19. The script reported success with no errors. Fix: always run `PRAGMA index_info()` before writing ON CONFLICT clauses.
+
+---
 
 ### ❌ Silent Failures
 
@@ -2141,9 +2213,213 @@ When adding a new API-calling workflow:
 **Fix:** Added `git pull --rebase` before every push
 
 ### 4. Workflow Passing Invalid CLI Args (Jan 28)
-**Problem:** Workflow used `--production-mode` flag that didn't exist in `main.py`  
-**Impact:** Pipeline crashed immediately on every run  
+**Problem:** Workflow used `--production-mode` flag that didn't exist in `main.py`
+**Impact:** Pipeline crashed immediately on every run
 **Fix:** Replaced CLI flags with environment variables (`IS_PRODUCTION`)
+
+### 5. BDL Milestone Market Leak → Phantom +269u P&L (Feb 20, 2026)
+**Problem:** BDL has two prop market structures: `over_under` (correct) and `milestone` (achievement bet with single `odds` field). Code reading `over_odds`/`under_odds` from milestone markets got None/garbage (-2, -4, -9). Settlement formula `100/abs(-2) = 50x` per win.
+**Impact:** Reported +269u profit on a day that was actually -41u. 167 bets affected.
+**Fix:** `if prop.get('market', {}).get('type') != 'over_under': continue` + `if abs(over_odds) < 100: continue`
+
+### 6. UPSERT Conflict Target Mismatch → 8 Days Silent Data Loss (Feb 19, 2026)
+**Problem:** `module_h_historian.py` had `ON CONFLICT(game_id, player_id)` but actual unique constraint is `(player_id, game_date)`. No conflict was ever triggered — inserts appeared to succeed but either created duplicates or silently did nothing.
+**Impact:** ALL player game log inserts failed silently for 8 days. Zero new data from Feb 12–19.
+**Fix:** `ON CONFLICT(player_id, game_date)`. Always verify with `PRAGMA index_info(idx_name)` before writing ON CONFLICT clauses.
+
+### 7. Single Population Path → Table Freezes When Primary API Fails (Feb 19, 2026)
+**Problem:** `games` table had exactly ONE population path — Odds API scripts (`populate_todays_games.py`, `module_g.py`, `sync_daily_referees.py`). When Odds API returned 401 (quota), the table froze at Feb 12.
+**Impact:** No game results → 1,947 bets unsettled. Settlement, scoring environment, and briefings all dependent on `games` table.
+**Fix:** Added BDL fallback to `populate_todays_games.py`. Added Module H → games UPSERT bridge. Two independent population paths now exist.
+
+### 8. BDL Props Coverage Is Not Full-Slate (Feb 19, 2026)
+**Problem:** BDL's `/v2/odds/player_props` endpoint only returns props for games where sportsbooks have published lines. On a 10-game slate with BDL as fallback, only 3 games had props.
+**Impact:** Pipeline covered only 30% of games. 7 games silently skipped (no warning in output).
+**Fix:** Added explicit log when a game has no props: `print(f"No props for {matchup} — BDL coverage gap")`. Expected behavior, not a code bug — but must be surfaced clearly.
+
+---
+
+## 16. BallDontLie (BDL) Complete Endpoint Reference
+
+**Last Updated:** February 20, 2026 | **Account tier required:** GOAT ($39.99/mo) for most endpoints
+**Base URLs:** `https://api.balldontlie.io/v1/` | `https://api.balldontlie.io/nba/v1/` | `https://api.balldontlie.io/nba/v2/`
+**Pagination:** Cursor-based. `meta.next_cursor` in response → pass as `?cursor=VALUE`. Max 100 per page.
+
+---
+
+### Games & Scores
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| All Games | `GET /v1/games` | `dates[]`, `seasons[]`, `team_ids[]`, `start_date`, `end_date`, `postseason` | Status: "Final", "1st Qtr", "7:00 pm ET" |
+| Single Game | `GET /v1/games/{id}` | — | Same shape as above |
+| Live Box Scores | `GET /v1/box_scores/live` | none | Real-time, all games today |
+| Historical Box Scores | `GET /v1/box_scores` | `date` (required, YYYY-MM-DD) | Completed games only |
+
+**Box score per-player fields:** `min`, `pts`, `reb`, `ast`, `stl`, `blk`, `fgm/fga`, `fg3m/fg3a`, `ftm/fta`, `oreb`, `dreb`, `turnover`, `pf`, `plus_minus`
+
+**Game status values:**
+- Pre-game: `"7:00 pm ET"` (time string)
+- In-progress: `"1st Qtr"`, `"Halftime"`, `"4th Qtr"`, etc.
+- Complete: `"Final"`
+
+**Note:** Quarter scores (`home_q1`-`q4`), bonus status, and timeouts only available for 2023 season+.
+
+---
+
+### Player Stats
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| Game Stats | `GET /v1/stats` | `dates[]`, `seasons[]`, `player_ids[]`, `game_ids[]` | Per-game box scores |
+| Advanced Stats V1 | `GET /nba/v1/stats/advanced` | `dates[]`, `player_ids[]`, `seasons[]`, `game_ids[]` | PIE, pace, usage%, ortg/drtg, reb%, ast% |
+| Advanced Stats V2 | `GET /nba/v2/stats/advanced` | Same + `period` (0=game, 1-4=qtrs) | **EVERYTHING**: tracking, hustle, defensive matchup, four factors, scoring splits |
+| Season Averages | `GET /v1/season_averages/{category}` | `season`, `season_type`, `type`, `player_ids[]` | Categories below |
+| Leaders | `GET /v1/leaders` | `stat_type`, `season` | League leaders by any stat |
+
+**Advanced Stats V2 — what's available (per-game or per-quarter):**
+- Core: `usage_percentage`, `offensive_rating`, `defensive_rating`, `net_rating`, `pace`, `pie`, `true_shooting_percentage`
+- Tracking: `speed`, `distance`, `touches`, `passes`, `contested_fg_pct`, `uncontested_fg_pct`
+- Hustle: `box_outs`, `deflections`, `charges_drawn`, `contested_shots`, `loose_balls_recovered`, `screen_assists`
+- Defensive matchup: `matchup_fg_pct`, `matchup_minutes`, `switches_on`, `partial_possessions`
+- Four Factors: `efg_pct`, `free_throw_attempt_rate`, `team_turnover_pct` (and opponent versions)
+- Scoring splits: paint points, fast break points, second-chance points, assisted/unassisted splits
+
+**⚡ Strategic note:** BDL V2 Advanced Stats has tracking + hustle + defensive matchup DATA PER GAME. This could REPLACE Ghost Protocol (browser scraping from NBA.com) for most use cases. Much cleaner pipeline.
+
+**Season Averages categories (`/v1/season_averages/{category}`):**
+| Category | Available Types | Use Case |
+|----------|----------------|----------|
+| general | base, advanced, usage, scoring, defense, misc | Standard projections |
+| playtype | isolation, postup, transition, spotup, handoff, cut, offscreen, roll_man, putback | **Synergy alternative** — cleaner API vs browser scrape |
+| tracking | drives, passing, rebounding, speeddistance, catchshoot, pullups | Speed, distance, touches |
+| shooting | 5ft_range, by_zone | Shot zone frequency + efficiency |
+| clutch | base, advanced, misc, scoring, usage | Clutch-time stats |
+| hustle | (no type) | Box outs, deflections, screen assists |
+| shotdashboard | overall, pullups, catch_and_shoot, less_than_10_ft | Shot profile |
+
+**⚡ Strategic note:** `playtype` category via `/v1/season_averages/playtype?type=isolation` returns the same data as NBA Synergy (ISO PPP, frequency%) via a clean API. Currently we scrape this from NBA.com with browser automation. This BDL endpoint is a much cleaner replacement.
+
+---
+
+### Betting / Odds
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| Game Odds | `GET /v2/odds` | `dates[]` or `game_ids[]` (one required) | Spread, moneyline, total per book |
+| Player Props | `GET /v2/odds/player_props` | `game_id` (required), `player_id`, `prop_type`, `vendors[]` | See critical patterns below |
+
+**Player Props — CRITICAL PATTERNS:**
+```python
+for prop in props_data:
+    market = prop.get('market', {})
+
+    # 1. ALWAYS check market type first
+    if market.get('type') != 'over_under':
+        continue  # Skip milestone markets (single odds field, no over/under)
+                  # Milestone example: "Will player score 30+ points?"
+
+    over_odds = market.get('over_odds')
+    under_odds = market.get('under_odds')
+
+    # 2. Validate American odds range (must be abs >= 100)
+    if not over_odds or not under_odds:
+        continue
+    if abs(over_odds) < 100 or abs(under_odds) < 100:
+        print(f"[BDL] Corrupt odds: {over_odds}/{under_odds} — skipping")
+        continue
+
+    # 3. Process valid over/under prop
+    process_prop(prop, over_odds, under_odds)
+```
+
+**Supported prop types:** `points`, `rebounds`, `assists`, `blocks`, `steals`, `threes`, `points_rebounds_assists`, `points_rebounds`, `points_assists`, `rebounds_assists`, `double_double`, `triple_double`, and quarter splits.
+
+**Vendor quality tiers (add `vendors[]` filter to API request):**
+- **Tier 1 (recommended):** `draftkings`, `fanduel`, `caesars`, `betmgm`, `betrivers`
+- **Tier 2 (lower quality):** `ballybet`, `betparx`, `betway`, `fanatics`, `rebet`
+- Best practice: filter to Tier 1 only to reduce alt-line noise
+
+**Coverage note:** BDL props covers only games where sportsbooks publish lines. On a typical 10-game slate, expect 3–7 games covered. Log a warning for games with no props — do not silently skip.
+
+---
+
+### Team Stats
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| Team Season Averages | `GET /nba/v1/team_season_averages/{category}` | `season`, `season_type`, `type`, `team_ids[]` | Same categories as player; adds opponent + violations |
+| Standings | `GET /v1/standings` | `season` | Win/loss, conference rank |
+
+**Team Season Averages unique additions:**
+- `general/opponent` — opponent defensive stats (useful for scheme detection)
+- `general/violations` — intentional fouls, violations data
+- Includes W/L record alongside traditional stats
+
+---
+
+### Roster / Player Data
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| Player Injuries | `GET /v1/player_injuries` | `player_ids[]`, `team_ids[]` | Returns status, description, return_date |
+| Active Players | `GET /v1/players/active` | `cursor`, `per_page` | Current-season roster |
+| All Players | `GET /v1/players` | `search`, `player_ids[]` | Historical + current |
+| Player Contracts | `GET /v1/contracts/players` | `player_id` | Cap hit, base salary, total cash |
+| Team Contracts | `GET /v1/contracts/teams` | `team_id`, `season` | Full team salary breakdown |
+
+**Player Injuries fields:** `status` (Out/Doubtful/Questionable/Probable), `description` (narrative with date), `return_date` (e.g., "Nov 17"). Tier: ALL-STAR+.
+
+---
+
+### Play-by-Play
+
+| Endpoint | URL | Key Params | Notes |
+|----------|-----|------------|-------|
+| Plays | `GET /v1/plays` | `game_id` (required) | Court coords, period, clock, shot type, score |
+
+**PBP fields:** `type`, `text`, `period`, `clock`, `coordinate_x/y`, `scoring_play`, `shooting_play`, `score_value`, `wallclock`. 2025 season+ only. No pagination.
+
+---
+
+### Pagination Pattern (applies to all paginated endpoints)
+
+```python
+def get_all_pages(client, url, params):
+    """Iterate all BDL pages using cursor-based pagination."""
+    results = []
+    cursor = None
+
+    while True:
+        if cursor:
+            params['cursor'] = cursor
+        params['per_page'] = 100  # Always use max
+
+        response = client._get(url, params)
+        data = response.get('data', [])
+        results.extend(data)
+
+        next_cursor = response.get('meta', {}).get('next_cursor')
+        if not next_cursor:
+            break  # No more pages
+        cursor = next_cursor
+
+    return results
+```
+
+**Note:** Some endpoints (plays, live box scores, leaders) have no pagination — all data in single response.
+
+---
+
+### BDL Tier Requirements Summary
+
+| Tier | Cost | Endpoints Available |
+|------|------|-------------------|
+| Free | $0 | Basic player/game/stats (limited) |
+| ALL-STAR | $? | Player injuries, most stats |
+| GOAT | $39.99/mo | ALL endpoints: odds, props, advanced stats, contracts, plays, lineups, season averages |
+
+We are on GOAT tier — all endpoints available.
 
 ---
 
