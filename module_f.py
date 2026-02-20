@@ -589,6 +589,15 @@ class LudiReporter:
         # Clamp to valid range [0, 3]
         tier_score = max(0, min(3, tier_score))
 
+        # Minimum edge floors — bonuses cannot promote a bet above its edge ceiling.
+        # Prevents composite bonus abuse (e.g. 7% edge BLK_UNDER for RIM_GUARDIAN
+        # getting double-bumped to DIAMOND). Gold combos are high-WR signals but
+        # only meaningful when the underlying edge is also real.
+        if tier_score == 3 and edge < 10.0:   # DIAMOND floor: must have ≥10% edge
+            tier_score = 2
+        if tier_score == 2 and edge < 7.0:    # BLUE CHIP floor: must have ≥7% edge
+            tier_score = 1
+
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
         return TIER_NAMES[tier_score]
 
