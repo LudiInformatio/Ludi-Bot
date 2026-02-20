@@ -1,7 +1,7 @@
 # Future Data Sources Roadmap
 
 **Discovered:** January 20, 2026
-**Last Audited:** February 19, 2026
+**Last Audited:** February 20, 2026 — End of Day
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
 
 **Status:** ~80% implemented (as of Feb 19, 2026 7:39 PM EST). Section 4.2 dormant data fully activated. Section 4.4 endpoints wired. Section 5.2 trend/beneficiary/matchup patterns implemented in Phase 8.15 + calibration fixes. Phase 8.10 League Rankings DONE. Remaining: pipeline consolidation (4.3), DVP rankings, PlayerRebounding (1), Phase 8.11.
@@ -282,3 +282,110 @@ Where:
 
 ### Cost
 - $0 (deterministic math, no API calls)
+
+---
+
+## 6. Phase 8.13 Research Findings — Ask Ludi Bot Architecture (Feb 20, 2026)
+
+**Researched:** February 20, 2026 PM
+**Sources:** 5 references — Medium articles on python-telegram-bot + Claude, GitHub repos (OpenClaw multi-channel adapter, telegram-claude-bot, ludi-lite), official docs
+**Status:** Architecture finalized. Ready for implementation sprint.
+
+### 6.1 Core Architecture Decision: Telegram Long Polling
+
+**Why Telegram (not Slack) for the betting product:**
+- Telegram is the existing channel for all betting product output (morning/evening cards)
+- No webhook/public IP required — long polling works perfectly on the self-hosted Mac runner
+- `python-telegram-bot` v21+ (async) is production-grade, widely documented
+
+**3-File Implementation Plan:**
+
+| File | Purpose |
+|------|---------|
+| `bots/ask_ludi.py` | Entry point — Application builder, `/start` handler, free-text dispatcher, long polling loop |
+| `bots/ask_ludi_db.py` | Read-only DB layer — 8 intent handlers (injuries, edges, trends, standings, schedule, recap, free-text, fallback) |
+| `bots/ask_ludi_handlers.py` | Intent classifier (Haiku → JSON) + DB fetch orchestration + Sonnet narrative → reply |
+| `scripts/launchd/com.ludi.askludi.plist` | macOS launchd keepalive — `KeepAlive=true`, restart on crash |
+
+**Key Design Principles:**
+- **Read-only SQLite**: `sqlite3.connect("file:ludi.db?mode=ro", uri=True)` — WAL-safe, cannot corrupt pipeline writes even under concurrent access
+- **Two-tier Claude routing**: Haiku for intent classification (<200ms, $0.0001/call, JSON output) → Python fetches DB rows → Sonnet for narrative (max_tokens=600, $0.003/call). No NBA facts from AI memory — all from DB.
+- **Graceful degradation**: if Claude fails, return formatted DB data directly (no AI analysis, but data is still useful)
+- **Rate limiting**: Per-user 10 req/minute cap prevents API cost explosion
+
+### 6.2 Advanced Patterns for Future Sprints
+
+**Tool Use / Function Calling (Phase 8.13-B):**
+- Claude calls `get_injuries(team)`, `get_top_edges(n, min_edge)`, `get_player_trends(name, stat)` as tools
+- Handles compound queries: "Who are the top UNDER plays for tonight with an injury angle?" → calls multiple tools → synthesizes
+- Prevents hallucination: Claude can ONLY use provided tool results, cannot recall NBA facts
+- Pattern: `client.messages.create(tools=[...], tool_choice={"type": "auto"})`
+
+**Streaming Responses (Phase 8.13-C):**
+- `client.messages.stream()` → `with client.messages.stream() as stream`
+- Stream tokens → buffer → send when sentence complete (`.` or `?` delimiter)
+- Perceived latency: 800ms first token vs 3-4s full response
+- Telegram `bot.send_chat_action(TYPING)` while buffering
+
+**Inline Keyboard Disambiguation:**
+- User: "Tell me about the Lakers game" → multiple games found → bot sends `InlineKeyboardMarkup` with buttons
+- User taps → `callback_query` fires → bot fetches specific game and responds
+- Implementation: `ConversationHandler` with state machine for multi-turn
+
+**Differential Context Injection:**
+- Key principle: Only inject what Claude doesn't already know
+- Don't send: raw DB schema, module internals, static config
+- DO send: today's injury list, tonight's slate with lines, last 10 games for the asked player
+- Pattern: build minimal context dict → serialize to compact JSON → inject into system prompt
+
+### 6.3 Multi-Channel Adapter Pattern (OpenClaw-Inspired)
+
+**The Pattern:** Decouple bot logic from channel implementation
+
+```
+ask_ludi_core.py          # Channel-agnostic: intent → DB → analysis
+├── ask_ludi_telegram.py  # Telegram adapter (current)
+├── ask_ludi_slack.py     # Slack adapter (future — vibestarters workspace)
+└── ask_ludi_streamlit.py # Ludi Lens web app (future)
+```
+
+**Why this matters:** When Ludi Lens (web app) launches, the same `ask_ludi_core.py` handles queries. The Streamlit app just passes user input to core and displays the response — no duplicate logic.
+
+**Current scope (8.13):** Build `ask_ludi_core.py` + `ask_ludi_telegram.py` only. Design with the adapter interface so Slack/Streamlit versions are plug-and-play.
+
+### 6.4 MCP Servers for Ludi Lens (Future Phase)
+
+**Relevance:** When Ludi Lens (Streamlit web app) launches, MCP servers expose `ludi.db` as a tool layer that Claude can call natively without custom Python glue.
+
+**Pattern:** Instead of `select * from player_trends where player_id = ?` hardcoded in Python, Claude calls the MCP tool `query_trends(player_name, stat)` and the server handles the SQL.
+
+**When to implement:** After Ludi Lens scaffold is complete. Not needed for Telegram bot phase.
+
+### 6.5 Claude Ops / Cost Monitoring Patterns
+
+**Weekly Cost Report:**
+- `utils/api_monitor.py` already logs token usage to DB (via `monitor.log_claude_usage()`)
+- Add `scripts/claude_cost_report.py`: query `claude_usage_log` → aggregate by model/task → compute weekly $ → send to Slack
+- Rate table: Haiku=$0.0008/1k input + $0.004/1k output | Sonnet=$0.003 + $0.015
+
+**Token Budget Guard:**
+- `claude_client.py`: track daily token count in `cache/claude_daily_tokens.json`
+- If projected daily spend > $2.00 → Slack alert, switch to Haiku fallback
+- Reset at midnight EST
+
+**`claude-ops-hub.yml` Upgrade:**
+- Current: ad-hoc Sonnet call to diagnose failures
+- Better: use `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN` (the correct use case for that token)
+- This gives Claude access to: workflow logs, repo context, PR diffs — much richer diagnosis
+
+### 6.6 Auth Pattern Reference (Resolved Feb 20, 2026)
+
+**For future sessions — correct auth priority in `utils/claude_client.py`:**
+
+| Priority | Token | Use Case |
+|----------|-------|---------|
+| 1 | `ANTHROPIC_API_KEY` | All Python SDK calls (long-lived, works everywhere) |
+| 2 | `~/.claude/config.json oauthToken` | Local dev only — skipped when `GITHUB_ACTIONS=true` |
+| 3 | `CLAUDE_CODE_OAUTH_TOKEN` | Only for `anthropics/claude-code-action@v1` in workflows — NOT for SDK |
+
+**Why this matters:** Self-hosted runner on local Mac has `~/.claude/config.json` with an OAuth token that expires every ~30 days. Priority 2 skip in CI prevents expired token from causing 401s. `CLAUDE_CODE_OAUTH_TOKEN` is a different OAuth flow meant for the GitHub Action tool, not the Python SDK.

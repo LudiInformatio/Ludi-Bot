@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 20, 2026 4:59 PM EST
+**Last Updated:** February 20, 2026 — End of Day
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 — Ask Ludi (Slack Bot)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅
+**Active Work:** Phase 8.13 — Ask Ludi (Telegram Bot) — Architecture research complete, implementation ready
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -60,9 +60,10 @@ This is the single source of truth for project tasks and priorities.
 | Infra ✅ | Model Calibration Fixes | DONE | `module_f.py`: BLK OVER hard skip (33.6% WR → filtered), dead Filter 6 removed. `morning_brief.py`: B2B fatigue flag wired, data-driven team notes, leverage profile context. Spotlight `analysis_block` populated via `get_matchup_analysis()`. | $0 |
 | Tank01 ✅ | Tank01 Data Expansion + Phase 3 Hardening | DONE | Central client (12 methods), STL/BLK weights fix, SIM_COUNT 10k, games fallback chain (Odds API→Tank01→BDL), output assertion gate (5 checks), Module H games bridge + fantasy_pts, Tank01 props validator in Module A, 4 new sync scripts (team info/projections/news/injury history), 4 new DB tables, morning brief streak notes. See `docs/projects/TANK01_DATA_EXPANSION.md` | $0 |
 | Infra ✅ | Injury Intelligence Hardening | DONE | RealGM RSS dual-source corroboration in `_nuance_check()` (confidence 0.95 when RotoWire + RealGM agree). AI blurb prompt hardened: `INJURY_BLURB_SYSTEM` + `INJURY_BLURB_PARSE_PROMPT` (5 few-shot examples, `tonight_available`, `blurb_is_stale`, `temperature=0.0`). Intraday refresh: `injury_refresh.yml` (4 daytime + 15 evening 20-min runs, staleness guard prevents API waste). Evening lock: `--force` pre-sync captures late scratches before 6 PM cards. `module_d.get_refresh_interval()` aligned: 120 min day / 20 min game-time. | $0 |
+| Infra ✅ | Claude Auth Fix | DONE | `utils/claude_client.py` priority reordered: ANTHROPIC_API_KEY (Priority 1) → `~/.claude/config.json` OAuth skipped in CI via `GITHUB_ACTIONS` check (Priority 2, local only) → `CLAUDE_CODE_OAUTH_TOKEN` last resort (Priority 3). `ANTHROPIC_API_KEY` added to GitHub repo secrets. Root cause: expired CLAUDE_CODE_OAUTH_TOKEN (set Feb 3) was winning Priority 1 in CI — fixed. | $0 |
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
-| 8.13 | Ask Ludi — Slack Bot | MEDIUM | Two-way Slack bot (vibestarters workspace): natural language → ludi.db + Claude → response in thread. Haiku intent, Sonnet analysis. Slack infrastructure already live. | ~$0.05/day |
+| 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → response in Telegram thread. Architecture research complete (Feb 20): python-telegram-bot v21+ long polling, Haiku intent ($0.0001/call) → Sonnet analysis, read-only SQLite (`?mode=ro`), launchd keepalive, 3-file implementation (`bots/ask_ludi.py`, `ask_ludi_db.py`, `ask_ludi_handlers.py`). See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
 | 8.16 | Suspension Intelligence | MEDIUM | `sync_suspensions.py` (Perplexity → Claude Haiku → auto-insert into `player_injuries` as SUSPENDED). Module D + Module X pick up automatically. Three injection points: morning sync, game context query, Module D `get_injuries()`. | ~$0.02/day |
 | 8.17 | Foul Intelligence | MEDIUM | Extend `sync_stint_profiles.py` to parse foul events from PlayByPlayV3 (same API, same loop, no extra cost). New `player_foul_splits` table (period, clock, foul_number, ref_name). Unlocks: early foul trouble → Module C minutes dampener, ref-player bias rebuild, weekly Claude context. | $0 |
 
@@ -90,6 +91,24 @@ First game day back exposed 9 critical/high issues. Full recovery + hardening co
 - BDL API best-practices docs — comprehensive endpoint reference + audit lessons
 
 **Remaining (next sprint):** Games table fallback chain (3A), output assertion gate (3B), Module H→games bridge (3C), Perplexity/Claude prompt enrichment (2H)
+
+---
+
+### Ask Ludi Architecture Research ✅ COMPLETE (Feb 20, 2026 PM)
+
+Researched Telegram + Claude integration patterns across 5 sources (Medium articles, GitHub repos, docs). Full notes in `docs/FUTURE_DATA_SOURCES.md` §6 and `memory/MEMORY.md`.
+
+**Implementation Plan (3 files, ready to build):**
+- `bots/ask_ludi.py` — Entry point, long-polling loop, `/start` + free-text handler
+- `bots/ask_ludi_db.py` — Read-only SQLite queries, 8 intent handlers (injuries/edges/trends/standings/schedule/recap/free/fallback)
+- `bots/ask_ludi_handlers.py` — Intent → Haiku classification (JSON output) → DB fetch → Sonnet narrative → reply
+- `scripts/launchd/com.ludi.askludi.plist` — macOS launchd keepalive (runs on self-hosted Mac runner)
+
+**Key Design Decisions:**
+- `python-telegram-bot` v21+ (async, long polling — no webhook/public IP needed)
+- Haiku for intent ($0.0001/call, <200ms) → Sonnet for analysis (max_tokens=600)
+- `sqlite3.connect("file:ludi.db?mode=ro", uri=True)` — read-only, WAL-safe, can't corrupt pipeline
+- `CLAUDE_CODE_OAUTH_TOKEN` correctly used in `claude-code-action@v1` only (not SDK calls)
 
 ---
 
@@ -161,6 +180,16 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 - [ ] Multi-book arbitrage detection
 - [ ] Steam move detection (rapid line movement alerts)
 
+### GH Actions / Claude Ops Improvements (identified Feb 20, 2026)
+- [ ] **`claude-ops-hub.yml` upgrade**: Use `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN` — proper tool, reads workflow logs, posts Slack diagnosis. Currently uses ad-hoc Sonnet call.
+- [ ] **PR review action**: Add `anthropics/claude-code-action@v1` to PR events for automated code review on push to main
+- [ ] **`pip-audit` step**: Add to `data_sync.yml` or a separate security workflow — fails build on known CVEs in `requirements.txt`
+- [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log` table, sends weekly $/1k-token summary to Slack
+- [ ] **Token budget guard**: `max_tokens` cap in `claude_client.py` per task type (Haiku=200, Sonnet=800) + log when approaching daily budget
+- [ ] **Ask Ludi bot management workflow**: `bot_management.yml` — start/stop/status commands for the long-polling bot process via launchd
+- [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist in key tables; run at pipeline start. Prevents silent failures like the `confidence_tier` vs `tier` bug.
+- [ ] **OAuth token refresh reminder**: Add to `claude-ops-hub.yml` — warn in Slack when `CLAUDE_CODE_OAUTH_TOKEN` is >25 days old (expires ~30 days)
+
 ---
 
 ## Low Priority
@@ -170,6 +199,13 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 - [ ] Strength of Schedule (SOS) adjustment
 - [ ] Shooting Luck Deviation signals
 - [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
+
+### Developer Workflow Improvements (identified Feb 20, 2026)
+- [ ] **Session start checklist**: `scripts/session_check.py` — quick health check (DB rows, API quota, last sync time) in <5s. Run at start of each dev session.
+- [ ] **`AGENTS.md`**: Create agent operating guide (primary rules for Codex-style agents) so CLAUDE.md can stay as supplemental context only
+- [ ] **GH workflow shortcuts**: `scripts/run_workflow.sh <name>` wrapper for `gh workflow run` — avoids memorizing exact workflow names
+- [ ] **`/compact` habit**: Use before context fills — prevents losing work mid-session
+- [ ] **End-of-session memory update**: Always update `memory/MEMORY.md` at session end with key decisions/bugs fixed before compacting
 
 ---
 
