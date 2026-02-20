@@ -1,3 +1,16 @@
+"""
+Vibe Starters Assistant — PM Bot (Powered by Ludi)
+
+AGENT INSTRUCTIONS: To send PM bot messages, always use main.py with --mode flag.
+This ensures the correct image header + dual Telegram/Slack routing is used.
+
+    Morning brief:   python main.py --mode pm_briefing
+    Nightly debrief: python main.py --mode pm_debrief
+    Break/pause:     python main.py --mode pm_break
+
+DO NOT call send_message() directly — that sends text only with no image.
+DO NOT call utils/pm_bot.py directly — use main.py as the entry point.
+"""
 import os
 import datetime
 from pathlib import Path

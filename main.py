@@ -659,10 +659,12 @@ if __name__ == "__main__":
     parser.add_argument("--send-telegram", action='store_true', help="Send results via Telegram")
     args = parser.parse_args()
 
-    if args.mode == "pm_briefing":
+    if args.mode in ("pm_briefing", "morning_brief", "morning"):
         ProjectManagerBot().generate_briefing(mode="morning")
-    elif args.mode == "pm_debrief":
+    elif args.mode in ("pm_debrief", "nightly_brief", "nightly", "debrief"):
         ProjectManagerBot().generate_briefing(mode="nightly")
+    elif args.mode in ("pm_break", "break", "break_notes", "state_preserve", "pause"):
+        ProjectManagerBot().send_break_message()
     else:
         app = LudiOrchestrator(target_teams=args.games, send_telegram=args.send_telegram)
         app.run_daily_cycle()
