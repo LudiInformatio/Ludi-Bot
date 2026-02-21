@@ -16,7 +16,7 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 20, 2026 8:03 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 20, 2026 9:27 PM EST) |
 
 ### Key Features
 
@@ -153,9 +153,11 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Model Calibration — BLK OVER filter (33.6% WR), data-driven team situation notes |
 | Infra | Morning/Evening Brief Hardening — native Telegram text (no image cards), all-game processing (watchlist removed), spotlight Markdown fallback, injury `skip_resolve` pipeline bug fixed |
 | Research | BetIQ/TeamRankings Analysis — 6 cross-game ATS/O-U patterns; Tier 1 features buildable from existing data; `docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md` |
+| Research | BERT/NLP Prompt Architecture — 8 patterns from google-research/bert mapped to Claude prompts; few-shot examples, NSP relevance gate, domain WR injection; `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` |
 
 **Planned Next:**
 - Phase 8.18: Game Lines Integration — `team_totals` Odds API market, per-team scoring modifiers in Module E, `_score_game()` game line signals, team totals + ML in Claude prompt
+- Phase 8.19: Prompt Engineering Upgrade — few-shot examples in GAME_NOTES/SPOTLIGHT templates, domain WR stats in curation, Haiku NSP news relevance gate, text_a/text_b context separation
 
 **Performance (Jan 7 – Feb 20, 2026):**
 - Settled Bets: 14,423+ | Win Rate: ~54.8% overall
@@ -178,6 +180,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | [best-practices/](best-practices/) | API patterns, sportsbook tiers, lessons learned |
 | [CLAUDE.md](CLAUDE.md) | AI assistant project instructions |
 | [docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
+| [best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md](best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md) | BERT-derived prompt engineering patterns — 8 structural improvements for Claude prompts, implementation priority |
 
 ---
 
