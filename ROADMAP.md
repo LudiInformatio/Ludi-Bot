@@ -212,6 +212,15 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 - [ ] Real-time prop display integration
 - [ ] Historical performance charts
 
+### Infographic & Data Visualization System (Post-Phase 8 — Frontend Sprint)
+**Blocked until:** Phase 8 backend cleanup complete
+**Full plan:** `docs/projects/INFOGRAPHIC_VISUALIZATION_SYSTEM.md`
+**Inspired by:** PaperBanana (arXiv:2601.23265) — AI-assisted illustration framework, code releasing ~March 2026
+- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 2 MVP charts (stat confidence matrix, daily P&L waterfall) wired into morning brief
+- [ ] Phase V2: Edge vs WR scatter, player trend sparklines, tier performance → weekly validation + debrief
+- [ ] Phase V3: Full 12-chart catalog + `scripts/generate_all_charts.py`
+- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted chart generation for Ask Ludi
+
 ### CLV Tracking Enhancement
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
