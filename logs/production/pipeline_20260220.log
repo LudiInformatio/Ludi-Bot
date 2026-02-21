@@ -1,0 +1,256 @@
+
+==================================================
+   LUDI INFORMATIO | SYSTEM INITIALIZATION
+   Architecture: Modules A-H (Production v2.0)
+==================================================
+========================================
+LUDI INFORMATIO: MODULE A (GATEKEEPER) ONLINE
+   >>> PIPELINE: V9.4 (4-TIER LINE SHOPPING)
+   >>> TIERS: NC_LEGAL | SHARP | DFS | SOCIAL
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] ✅ Today's games already exist
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE H (HISTORIAN) ONLINE
+========================================
+   🛡️ API Budget: 200 requests
+
+========================================
+LUDI INFORMATIO: MODULE C (ORACLE V4.0) LIVE
+   >>> Hybrid Engine: Normal (High-Vol) + Poisson (Rare)
+   >>> Sim Count: 5000
+========================================
+   >>> Shot quality data loaded: 500 players
+   >>> Rolling TS% data loaded: 334 players
+   >>> Drives context data loaded: 365 players
+   >>> Team defense data loaded: 30 teams
+
+========================================
+LUDI INFORMATIO: MODULE D (YAK V3.5) ONLINE
+   >>> 15-MIN SYNC | PROBABLE & AVAILABLE ACTIVE
+========================================
+
+========================================
+LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE
+   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE
+========================================
+[Module E] DB clutch fallback loaded: 30 teams
+[Module E] Speed/fatigue data loaded: 365 players
+[Module E] Touches data loaded: 545 players
+[Module E] Leverage profiles loaded: 30 teams
+[Module E] Player leverage usage loaded: 435 players
+
+========================================
+LUDI INFORMATIO: MODULE F (V5.2) ONLINE
+   >>> DETERMINISTIC REPORTING | NO SPECULATION
+   >>> BET LOGGING ENABLED
+========================================
+✅ BetLogger initialized (DB: ludi.db, Logs: logs/bets)
+✅ Bet logger connected
+✅ TagClassifier initialized with synced defensive schemes
+✅ Tag classifier connected
+
+========================================
+LUDI INFORMATIO: MODULE G (ZEBRAS) V3.0 ONLINE
+========================================
+   [ZEBRAS] 🔍 Checking today's games in database...
+   [ZEBRAS] ✅ Today's games already exist
+   [ZEBRAS] 📊 Database: 71 referees loaded
+
+========================================
+LUDI INFORMATIO: MODULE X (SCENARIO V3.7) ONLINE
+   >>> DYNAMIC ROSTERS | LIVE SCHEMA ACTIVE
+========================================
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)... ❌ Browser Error: Page.goto: Navigation to "https://official.nba.com/referee-assignments/" is interrupted by another navigation to "about:blank"
+Call log:
+  - navigating to "https://official.nba.com/referee-assignments/", waiting until "domcontentloaded"
+
+   [ZEBRAS] 📸 Screenshot saved to 'error_state.png'
+
+==================================================
+   >>> STARTING DAILY SIMULATION CYCLE <<<
+   Mode: Production v2.0
+==================================================
+[DAILY_LOCK] No config file found, running in LIVE mode (all games)
+[1] 📡 Fetching Slate & Live Odds...
+   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...    [ZEBRAS] 🛡️ Cleaning UI and simulating human... Done.
+   [ZEBRAS] 🔽 Opening date dropdown... Done.
+   [ZEBRAS] 🔄 Toggling date to force refresh... Done.
+   [ZEBRAS] ⚠️ Timeout waiting for table rows.
+✅ Success. Found assignments for 0 games.
+      📊 ODDS_API: 0 credits remaining
+
+⚠️ WARNING: ODDS_API quota at 100.0% (0 remaining)
+
+      ⚠️ Telegram alert failed: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))
+   ⚠️  The-Odds-API Failed: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?api_key=9aa84b1836e565ec82161558d5cc948b&regions=us%2Cus2&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american
+   📡 Falling back to BallDontLie for game lines...
+   📡 [BDL] Fetching game lines from BallDontLie...
+   ✅ [BDL] Found 9 games
+   ----------------------------------------
+   === 2026-02-20 (TONIGHT) ===
+   🏀 Cleveland Cavaliers @ Charlotte Hornets
+      > Time: 07:00 PM ET | Line: 6.0 | Total: 230.5 | Pace: 1.0x | Whistle: 1.0x (0% conf)
+   🏀 Indiana Pacers @ Washington Wizards
+      > Time: 07:00 PM ET | Line: 2.0 | Total: 230.5 | Pace: 1.0x | Whistle: 1.0x (0% conf)
+   🏀 Utah Jazz @ Memphis Grizzlies
+      > Time: 07:00 PM ET | Line: -1.5 | Total: 238.5 | Pace: 1.0x | Whistle: 1.0x (0% conf)
+   ----------------------------------------
+   ✅ [BDL] Loaded 3 games with lines
+   📡 [BDL] Using BallDontLie for props (fallback mode)...
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 2222 props
+   [BDL] Building player ID cache (one-time)...
+   [BDL] Player cache built: 522 players
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 1502 props
+      > [BDL] Cross-referencing with BallDontLie...
+      ✅ [BDL] Retrieved 2019 props
+✅ Props loaded.
+[step 3] Building Scenarios & Rosters...
+   > Processing Cleveland Cavaliers @ Charlotte Hornets...
+[ROSTER] Tier 1.5 (freshly traded): Coby White → CHA (pre-trade stats from CHI)
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+      📊 TANK01: 916 credits remaining
+   [YAK] 📋 Heartbeat: NBA Official Feed Synced (Tank01).
+      ↳ Generated 1 scenarios
+   > Processing Indiana Pacers @ Washington Wizards...
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+[ROSTER] Tier 1.5 (freshly traded): Ivica Zubac → IND (pre-trade stats from LAC)
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+      ↳ Generated 1 scenarios
+   > Processing Utah Jazz @ Memphis Grizzlies...
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+[INJURY-TIER3] Walker Kessler (UTA) — 223d out, skipped
+[INJURY-TIER3] Dereck Lively II (DAL) — 223d out, skipped
+[INJURY-TIER3] Noa Essengue (CHI) — 223d out, skipped
+[INJURY-TIER3] Bradley Beal (LAC) — 223d out, skipped
+[INJURY-TIER3] Kyrie Irving (DAL) — 223d out, skipped
+[INJURY-TIER3] Damian Lillard (POR) — 223d out, skipped
+[INJURY-TIER3] Terry Rozier (MIA) — 40d out, skipped
+[INJURY-TIER3] Fred VanVleet (HOU) — 101d out, skipped
+[INJURY-TIER3] Tyrese Haliburton (IND) — 223d out, skipped
+      ↳ Generated 1 scenarios
+[step 4] Running Monte Carlo Simulations (3 scenarios)...
+   [NEW TO TEAM] James Harden: 3 games on current team — LOW confidence, 5% dampener
+   [NEW TO TEAM] Kyle Anderson: 3 games on current team — LOW confidence, 5% dampener
+[step 5] Generating Daily Briefing (Module F)...
+📊 Daily summary logged: 121 bets, 116.8 units
+[FONTS] ✅ Using bundled Liberation fonts
+✅ Visual briefing generated: /Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/assets/generated/ludi_generated_briefing.png
+
+==================================================
+DAILY BRIEFING GENERATED
+==================================================
+
+📰 LUDI ELITE BRIEFING (Feb 20, 2026)
+================================
+⚠️  ODDS SOURCE: BDL Fallback (Odds-API quota exhausted)
+   Lines estimated — verify at your book before betting.
+   Full accuracy resumes March 1.
+================================
+💎 TOP TARGETS BY GAME
+
+🏀 Cleveland Cavaliers @ Charlotte Hornets
+   💎 GRANT WILLIAMS — UNDER 10.5 PTS
+   📊 Cleveland Cavaliers @ Charlotte Hornets  |  Proj: 7.34  |  Edge: +53.8%  |  1.0u
+   💰 Best Bet: betway +100
+   🎯 Archetype: ENERGY_BIG vs PERIMETER defense
+   📝 Key Signal: Half-Court Advantage, Energy Big Boards
+   💎 GRANT WILLIAMS — UNDER 16.5 PR
+   📊 Cleveland Cavaliers @ Charlotte Hornets  |  Proj: 13.22  |  Edge: +55.9%  |  1.0u
+   💰 Best Bet: FanDuel -112
+   🎯 Archetype: ENERGY_BIG vs PERIMETER defense
+   📝 Key Signal: Half-Court Advantage, Energy Big Boards
+   💎 GRANT WILLIAMS — UNDER 1.5 3PM
+   📊 Cleveland Cavaliers @ Charlotte Hornets  |  Proj: 1.13  |  Edge: +43.4%  |  1.0u
+   💰 Best Bet: betway +115
+   🎯 Archetype: ENERGY_BIG vs PERIMETER defense
+   📝 Key Signal: Half-Court Advantage, Energy Big Boards
+
+🏀 Indiana Pacers @ Washington Wizards
+   💎 KOBE BROWN — UNDER 14.5 PA
+   📊 Indiana Pacers @ Washington Wizards  |  Proj: 10.04  |  Edge: +48.8%  |  1.0u
+   💰 Best Bet: BetMGM -125
+   🎯 Archetype: ENERGY_BIG vs PAINT PACK defense
+   📝 Key Signal: Roll Man vs Drop, Cutter Tax
+   💎 ANDREW NEMBHARD — OVER 9.5 RA
+   📊 Indiana Pacers @ Washington Wizards  |  Proj: 14.13  |  Edge: +43.2%  |  1.0u
+   💰 Best Bet: BetMGM -118
+   🎯 Archetype: FACILITATOR vs PAINT PACK defense
+   📝 Key Signal: Playmaking vs Drop, P&R_HANDLER PPP: 0.95 (39%)
+   💎 KOBE BROWN — UNDER 21.5 PRA
+   📊 Indiana Pacers @ Washington Wizards  |  Proj: 17.32  |  Edge: +43.2%  |  1.0u
+   💰 Best Bet: BetMGM -115
+   🎯 Archetype: ENERGY_BIG vs PAINT PACK defense
+   📝 Key Signal: Roll Man vs Drop, Cutter Tax
+
+🏀 Utah Jazz @ Memphis Grizzlies
+   💎 CAM SPENCER — UNDER 2.5 3PM
+   📊 Utah Jazz @ Memphis Grizzlies  |  Proj: 1.47  |  Edge: +59%  |  1.0u
+   💰 Best Bet: betway +115
+   🎯 Archetype: FACILITATOR vs NEUTRAL defense
+   📝 Key Signal: P&R_HANDLER PPP: 1.10 (35%), Elite Spot-Up D
+   💎 KYLE ANDERSON — UNDER 9.5 RA
+   📊 Utah Jazz @ Memphis Grizzlies  |  Proj: 5.5  |  Edge: +57.6%  |  1.0u
+   💰 Best Bet: BetMGM -110
+   🎯 Archetype: RIM_GUARDIAN vs NEUTRAL defense
+   📝 Key Signal: Off-Dribble 3s, Low Quality Shots
+   💎 CAM SPENCER — UNDER 16.5 PTS
+   📊 Utah Jazz @ Memphis Grizzlies  |  Proj: 10.89  |  Edge: +56.2%  |  1.0u
+   💰 Best Bet: betway -110
+   🎯 Archetype: FACILITATOR vs NEUTRAL defense
+   📝 Key Signal: P&R_HANDLER PPP: 1.10 (35%), Elite Spot-Up D
+
+
+✅ Saved to daily_briefing.txt
+✅ Visual Card saved to: /Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/assets/generated/ludi_generated_briefing.png
+[step 6] Sending Telegram Briefing...
+❌ HTTP error: 400 Client Error: Bad Request for url: https://api.telegram.org/bot8190581794:AAEUVV88PupubJYcudiyRCuWCpgPVLlZ-ag/sendMessage
