@@ -273,6 +273,62 @@ def _format_bets_for_prompt(bets: list[dict]) -> str:
     return '\n\n'.join(lines)
 
 
+def _get_system_wr_context(conn: sqlite3.Connection) -> str:
+    """Build empirical win rate context for Sonnet curation — Pattern 6 (BERT domain pre-training).
+
+    Uses Wilson 95% lower bound instead of raw WR — statistically conservative and
+    sample-size adjusted. Grades: A+ (iron-clad) → F (avoid). Auto-updates as bets settle.
+
+    See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md
+    """
+    import math
+    try:
+        rows = conn.execute("""
+            SELECT stat_category, bet_side,
+                   COUNT(*) as n,
+                   ROUND(100.0 * SUM(CASE WHEN outcome='WIN' THEN 1 ELSE 0 END) / COUNT(*), 1) as wr,
+                   SUM(CASE WHEN outcome='WIN' THEN 1 ELSE 0 END) as wins
+            FROM bet_recommendations
+            WHERE outcome IN ('WIN','LOSS')
+            GROUP BY stat_category, bet_side
+            HAVING COUNT(*) >= 50
+            ORDER BY wr DESC
+        """).fetchall()
+    except Exception:
+        return ""
+
+    z = 1.96  # 95% confidence
+    lines = [
+        "LUDI-BOT EMPIRICAL WIN RATES (this season, Wilson 95% confidence floor):",
+        "Use these to break selection ties. High raw edge ≠ reliable bet for high-variance stats.",
+    ]
+    for stat, side, n, wr, wins in rows:
+        p = wins / n
+        denom = 1 + z**2 / n
+        center = (p + z**2 / (2 * n)) / denom
+        margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denom
+        lb = max(0.0, center - margin)
+
+        if lb >= 0.60 and n >= 500:    grade, flag = "A+", " ← PRIORITIZE"
+        elif lb >= 0.55 and n >= 150:  grade, flag = "B",  " ← PREFER"
+        elif lb >= 0.50:               grade, flag = "C",  ""
+        elif lb >= 0.42:               grade, flag = "D",  " ← DEPRIORITIZE"
+        else:                          grade, flag = "F",  " ← AVOID"
+
+        lines.append(f"  {stat} {side}: {wr:.0f}% WR (95% floor={lb*100:.0f}%, n={n}) [{grade}]{flag}")
+
+    lines += [
+        "",
+        "KEY CALIBRATION NOTES:",
+        "- BLOCKS UNDER: structural book edge — book lines are consistently set too high; prioritize even at lower edge",
+        "- PTS/REB/PRA OVER: model OVERSTATES edge by 18-21%; require higher edge threshold before selecting",
+        "- STEALS UNDER: improving trend — confidence growing as sample builds",
+        "- REB OVER: actively degrading (WR falling late-season) — deprioritize unless edge >10%",
+        "- PRA OVER: structural avoid — 25% WR on 80 bets, should be filtered before curation",
+    ]
+    return "\n".join(lines)
+
+
 def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict] | None:
     """
     Ask Sonnet to select and rank top 5 bets from passing bets.
@@ -287,8 +343,20 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
         return None
 
     bets_text = _format_bets_for_prompt(passing_bets)
+
+    # Build domain WR context from live DB (Pattern 6: domain pre-training proxy)
+    # Wilson-adjusted WR grades auto-update as bets settle each night.
+    try:
+        conn_wr = sqlite3.connect(DB_PATH)
+        wr_context = _get_system_wr_context(conn_wr)
+        conn_wr.close()
+    except Exception:
+        wr_context = ""
+
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
-    
+    if wr_context:
+        system_prompt += f"\n\n{wr_context}"
+
     env = config.get_scoring_environment()
     over_rate = env.get('over_hit_rate_14d', 0)
     env_label = env.get('environment', 'NEUTRAL')

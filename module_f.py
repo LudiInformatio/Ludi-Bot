@@ -18,8 +18,15 @@ except ImportError:
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE F: THE ALCHEMIST
-# V5.2 - CONFIDENCE TIER SYSTEM | FEB 2026
+# V5.3 - STAT CONFIDENCE & EDGE CALIBRATION | FEB 2026
 # ==============================================================================
+# CHANGELOG V5.3 (Feb 20, 2026):
+# - Added _apply_stat_calibration(): deflates edge for PTS/REB/AST (19% overconfident)
+#   and boosts BLOCKS UNDER (structural book inefficiency, underestimated by model)
+# - Added _rmse_sizing_modifier(): RMSE-based unit penalty (PTS/PRA high-variance)
+# - See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md for full methodology
+# - Data source: 14,000+ settled bets (Jan 7 – Feb 20, 2026)
+#
 # CHANGELOG V5.2 (Feb 2026):
 # - Fixed negative edge leak (abs(edge) → edge in sharp filter)
 # - Added edge dampening for 20%+ edges (diminishing returns)
@@ -27,6 +34,40 @@ except ImportError:
 # - Switched to tier-based unit sizing (DIAMOND=1.0, BLUE CHIP=0.75, etc.)
 # - Gold combos: BLK/3PM/TOV/STL UNDER (+1 tier)
 # - Archetype modifiers re-enabled after Phase 7.9 archetype overhaul
+
+# --- STAT CALIBRATION CONSTANTS (V5.3) ---
+# Edge multipliers: calibration_gap analysis from 14k+ settled bets.
+# BLOCKS UNDER: model avg_edge=-2.8% but WR=66.4% → books set lines too high → boost.
+# PTS/REB/PRA: model avg_edge=33-40% but WR=46-52% → model overconfident → deflate.
+_STAT_EDGE_CALIBRATION = {
+    'blk':      {'under': 1.25, 'over': 1.00},
+    'blocks':   {'under': 1.25, 'over': 1.00},   # same stat, different label era
+    'tov':      {'under': 1.10, 'over': 1.00},
+    'turnovers':{'under': 1.10, 'over': 1.00},
+    'stl':      {'under': 1.00, 'over': 1.00},
+    'steals':   {'under': 1.00, 'over': 1.00},   # improving trend, well-calibrated
+    '3pm':      {'under': 0.90, 'over': 0.90},   # 11% overconfident
+    'ast':      {'under': 0.87, 'over': 0.87},   # 13% overconfident
+    'reb':      {'under': 0.82, 'over': 0.80},   # 18% overconfident + degrading
+    'pts':      {'under': 0.80, 'over': 0.78},   # 19.5% overconfident
+    'pra':      {'under': 0.85, 'over': 0.70},   # most volatile; OVER is structural avoid
+    'pa':       {'under': 0.90, 'over': 0.72},   # PA OVER 36.9% WR (D grade)
+    'pr':       {'under': 0.88, 'over': 0.75},   # PR OVER 38.2% WR
+    'ra':       {'under': 0.92, 'over': 0.92},   # moderate, small sample
+}
+
+# RMSE of projection vs market line by stat (absolute units, Feb 2026).
+# Low RMSE = projection reliable = no sizing penalty.
+# High RMSE = projection uncertain = reduce units even at same edge/tier.
+_STAT_RMSE = {
+    'blk': 0.35,  'blocks': 0.35,
+    'stl': 0.46,  'steals': 0.46,
+    '3pm': 0.67,
+    'ast': 1.24,
+    'reb': 1.87,
+    'pts': 4.93,
+    'pa':  4.80,  'pr': 4.96,  'pra': 5.51,
+}
 #
 # CHANGELOG V5.1 (Feb 2, 2026):
 # - Added REB OVER filter (skip until calibration - was -198u leak)
@@ -222,6 +263,13 @@ class LudiReporter:
                             edge = round(20.0 + (excess * 0.5), 1)  # Half-credit above 20%
                         # --- END EDGE DAMPENING ---
 
+                        # --- V5.3: STAT CALIBRATION (Feb 20, 2026) ---
+                        # Deflates edge for high-variance stats (PTS/REB 19% overconfident)
+                        # Boosts edge for BLOCKS UNDER (structural book inefficiency)
+                        # See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md
+                        edge = self._apply_stat_calibration(edge, stat_key, bet_direction)
+                        # --- END STAT CALIBRATION ---
+
                         # Store fair probability for reporting
                         fair_prob = get_fair_probability(odds_over, odds_under, bet_direction)
 
@@ -274,6 +322,10 @@ class LudiReporter:
                                 'THE STEAL': 0.25,
                             }
                             units = TIER_UNITS.get(confidence_tier, 0.25)
+
+                            # V5.3: RMSE-based sizing modifier
+                            # High projection uncertainty (PTS/PRA) → smaller bet at same tier
+                            units = round(units * self._rmse_sizing_modifier(stat_key), 2)
 
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
@@ -600,6 +652,33 @@ class LudiReporter:
 
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
         return TIER_NAMES[tier_score]
+
+    def _apply_stat_calibration(self, edge: float, stat_key: str, bet_direction: str) -> float:
+        """V5.3: Apply stat-specific edge calibration based on 14k+ settled bet analysis.
+
+        High-variance stats (PTS, REB, PRA) are systematically overconfident by 13-21%.
+        BLOCKS UNDER has a structural book inefficiency — even when model edge is low, it wins.
+        See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md
+        """
+        norm = stat_key.lower()
+        factors = _STAT_EDGE_CALIBRATION.get(norm, {})
+        multiplier = factors.get(bet_direction.lower(), 1.0)
+        return round(edge * multiplier, 1)
+
+    def _rmse_sizing_modifier(self, stat_key: str) -> float:
+        """V5.3: RMSE-based unit sizing modifier.
+
+        High projection uncertainty → smaller bet even at same tier.
+        RMSE ≤ 1.0: no penalty. 1.0–2.0: 5% cut. >4.0: 15% cut.
+        BLOCKS/STEALS/3PM are precise projections → full sizing.
+        PTS/PRA projections have 5x more absolute error → reduce sizing.
+        """
+        norm = stat_key.lower()
+        rmse = _STAT_RMSE.get(norm, 2.0)
+        if rmse <= 1.0:   return 1.00
+        elif rmse <= 2.0: return 0.95
+        elif rmse <= 4.0: return 0.90
+        else:             return 0.85   # PTS, PA, PR, PRA — high uncertainty
 
     def _estimate_over_probability(self, projection: float, line: float, stat_key: str) -> float:
         """

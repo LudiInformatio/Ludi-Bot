@@ -271,6 +271,12 @@ jobs:
         run: |
           python3 scripts/build_player_trends.py
 
+      - name: Build Stat Confidence Cache (Phase 8.20)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          python3 scripts/build_stat_confidence.py
+
       - name: Update Team Scheme Cache
         continue-on-error: true
         timeout-minutes: 5
