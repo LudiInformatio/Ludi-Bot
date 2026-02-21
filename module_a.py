@@ -15,6 +15,9 @@ from utils.api_helpers import retry_with_backoff
 # [NEW] BallDontLie Client
 from utils.bdl_client import BDLClient
 
+# [NEW] Import centralized mappings
+from utils.mappings import resolve_team_abbr
+
 class Gatekeeper:
     def __init__(self):
         print("========================================")
@@ -53,17 +56,7 @@ class Gatekeeper:
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
-        mapping = {
-            "Atlanta Hawks": "ATL", "Boston Celtics": "BOS", "Brooklyn Nets": "BKN", "Charlotte Hornets": "CHA",
-            "Chicago Bulls": "CHI", "Cleveland Cavaliers": "CLE", "Dallas Mavericks": "DAL", "Denver Nuggets": "DEN",
-            "Detroit Pistons": "DET", "Golden State Warriors": "GSW", "Houston Rockets": "HOU", "Indiana Pacers": "IND",
-            "Los Angeles Clippers": "LAC", "LA Clippers": "LAC", "Los Angeles Lakers": "LAL", "Memphis Grizzlies": "MEM",
-            "Miami Heat": "MIA", "Milwaukee Bucks": "MIL", "Minnesota Timberwolves": "MIN", "New Orleans Pelicans": "NOP",
-            "New York Knicks": "NYK", "Oklahoma City Thunder": "OKC", "Orlando Magic": "ORL", "Philadelphia 76ers": "PHI",
-            "Phoenix Suns": "PHX", "Portland Trail Blazers": "POR", "Sacramento Kings": "SAC", "San Antonio Spurs": "SAS",
-            "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
-        }
-        return mapping.get(team_name, None)
+        return resolve_team_abbr(team_name)
 
     @retry_with_backoff(max_attempts=3, backoff=2.0)
     def fetch_live_slate(self, sport='basketball_nba'):
