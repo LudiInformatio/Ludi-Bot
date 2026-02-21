@@ -20,11 +20,17 @@ wheels/
 .installed.cfg
 *.egg
 
+# Testing
+.pytest_cache/
+
 # Virtual Environment
 venv/
 .venv/
 ENV/
 env/
+
+# Node (future web app dependencies)
+node_modules/
 
 # IDE
 .vscode/
