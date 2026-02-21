@@ -17,6 +17,7 @@ pilmoji==2.0.3
 emoji==2.2.0
 playwright==1.57.0
 feedparser==6.0.12
+pbpstats==1.3.11
 pytest>=8.0.0
 
 # Phase 8 — Claude AI Integration (CRITICAL — missing = all AI features silently disabled)
