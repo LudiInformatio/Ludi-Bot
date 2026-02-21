@@ -415,7 +415,7 @@ class InjurySync:
         self._log(f"✅ RSS feeds: {len(parsed_injuries)} OUT/DOUBTFUL found")
         return {"success": True, "injuries": parsed_injuries, "errors": []}
 
-    def sync_to_database(self, injury_data):
+    def sync_to_database(self, injury_data, skip_resolve=False):
         """
         Sync injury data to database with status-change detection.
 
@@ -531,39 +531,42 @@ class InjurySync:
                         player_name
                     ))
 
-            resolved_cursor = conn.cursor()
-            resolved_cursor.execute('''
-                SELECT DISTINCT player_name
-                FROM player_injuries
-                WHERE resolved_at IS NULL
-            ''')
-            currently_injured = {row[0] for row in resolved_cursor.fetchall()}
+            # skip_resolve=True when called for supplementary data (e.g. RSS-only additions)
+            # to avoid wiping injuries that were synced in the primary BDL/Tank01 pass
+            if not skip_resolve:
+                resolved_cursor = conn.cursor()
+                resolved_cursor.execute('''
+                    SELECT DISTINCT player_name
+                    FROM player_injuries
+                    WHERE resolved_at IS NULL
+                ''')
+                currently_injured = {row[0] for row in resolved_cursor.fetchall()}
 
-            players_no_longer_injured = currently_injured - active_player_names
+                players_no_longer_injured = currently_injured - active_player_names
 
-            for player_name in players_no_longer_injured:
-                if not self.dry_run:
-                    resolved_cursor.execute('''
-                        UPDATE player_injuries
-                        SET resolved_at = ?
-                        WHERE player_name = ? AND resolved_at IS NULL
-                    ''', (snapshot_time, player_name))
+                for player_name in players_no_longer_injured:
+                    if not self.dry_run:
+                        resolved_cursor.execute('''
+                            UPDATE player_injuries
+                            SET resolved_at = ?
+                            WHERE player_name = ? AND resolved_at IS NULL
+                        ''', (snapshot_time, player_name))
 
-                    resolved_cursor.execute('''
-                        UPDATE players SET
-                            current_injury_status = 'ACTIVE',
-                            injury_updated_at = ?,
-                            injury_return_date = NULL,
-                            days_out_current = 0
-                        WHERE LOWER(name) = LOWER(?)
-                    ''', (snapshot_time, player_name))
+                        resolved_cursor.execute('''
+                            UPDATE players SET
+                                current_injury_status = 'ACTIVE',
+                                injury_updated_at = ?,
+                                injury_return_date = NULL,
+                                days_out_current = 0
+                            WHERE LOWER(name) = LOWER(?)
+                        ''', (snapshot_time, player_name))
 
-                    if resolved_cursor.rowcount > 0:
+                        if resolved_cursor.rowcount > 0:
+                            resolved_count += 1
+                            self._log(f"  ✅ Resolved: {player_name}")
+                    else:
                         resolved_count += 1
-                        self._log(f"  ✅ Resolved: {player_name}")
-                else:
-                    resolved_count += 1
-                    self._log(f"  [DRY RUN] Would resolve: {player_name}")
+                        self._log(f"  [DRY RUN] Would resolve: {player_name}")
 
             if not self.dry_run:
                 conn.commit()
@@ -710,7 +713,7 @@ def main():
         ]
         if new_from_rss:
             print(f"   📰 {len(new_from_rss)} new OUT/DOUBTFUL from RSS → writing to DB")
-            rss_result = syncer.sync_to_database({"success": True, "injuries": new_from_rss, "errors": []})
+            rss_result = syncer.sync_to_database({"success": True, "injuries": new_from_rss, "errors": []}, skip_resolve=True)
             print(f"   Synced: {rss_result['injuries_synced']} | Changes: {rss_result['status_changes']}")
         else:
             print("   No additional injuries from RSS feeds")

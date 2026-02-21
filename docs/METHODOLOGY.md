@@ -154,7 +154,7 @@ ALTER TABLE bet_recommendations ADD COLUMN closing_time TEXT;
 ## Poisson Simulation (Module C)
 
 ### Configuration
-- **25,000 iterations** per player (optimal balance of speed vs accuracy)
+- **10,000 iterations** per player (optimal balance of speed vs accuracy)
 - **Two-stage simulation**:
   1. Volume simulation (FGA, FG3A, FTA using Poisson distributions)
   2. Outcome simulation (apply shooting percentages)

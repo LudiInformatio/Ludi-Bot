@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 20, 2026 — End of Day
+**Last Updated:** February 20, 2026 — 11:59 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 — Ask Ludi (Telegram Bot) — Architecture research complete, implementation ready
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅
+**Active Work:** Phase 8.18 Game Lines Integration (planned) + Phase 8.13 Ask Ludi (implementation ready)
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -61,7 +61,10 @@ This is the single source of truth for project tasks and priorities.
 | Tank01 ✅ | Tank01 Data Expansion + Phase 3 Hardening | DONE | Central client (12 methods), STL/BLK weights fix, SIM_COUNT 10k, games fallback chain (Odds API→Tank01→BDL), output assertion gate (5 checks), Module H games bridge + fantasy_pts, Tank01 props validator in Module A, 4 new sync scripts (team info/projections/news/injury history), 4 new DB tables, morning brief streak notes. See `docs/projects/TANK01_DATA_EXPANSION.md` | $0 |
 | Infra ✅ | Injury Intelligence Hardening | DONE | RealGM RSS dual-source corroboration in `_nuance_check()` (confidence 0.95 when RotoWire + RealGM agree). AI blurb prompt hardened: `INJURY_BLURB_SYSTEM` + `INJURY_BLURB_PARSE_PROMPT` (5 few-shot examples, `tonight_available`, `blurb_is_stale`, `temperature=0.0`). Intraday refresh: `injury_refresh.yml` (4 daytime + 15 evening 20-min runs, staleness guard prevents API waste). Evening lock: `--force` pre-sync captures late scratches before 6 PM cards. `module_d.get_refresh_interval()` aligned: 120 min day / 20 min game-time. | $0 |
 | Infra ✅ | Claude Auth Fix | DONE | `utils/claude_client.py` priority reordered: ANTHROPIC_API_KEY (Priority 1) → `~/.claude/config.json` OAuth skipped in CI via `GITHUB_ACTIONS` check (Priority 2, local only) → `CLAUDE_CODE_OAUTH_TOKEN` last resort (Priority 3). `ANTHROPIC_API_KEY` added to GitHub repo secrets. Root cause: expired CLAUDE_CODE_OAUTH_TOKEN (set Feb 3) was winning Priority 1 in CI — fixed. | $0 |
-| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest** | $0 |
+| Infra ✅ | Morning Brief Pipeline Hardening | DONE | Removed `send_photo` + image card pipeline → native chunked Telegram text. Removed January hardcoded team watchlist → `target_teams=None` (all games processed). Spotlight 400 Bad Request fixed: 4000-char truncation + Markdown fallback. `sync_injuries.py` `skip_resolve` bug fixed: Step 4 RSS call was resolving all BDL/Tank01 injuries (0 active in DB). All games now scored by tier-weight algorithm, not filtered by hardcoded list. | $0 |
+| Research ✅ | BetIQ / TeamRankings Competitive Analysis | DONE | 3-session sprint (Feb 20). Findings: 6 cross-game patterns (B2B covers at 78-82% ATS, 2-3 day rest ATS trap, home UNDER 30-40%, heavy favorites fail ATS, underdog covers, H1/H2 team identity). Feature gap analysis: Tier 1 all buildable from existing ludi.db. Full doc: `docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md`. | $0 |
+| 8.18 | Game Lines Integration | HIGH | Fix `total=0` data flow bug (single line in `build_reporter_input()`). Add `team_totals` Odds API market (zero extra API calls). Module E 3-tier team scoring modifier: real team totals → derived implied → blanket fallback. `_score_game()` game line signals (total, spread). Claude prompt: team totals + moneyline rows. Odds API spread perspective fix (index 0 ambiguity). Phase 8.8 slot reserved in `_score_game()`. See plan doc for full details. | $0 |
+| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest. Phase 8.18 creates the slot for this to plug in.** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → response in Telegram thread. Architecture research complete (Feb 20): python-telegram-bot v21+ long polling, Haiku intent ($0.0001/call) → Sonnet analysis, read-only SQLite (`?mode=ro`), launchd keepalive, 3-file implementation (`bots/ask_ludi.py`, `ask_ludi_db.py`, `ask_ludi_handlers.py`). See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
 | 8.16 | Suspension Intelligence | MEDIUM | `sync_suspensions.py` (Perplexity → Claude Haiku → auto-insert into `player_injuries` as SUSPENDED). Module D + Module X pick up automatically. Three injection points: morning sync, game context query, Module D `get_injuries()`. | ~$0.02/day |
@@ -123,6 +126,25 @@ Second sprint of Feb 20 — closed remaining injury pipeline gaps and built intr
 - **Evening slate lock**: `--force` injury sync step before `morning_brief --mode evening` captures 4–6 PM late scratches in DB before 6 PM cards generate
 - **`--force` flag** on `sync_injuries.py` for on-demand overrides (web app, bot, evening lock)
 - **Downstream ready**: Telegram bot (8.13) and Ludi Lens web app query `player_injuries` directly — always ≤20 min stale during game time
+
+---
+
+### Morning Brief Pipeline Hardening + BetIQ Research ✅ COMPLETE (Feb 20, 2026 — Late PM)
+
+Third sprint of Feb 20 — hardened the morning/evening brief pipeline and completed competitive analysis.
+
+**Pipeline Fixes (both morning + evening modes):**
+- **Native Telegram text:** Removed `send_photo` + image card pipeline from `morning_brief.py`. Both morning and evening modes now send chunked native text (4000-char splits). No more PIL/PNG dependencies in briefing flow.
+- **All-game processing:** Removed January hardcoded watchlist (`['PHX','MIA','CHI',...]`). Set `target_teams=None` — all games on the slate are now processed and scored by the tier-weight algorithm. Tonight's IND@WAS was previously invisible.
+- **Spotlight Markdown fallback:** Claude spotlight outputs truncated to 4000 chars and retried as plain text on 400 Bad Request. Fixes Kyle Anderson-style failures.
+- **Injury `skip_resolve` bug:** `sync_to_database()` called twice in `sync_injuries.py main()`. Step 4 RSS call (7 players) was resolving all 34+ BDL/Tank01 injuries because they weren't in the RSS batch. Fixed with `skip_resolve=True` parameter — RSS call now only adds, never sweeps.
+- **`.gitignore` hardening:** Added `archives/data/`, `logs/health/`, `*.png` to gitignore.
+
+**Competitive Research:**
+- BetIQ/TeamRankings 3-session sprint — 6 cross-game ATS/O-U patterns confirmed across CLE@CHA, DAL@MIN, IND@WAS. 20+ power rating dimensions mapped. Tier 1 features all buildable from existing `ludi.db` (no new APIs). Doc: `docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md`
+
+**Game Lines Integration Planned (Phase 8.18):**
+- Confirmed: Odds API supports `team_totals` market (zero extra API calls — same request). BDL and Tank01 do NOT have team totals. Architecture: real team totals (Odds API) → derived implied totals (BDL fallback) → blanket modifier. Full plan ready for implementation.
 
 ---
 

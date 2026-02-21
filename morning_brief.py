@@ -10,8 +10,7 @@ from module_f import LudiReporter
 from module_g import LudiRefEngine
 from module_h_historian import LudiHistorian
 from module_x_scenario import ScenarioBuilder
-from utils.render_full_report import create_briefing_card
-from utils.telegram_notifier import send_photo, send_message
+from utils.telegram_notifier import send_message
 from utils.claude_client import get_claude_analysis, SONNET_MODEL
 from utils.claude_prompts import (
     ROSTER_RULES, 
@@ -674,7 +673,10 @@ class MorningBriefEngine:
                             if response:
                                 print(f"      ✅ Spotlight generated for {player_name}")
                                 if not self.dry_run:
-                                    send_message(response, parse_mode="Markdown")
+                                    # Truncate to Telegram limit; fall back to plain text if Markdown parse fails
+                                    text_out = response[:4000]
+                                    if not send_message(text_out, parse_mode="Markdown"):
+                                        send_message(text_out, parse_mode=None)
                                 else:
                                     print(f"      [DRY RUN] Would send:\n{response[:100]}...")
                             else:
@@ -693,22 +695,18 @@ class MorningBriefEngine:
         except Exception as e:
             print(f"⚠️ Global Spotlight Error: {e}")
 
-        if image_path:
-            print(f"✅ Visual Card Ready: {image_path}")
-            # 5. Send to Telegram (Visual Only)
-            
-            caption = (
-                f"**{report_title} | {datetime.date.today().strftime('%b %d')}**\n"
-                f"💎 {body}"
-            )
-            
+        # 5. Send bet list to Telegram as native text (no image card)
+        if text_report:
+            header = f"*{report_title} | {datetime.date.today().strftime('%b %d')}*\n💎 {body}\n\n"
+            full_text = header + text_report
+            # Telegram max message size is 4096 chars — split if needed
+            MAX_CHARS = 4000
             if not self.dry_run:
-                send_photo(image_path, caption=caption)
-                print("🚀 Sent to Telegram!")
+                for i in range(0, len(full_text), MAX_CHARS):
+                    send_message(full_text[i:i + MAX_CHARS], parse_mode="Markdown")
+                print("🚀 Bet list sent to Telegram!")
             else:
-                print(f"🚫 [DRY RUN] Skipping photo send for {image_path}")
-        else:
-            print("❌ Failed to generate visual card.")
+                print(f"🚫 [DRY RUN] Would send bet list ({len(full_text)} chars)")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -716,13 +714,6 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Skip Telegram sends")
     args = parser.parse_args()
 
-    # --- MANUAL WATCHLIST CONFIG ---
-    # Jan 13: PHX, MIA, CHI, HOU, SAS, OKC
-    # Jan 14: CLE, PHI, NYK, SAC, UTA, CHI (Already in Jan 13 list)
-    watchlist = [
-        'PHX', 'MIA', 'CHI', 'HOU', 'SAS', 'OKC', # Jan 13
-        'CLE', 'PHI', 'NYK', 'SAC', 'UTA'         # Jan 14
-    ]
-    
-    engine = MorningBriefEngine(target_teams=watchlist, mode=args.mode, dry_run=args.dry_run)
+    # Process all games on the slate (no hardcoded team filter)
+    engine = MorningBriefEngine(target_teams=None, mode=args.mode, dry_run=args.dry_run)
     engine.run()

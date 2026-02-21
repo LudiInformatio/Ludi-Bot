@@ -14,13 +14,13 @@ A production-grade betting analytics engine that generates player prop recommend
 | Component | Description |
 |-----------|-------------|
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
-| **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 25K Runs \| Usage Vacuum) |
+| **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 19, 2026 7:39 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 20, 2026 11:59 PM EST) |
 
 ### Key Features
 
-- **Monte Carlo Simulations** — 25,000 iterations per player with Poisson/Normal hybrid distributions
+- **Monte Carlo Simulations** — 10,000 iterations per player with Poisson/Normal hybrid distributions
 - **Usage Vacuum Theory** — Automatic usage redistribution when star players are OUT
 - **19-Archetype Matchup System** — Player style vs defensive scheme analysis (incl. 5 defensive archetypes)
 - **Rotation Intelligence** — 396 player rotation profiles + 789 beneficiary pairs (e.g. Embiid OUT → Drummond +18 min)
@@ -52,7 +52,7 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 |--------|---------|
 | **A: Gatekeeper** | Odds ingestion (The-Odds-API primary, BDL fallback) |
 | **B: Engine** | Historical analysis (L5, L10, season trends, hot streaks) |
-| **C: Oracle** | Monte Carlo simulation engine (25K iterations) + rotation projection |
+| **C: Oracle** | Monte Carlo simulation engine (10K iterations) + rotation projection |
 | **D: Yak** | Injury intelligence (BDL + Tank01 + Perplexity Sonar) |
 | **E: Calibrator** | Matchup adjustments (archetype vs scheme) + scoring environment dampener |
 | **F: Alchemist** | Edge calculation, devigging, OVER filters, bet sizing, tier classification |
@@ -131,7 +131,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 19, 2026 7:39 PM EST
+**Last Updated:** February 20, 2026 11:59 PM EST
 
 **Phase 8 Completions:**
 
@@ -151,8 +151,13 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.15 | Trend Engine — `player_trends` (4,500+ rows), hybrid pre-computed + live hit rates, enriched briefings |
 | Infra | Slack/Notification Split — ops alerts → Slack; betting product stays on Telegram |
 | Infra | Model Calibration — BLK OVER filter (33.6% WR), data-driven team situation notes |
+| Infra | Morning/Evening Brief Hardening — native Telegram text (no image cards), all-game processing (watchlist removed), spotlight Markdown fallback, injury `skip_resolve` pipeline bug fixed |
+| Research | BetIQ/TeamRankings Analysis — 6 cross-game ATS/O-U patterns; Tier 1 features buildable from existing data; `docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md` |
 
-**Performance (Jan 7 – Feb 19, 2026):**
+**Planned Next:**
+- Phase 8.18: Game Lines Integration — `team_totals` Odds API market, per-team scoring modifiers in Module E, `_score_game()` game line signals, team totals + ML in Claude prompt
+
+**Performance (Jan 7 – Feb 20, 2026):**
 - Settled Bets: 14,423+ | Win Rate: ~54.8% overall
 - BLOCKS UNDER: 63.2% WR (870 bets) — strongest signal in system
 - UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)
@@ -172,6 +177,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | [docs/PRODUCTION_HANDBOOK.md](docs/PRODUCTION_HANDBOOK.md) | Deployment and operations guide |
 | [best-practices/](best-practices/) | API patterns, sportsbook tiers, lessons learned |
 | [CLAUDE.md](CLAUDE.md) | AI assistant project instructions |
+| [docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
 
 ---
 
