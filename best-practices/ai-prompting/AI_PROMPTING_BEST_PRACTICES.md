@@ -237,3 +237,70 @@ query = f"NBA injuries today"
 | Feb 2026 | Inline prompts in module_d.py → prompt drift when updating logic. Fixed: centralize in `claude_prompts.py` |
 | Feb 2026 | No few-shot examples → Haiku invented `expected_return` as date string sometimes, enum other times. Fixed: 5 examples in `INJURY_BLURB_PARSE_PROMPT` |
 | Feb 2026 | Sonnet for injury classification → 5× cost for same accuracy as Haiku. Rule: Haiku for classification, Sonnet for reasoning |
+
+---
+
+## Claude Code Session Memory (`MEMORY.md`)
+
+Claude Code auto-loads `memory/MEMORY.md` at the start of every session. Lines after **200 are truncated** — Claude never sees them. Treat it as a tight index, not a log.
+
+### The 200-Line Rule
+
+MEMORY.md has a hard 200-line display cap. When the file grows past that:
+1. Move detailed notes into a topic file (e.g., `memory/schema_notes.md`, `memory/api_lessons.md`)
+2. Replace the detail in MEMORY.md with a 1-line reference: `- Full schema notes: memory/schema_notes.md`
+3. Keep MEMORY.md as a scannable index only
+
+### What to Save
+
+✅ **Save these:**
+- Stable patterns confirmed across multiple sessions (e.g., "BDL team abbr mismatch: GS→GSW")
+- Key architectural decisions and the reason behind them
+- Schema gotchas that would cause silent bugs if forgotten (e.g., `games.date` not `game_date`)
+- Bugs that recur — so Claude doesn't re-introduce them
+- User preferences stated explicitly ("always use bun", "never auto-commit")
+
+❌ **Don't save these:**
+- Current task state or in-progress work notes
+- Anything that duplicates CLAUDE.md or AGENTS.md
+- Speculative conclusions from reading a single file
+- Module-level implementation details (put those in code comments)
+
+### How to Organize
+
+**Semantic over chronological.** Group by topic, not by date. Bad:
+
+```
+## Feb 20 session
+- Fixed X
+- Found Y
+- Decided Z
+```
+
+Good:
+```
+## Database Schema Notes
+- games.date (not game_date) — confirmed correct column name
+- bet_recommendations.confidence_tier (not tier, not bet_tier)
+
+## BDL API Gotchas
+- Abbr mismatches: GS/NO/NY/PHO/SA → normalize to GSW/NOP/NYK/PHX/SAS
+```
+
+### Priority Ordering
+
+High-importance items go **at the top** of the file. Claude reads top-to-bottom and the last ~30 lines may be cut off at session start. Important recurring lessons should be near line 1, not line 180.
+
+### Save Habit
+
+Update MEMORY.md at the **end of each session** (before `/compact`), not during. Mid-session entries are often incomplete. End-of-session: one pass, add what's stable, remove what turned out to be wrong.
+
+### Quick Checks
+
+```bash
+# See current line count (stay under 200)
+wc -l memory/MEMORY.md
+
+# Check what Claude actually sees (first 200 lines)
+head -200 memory/MEMORY.md
+```
