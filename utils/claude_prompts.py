@@ -46,23 +46,28 @@ BEFORE SUBMITTING, verify:
 GAME_NOTES_TEMPLATE = """📅 {game_label}
 ## {away_team} @ {home_team} | S.A.V.A.G.E.
 
+=== TONIGHT'S GAME DATA ===
 **Game Context:**
 | Factor | Value | Impact |
 |--------|-------|--------|
 | Spread | {spread} | {blowout_risk} |
 | Total | {total} | {env_note} |
+| Home Total | {home_team_total} | Team scoring context |
+| Away Total | {away_team_total} | Team scoring context |
 | Pace | {matchup_pace_note} | Context |
 | Schedule | {schedule_notes} | {fatigue_flag} |
 
 **Situational Intel:**
 {situational_context}
 
+=== INJURY & PERSONNEL ===
 **Injury Impact:**
 {injury_intel_block}
 {beneficiary_block}
 [Format: "OUT: {player} ({days_out}d {injury_type}) → {beneficiary} +{boost} {stat} proj"]
 [Or: "GTD: {player} ({injury_type}) — {update_time} update critical"]
 
+=== MATCHUP ANALYSIS ===
 **Scheme Edge:**
 - {away_team} ({away_archetype_summary}) vs {home_team} ({home_def_scheme}): {one_sentence}
 - {home_team} ({home_archetype_summary}) vs {away_team} ({away_def_scheme}): {one_sentence}
@@ -96,6 +101,64 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 [STOP HERE if player is OUT/DOUBTFUL — do not analyze further]
 
 {analysis_block}
+
+---
+*Player spotlight - research only*
+"""
+
+GAME_NOTES_EXAMPLE = """📅 Feb 21, 2026
+## LAL @ BOS | S.A.V.A.G.E.
+
+=== TONIGHT'S GAME DATA ===
+**Game Context:**
+| Factor | Value | Impact |
+|--------|-------|--------|
+| Spread | LAL +4.5 | MODERATE |
+| Total | 225.5 | High-scoring |
+| Pace | 102.3 (8th vs 5th) | Context |
+| Schedule | LAL on B2B (road) | LAL fatigue |
+
+**Situational Intel:**
+LeBron (calf) returns tonight after missing 3 games. Lakers 2-1 without him. Celtics 8-2 in last 10 home games.
+
+=== INJURY & PERSONNEL ===
+**Injury Impact:**
+OUT: Kristaps Porzingis (calf, 2d) → Grant Williams +5 REB proj
+GTD: LeBron James (calf) — 6:00 PM update critical
+
+=== MATCHUP ANALYSIS ===
+**Scheme Edge:**
+- LAL (HELIOCENTRIC) vs BOS (DROP): LeBron drives vs drop coverage → kick3s
+-out  BOS (DROP) vs LAL (HELIOCENTRIC): Tatum posts up Lakers wings → mismatch
+
+**Key Edges Today:**
+LeBron PTS OVER 28.5 — LeBron vs drop coverage (64% hit rate L10) (+8.2% edge)
+Tatum REB OVER 7.5 — Lakers allow 9.2 REB to wings (+5.1% edge)
+
+---
+*S.A.V.A.G.E. analysis - research only*
+"""
+
+SPOTLIGHT_EXAMPLE = """## LeBron James | LAL @ BOS
+
+LeBron James PTS OVER 28.5 (+100) — DIAMOND tier play vs DROP defense.
+
+**Context:**
+- Archetype: HELIOCENTRIC
+- Opponent scheme: DROP (allows rim pressure + kickout 3s)
+- Injury status: GTD (calf) — confirmed active
+- Trend: +4.2 PTS L5
+- Minutes: 32-36 (stable)
+- L10 avg: 29.8 (70% hit rate)
+- Streak: 3 consecutive OVER
+- Edge: 8.2% above line
+
+**Why this play:**
+LeBron → vs BOS DROP defense → kicks out to shooters when doubled →，今晚 vs Lakers transition → high usage in return game.
+
+[STOP HERE if player is OUT/DOUBTFUL — do not analyze further]
+
+LeBron returns from a 3-game calf injury absence with fresh legs. Against Boston's drop coverage, he can operate in the mid-post where he's most efficient. The Lakers' spacing improves with DFS/Reddish, giving LeBron driving lanes. His L10 29.8 PPG on 70% hit rate vs the line shows strong form.
 
 ---
 *Player spotlight - research only*
