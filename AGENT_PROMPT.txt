@@ -1,0 +1,196 @@
+COMPREHENSIVE POST-AUDIT DOCUMENTATION TASK
+
+CONTEXT:
+- 10-sprint audit complete (Sprints 0-10)
+- Two production bugs fixed and verified
+- Best practices proposal document created at docs/audit/NEW_BEST_PRACTICES_PROPOSAL.md
+- Documentation cross-reference gaps identified
+
+EXECUTION MODE: [User selects ONE]
+
+---
+
+MODE 1: MINIMAL (Phase 1 Only - Documentation Cross-References)
+
+Execute documentation cross-reference fixes. No best practices integration. Keeps proposal document as standalone reference.
+
+TASKS:
+1. Edit CLAUDE.md:
+   - Add to "Project Context" section (after line 22): "See @docs/TOOLS_GUIDE.md for task automation scripts and helpers."
+   - Add to "Resources" section (after line 183):
+     ```
+     - **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
+     - **Research**: `docs/research/` (competitive analysis, prompt engineering)
+     ```
+
+2. Edit README.md:
+   - Add to "Documentation" table (after line 183):
+     ```
+     | [docs/TOOLS_GUIDE.md](docs/TOOLS_GUIDE.md) | Task automation scripts and helpers |
+     | [docs/STATUS_HISTORY.md](docs/STATUS_HISTORY.md) | Archived project status updates (Phases 1-4) |
+     ```
+
+3. Verify:
+   ```bash
+   grep -l "TOOLS_GUIDE" CLAUDE.md README.md
+   grep -l "STATUS_HISTORY" CLAUDE.md README.md
+   # Both should return both files
+   ```
+
+FILES MODIFIED: 2 files, ~6 lines changed
+RISK: LOW (additive only, no removals)
+
+---
+
+MODE 2: COMPREHENSIVE (Phase 1 + Phase 2 - Full Integration)
+
+Execute full post-audit documentation plan: cross-reference fixes + 3 critical pattern integrations + cleanup.
+
+TASKS (Phase 1 - Same as Mode 1):
+[Complete Phase 1 tasks from Mode 1]
+
+TASKS (Phase 2 - Best Practices Integration):
+
+4. Add Pattern to best-practices/data-modeling/README.md (after line 93):
+   ```markdown
+   ## Pattern 8 — Schema Constraint Validation
+
+   **Problem:** `ON CONFLICT` clause must match the ACTUAL constraint name in CREATE TABLE, not assumed column names. Mismatches cause silent insert failures.
+
+   **Example:**
+   ```sql
+   -- ❌ Wrong: conflict clause doesn't match actual constraint
+   CREATE TABLE player_game_logs (
+       player_id TEXT NOT NULL,
+       game_date TEXT NOT NULL,
+       pts INTEGER,
+       UNIQUE(player_id, game_date)  -- Actual constraint
+   );
+   -- Later: ON CONFLICT(game_id, player_id) silently fails
+
+   -- ✅ Right: verify constraint before writing upsert
+   PRAGMA table_info(player_game_logs);
+   -- Then: ON CONFLICT(player_id, game_date) DO UPDATE
+   ```
+
+   **Real incident:** Module H `ON CONFLICT(game_id, player_id)` wrong → actual constraint `(player_id, game_date)` — all inserts silently failed 8 days (Sprint 8).
+   ```
+
+5. Add Pattern to best-practices/coding/README.md (after line 87):
+   ```markdown
+   ## Pattern 7 — Module-Level Constants for Configuration
+
+   **Problem:** Stat categorizations scattered across functions create maintenance burden. Adding a stat type requires editing multiple conditionals.
+
+   **Example:**
+   ```python
+   # ❌ Before: magic values in every function
+   def get_matchup_analysis(stat_category):
+       if stat_category in ['PTS', 'AST', '3PM', 'TOV']:
+           return _offensive_matchup()
+       elif stat_category in ['STL', 'BLK', 'DREB']:
+           return _defensive_matchup()
+
+   def apply_modifier(stat_category):
+       if stat_category in ['PTS', 'AST', '3PM', 'TOV']:  # Duplicate list
+           return offensive_modifier()
+
+   # ✅ After: single source of truth at module level
+   OFFENSIVE_STATS = ['PTS', 'AST', '3PM', 'TOV', 'FGA', 'FTA', 'OREB']
+   DEFENSIVE_STATS = ['STL', 'BLK', 'DREB']
+
+   def get_matchup_analysis(stat_category):
+       if stat_category in OFFENSIVE_STATS:
+           return _offensive_matchup()
+       elif stat_category in DEFENSIVE_STATS:
+           return _defensive_matchup()
+   ```
+
+   **Real incident:** Bug 2 (defensive playtype filtering) — stat routing logic needed in 2+ functions. Module-level constants solved it (Sprint 10 post-audit).
+   ```
+
+6. Add Pattern to best-practices/debugging/README.md (after line 142):
+   ```markdown
+   ## Pattern 7 — Parameter Propagation Debugging
+
+   **Problem:** New parameter added to function but not threaded through entire call chain. Callers pass old signature, new parameter gets default value instead of intended value.
+
+   **Grep workflow before adding new parameter:**
+   ```bash
+   # 1. Find the function definition
+   grep -rn "def your_function" --include="*.py" .
+
+   # 2. Find ALL call sites
+   grep -rn "your_function(" --include="*.py" .
+
+   # 3. Find ALL unpacking patterns (assignment statements)
+   grep -rn "= .*your_function\|, .*your_function" --include="*.py" .
+
+   # 4. Update ALL call sites in the same commit
+   # Example: adding title parameter to create_daily_briefing()
+   # - Found: module_f.py line 560 (generate_report calls it)
+   # - Found: morning_brief.py line 295 (sets title value)
+   # - Fixed: Both files updated before commit
+   ```
+
+   **Real incident:** Bug 1 (morning brief title mode) — title parameter added to create_daily_briefing() but not passed from generate_report() caller. Hardcoded value used instead of dynamic mode-based title (Sprint 10 post-audit).
+   ```
+
+7. Update best-practices/README.md pattern counts:
+   - Line 10: "Coding: 6 patterns" → "Coding: 7 patterns"
+   - Line 11: "Data Modeling: 7 patterns" → "Data Modeling: 8 patterns"
+   - Line 12: "Debugging: 6 patterns" → "Debugging: 7 patterns"
+
+8. Update MEMORY.md (add after "Full Project Audit" section):
+   ```markdown
+   ### Post-Audit Best Practices (Feb 21, 2026)
+   - 3 critical patterns integrated: Schema Constraint Validation, Module-Level Constants, Parameter Propagation Debugging
+   ```
+
+TASKS (Phase 3 - Cleanup):
+
+9. Archive proposal document:
+   ```bash
+   mkdir -p docs/audit/proposals
+   mv docs/audit/NEW_BEST_PRACTICES_PROPOSAL.md docs/audit/proposals/
+   ```
+
+10. Update docs/audit/AUDIT_2026_02_21.md (add at end):
+    ```markdown
+    ### Post-Audit Follow-Up (Feb 21, 2026 PM)
+
+    **Documentation:**
+    - Cross-reference gaps fixed in CLAUDE.md and README.md
+    - TOOLS_GUIDE.md and STATUS_HISTORY.md now properly indexed
+
+    **Best Practices Integration:** COMPLETED
+    - 3 critical patterns integrated into existing files
+    - Proposal document archived at docs/audit/proposals/
+    ```
+
+11. Verify:
+    ```bash
+    # Pattern counts match
+    grep "Pattern [0-9]" best-practices/coding/README.md | wc -l  # Should be 7
+    grep "Pattern [0-9]" best-practices/data-modeling/README.md | wc -l  # Should be 8
+    grep "Pattern [0-9]" best-practices/debugging/README.md | wc -l  # Should be 7
+
+    # Proposal archived
+    [ -f docs/audit/proposals/NEW_BEST_PRACTICES_PROPOSAL.md ] && echo "✅ Archived"
+
+    # Cross-references present
+    grep -c "TOOLS_GUIDE\|STATUS_HISTORY" CLAUDE.md README.md  # Should be 2 each
+    ```
+
+FILES MODIFIED: 8 files, ~110 lines changed
+RISK: MEDIUM (adds content to production best-practices files)
+
+---
+
+DECISION POINT:
+- Choose MODE 1 for minimal intervention (cross-references only)
+- Choose MODE 2 for comprehensive knowledge capture (full integration)
+
+RECOMMENDATION: Execute MODE 1 immediately. MODE 2 can be deferred if user prefers standalone proposal document.
+
+REFERENCE PLAN: /Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/docs/audit/POST_AUDIT_DOCUMENTATION_PLAN.md

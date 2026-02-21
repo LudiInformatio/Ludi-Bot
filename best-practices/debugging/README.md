@@ -1,6 +1,6 @@
 # Debugging Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-19)
+**Status:** ✅ Complete (updated 2026-02-21)
 
 This guide covers debugging workflows, CI diagnosis, and silent failure detection for the Ludi-Bot production pipeline. Patterns are derived from real incidents discovered through the Feb 19 workflow audit.
 
@@ -140,6 +140,32 @@ grep -rn "= self\.reporter\." --include="*.py" .
 ```
 
 **Real incident:** Phase 8.2/8.3 (commit `bd9cb38`, Feb 17) changed `module_f.generate_report()` to return `(briefing, image_path, all_props)`. `main.py:639` still unpacked only 2 values. The pipeline crashed on every run from Feb 17–19. Fixed Feb 19 (commit `0104878`).
+
+---
+
+## Pattern 7 — Parameter Propagation Debugging
+
+**Problem:** New parameter added to function but not threaded through entire call chain. Callers pass old signature, new parameter gets default value instead of intended value.
+
+**Grep workflow before adding new parameter:**
+```bash
+# 1. Find the function definition
+grep -rn "def your_function" --include="*.py" .
+
+# 2. Find ALL call sites
+grep -rn "your_function(" --include="*.py" .
+
+# 3. Find ALL unpacking patterns (assignment statements)
+grep -rn "= .*your_function\|, .*your_function" --include="*.py" .
+
+# 4. Update ALL call sites in the same commit
+# Example: adding title parameter to create_daily_briefing()
+# - Found: module_f.py line 560 (generate_report calls it)
+# - Found: morning_brief.py line 295 (sets title value)
+# - Fixed: Both files updated before commit
+```
+
+**Real incident:** Bug 1 (morning brief title mode) — title parameter added to create_daily_briefing() but not passed from generate_report() caller. Hardcoded value used instead of dynamic mode-based title (Sprint 10 post-audit).
 
 ---
 

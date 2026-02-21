@@ -27,6 +27,7 @@ See @ROADMAP.md for current tasks and priorities.
 See @docs/ARCHITECTURE.md for system design and module reference.
 See @docs/METHODOLOGY.md for betting edge calculations.
 See @docs/STATUS_HISTORY.md for historical updates.
+See @docs/TOOLS_GUIDE.md for task automation scripts and helpers.
 See @best-practices/ for reusable patterns and lessons learned.
 
 ---
@@ -222,3 +223,5 @@ This project has custom skills available:
 - **Best Practices**: `best-practices/` (API patterns, lessons learned, reusable templates)
   - **API Best Practices**: `best-practices/api/API_BEST_PRACTICES.md` (comprehensive guide)
   - **API Quick Reference**: `best-practices/api/API_QUICK_REFERENCE.md` (cheatsheet)
+- **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
+- **Research**: `docs/research/` (competitive analysis, prompt engineering)

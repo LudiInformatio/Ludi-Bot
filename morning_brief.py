@@ -734,7 +734,8 @@ Return JSON only."""
                                 analysis_block=get_matchup_analysis(
                                     player_name,
                                     opponent,
-                                    cursor
+                                    cursor,
+                                    stat_cat
                                 ),
                             )
                             

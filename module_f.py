@@ -557,7 +557,7 @@ class LudiReporter:
         # Generate visual card (V4.6 - Visual Upgrade)
         image_path = self.generate_image_card(visual_props, title=title)
         
-        return self.create_daily_briefing(all_props), image_path, all_props
+        return self.create_daily_briefing(all_props, title=title), image_path, all_props
 
     def generate_image_card(self, props: list, title: str = "LUDI GAME BRIEF") -> str:
         """
@@ -958,9 +958,9 @@ class LudiReporter:
 
         return card
 
-    def create_daily_briefing(self, props):
+    def create_daily_briefing(self, props, title="LUDI GAME BRIEF"):
         """Formats the final briefing output for bot and console display."""
-        report = f"\n📰 LUDI ELITE BRIEFING ({format_est_date('%b %d, %Y')})\n"
+        report = f"\n📰 {title} ({format_est_date('%b %d, %Y')})\n"
         report += "================================\n"
 
         # BDL Fallback notice — set by Gatekeeper when Odds-API quota is exhausted.

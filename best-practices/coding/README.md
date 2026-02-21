@@ -1,6 +1,6 @@
 # Coding Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-19)
+**Status:** ✅ Complete (updated 2026-02-21)
 
 This guide covers Python and bash coding patterns for the Ludi-Bot codebase. Every pattern is backed by a real incident or confirmed working pattern from the production system.
 
@@ -238,6 +238,38 @@ def calculate_edge(self, model_prob, fair_prob):
         raise ValueError(f"Invalid fair_prob: {fair_prob}")  # this should never happen
     return (model_prob - fair_prob) / fair_prob * 100
 ```
+
+---
+
+## Pattern 7 — Module-Level Constants for Configuration
+
+**Problem:** Stat categorizations scattered across functions create maintenance burden. Adding a stat type requires editing multiple conditionals.
+
+**Example:**
+```python
+# ❌ Before: magic values in every function
+def get_matchup_analysis(stat_category):
+    if stat_category in ['PTS', 'AST', '3PM', 'TOV']:
+        return _offensive_matchup()
+    elif stat_category in ['STL', 'BLK', 'DREB']:
+        return _defensive_matchup()
+
+def apply_modifier(stat_category):
+    if stat_category in ['PTS', 'AST', '3PM', 'TOV']:  # Duplicate list
+        return offensive_modifier()
+
+# ✅ After: single source of truth at module level
+OFFENSIVE_STATS = ['PTS', 'AST', '3PM', 'TOV', 'FGA', 'FTA', 'OREB']
+DEFENSIVE_STATS = ['STL', 'BLK', 'DREB']
+
+def get_matchup_analysis(stat_category):
+    if stat_category in OFFENSIVE_STATS:
+        return _offensive_matchup()
+    elif stat_category in DEFENSIVE_STATS:
+        return _defensive_matchup()
+```
+
+**Real incident:** Bug 2 (defensive playtype filtering) — stat routing logic needed in 2+ functions. Module-level constants solved it (Sprint 10 post-audit).
 
 ---
 

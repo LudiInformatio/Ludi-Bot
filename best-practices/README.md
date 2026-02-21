@@ -56,7 +56,7 @@ best-practices/
 
 ### 🔧 Coding Patterns (`coding/`)
 **Status:** ✅ Complete (Feb 19, 2026)
-- `README.md` — 6 patterns: error handling, tuple unpacking, bash defaults, lazy imports, type hints
+- `README.md` — 7 patterns: error handling, tuple unpacking, bash defaults, lazy imports, type hints, module-level constants
 
 ---
 
@@ -69,13 +69,13 @@ best-practices/
 
 ### 🗄️ Data Modeling (`data-modeling/`)
 **Status:** ✅ Complete (Feb 19, 2026)
-- `README.md` — 8 patterns: schema design, canonical IDs, indexes, freshness validation, self-healing
+- `README.md` — 9 patterns: schema design, canonical IDs, indexes, freshness validation, self-healing, constraint validation
 
 ---
 
 ### 🐛 Debugging (`debugging/`)
 **Status:** ✅ Complete (Feb 19, 2026)
-- `README.md` — 6 patterns: CI diagnosis playbook, silent failure detection, library param inspection, bash empty-var crash, function return mismatch, DB corruption check
+- `README.md` — 7 patterns: CI diagnosis playbook, silent failure detection, library param inspection, bash empty-var crash, function return mismatch, DB corruption check, parameter propagation
 - Anti-pattern table: `except: continue` → always log; `|| echo` → use `${VAR:-default}`
 
 ---

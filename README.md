@@ -181,6 +181,8 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | [docs/PRODUCTION_HANDBOOK.md](docs/PRODUCTION_HANDBOOK.md) | Deployment and operations guide |
 | [best-practices/](best-practices/) | API patterns, sportsbook tiers, lessons learned |
 | [CLAUDE.md](CLAUDE.md) | AI assistant project instructions |
+| [docs/TOOLS_GUIDE.md](docs/TOOLS_GUIDE.md) | Task automation scripts and helpers |
+| [docs/STATUS_HISTORY.md](docs/STATUS_HISTORY.md) | Archived project status updates (Phases 1-4) |
 | [docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
 | [best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md](best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md) | BERT-derived prompt engineering patterns — 8 structural improvements for Claude prompts, implementation priority |
 

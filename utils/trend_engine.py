@@ -389,25 +389,25 @@ def format_minutes_line(trend_data: dict) -> str:
         return f"MINS DOWN {delta:.1f} ({l15:.1f} -> {l7:.1f})"
 
 
-def get_matchup_analysis(player_name, opponent_abbr, cursor):
+OFFENSIVE_STATS = ['PTS', 'AST', '3PM', 'TOV', 'FGA', 'FTA', 'OREB']
+DEFENSIVE_STATS = ['STL', 'BLK', 'DREB']
+TOTAL_REB_STAT = ['REB']
+MINUTES_STAT = ['MIN']
+
+
+def get_matchup_analysis(player_name, opponent_abbr, cursor, stat_category='PTS'):
     """
     Build a structured archetype-vs-scheme matchup block for Spotlight cards.
     Returns a 1-2 line string, or empty string if data unavailable.
-    Example output: "P&R Ball Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ defense"
+    
+    Example outputs:
+    - PTS OVER: "P&R Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ defense"
+    - BLK OVER: "Defends 18% of possessions | Allows 42.3% FG (-4.1% vs avg) vs P&R_HEAVY offense"
+    - REB OVER: "Putbacks (1.12 PPP, 8%) | Defends 21% (DREB context)"
+    - MIN OVER: "Starter: 34.2 avg | B2B: 31.5 | Blowout: 28.3 | Close: 36.1"
     """
     try:
-        # Pull player's top 2 Synergy playtypes by frequency
-        playtypes = cursor.execute("""
-            SELECT playtype, ppp, freq_pct, percentile
-            FROM player_synergy_playtypes
-            WHERE player_name = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
-            ORDER BY freq_pct DESC LIMIT 2
-        """, (player_name,)).fetchall()
-
-        if not playtypes:
-            return ""
-
-        # Pull opponent's current defensive scheme
+        # Pull opponent's current scheme
         scheme_row = cursor.execute("""
             SELECT active_style
             FROM team_scheme_cache
@@ -416,33 +416,143 @@ def get_matchup_analysis(player_name, opponent_abbr, cursor):
         """, (opponent_abbr,)).fetchone()
 
         scheme = scheme_row[0] if scheme_row else "NEUTRAL"
-
-        # Format: "P&R Ball Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ"
-        pt_parts = []
-        for row in playtypes:
-            playtype, ppp, freq_pct, percentile = row
-
-            # Clean up verbose NBA playtype names
-            clean_name = (playtype
-                          .replace("PlayerPlayType", "")
-                          .replace("PickAndRollBallHandler", "P&R Handler")
-                          .replace("PickAndRollRollMan", "P&R Roll Man")
-                          .replace("Isolation", "ISO")
-                          .replace("Spotup", "Spot-Up")
-                          .replace("Transition", "Transition")
-                          .replace("Postup", "Post-Up")
-                          .replace("Handoff", "Handoff")
-                          .replace("OffScreen", "Off-Screen")
-                          .replace("Cut", "Cut")
-                          .strip())
-
-            ppp_str = f"{ppp:.2f}" if ppp else "N/A"
-            freq_str = f"{freq_pct:.0f}%" if freq_pct else "N/A"
-
-            pt_parts.append(f"{clean_name} ({ppp_str} PPP, {freq_str})")
-
-        playtype_str = " | ".join(pt_parts)
-        return f"{playtype_str} vs {scheme} defense"
+        
+        # OFFENSIVE stats: use Synergy PPP playtype data
+        if stat_category in OFFENSIVE_STATS:
+            return _get_offensive_matchup(player_name, opponent_abbr, cursor, scheme)
+        
+        # DEFENSIVE stats: use player_defense metrics
+        elif stat_category in DEFENSIVE_STATS:
+            return _get_defensive_matchup(player_name, opponent_abbr, cursor, scheme)
+        
+        # TOTAL REB: combine both contexts
+        elif stat_category in TOTAL_REB_STAT:
+            return _get_rebound_matchup(player_name, opponent_abbr, cursor, scheme)
+        
+        # MINUTES: use rotation profile data
+        elif stat_category in MINUTES_STAT:
+            return _get_minutes_matchup(player_name, cursor)
+        
+        # Default fallback to offensive
+        return _get_offensive_matchup(player_name, opponent_abbr, cursor, scheme)
 
     except Exception:
         return ""
+
+
+def _get_offensive_matchup(player_name, opponent_abbr, cursor, scheme):
+    """Handle offensive stat categories (PTS, AST, 3PM, TOV, FGA, FTA, OREB)."""
+    playtypes = cursor.execute("""
+        SELECT playtype, ppp, freq_pct, percentile
+        FROM player_synergy_playtypes
+        WHERE player_name = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
+        ORDER BY freq_pct DESC LIMIT 2
+    """, (player_name,)).fetchall()
+
+    if not playtypes:
+        return ""
+
+    pt_parts = []
+    for row in playtypes:
+        playtype, ppp, freq_pct, percentile = row
+
+        clean_name = (playtype
+                      .replace("PlayerPlayType", "")
+                      .replace("PickAndRollBallHandler", "P&R Handler")
+                      .replace("PickAndRollRollMan", "P&R Roll Man")
+                      .replace("Isolation", "ISO")
+                      .replace("Spotup", "Spot-Up")
+                      .replace("Transition", "Transition")
+                      .replace("Postup", "Post-Up")
+                      .replace("Handoff", "Handoff")
+                      .replace("OffScreen", "Off-Screen")
+                      .replace("Cut", "Cut")
+                      .strip())
+
+        ppp_str = f"{ppp:.2f}" if ppp else "N/A"
+        freq_str = f"{freq_pct:.0f}%" if freq_pct else "N/A"
+
+        pt_parts.append(f"{clean_name} ({ppp_str} PPP, {freq_str})")
+
+    playtype_str = " | ".join(pt_parts)
+    return f"{playtype_str} vs {scheme} defense"
+
+
+def _get_defensive_matchup(player_name, opponent_abbr, cursor, scheme):
+    """Handle defensive stat categories (STL, BLK, DREB)."""
+    defense = cursor.execute("""
+        SELECT freq_pct, dfg_pct, diff_pct
+        FROM player_defense
+        WHERE player_name = ? AND opponent_team = ?
+        ORDER BY updated_at DESC LIMIT 1
+    """, (player_name, opponent_abbr,)).fetchone()
+
+    if not defense:
+        return ""
+
+    freq_pct, dfg_pct, diff_pct = defense
+    
+    freq_str = f"{freq_pct:.0f}%" if freq_pct else "N/A"
+    dfg_str = f"{dfg_pct:.1f}%" if dfg_pct else "N/A"
+    diff_str = f"{diff_pct:+.1f}%" if diff_pct else "N/A"
+
+    return f"Defends {freq_str} of possessions | Allows {dfg_str} FG ({diff_str} vs avg) vs {scheme} offense"
+
+
+def _get_rebound_matchup(player_name, opponent_abbr, cursor, scheme):
+    """Handle total rebounds (REB) - combines offensive and defensive contexts."""
+    # Get offensive putbacks
+    putbacks = cursor.execute("""
+        SELECT ppp, freq_pct
+        FROM player_synergy_playtypes
+        WHERE player_name = ? AND playtype LIKE '%Putback%'
+        ORDER BY freq_pct DESC LIMIT 1
+    """, (player_name,)).fetchone()
+    
+    # Get defensive rebound context
+    dreb = cursor.execute("""
+        SELECT freq_pct
+        FROM player_defense
+        WHERE player_name = ? AND opponent_team = ?
+        ORDER BY updated_at DESC LIMIT 1
+    """, (player_name, opponent_abbr,)).fetchone()
+
+    parts = []
+    if putbacks:
+        ppp, freq = putbacks
+        ppp_str = f"{ppp:.2f}" if ppp else "N/A"
+        freq_str = f"{freq:.0f}%" if freq else "N/A"
+        parts.append(f"Putbacks ({ppp_str} PPP, {freq_str})")
+    
+    if dreb:
+        freq_pct = dreb[0]
+        freq_str = f"{freq_pct:.0f}%" if freq_pct else "N/A"
+        parts.append(f"Defends {freq_str} (DREB context)")
+    
+    if not parts:
+        return ""
+    
+    return " | ".join(parts)
+
+
+def _get_minutes_matchup(player_name, cursor):
+    """Handle minutes (MIN) - shows rotation role and situation splits."""
+    profile = cursor.execute("""
+        SELECT role, avg_minutes_normal, avg_minutes_b2b, avg_minutes_blowout_win, avg_minutes_close
+        FROM rotation_profiles
+        WHERE player_name = ?
+        ORDER BY updated_at DESC LIMIT 1
+    """, (player_name,)).fetchone()
+
+    if not profile:
+        return ""
+
+    role, normal, b2b, blowout, close = profile
+    
+    role_str = role if role else "Starter"
+    normal_str = f"{normal:.1f}" if normal else "N/A"
+    b2b_str = f"{b2b:.1f}" if b2b else "N/A"
+    blowout_str = f"{blowout:.1f}" if blowout else "N/A"
+    close_str = f"{close:.1f}" if close else "N/A"
+
+    return f"{role_str}: {normal_str} avg | B2B: {b2b_str} | Blowout: {blowout_str} | Close: {close_str}"

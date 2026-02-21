@@ -1,6 +1,6 @@
 # Data Modeling Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-19)
+**Status:** ✅ Complete (updated 2026-02-21)
 
 This guide covers SQLite schema design, data integrity, and ETL patterns for the Ludi-Bot analytics database. Every pattern is derived from a real incident or confirmed working design in the production `ludi.db`.
 
@@ -331,6 +331,30 @@ def rebuild_rotation_profiles(conn, window_days=21, min_games=3):
 - ✅ Rebuild: Tables where staleness = just recompute from source data (zero API cost) — see `scripts/build_player_trends.py`
 - ❌ Rebuild: Tables that hold raw API responses (player_game_logs, games, odds) — incremental only
 - ❌ Rebuild: Tables with expensive API calls to re-populate — too slow daily
+
+---
+
+## Pattern 9 — Schema Constraint Validation
+
+**Problem:** `ON CONFLICT` clause must match the ACTUAL constraint name in CREATE TABLE, not assumed column names. Mismatches cause silent insert failures.
+
+**Example:**
+```sql
+-- ❌ Wrong: conflict clause doesn't match actual constraint
+CREATE TABLE player_game_logs (
+    player_id TEXT NOT NULL,
+    game_date TEXT NOT NULL,
+    pts INTEGER,
+    UNIQUE(player_id, game_date)  -- Actual constraint
+);
+-- Later: ON CONFLICT(game_id, player_id) silently fails
+
+-- ✅ Right: verify constraint before writing upsert
+PRAGMA table_info(player_game_logs);
+-- Then: ON CONFLICT(player_id, game_date) DO UPDATE
+```
+
+**Real incident:** Module H `ON CONFLICT(game_id, player_id)` wrong → actual constraint `(player_id, game_date)` — all inserts silently failed 8 days (Sprint 8).
 
 ---
 
