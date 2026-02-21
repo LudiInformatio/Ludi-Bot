@@ -224,4 +224,27 @@ This means by March 2026 (~2,000 more bets), TURNOVERS UNDER (n=169 today) will 
 
 ---
 
+## Phase 9 Candidates (Future Work)
+
+### Unabated Median Conversion for Low-Count Stats
+Unabated converts Poisson **mean** projections to **median** before comparing to the line. For sparse distributions (BLOCKS, STEALS, TOV), the mean and median diverge significantly.
+
+**Example:**
+- Player projects 1.2 blocks (λ=1.2)
+- Poisson median ≈ `floor(λ + 1/3)` = `floor(1.533)` = 1
+- Our model: mean=1.2 vs line=1.5 → 0.3 gap
+- Unabated approach: median=1 vs line=1.5 → **0.5 gap** (stronger UNDER signal, no new data needed)
+
+**Implementation:** In `_estimate_over_probability()` in `module_f.py`, for `stat_key in ('blk', 'blocks', 'stl', 'steals', 'tov', 'turnovers')`, substitute `projection` with `math.floor(projection + 1/3)` before the z-score calculation.
+
+**Impact:** Further strengthens BLOCKS/STEALS UNDER edge without any new data or API calls. ~30-minute implementation.
+
+### Brier Score + Log Loss Tracking
+Industry uses Brier Score (probability calibration) and Log Loss (information criterion) alongside RMSE. These are harder to compute but more rigorous than RMSE for probability model validation. Add to the nightly `build_stat_confidence.py` once we have 5,000+ settled bets per stat.
+
+### Player-Level RMSE
+Current RMSE is at stat-category level. A player who averages 28 points has lower RMSE than a player who averages 28 points but is highly inconsistent. Player-level RMSE in `player_trends` would unlock more precise sizing. Phase 9 territory.
+
+---
+
 *Authored Feb 20, 2026 — based on 14,000+ settled bets + DraftEdge/Unabated/Rithmm methodology research*
