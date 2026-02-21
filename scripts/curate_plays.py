@@ -45,6 +45,13 @@ from utils.telegram_notifier import send_message
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
 VOLUME_STATS = {'PTS', 'REB', 'AST', 'MIN'}
 SANITY_FAIL_STATUSES = {'OUT', 'DOUBTFUL'}
+
+SANITY_GATE_SYSTEM = """You are a bet sanity checker for an NBA analytics model.
+VALID OUTPUT ONLY:
+  {"result": "PASS", "reason": ""}
+  {"result": "FLAG", "reason": "<one sentence describing the contradiction>"}
+No other values are valid for "result". Return JSON only."""
+
 TIER_EMOJI = {
     'DIAMOND': '💎',
     'BLUE CHIP': '🔷',
@@ -185,7 +192,7 @@ def _haiku_sanity_check(bet: dict, injury: dict | None, verbose: bool = False) -
             f"Game Day Report: {'Yes' if injury['is_game_day_report'] else 'No'}"
         )
 
-    system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+    system_prompt = f"{SANITY_GATE_SYSTEM}\n\n{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
 
     perplexity_block = f"\n\nRECENT NEWS (Perplexity):\n{perp_news}" if perp_news else ""
     
@@ -239,6 +246,8 @@ Otherwise PASS. When in doubt, PASS."""
             print(f"  [HAIKU] {bet['player_name']}: {result} — {reason}")
         return result, reason
     except (json.JSONDecodeError, KeyError, IndexError) as e:
+        raw_preview = response[:200] if response else "empty"
+        print(f"[HAIKU PARSE FAIL] {bet['player_name']}: {type(e).__name__} | raw={raw_preview}")
         if verbose:
             print(f"  [HAIKU] Parse error for {bet['player_name']}: {e} — defaulting PASS")
         return 'PASS', ''
@@ -438,6 +447,8 @@ Select the best 5 (or all available if fewer than 5 passed the gate). Return JSO
             print(f"  [SONNET] Successfully selected {len(result)} bets (max-2-per-game enforced)")
         return result
     except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
+        raw_preview = response[:200] if response else "empty"
+        print(f"[SONNET PARSE FAIL] {type(e).__name__} | raw={raw_preview}")
         if verbose:
             print(f"  [SONNET] Parse error: {e} — will use deterministic fallback")
         return None

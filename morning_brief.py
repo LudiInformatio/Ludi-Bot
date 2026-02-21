@@ -11,12 +11,14 @@ from module_g import LudiRefEngine
 from module_h_historian import LudiHistorian
 from module_x_scenario import ScenarioBuilder
 from utils.telegram_notifier import send_message
-from utils.claude_client import get_claude_analysis, SONNET_MODEL
+from utils.claude_client import get_claude_analysis, SONNET_MODEL, HAIKU_MODEL
 from utils.claude_prompts import (
     ROSTER_RULES, 
     ANALYSIS_PROTOCOL,
     GAME_NOTES_TEMPLATE, 
-    SPOTLIGHT_TEMPLATE
+    SPOTLIGHT_TEMPLATE,
+    GAME_NOTES_EXAMPLE,
+    SPOTLIGHT_EXAMPLE
 )
 import main
 from utils.perplexity_client import PerplexityClient
@@ -24,6 +26,21 @@ from utils.trend_engine import get_player_trends, get_beneficiary_context, get_s
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
+
+_MAX_BLOCK_CHARS = {
+    'situational_context': 500,
+    'injury_intel_block': 600,
+    'beneficiary_block': 400,
+    'edges_block': 800,
+    'schedule_notes': 200,
+}
+
+
+def _safe_inject(text: str, max_chars: int) -> str:
+    """Pre-truncate injected template blocks to prevent silent overflow."""
+    if text and len(text) > max_chars:
+        return text[:max_chars] + "... [truncated]"
+    return text if text else ""
 
 
 def _get_team_situation_note(team_abbr, cursor):
@@ -342,12 +359,61 @@ class MorningBriefEngine:
                         + (1.0 if 'BENEFICIARY' in str(b.get('tags', '')) else 0.0)
                         for b in bets
                     )
-                    news = game_news_cache.get(gid, "").lower()
+                    news = game_news_cache.get(gid, "")
                     if news:
-                        if any(kw in news for kw in _INJURY_KWS):
-                            score += 1.5
-                        if any(kw in news for kw in _NARRATIVE_KWS):
-                            score += 0.5
+                        score_delta = 0.0
+                        key_signal = ""
+                        try:
+                            players = [b['player_name'] for b in bets[:5]]
+                            stats = list({b['stat_category'] for b in bets})
+
+                            nsp_system = """You are an NBA news relevance scorer for a sports betting model.
+Return ONLY valid JSON: {"score_delta": <-2.0 to +2.0>, "key_signal": "<10 words>"}
+Positive score: news boosts confidence. Negative score: news reduces confidence. Zero: irrelevant."""
+
+                            nsp_prompt = f"""BETS IN THIS GAME:
+Players: {', '.join(players)}
+Stats being bet: {', '.join(stats)}
+
+NEWS (truncated):
+{news[:600]}
+
+QUESTION: Does this news change the expected outcome for any of these specific bets?
+Return JSON only."""
+
+                            nsp_response = get_claude_analysis(
+                                prompt=nsp_prompt,
+                                system_prompt=nsp_system,
+                                model=HAIKU_MODEL,
+                                temperature=0.1,
+                                max_tokens=100,
+                            )
+
+                            if nsp_response:
+                                import json
+                                try:
+                                    clean = nsp_response.strip()
+                                    if '```' in clean:
+                                        clean = clean.split('```')[1]
+                                        if clean.startswith('json'):
+                                            clean = clean[4:]
+                                    clean = clean.strip()
+                                    data = json.loads(clean)
+                                    score_delta = float(data.get('score_delta', 0.0))
+                                    key_signal = str(data.get('key_signal', ''))
+                                except (json.JSONDecodeError, ValueError, KeyError):
+                                    pass
+                        except Exception:
+                            pass
+
+                        if score_delta != 0.0:
+                            score += score_delta
+                        else:
+                            news_lower = news.lower()
+                            if any(kw in news_lower for kw in _INJURY_KWS):
+                                score += 1.5
+                            if any(kw in news_lower for kw in _NARRATIVE_KWS):
+                                score += 0.5
                     return min(score, 20.0)
 
                 scored_games = sorted(game_groups.items(), key=lambda x: _score_game(x[1], x[0]), reverse=True)
@@ -365,6 +431,8 @@ class MorningBriefEngine:
                     away_team = first.get('away_team', 'UNK')
                     spread = first.get('spread', 0)
                     total = first.get('total', 0)
+                    home_team_total = first.get('home_team_total', 'N/A')
+                    away_team_total = first.get('away_team_total', 'N/A')
                     matchup = first.get('matchup', gid)
                     
                     blowout_risk = "HIGH" if abs(spread) > 10 else "MODERATE"
@@ -519,25 +587,27 @@ class MorningBriefEngine:
                             spread=spread,
                             blowout_risk=blowout_risk,
                             total=total,
+                            home_team_total=home_team_total,
+                            away_team_total=away_team_total,
                             env_note=env_note,
                             matchup_pace_note=matchup_pace_note,
-                            schedule_notes=schedule_notes,
+                            schedule_notes=_safe_inject(schedule_notes, _MAX_BLOCK_CHARS['schedule_notes']),
                             fatigue_flag=fatigue_flag,
-                            injury_intel_block=injury_intel_block,
-                            beneficiary_block=beneficiary_block,
+                            injury_intel_block=_safe_inject(injury_intel_block, _MAX_BLOCK_CHARS['injury_intel_block']),
+                            beneficiary_block=_safe_inject(beneficiary_block, _MAX_BLOCK_CHARS['beneficiary_block']),
                             away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),
                             home_def_scheme=schemes.get(home_team, "UNK"),
                             home_archetype_summary="Style: " + schemes.get(home_team, "UNK"),
                             away_def_scheme=schemes.get(away_team, "UNK"),
-                            edges_block=edges_block,
-                            situational_context=situational_context,
+                            edges_block=_safe_inject(edges_block, _MAX_BLOCK_CHARS['edges_block']),
+                            situational_context=_safe_inject(situational_context, _MAX_BLOCK_CHARS['situational_context']),
                             **preservation_keys
                         )
                         
                         # 7. Call Claude
                         response = get_claude_analysis(
                             prompt=prompt,
-                            system_prompt=ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
+                            system_prompt=GAME_NOTES_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
                             model=SONNET_MODEL,
                             temperature=0.2,
                             max_tokens=1500
@@ -664,7 +734,7 @@ class MorningBriefEngine:
                             # 2e. Call Claude
                             response = get_claude_analysis(
                                 prompt=prompt,
-                                system_prompt=ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
+                                system_prompt=SPOTLIGHT_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
                                 model=SONNET_MODEL,
                                 temperature=0.2,
                                 max_tokens=600

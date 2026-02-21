@@ -376,8 +376,19 @@ class LudiOrchestrator:
             'STL': 'proj_stl', 'BLK': 'proj_blk', 'DREB': 'proj_dreb'
         }
         home, away = self.gate._get_abbr(game_data.get('home')), self.gate._get_abbr(game_data.get('away'))
-        spread = game_data.get('vegas', {}).get('spread', 0)
-        total = game_data.get('vegas', {}).get('total', 0)
+        
+        vegas_data = game_data.get('vegas', {})
+        try:
+            spread = float(vegas_data.get('spread', 0)) if vegas_data.get('spread') not in (None, 'N/A', '') else 0.0
+        except (ValueError, TypeError):
+            spread = 0.0
+        try:
+            total = float(vegas_data.get('total', 0)) if vegas_data.get('total') not in (None, 'N/A', '') else 0.0
+        except (ValueError, TypeError):
+            total = 0.0
+        team_total_home = vegas_data.get('team_total_home')
+        team_total_away = vegas_data.get('team_total_away')
+        home_team = vegas_data.get('home_team', home)
 
         home_stats = self.get_opponent_stats(home)
         away_stats = self.get_opponent_stats(away)
@@ -396,7 +407,13 @@ class LudiOrchestrator:
                 'scenario': sim.get('SCENARIO', 'BASE'),  # Propagate scenario name
                 'wowy_confidence': sim.get('wowy_confidence'),  # Propagate WOWY confidence (if exists)
                 'decision_note': sim.get('decision_note', ''),  # Captured from Yak
-                'notes': '', 'odds': {'spread': spread, 'total': total},
+                'notes': '', 'odds': {
+                    'spread': spread, 
+                    'total': total,
+                    'team_total_home': team_total_home,
+                    'team_total_away': team_total_away,
+                    'home_team': home_team
+                },
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
                 'base_ast': sim.get('AST', 0), 'base_3pm': sim.get('FG3M', 0),
                 'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0),
