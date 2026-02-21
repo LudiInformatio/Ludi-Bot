@@ -16,7 +16,7 @@ concurrency:
 jobs:
   sync-wowy:
     runs-on: self-hosted
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       IS_SELF_HOSTED: 'true'
       PYTHONPATH: ${{ github.workspace }}

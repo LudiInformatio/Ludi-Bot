@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 20, 2026 — 9:46 PM EST
+**Last Updated:** February 21, 2026 — Morning
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.18 Game Lines Integration (planned) + Phase 8.13 Ask Ludi (implementation ready) + Phase 8.19 Prompt Engineering Upgrade (research complete)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -73,6 +73,27 @@ This is the single source of truth for project tasks and priorities.
 | 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → response in Telegram thread. Architecture research complete (Feb 20): python-telegram-bot v21+ long polling, Haiku intent ($0.0001/call) → Sonnet analysis, read-only SQLite (`?mode=ro`), launchd keepalive, 3-file implementation (`bots/ask_ludi.py`, `ask_ludi_db.py`, `ask_ludi_handlers.py`). See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
 | 8.16 | Suspension Intelligence | MEDIUM | `sync_suspensions.py` (Perplexity → Claude Haiku → auto-insert into `player_injuries` as SUSPENDED). Module D + Module X pick up automatically. Three injection points: morning sync, game context query, Module D `get_injuries()`. | ~$0.02/day |
 | 8.17 | Foul Intelligence | MEDIUM | Extend `sync_stint_profiles.py` to parse foul events from PlayByPlayV3 (same API, same loop, no extra cost). New `player_foul_splits` table (period, clock, foul_number, ref_name). Unlocks: early foul trouble → Module C minutes dampener, ref-player bias rebuild, weekly Claude context. | $0 |
+
+---
+
+### Production Pipeline / WOWY / Settlement Fix ✅ COMPLETE (Feb 21, 2026)
+
+Pipeline had been failing 5 consecutive days (Feb 17-21). WOWY sync timing out every run. Duplicate settlement notifications.
+
+**P0 — Daily Production Pipeline (5-day outage):**
+
+- `daily_simulation_pipeline.yml`: Added `continue-on-error: true` to "Verify data freshness" and "Run System Health Monitor" steps. Diagnostic steps no longer kill a pipeline that successfully generated bets.
+- `monitor_system_health.py`: Tightened critical alert filter — only `'Table is empty'` or `'Database connection failed'` are critical. Odds API quota exhaustion no longer triggers `exit(1)`.
+
+**P1 — WOWY Sync Timeouts:**
+
+- `sync_wowy_hybrid.py`: Removed `@retry_with_backoff` decorator (double retry: 3 decorator × 3 outer loop = 9 attempts × 180s). Reduced `REQUEST_TIMEOUT` 180→60s. Fixed Ghost Protocol threshold: `api_failures >= 2` → `>= 1` (was unreachable for `--days 1`).
+- `wowy_sync.yml`: Increased workflow timeout 30→45 min (Ghost Protocol needs 10-15 min after API fails).
+- **Data source investigation:** BDL has no WOWY capability. PBP Stats is viable future Tier 3 (7 endpoints already in `pbp_stats_client.py`, not wired to `team_lineups`). popcornmachine.net not useful.
+
+**P2 — Settlement Notifications:**
+
+- `settle_bets.py`: Removed per-date Telegram sends (5 AM). 6 AM aggregate summary (`send_settlement_summary.py`) is the single notification now.
 
 ---
 

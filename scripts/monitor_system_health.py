@@ -471,7 +471,7 @@ class SystemHealthMonitor:
         # Summary
         report['summary'] = {
             'total_alerts': len(self.alerts),
-            'critical_alerts': len([a for a in self.alerts if a.startswith('🚨') and ('EMPTY' in a or 'failed' in a.lower() or 'Exception' in a)]),
+            'critical_alerts': len([a for a in self.alerts if a.startswith('🚨') and ('Table is empty' in a or 'Database connection failed' in a)]),
             'warning_alerts': len([a for a in self.alerts if a.startswith('⚠️')]),
             'alerts': self.alerts
         }

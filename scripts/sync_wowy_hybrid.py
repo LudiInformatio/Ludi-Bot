@@ -33,7 +33,7 @@ from utils.api_helpers import retry_with_backoff
 API_RATE_LIMIT = 2.0  # Seconds between API calls (Community recommends 2s to avoid Cloudflare rate limit)
 MAX_API_RETRIES = 3
 GHOST_THRESHOLD_DAYS = 14  # Use Ghost automatically if > 14 days requested
-REQUEST_TIMEOUT = 180  # 3 minutes per request (increased from 120s)
+REQUEST_TIMEOUT = 60  # 60 seconds per request (generous for successful calls)
 
 # Standard headers required for NBA.com (Copied from utils/nba_api_client.py)
 HEADERS = {
@@ -50,7 +50,6 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@retry_with_backoff(max_attempts=3, backoff=2.0, exceptions=(Exception,))
 def sync_via_api(target_date: datetime) -> int:
     """
     Tier 1: Fetch single day lineup data via nba_api.
@@ -237,7 +236,7 @@ def run_hybrid_sync(start_date: datetime, end_date: datetime, force_ghost: bool 
             # Allow fallback if local OR self-hosted CI
             can_fallback = not is_ci or os.environ.get('IS_SELF_HOSTED')
             
-            if can_fallback and api_failures >= 2:
+            if can_fallback and api_failures >= 1:
                 print("\n⚠️  Too many API failures. NBA WAF might be blocking.")
                 print("   👉 Switching to Tier 2: Ghost Protocol for remaining dates...")
                 # FORCE VISIBLE MODE for Self-Hosted (Headless is blocked by WAF)

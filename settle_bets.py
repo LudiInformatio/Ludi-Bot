@@ -1,7 +1,6 @@
 import sqlite3
 import datetime
 from utils.bet_logger import get_bet_logger
-from utils.telegram_notifier import send_message
 from utils.player_id_resolver import PlayerIDResolver
 
 # =========================================================
@@ -106,24 +105,10 @@ class BetSettler:
         print("-" * 60)
         print(f"✅ SETTLEMENT COMPLETE: {settled_count}/{len(pending_bets)} bets graded.")
         
-        # Update Daily Summary & Send Telegram
+        # Update Daily Summary
         for d, stats in daily_pl.items():
             self.logger.calculate_daily_summary(d)
             print(f"   📅 Daily Summary Updated: {d}")
-            
-            # Send Telegram Report for the specific date
-            if stats['wins'] + stats['losses'] > 0:
-                header = f"💰 **LUDI SETTLEMENT | {d}**"
-                body = (
-                    f"✅ Wins: {stats['wins']}\n"
-                    f"❌ Losses: {stats['losses']}\n"
-                    f"📈 Profit: {stats['units']:+.2f} Units"
-                )
-                try:
-                    send_message(f"{header}\n\n{body}")
-                    print(f"   🚀 Sent Telegram Recap for {d}")
-                except Exception as e:
-                    print(f"   ⚠️ Failed to send Telegram: {e}")
 
     def _lookup_game_log(self, player_name, game_date, stat_cat):
         """
