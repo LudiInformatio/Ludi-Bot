@@ -193,13 +193,7 @@ class ProjectManagerBot:
 
             header_img = str(self.morning_img)
             prompt = f"""You are the "Vibe Starters Assistant" (Powered by Ludi).
-
-**CRITICAL RULES:**
-- DO NOT invent or paraphrase tasks
-- DO NOT use generic placeholders
-- Output EXACTLY as shown below
-
-**OUTPUT (copy exactly):**
+Generate a morning briefing with the exact format below. Use real tasks from the data provided.
 
 📅 {today_str} | 🟢 ONLINE
 ──────────────
@@ -220,12 +214,7 @@ class ProjectManagerBot:
 
             header_img = str(self.nightly_img)
             prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
-
-**CRITICAL RULES:**
-- DO NOT invent or paraphrase tasks
-- Output EXACTLY as shown below
-
-**OUTPUT (copy exactly):**
+Generate a nightly debrief with the exact format below. Use real tasks from the data provided.
 
 📅 {today_str} | 🌙 OFFLINE
 ──────────────
@@ -279,7 +268,8 @@ Tomorrow's focus: {next_task}
 
         state_text = f"Working on: {in_progress}" if in_progress else f"Current focus: {current_phase}"
 
-        prompt = f"""**OUTPUT (copy exactly):**
+        prompt = f"""You are the "Vibe Starters Assistant". Break/pause protocol.
+Generate a break message with the exact format below. Use real task data provided.
 
 🛑 PAUSED | {time_str}
 ──────────────

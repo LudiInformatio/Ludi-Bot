@@ -3,24 +3,30 @@ Slack Notifier — Ops/Work Notes Channel
 Routes operational alerts to Slack, keeping Telegram clean for betting product only.
 
 Telegram = betting product (game notes, bet cards, spotlights, P&L)
-Slack    = ops/work notes (pipeline failures, health alerts, diagnostics, QA)
+Slack    = ops/work notes (pipeline failures, health alerts, diagnostics, QA, PM bot work notes)
 
 Uses Incoming Webhook — no OAuth, no bot token. Just a URL in SLACK_WEBHOOK_URL.
-Graceful degradation: if URL not set, returns False silently. Betting pipeline unaffected.
+Graceful degradation: if URL not set, prints warning but doesn't crash.
 """
-import os
 import requests
+
+try:
+    from config import SLACK_WEBHOOK_URL
+except (ImportError, ModuleNotFoundError):
+    import os
+    SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '')
 
 
 def _get_webhook() -> str:
-    return os.environ.get('SLACK_WEBHOOK_URL') or ''
+    return SLACK_WEBHOOK_URL or ''
 
 
 def send_slack_message(text: str) -> bool:
     """Send a plain text message to the Slack ops channel."""
     webhook = _get_webhook()
     if not webhook:
-        return False  # Not configured — degrade silently
+        print("⚠️ SLACK_WEBHOOK_URL not configured - skipping Slack notification")
+        return False
     try:
         r = requests.post(
             webhook,
