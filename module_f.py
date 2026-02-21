@@ -84,7 +84,7 @@ _STAT_RMSE = {
 class LudiReporter:
     def __init__(self):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE F (V5.2) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE F (V5.3) ONLINE")
         print(f"   >>> DETERMINISTIC REPORTING | NO SPECULATION")
         print(f"   >>> BET LOGGING ENABLED")
         print(f"{'='*40}")
@@ -104,6 +104,13 @@ class LudiReporter:
         except Exception as e:
             print(f"⚠️  Tag classifier unavailable: {e}")
             self.tag_classifier = None
+
+        # Phase 8.20: Load stat confidence cache (built nightly by build_stat_confidence.py)
+        # When sample_n >= 200, live calibration_gap + RMSE override hardcoded constants.
+        # Falls back to _STAT_EDGE_CALIBRATION / _STAT_RMSE when cache is missing or thin.
+        self._stat_conf = self._load_stat_confidence_cache()
+        live_count = sum(1 for v in self._stat_conf.values() if v.get('sample_n', 0) >= 200)
+        print(f"✅ Stat confidence cache: {len(self._stat_conf)} entries ({live_count} with live calibration)")
 
     def generate_report(self, processed_slate, title="LUDI GAME BRIEF"):
         """
@@ -653,28 +660,71 @@ class LudiReporter:
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
         return TIER_NAMES[tier_score]
 
-    def _apply_stat_calibration(self, edge: float, stat_key: str, bet_direction: str) -> float:
-        """V5.3: Apply stat-specific edge calibration based on 14k+ settled bet analysis.
+    @staticmethod
+    def _load_stat_confidence_cache() -> dict:
+        """Load cache/stat_confidence.json built nightly by build_stat_confidence.py.
 
-        High-variance stats (PTS, REB, PRA) are systematically overconfident by 13-21%.
-        BLOCKS UNDER has a structural book inefficiency — even when model edge is low, it wins.
+        Returns dict keyed by '{STAT}_{SIDE}' (e.g. 'BLOCKS_UNDER').
+        Returns {} on any error — hardcoded constants will be used as fallback.
+        """
+        import os, json as _json
+        cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', 'stat_confidence.json')
+        try:
+            with open(cache_path) as f:
+                return _json.load(f)
+        except Exception:
+            return {}
+
+    def _apply_stat_calibration(self, edge: float, stat_key: str, bet_direction: str) -> float:
+        """V5.3: Apply stat-specific edge calibration — live cache when data is sufficient,
+        hardcoded fallback otherwise.
+
+        LIVE (sample_n >= 200): derives multiplier from calibration_gap in stat_confidence.json.
+          factor = clamp(1.0 + calibration_gap / 150, 0.65, 1.40)
+          Dampening of 150 means a +23.6 gap (BLOCKS UNDER) → 1.157x boost.
+          A -19.8 gap (PTS OVER) → 0.868x deflation.
+          As sample grows each night, factors self-correct without code changes.
+
+        FALLBACK (thin sample): uses _STAT_EDGE_CALIBRATION hardcoded dict —
+          our manually-tuned starting estimates.
+
         See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md
         """
+        cache_key = f"{stat_key.upper()}_{bet_direction.upper()}"
+        entry = self._stat_conf.get(cache_key, {})
+
+        if entry.get('sample_n', 0) >= 200 and entry.get('calibration_gap') is not None:
+            # Live: derive factor from this season's actual calibration gap
+            gap = entry['calibration_gap']
+            factor = max(0.65, min(1.40, 1.0 + gap / 150.0))
+            return round(edge * factor, 1)
+
+        # Fallback: hardcoded initial estimates
         norm = stat_key.lower()
         factors = _STAT_EDGE_CALIBRATION.get(norm, {})
         multiplier = factors.get(bet_direction.lower(), 1.0)
         return round(edge * multiplier, 1)
 
     def _rmse_sizing_modifier(self, stat_key: str) -> float:
-        """V5.3: RMSE-based unit sizing modifier.
+        """V5.3: RMSE-based unit sizing modifier — live cache when available, hardcoded fallback.
 
-        High projection uncertainty → smaller bet even at same tier.
+        LIVE (sample_n >= 50): uses RMSE from DB projection vs line analysis in cache.
+        FALLBACK: uses _STAT_RMSE hardcoded dict.
+
         RMSE ≤ 1.0: no penalty. 1.0–2.0: 5% cut. >4.0: 15% cut.
         BLOCKS/STEALS/3PM are precise projections → full sizing.
         PTS/PRA projections have 5x more absolute error → reduce sizing.
         """
-        norm = stat_key.lower()
-        rmse = _STAT_RMSE.get(norm, 2.0)
+        # Try cache (either side has the RMSE value — it's stat-level, not side-level)
+        for side in ('UNDER', 'OVER'):
+            entry = self._stat_conf.get(f"{stat_key.upper()}_{side}", {})
+            if entry.get('rmse') is not None and entry.get('sample_n', 0) >= 50:
+                rmse = entry['rmse']
+                break
+        else:
+            # Fallback to hardcoded
+            rmse = _STAT_RMSE.get(stat_key.lower(), 2.0)
+
         if rmse <= 1.0:   return 1.00
         elif rmse <= 2.0: return 0.95
         elif rmse <= 4.0: return 0.90
