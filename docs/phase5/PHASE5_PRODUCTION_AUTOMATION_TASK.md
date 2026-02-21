@@ -27,12 +27,12 @@ We have successfully upgraded Module E (Synergy Playtypes, Team Styles, B2B Fati
 We need to ensure the daily synchronization and simulation pipeline is fully integrated.
 
 **Current Workflows:**
-- `data_sync.yml`: Runs 5 AM EST.
+- `data_sync.yml`: Runs 3 AM EST.
 - `referee_sync.yml`: Runs 9:30 AM EST.
-- `weekly_referee_sync.yml`: Runs Mondays 5 AM EST.
+- `weekly_referee_sync.yml`: Runs Sundays 6 AM EST.
 
 **Task:** Create or Update `daily_simulation_pipeline.yml` to:
-1.  **Trigger:** Daily at 11 AM EST (after Ref assignments are confirmed).
+1.  **Trigger:** Daily at 10 AM EST (after Ref assignments are confirmed).
 2.  **Execute:** `main.py` with full Module A-X pipeline.
 3.  **Output:** Send final Telegram "Diamond Cards" to the production channel.
 4.  **Logging:** Archive daily logs to `logs/production/`.

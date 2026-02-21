@@ -5,7 +5,7 @@ Pre-computes L7/L10/L15 averages, season averages, trend labels, and
 streak-vs-season-avg for all active players across 12 stat types.
 
 Writes to: player_trends table (UPSERT via INSERT OR REPLACE)
-Runs: Daily at 5 AM in data_sync.yml (after game log sync)
+Runs: Daily at 3 AM in data_sync.yml (after game log sync)
 Pattern: Zero API calls — pure SQL against player_game_logs.
 
 Usage:

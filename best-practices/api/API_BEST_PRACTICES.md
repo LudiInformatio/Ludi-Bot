@@ -1696,9 +1696,9 @@ def sync_injuries(is_game_day_report: int = 0):
             )
 
 # Three sync windows (wired via GitHub Actions):
-# data_sync.yml      5:00 AM  — is_game_day_report=0  (overnight baseline)
-# daily_briefing.yml 11:00 AM — is_game_day_report=1  (game-day report)
-# capture_closing.yml 5:30 PM — is_game_day_report=1  (pre-tipoff final)
+# data_sync.yml      3:00 AM  — is_game_day_report=0  (overnight baseline)
+# daily_briefing.yml 9:00 AM — is_game_day_report=1  (game-day report)
+# capture_closing.yml 6:00 PM — is_game_day_report=1  (pre-tipoff final)
 ```
 
 ### Line/Odds Data Freshness

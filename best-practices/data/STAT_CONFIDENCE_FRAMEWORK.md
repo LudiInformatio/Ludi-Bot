@@ -207,7 +207,7 @@ The current 5% floor is uniform. These are stat-specific calibrated minimums:
 
 ## Auto-Update Cadence
 
-`build_stat_confidence.py` runs **nightly at 5 AM** in `data_sync.yml`, after bet settlement.
+`build_stat_confidence.py` runs **nightly at 3 AM** in `data_sync.yml`, after bet settlement.
 As sample sizes grow, grades automatically promote (D→C→B→A+). No manual updates needed.
 
 This means by March 2026 (~2,000 more bets), TURNOVERS UNDER (n=169 today) will have a sample-validated grade rather than "SMALL_N" — and Module F will automatically apply a tighter calibration.

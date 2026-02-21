@@ -329,9 +329,9 @@ for k, v in result.items():
 **Intraday sync schedule:**
 | Time | Workflow | is_game_day_report | Purpose |
 |------|---------|-------------------|---------|
-| 5 AM EST | `data_sync.yml` | 0 | Overnight refresh |
-| 11 AM EST | `daily_briefing.yml` | 1 | Pre-morning-brief |
-| 5:30 PM EST | `capture_closing_lines.yml` | 1 | Pre-tipoff (critical) |
+| 3 AM EST | `data_sync.yml` | 0 | Overnight refresh |
+| 9 AM EST | `daily_briefing.yml` | 1 | Pre-morning-brief |
+| 6 PM EST | `capture_closing_lines.yml` | 1 | Pre-tipoff (critical) |
 
 **`data_sync.yml` snippet:**
 ```yaml

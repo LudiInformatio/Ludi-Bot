@@ -115,14 +115,16 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 
 | Workflow | Schedule (EST) | Purpose |
 |----------|---------------|---------|
-| Daily Data Sync | 5:00 AM | Game logs, WOWY, injuries, rotation profiles, scoring environment |
-| Nightly Debrief | 5:00 AM | Bet settlement + daily P&L |
-| DB Backup | 6:00 AM | Automated database backup (7-day rotation) |
+| DB Backup | 1:00 AM | Automated database backup (7-day rotation) |
+| Daily Data Sync | 3:00 AM | Game logs, WOWY, injuries, rotation profiles, scoring environment |
+| Daily Reports | 6:00 AM | Work notes + bet summary |
+| WOWY Sync | 7:00 AM | Daily WOWY sync |
 | Morning Briefing | 9:00 AM | AI game notes + player spotlights → Telegram |
 | Daily Referee Sync | 9:30 AM | Scrape referee assignments |
-| Production Pipeline | 11:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
-| Closing Line Capture | 5:30 PM | CLV capture before tipoff |
+| Production Pipeline | 10:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
 | Evening Slate Lock | 6:00 PM | Final pre-game Telegram cards |
+| Nightly Debrief | 8:30 PM | Bet settlement + daily P&L |
+| Closing Line Capture | 7:30-11:30 PM | CLV capture (5 runs/night) |
 | Weekly Validation | Tuesdays | Backtest + archetype classifier + league rankings + ops digest → Slack |
 | Claude Ops Hub | On failure | Auto-diagnosis → Slack; GitHub issue creation |
 

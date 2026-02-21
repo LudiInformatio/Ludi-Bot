@@ -166,16 +166,18 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 
 | Time (EST) | Workflow | Purpose |
 |------------|----------|---------|
-| 5:00 AM | `data_sync.yml` | Sync game logs, WOWY, clutch, assists |
-| 5:00 AM | `nightly_debrief.yml` | Settlement + daily P&L |
-| 6:00 AM | `db_backup.yml` | Automated database backup |
+| 1:00 AM | `db_backup.yml` | Automated database backup |
+| 3:00 AM | `data_sync.yml` | Sync game logs, WOWY, clutch, assists |
+| 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
+| 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
 | 9:00 AM | `daily_briefing.yml` | Morning Telegram cards |
 | 9:30 AM | `referee_sync.yml` | Daily referee assignments |
-| 11:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
-| 5:30 PM | `capture_closing_lines.yml` | CLV capture before tipoff |
+| 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
 | 6:00 PM | `evening_slate_lock.yml` | Evening Telegram cards |
+| 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
+| 7:30-11:30 PM | `capture_closing_lines.yml` | CLV capture (5 runs/night) |
+| Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data (6hr sync) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
-| Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data |
 | On failure | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
 
 ---

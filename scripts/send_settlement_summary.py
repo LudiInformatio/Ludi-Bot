@@ -3,7 +3,7 @@
 LUDI INFORMATIO | SETTLEMENT SUMMARY
 ====================================
 Send last night's bet settlement P&L to Telegram.
-Runs at 5 AM EST as part of data_sync workflow.
+Runs at 3 AM EST as part of data_sync workflow.
 """
 import sys
 import os
