@@ -126,6 +126,9 @@ IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'false').lower() == 'true'
 # Phase 8.9: Rotation/minutes projection feature flag (True by default)
 USE_MINUTES_PROJECTION = os.getenv('USE_MINUTES_PROJECTION', 'true').lower() == 'true'
 
+# Phase 8.18: Team totals scoring modifier feature flag
+USE_TEAM_TOTALS_MODIFIER = True
+
 # Phase 8 / Module A: Use Tank01 consensus prop lines as 3rd fallback + line validator.
 # When True: (1) single-vendor BDL lines are validated against Tank01 before being
 # accepted, and (2) players with zero BDL coverage get a Tank01-only entry at -110/-110.

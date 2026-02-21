@@ -77,7 +77,7 @@ class Gatekeeper:
         params = {
             'api_key': config.ODDS_API_KEY,
             'regions': 'us,us2',
-            'markets': 'h2h,spreads,totals',
+            'markets': 'h2h,spreads,totals,team_totals',
             'oddsFormat': 'american'
         }
         
@@ -136,6 +136,9 @@ class Gatekeeper:
                     'vegas': {
                         'spread': 'N/A', 
                         'total': 'N/A', 
+                        'team_total_home': None,
+                        'team_total_away': None,
+                        'home_team': home,
                         'moneyline_home': 'N/A', 
                         'moneyline_away': 'N/A'
                     },
@@ -152,10 +155,22 @@ class Gatekeeper:
                 for book in game['bookmakers']:
                     if book['key'] in ['draftkings', 'fanduel', 'mgm', 'bovada', 'pinnacle', 'caesars']:
                         for market in book['markets']:
-                            if market['key'] == 'spreads': 
-                                self.games[game_id]['vegas']['spread'] = market['outcomes'][0].get('point')
-                            if market['key'] == 'totals': 
-                                self.games[game_id]['vegas']['total'] = market['outcomes'][0].get('point')
+                            if market['key'] == 'spreads':
+                                for outcome in market['outcomes']:
+                                    if outcome['name'] == home:
+                                        self.games[game_id]['vegas']['spread'] = outcome.get('point')
+                                        break
+                            if market['key'] == 'totals':
+                                for outcome in market['outcomes']:
+                                    if outcome['name'] == home:
+                                        self.games[game_id]['vegas']['total'] = outcome.get('point')
+                                        break
+                            if market['key'] == 'team_totals':
+                                for outcome in market['outcomes']:
+                                    if outcome['name'] == home:
+                                        self.games[game_id]['vegas']['team_total_home'] = outcome.get('point')
+                                    elif outcome['name'] == away:
+                                        self.games[game_id]['vegas']['team_total_away'] = outcome.get('point')
                             if market['key'] == 'h2h':
                                 for outcome in market['outcomes']:
                                     if outcome['name'] == home:

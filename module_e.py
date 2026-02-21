@@ -999,6 +999,39 @@ class LudiCalibrator:
         # 3.5 SCHEDULE FATIGUE (Phase 4 Integration - Jan 21, 2026)
         self._apply_fatigue_adjustments(calibrated, yak_report)
 
+        # 3.6 TEAM TOTALS MODIFIER (Phase 8.18)
+        if getattr(config, 'USE_TEAM_TOTALS_MODIFIER', False):
+            team_total_home = odds.get('team_total_home')
+            team_total_away = odds.get('team_total_away')
+            home_team = odds.get('home_team', '')
+            player_team = calibrated.get('team', player_packet.get('TEAM_ABBREVIATION', ''))
+            
+            team_total = None
+            if player_team and home_team:
+                is_home = player_team == home_team
+                if is_home and team_total_home:
+                    try:
+                        team_total = float(team_total_home)
+                    except (ValueError, TypeError):
+                        team_total = None
+                elif not is_home and team_total_away:
+                    try:
+                        team_total = float(team_total_away)
+                    except (ValueError, TypeError):
+                        team_total = None
+            
+            if team_total and team_total > 0:
+                ratio = team_total / (config.LEAGUE_AVG_TOTAL / 2)
+                ratio = max(0.93, min(1.07, ratio))
+                self._apply_factor(calibrated, ratio)
+                calibrated['notes'] += f" | TeamTotal:{team_total:.1f}"
+            elif total > 0 and spread > 0:
+                implied_team_total = (total + spread) / 2 if player_team != home_team else (total - spread) / 2
+                ratio = implied_team_total / (config.LEAGUE_AVG_TOTAL / 2)
+                ratio = max(0.93, min(1.07, ratio))
+                self._apply_factor(calibrated, ratio)
+                calibrated['notes'] += f" | ImpliedTT:{implied_team_total:.1f}"
+
         # 4. GAME SCRIPT
         odds = calibrated.get('odds', {})
         total = float(odds.get('total', 0)) if odds.get('total') else 0
