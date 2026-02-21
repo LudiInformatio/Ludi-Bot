@@ -115,6 +115,8 @@ GAME_NOTES_EXAMPLE = """📅 Feb 21, 2026
 |--------|-------|--------|
 | Spread | LAL +4.5 | MODERATE |
 | Total | 225.5 | High-scoring |
+| Home Total | 115.0 | BOS scoring context |
+| Away Total | 110.5 | LAL scoring context |
 | Pace | 102.3 (8th vs 5th) | Context |
 | Schedule | LAL on B2B (road) | LAL fatigue |
 
