@@ -82,7 +82,8 @@ class ScenarioBuilder:
                 'FGA': round(row[4] or 0, 1), 'FG3A': round(row[5] or 0, 1),
                 'FTA': round(row[6] or 0, 1)
             }
-        except Exception:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             return {}
 
     def generate_scenarios(self, processed_slate):
@@ -266,7 +267,8 @@ class ScenarioBuilder:
                 }
                 for r in rows
             ]
-        except Exception:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             return []
 
     def _infer_dynamic_backup(self, all_players, starter_out):
@@ -461,7 +463,8 @@ class ScenarioBuilder:
         try:
             total = float(total)
             spread = float(spread) if spread != 'N/A' else 0
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             return players
 
         implied_total = (total / 2) - (spread / 2)

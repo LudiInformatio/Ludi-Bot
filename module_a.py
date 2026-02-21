@@ -302,7 +302,8 @@ class Gatekeeper:
                 try:
                     utc_time = datetime.fromisoformat(bdl_datetime.replace('Z', '+00:00'))
                     est_time = utc_time.astimezone(self.est_tz)
-                except:
+                except Exception as e:
+                    print(f"[TAG] Context: {e}")
                     est_time = today  # Fallback to today
             else:
                 est_time = today

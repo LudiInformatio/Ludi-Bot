@@ -176,7 +176,8 @@ class DailyRefereeSync:
                                 if consent_btn:
                                     consent_btn.click(timeout=5000)
                                     page.wait_for_timeout(1000)
-                            except:
+                            except Exception as e:
+                                print(f"[TAG] Context: {e}")
                                 pass  # No popup, continue
                             
                             break
@@ -206,7 +207,8 @@ class DailyRefereeSync:
                             # Re-open dropdown
                             try:
                                  page.click('button.dropdown-toggle', force=True)
-                            except:
+                            except Exception as e:
+                                print(f"[TAG] Context: {e}")
                                 pass
                                 
                             page.fill('input#ref-date', today_str)
@@ -220,7 +222,8 @@ class DailyRefereeSync:
                     print("   [SYNC] Waiting for table rows...")
                     try:
                         page.wait_for_selector(".nba-refs-content table tbody tr", timeout=30000)
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         print("   ⚠️ Timeout waiting for table rows (page might be empty or slow)")
                     
                     content = page.content()

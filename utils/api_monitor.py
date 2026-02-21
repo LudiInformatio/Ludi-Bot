@@ -33,7 +33,8 @@ class APIMonitor:
             try:
                 with open(log_file, 'r') as f:
                     self.logs = json.load(f)
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 self.logs = []
         else:
             self.logs = []
@@ -50,7 +51,8 @@ class APIMonitor:
                 self.telegram_chat_id = config.TELEGRAM_CHAT_ID
                 if self.telegram_token and self.telegram_chat_id:
                     return True
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass
         return False
 

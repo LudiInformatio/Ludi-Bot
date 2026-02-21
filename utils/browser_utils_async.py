@@ -22,7 +22,8 @@ async def simulate_human_interaction_async(page):
             await page.mouse.wheel(0, -random.randint(100, 300))
             await asyncio.sleep(random.uniform(0.2, 0.5))
             
-    except Exception:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         pass
 
 async def close_popups_async(page):
@@ -40,7 +41,8 @@ async def close_popups_async(page):
                     await page.click(sel, timeout=2000)
                     await asyncio.sleep(1)
                     break
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 continue
 
         # 2. General Overlays
@@ -53,7 +55,9 @@ async def close_popups_async(page):
                 if await page.is_visible(sel, timeout=500):
                     await page.click(sel, timeout=1000)
                     await asyncio.sleep(0.5)
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 continue
-    except:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         pass 

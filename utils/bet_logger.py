@@ -229,7 +229,8 @@ class BetLogger:
             # If database fails, try JSON only
             try:
                 self._append_to_json(rec_data, bet_id=None)
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 pass
             raise
 

@@ -700,7 +700,8 @@ class LudiHistorian:
                 try:
                     parts = min_val.split(":")
                     return int(parts[0]) + (int(parts[1]) / 60.0)
-                except:
+                except Exception as e:
+                    print(f"[TAG] Context: {e}")
                     return 0.0
 
     def fetch_historical_apisports(self, season, date_str):

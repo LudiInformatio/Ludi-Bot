@@ -65,7 +65,8 @@ def _get_team_situation_note(team_abbr, cursor):
                 notes.append(f"High FT rate ({ft_rate:.2f})")
             if oreb and oreb >= 0.30:
                 notes.append(f"Strong OREB ({oreb:.2f})")
-    except Exception:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         pass
 
     # Win/loss streak from team_current_info (synced daily by sync_team_current_info.py)
@@ -80,7 +81,8 @@ def _get_team_situation_note(team_abbr, cursor):
                 notes.append(f"{win_streak}-game win streak")
             elif loss_streak and int(loss_streak) >= 3:
                 notes.append(f"{loss_streak}-game skid")
-    except Exception:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         pass
 
     return " | ".join(notes) if notes else ""
@@ -119,7 +121,8 @@ class MorningBriefEngine:
                 f"Pipeline sleeping\\. Back when the slate is live\\."
             )
             send_message(msg, parse_mode="MarkdownV2")
-        except Exception:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass  # Never let notification failure crash the briefing
 
     def _get_db_conn(self):
@@ -403,7 +406,8 @@ Return JSON only."""
                                     key_signal = str(data.get('key_signal', ''))
                                 except (json.JSONDecodeError, ValueError, KeyError):
                                     pass
-                        except Exception:
+                        except Exception as e:
+                            print(f"[TAG] Context: {e}")
                             pass
 
                         if score_delta != 0.0:
@@ -482,7 +486,8 @@ Return JSON only."""
                                     blowout_close_note += f"{team} clutch-heavy. "
                                 if garbage and garbage >= 1.3:
                                     blowout_close_note += f"{team} bench upside in blowouts. "
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         pass
 
                     # 4. Opponent Scheme
@@ -548,7 +553,8 @@ Return JSON only."""
                         _gd = datetime.datetime.strptime(_game_date_str, '%Y-%m-%d').date() if _game_date_str else _est_now.date()
                         _day = "TONIGHT" if _gd == _est_now.date() else "TOMORROW"
                         game_label = f"{_day} · {_gd.strftime('%b %d').replace(' 0', ' ')}"
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         game_label = f"TONIGHT · {_est_now.strftime('%b %d').replace(' 0', ' ')}"
 
                     # B1: B2B detection — check if either team played yesterday
@@ -576,7 +582,8 @@ Return JSON only."""
                             fatigue_flag = f"{home_team} on B2B (home)"
                         elif _away_b2b:
                             fatigue_flag = f"{away_team} on B2B (road)"
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         fatigue_flag = "None"
 
                     try:

@@ -326,7 +326,8 @@ class LudiHistorian:
             col_name = col_def.split()[0]
             try:
                 c.execute(f'ALTER TABLE player_game_tracking ADD COLUMN {col_def}')
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 pass # Column exists
 
         # 16. Player Game Advanced (New)
@@ -479,17 +480,20 @@ class LudiHistorian:
         # Using ALTER TABLE with IF NOT EXISTS pattern (SQLite 3.35.0+)
         try:
             c.execute('ALTER TABLE players ADD COLUMN season_id TEXT DEFAULT "22025"')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass  # Column already exists
 
         try:
             c.execute('ALTER TABLE players ADD COLUMN is_active BOOLEAN DEFAULT 1')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass  # Column already exists
 
         try:
             c.execute('ALTER TABLE players ADD COLUMN roster_updated_at TIMESTAMP')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass  # Column already exists
 
         # Add composite index for season-aware roster queries
@@ -762,22 +766,26 @@ class LudiHistorian:
         # Add injury columns to players table (Phase 8.0)
         try:
             c.execute('ALTER TABLE players ADD COLUMN current_injury_status TEXT DEFAULT \'ACTIVE\'')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass
 
         try:
             c.execute('ALTER TABLE players ADD COLUMN injury_updated_at TEXT')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass
 
         try:
             c.execute('ALTER TABLE players ADD COLUMN injury_return_date TEXT')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass
 
         try:
             c.execute('ALTER TABLE players ADD COLUMN days_out_current INTEGER DEFAULT 0')
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass
 
         # Create lineup_season_totals view (aggregates per-game lineup data)
@@ -844,7 +852,8 @@ class LudiHistorian:
         # Migration guard for existing installs (Phase 8.12)
         try:
             c.execute('ALTER TABLE rotation_profiles ADD COLUMN games_on_current_team INTEGER DEFAULT NULL')
-        except Exception:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             pass  # Column already exists
         c.execute('''
             CREATE INDEX IF NOT EXISTS idx_rotation_profiles_player

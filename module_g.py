@@ -281,8 +281,8 @@ class LudiRefEngine:
                     try:
                         # Specific class found by browser agent: .nba-refs-content table
                         page.wait_for_selector(".nba-refs-content table tbody tr", timeout=15000)
-                    except Exception:
-                        print("   [ZEBRAS] ⚠️ Timeout waiting for table rows.")
+                    except Exception as e:
+                        print(f"   [ZEBRAS] ⚠️ Timeout waiting for table rows: {e}")
                         
                     content = page.content()
                     
@@ -292,7 +292,9 @@ class LudiRefEngine:
                     try:
                         page.screenshot(path="error_state.png")
                         print("   [ZEBRAS] 📸 Screenshot saved to 'error_state.png'")
-                    except: pass
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
+                        pass
                     
                     browser.close()
                     return {}
@@ -349,7 +351,8 @@ class LudiRefEngine:
                         rows = conn.execute("SELECT referee_name FROM referee_profiles").fetchall()
                         known_refs = [r[0] for r in rows]
                         conn.close()
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         pass
 
                     # Load today's games for per-game queries (more targeted than bulk)
@@ -362,7 +365,8 @@ class LudiRefEngine:
                         ).fetchall()
                         today_games = rows
                         conn.close()
-                    except Exception:
+                    except Exception as e:
+                        print(f"[TAG] Context: {e}")
                         pass
 
                     perp_count = 0
@@ -387,7 +391,8 @@ class LudiRefEngine:
                                 )
                                 conn.commit()
                                 conn.close()
-                            except Exception:
+                            except Exception as e:
+                                print(f"[TAG] Context: {e}")
                                 pass
                             print(f"   [ZEBRAS] 🔍 Perplexity crew ({home_team}): {', '.join(matched)}")
                             perp_count += 1

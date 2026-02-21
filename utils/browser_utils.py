@@ -42,7 +42,8 @@ def close_popups(page):
                     page.click(sel, timeout=2000)
                     time.sleep(1)
                     break # Usually only one cookie banner
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 continue
 
         # 2. General Ad Popups / Newsletters / Overlays
@@ -67,9 +68,11 @@ def close_popups(page):
                 if page.is_visible(sel, timeout=500):
                     page.click(sel, timeout=1000)
                     time.sleep(0.5)
-            except:
+            except Exception as e:
+                print(f"[TAG] Context: {e}")
                 continue
-    except:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         pass 
 
 def wait_for_selector_safe(page, selector, timeout=30000, message=None):
@@ -78,7 +81,8 @@ def wait_for_selector_safe(page, selector, timeout=30000, message=None):
         # Initial wait
         page.wait_for_selector(selector, timeout=timeout)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[TAG] Context: {e}")
         # If timeout, try closing popups and wait again briefly
         if message:
             print(f"      [BROWSER] ⏳ Timeout waiting for {message}, checking for popups...")
@@ -86,5 +90,6 @@ def wait_for_selector_safe(page, selector, timeout=30000, message=None):
         try:
             page.wait_for_selector(selector, timeout=5000)
             return True
-        except:
+        except Exception as e:
+            print(f"[TAG] Context: {e}")
             return False
