@@ -370,8 +370,19 @@ def test_pipeline():
         with open('api_usage_log.json', 'r') as f:
             logs = json.load(f)
             if logs:
-                initial_credits = int(logs[-1]['rate_limit_info']['requests_remaining'])
-                print(f"[INIT] Starting credits: {initial_credits:,}\n")
+                # Find the most recent log entry with rate_limit_info
+                initial_credits = None
+                for log in reversed(logs):
+                    if 'rate_limit_info' in log and log['rate_limit_info']:
+                        rate_info = log['rate_limit_info']
+                        if 'requests_remaining' in rate_info and rate_info['requests_remaining'] != 'N/A':
+                            try:
+                                initial_credits = int(rate_info['requests_remaining'])
+                                break
+                            except (ValueError, TypeError):
+                                continue
+                if initial_credits is not None:
+                    print(f"[INIT] Starting credits: {initial_credits:,}\n")
 
     # === STEP 1: Initialize Modules ===
     print("[STEP 1] Initializing Modules...")
@@ -533,8 +544,19 @@ def test_pipeline():
         with open('api_usage_log.json', 'r') as f:
             logs = json.load(f)
 
-        final_credits = int(logs[-1]['rate_limit_info']['requests_remaining'])
-        credits_used = initial_credits - final_credits if initial_credits else 0
+        # Find the most recent log entry with rate_limit_info
+        final_credits = None
+        for log in reversed(logs):
+            if 'rate_limit_info' in log and log['rate_limit_info']:
+                rate_info = log['rate_limit_info']
+                if 'requests_remaining' in rate_info and rate_info['requests_remaining'] != 'N/A':
+                    try:
+                        final_credits = int(rate_info['requests_remaining'])
+                        break
+                    except (ValueError, TypeError):
+                        continue
+        
+        credits_used = initial_credits - final_credits if (initial_credits and final_credits) else 0
 
         cost_per_credit = 30.0 / 20000
         total_cost = credits_used * cost_per_credit

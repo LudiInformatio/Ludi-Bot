@@ -259,7 +259,7 @@ def run_14day_trends():
         import json
         try:
             tags = json.loads(tags_str)
-        except:
+        except (json.JSONDecodeError, TypeError):
             continue
 
         # Find defensive scheme tag

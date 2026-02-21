@@ -556,7 +556,7 @@ class ModelPerformanceAnalyzer:
                     pools[pool]['wins'] += 1
 
                 date_pools[game_date].add(pool)
-            except:
+            except (KeyError, TypeError):
                 continue
 
         # Build result table

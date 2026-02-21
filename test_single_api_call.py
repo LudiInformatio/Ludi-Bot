@@ -61,7 +61,7 @@ def test_single_slate_fetch():
                     try:
                         cost = int(requests_used) * 0.0015  # $30/20000 = $0.0015 per credit
                         print(f"    - Estimated cost: ${cost:.4f}")
-                    except:
+                    except (ValueError, TypeError):
                         pass
             else:
                 print("    ⚠️  No rate limit info found in headers")

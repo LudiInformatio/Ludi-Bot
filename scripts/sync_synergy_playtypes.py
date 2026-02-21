@@ -99,7 +99,7 @@ async def scrape_playtype(page, playtype_key: str, season: str = '2025-26'):
             try:
                 await page.wait_for_selector('table.Crom_table__p1iZz', timeout=15000)
                 break
-            except:
+            except Exception:
                 print(f"[{config['tag']}] Waiting for table (attempt {attempt + 1}/3)...")
                 await asyncio.sleep(3)
         
@@ -272,7 +272,7 @@ def parse_float(text: str) -> float:
     text = text.replace('%', '').strip()
     try:
         return float(text)
-    except:
+    except (ValueError, TypeError):
         return 0.0
 
 

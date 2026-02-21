@@ -245,7 +245,7 @@ def scrape_table(page, label):
             page.wait_for_selector("table.Crom_table__p1iZz", timeout=timeout)
             table_found = True
             break
-        except:
+        except Exception:
             if attempt < 2:
                 print(f"      ⏳ Retry {attempt+1}/3: Table not found, waiting...")
                 simulate_human_interaction(page) # Trigger load
@@ -319,7 +319,7 @@ def extract_id_from_href(href):
             if part.isdigit() and len(part) > 4: # Simple heuristic
                 return part
         return None
-    except:
+    except Exception:
         return None
 
 def process_tracking_row(data, date_str, col_map):

@@ -174,7 +174,7 @@ def analyze_scheme_effectiveness():
             import json
             try:
                 tags = json.loads(tags_json)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 continue
 
             # Find defensive scheme tag
@@ -288,7 +288,7 @@ def analyze_archetype_trends():
             import json
             try:
                 tags = json.loads(tags_json)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 continue
 
             # Find archetype tag

@@ -211,7 +211,7 @@ def extract_id_from_href(href):
             if part.isdigit() and len(part) > 3:
                 return part
         return None
-    except:
+    except Exception:
         return None
 
 def process_item(item_key, data, date_str):
@@ -272,7 +272,7 @@ def process_item(item_key, data, date_str):
                     if val_str and val_str != '-':
                         try:
                             val = float(val_str.replace('%', '').replace(',', ''))
-                        except:
+                        except (ValueError, TypeError):
                             val = val_str # Keep as string if not float (e.g. Lineup names)
                     
                     db_values[db_col] = val

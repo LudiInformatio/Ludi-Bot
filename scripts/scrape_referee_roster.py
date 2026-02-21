@@ -87,7 +87,7 @@ def scrape_referee_roster(dry_run=False):
                 try:
                     # Generic wait for any table to ensure render
                     page.wait_for_selector("table", timeout=15000)
-                except:
+                except Exception:
                     print("   ⚠️  Timed out waiting for table")
                 
                 content = page.content()
@@ -148,7 +148,7 @@ def scrape_referee_roster(dry_run=False):
             
             try:
                 games = int(float(row.get('G', row.get('GAMES', 0))))
-            except:
+            except (ValueError, TypeError):
                 games = 0
             
             if games < 5:
@@ -162,7 +162,7 @@ def scrape_referee_roster(dry_run=False):
                 # BBR might have multiple 'PF' columns if flattening failed poorly, usually unique though
                 total_fouls_combined = float(pf_val)
                 fouls_per_game_team = (total_fouls_combined / games) / 2.0 if games > 0 else 0
-            except:
+            except (ValueError, TypeError):
                 fouls_per_game_team = LEAGUE_AVG_FOULS_PER_GAME
             
             pace_impact = round(fouls_per_game_team / LEAGUE_AVG_FOULS_PER_GAME, 3)
@@ -171,7 +171,7 @@ def scrape_referee_roster(dry_run=False):
             try:
                 techs = float(row.get('TECH', row.get('T', 0)))
                 tech_rate = (techs / games) / 2.0 if games > 0 else 0 # per team
-            except:
+            except (ValueError, TypeError):
                 tech_rate = 0.0
             
             # Classify style

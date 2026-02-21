@@ -1,5 +1,4 @@
 import config
-import requests
 # [FUTURE] This module will serve as the central hub for data fetching,
 # routing requests to the appropriate API provider based on availability and cost.
 
