@@ -1066,6 +1066,45 @@ class LudiHistorian:
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
 
+    # -------------------------------------------------------------------------
+    # ORPHAN TABLES (created by migrations or scripts — NOT in CREATE TABLE above)
+    # Sprint 8 DB Schema Audit (Feb 2026): 37 tables in database.py + 16 orphans = 53+ documented.
+    # Each orphan is owned by the script/migration that creates it.
+    #
+    # Source: migrations/create_synergy_tables.sql
+    #   player_synergy_playtypes  — NBA Synergy playtype data (1,326 rows)
+    #   player_drives             — Drive-based play data
+    #   player_touches            — Touch/possession data
+    #   player_speed              — Speed/distance tracking
+    #   player_defense            — Opponent defensive matchup data
+    #
+    # Source: migrations/migration.sql + migrations/migration_enable.sql
+    #   player_canonical_ids_inactive_log  — Audit log for Phase 3 ID dedup
+    #
+    # Source: scripts/build_classification_profiles.py (SQLite views)
+    #   player_offensive_playtype_profile  — Aggregated view for archetype classification
+    #   team_offensive_playtype_profile    — Team-level playtype view
+    #   player_defense_proxy_profile       — Defensive proxy metrics view
+    #
+    # Source: scripts/sync_assist_combos.py
+    #   assist_combos             — Player-to-player assist pair frequency (BENEFICIARY aid)
+    #
+    # Source: scripts/sync_pbp_totals.py
+    #   player_season_quality     — Season-level PBP shot quality aggregates
+    #
+    # Source: scripts/sync_wowy_backfill.py
+    #   team_lineups              — 5-man lineup on/off data (Ghost Protocol, 10,669 rows)
+    #   player_on_off_stats       — Player-level on/off efficiency splits
+    #
+    # Source: utils/bet_logger.py
+    #   bet_recommendations       — Primary bet log (15,575+ records, settlement target)
+    #   bet_daily_summaries       — Daily P&L rollup (one row per date)
+    #
+    # Unresolved (referenced in production but CREATE TABLE source not found):
+    #   player_canonical_ids      — ID mapping table (500+ rows); creation script likely deleted
+    #   players_archived          — Referenced in migration_enable.sql; presumed manual creation
+    # -------------------------------------------------------------------------
+
     def update_player_census(self, player_data):
         """
         Upserts (Update or Insert) player data.
