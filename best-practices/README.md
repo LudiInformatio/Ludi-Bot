@@ -9,88 +9,82 @@ best-practices/
 ├── api/                    # ✅ API integration patterns (COMPLETE)
 │   ├── API_BEST_PRACTICES.md
 │   ├── API_QUICK_REFERENCE.md
-│   └── API_DOCUMENTATION_INDEX.md
-├── coding/                 # 📋 Code quality, patterns, style (INITIALIZED)
+│   ├── API_DOCUMENTATION_INDEX.md
+│   ├── LLM_INTEGRATION.md
+│   └── SPORTSBOOK_TIERS_AND_MATH.md
+├── ai/                     # ✅ Prompt engineering patterns (COMPLETE)
+│   └── PROMPT_ENGINEERING_PATTERNS.md
+├── ai-prompting/           # ✅ Operational AI prompting guide (COMPLETE)
+│   └── AI_PROMPTING_BEST_PRACTICES.md
+├── coding/                 # ✅ Code quality, patterns, style (COMPLETE)
 │   └── README.md
-├── debugging/              # 📋 Troubleshooting strategies (INITIALIZED)
+├── data/                   # ✅ Stat confidence & edge calibration (COMPLETE)
+│   └── STAT_CONFIDENCE_FRAMEWORK.md
+├── data-modeling/          # ✅ Database design, schema patterns (COMPLETE)
+│   └── README.md
+├── debugging/              # ✅ Troubleshooting strategies (COMPLETE)
 │   └── README.md
 ├── testing/                # 📋 Testing patterns and validation (INITIALIZED)
 │   └── README.md
-├── deployment/             # 📋 CI/CD, production operations (INITIALIZED)
-│   └── README.md
-└── data-modeling/          # 📋 Database design, schema patterns (INITIALIZED)
+└── deployment/             # 📋 CI/CD, production operations (INITIALIZED)
     └── README.md
 ```
 
-## Current Categories
+## Categories
 
-### 📡 API Best Practices (`api/`)
-**Status:** ✅ Complete (Feb 17, 2026) — Updated Feb 19, 2026
-
-Comprehensive guide covering:
-- Authentication & secrets management
-- Rate limiting & quota management
-- Caching strategies
-- Error handling & retry logic
-- Version management & breaking changes
-- Testing & validation
-- Monitoring & alerting
-- Multi-API architecture
-- GitHub Actions integration
-- Sports API considerations
-- **LLM/Claude integration (Phase 8)** — see `LLM_INTEGRATION.md`
-
-**Documentation:**
-- `API_BEST_PRACTICES.md` (15 sections, 60+ examples — traditional REST APIs)
-- `LLM_INTEGRATION.md` (Claude/Anthropic integration — Phase 8 patterns)
-- `API_QUICK_REFERENCE.md` (7 KB, 1-page cheatsheet)
-- `API_DOCUMENTATION_INDEX.md` (6 KB, navigation hub)
-
-**Lessons documented:** 25 real mistakes with root cause analysis and fixes
+### 📡 API Integration (`api/`)
+**Status:** ✅ Complete (Feb 19, 2026)
+- `API_BEST_PRACTICES.md` — 15 sections, 60+ examples; 25 real mistakes documented
+- `LLM_INTEGRATION.md` — Claude/Anthropic Phase 8 integration patterns
+- `API_QUICK_REFERENCE.md` — 1-page cheatsheet
+- `SPORTSBOOK_TIERS_AND_MATH.md` — NC Legal book tiers, devig math, CLV formula
 
 ---
 
-## Future Categories (Initialized)
+### 🤖 AI — Prompt Engineering Research (`ai/`)
+**Status:** ✅ Complete (Feb 20, 2026)
+- `PROMPT_ENGINEERING_PATTERNS.md` — 8 BERT-derived patterns mapped to Claude prompts
+- Source: Google BERT codebase + Procedia CS 2024 sentiment paper
+- Explains root cause of format drift, 400 errors, and few-shot vs zero-shot tradeoffs
 
-All categories below have folder structure and placeholder READMEs. Ready to be populated as patterns are discovered.
+### 🤖 AI — Operational Prompting Guide (`ai-prompting/`)
+**Status:** ✅ Complete (Feb 20, 2026)
+- `AI_PROMPTING_BEST_PRACTICES.md` — Practical rules for Haiku, Sonnet, and Perplexity Sonar
+- Temperature rules, cost breakdown, injection points per pipeline stage
 
-### 🔧 Coding Best Practices (`coding/`)
-**Status:** ✅ Complete (updated Feb 19, 2026)
-**Reference:** `coding/README.md` — 6 patterns covering error handling, tuple unpacking, bash defaults, lazy imports
+---
 
-### 🐛 Debugging Best Practices (`debugging/`)
-**Status:** 📋 Initialized (placeholder README created)
-**Topics:**
-- Silent failure detection and prevention
-- Logging strategies
-- Performance profiling
-- Memory leak detection
-- Database debugging
-- API debugging workflows
+### 🔧 Coding Patterns (`coding/`)
+**Status:** ✅ Complete (Feb 19, 2026)
+- `README.md` — 6 patterns: error handling, tuple unpacking, bash defaults, lazy imports, type hints
 
-### ✅ Testing Best Practices (`testing/`)
-**Status:** 📋 Initialized (placeholder README created)
-**Topics:**
-- Unit testing patterns
-- Integration testing strategies
-- Backtest validation frameworks
-- Mock data and fixtures
-- Quota-aware API testing
-- CI/CD test automation
+---
 
-### 🚀 Deployment Best Practices (`deployment/`)
-**Status:** 📋 Initialized (placeholder README created)
-**Topics:**
-- GitHub Actions workflow patterns
-- Database backup and recovery
-- Secret management
-- Environment configuration
-- Rollback procedures
-- Production monitoring
+### 📊 Data — Stat Confidence & Edge Calibration (`data/`)
+**Status:** ✅ Complete (Feb 20, 2026)
+- `STAT_CONFIDENCE_FRAMEWORK.md` — A+ to F grades across all stat markets; 14k+ bets analyzed
+- Key finding: BLOCKS UNDER 70.7% WR; PTS OVER systematically overconfident at high edges
 
-### 📊 Data Modeling Best Practices (`data-modeling/`)
-**Status:** ✅ Complete (updated Feb 19, 2026)
-**Reference:** See `data-modeling/README.md` — 8 patterns covering schema design, canonical IDs, indexes, freshness validation, self-healing rebuilds
+---
+
+### 🗄️ Data Modeling (`data-modeling/`)
+**Status:** ✅ Complete (Feb 19, 2026)
+- `README.md` — 8 patterns: schema design, canonical IDs, indexes, freshness validation, self-healing
+
+---
+
+### 🐛 Debugging (`debugging/`)
+**Status:** ✅ Complete (Feb 19, 2026)
+- `README.md` — 6 patterns: CI diagnosis playbook, silent failure detection, library param inspection, bash empty-var crash, function return mismatch, DB corruption check
+- Anti-pattern table: `except: continue` → always log; `|| echo` → use `${VAR:-default}`
+
+---
+
+### ✅ Testing (`testing/`)
+**Status:** 📋 Initialized — topics outlined, patterns pending
+
+### 🚀 Deployment (`deployment/`)
+**Status:** 📋 Initialized — topics outlined, patterns pending
 
 ---
 
@@ -157,13 +151,16 @@ When you discover a new pattern or lesson:
 
 - **API Best Practices:** [api/API_BEST_PRACTICES.md](api/API_BEST_PRACTICES.md)
 - **API Quick Reference:** [api/API_QUICK_REFERENCE.md](api/API_QUICK_REFERENCE.md)
+- **Prompt Engineering:** [ai/PROMPT_ENGINEERING_PATTERNS.md](ai/PROMPT_ENGINEERING_PATTERNS.md)
+- **AI Prompting Guide:** [ai-prompting/AI_PROMPTING_BEST_PRACTICES.md](ai-prompting/AI_PROMPTING_BEST_PRACTICES.md)
+- **Stat Confidence:** [data/STAT_CONFIDENCE_FRAMEWORK.md](data/STAT_CONFIDENCE_FRAMEWORK.md)
+- **Debugging Playbook:** [debugging/README.md](debugging/README.md)
 - **Project Documentation:** [../docs/](../docs/)
 - **Architecture Guide:** [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 - **Roadmap:** [../ROADMAP.md](../ROADMAP.md)
 
 ---
 
-**Last Updated:** February 19, 2026
-**Total Documentation:** ~100 KB across 2 categories (API, data-modeling, coding)
-**Categories Complete:** 3 (api, data-modeling, coding)
-**Categories Planned:** 2 (debugging, testing, deployment)
+**Last Updated:** February 21, 2026
+**Categories Complete:** 7 (api, ai, ai-prompting, coding, data, data-modeling, debugging)
+**Categories Initialized:** 2 (testing, deployment)
