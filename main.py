@@ -650,7 +650,7 @@ class LudiOrchestrator:
         
         if self._telegram_enabled:
             print("[step 6] Sending Telegram Briefing...")
-            send_message(f"🚨 **LUDI EVENING LOCK** 🚨\n\n{briefing}")
+            send_message(f"📊 **LUDI SIMULATION RESULTS** 📊\n\n{briefing}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

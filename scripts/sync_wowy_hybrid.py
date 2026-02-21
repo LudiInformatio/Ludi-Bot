@@ -260,11 +260,11 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    end = datetime.now()
+    end = datetime.now() - timedelta(days=1)  # Yesterday (most recent completed games)
     if args.end_date:
         end = datetime.strptime(args.end_date, "%Y-%m-%d")
-        
-    start = end - timedelta(days=args.days)
+
+    start = end - timedelta(days=args.days - 1)  # --days 1 = just yesterday; --days 7 = 7 days ending yesterday
     if args.start_date:
         start = datetime.strptime(args.start_date, "%Y-%m-%d")
         
