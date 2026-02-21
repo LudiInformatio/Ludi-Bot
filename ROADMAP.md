@@ -224,6 +224,9 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 
 ### Data Pipeline Improvements
 - [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
+- [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved per already-synced date in weekly backfills)
+- [ ] Ghost Protocol on/off scraping: uncomment/implement on/off tab in `WOWY_MANIFEST` (currently lineups-only)
+- [ ] Schedule `sync_pbp_wowy.py` weekly in `data_sync.yml` (season-level on/off splits, currently manual-only)
 - [ ] Multi-book arbitrage detection
 - [ ] Steam move detection (rapid line movement alerts)
 
