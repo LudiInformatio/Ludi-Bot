@@ -243,15 +243,23 @@ class BDLClient:
     def get_season_averages(self, player_ids: List[int] = None,
                             season: int = 2025,
                             category: str = "general",
-                            season_type: str = "regular") -> List[Dict]:
+                            season_type: str = "regular",
+                            stat_type: str = None) -> List[Dict]:
         """
         Fetch season averages.
 
         Categories: general, advanced, scoring, usage, per_36, per_48,
                     opponent, defense
         season_type: regular, playoffs
+        stat_type: subtype filter (e.g. "drives", "isolation") — maps to API param "type"
         """
-        params: Dict[str, Any] = {"season": season, "type": season_type}
+        params: Dict[str, Any] = {
+            "season": season,
+            "season_type": season_type,   # FIXED: was "type": season_type (caused collision)
+            "per_page": 100,
+        }
+        if stat_type:
+            params["type"] = stat_type    # subtype (e.g. "drives", "isolation")
         if player_ids:
             params["player_ids[]"] = player_ids
 
@@ -283,6 +291,19 @@ class BDLClient:
         data = self._get(f"{self.BASE_URL_V1}/team_season_averages/{category}", params)
         result = data.get("data", []) if data else []
 
+        if result:
+            _write_cache(cache_path, result)
+        return result
+
+    def get_standings(self, season: int = 2025) -> List[Dict]:
+        """Fetch team standings. Returns 30 teams with wins, losses, conference/division rank."""
+        params: Dict[str, Any] = {"season": season}
+        cache_path = _get_cache_path(f"standings_{season}", params)
+        cached = _read_cache(cache_path, ttl_hours=6.0)
+        if cached is not None:
+            return cached
+        data = self._get(f"{self.BASE_URL_V1}/standings", params)
+        result = data.get("data", []) if isinstance(data, dict) else (data or [])
         if result:
             _write_cache(cache_path, result)
         return result
@@ -399,9 +420,12 @@ class BDLClient:
 
     def get_advanced_stats(self, player_ids: List[int] = None,
                            game_ids: List[int] = None,
-                           season: int = None) -> List[Dict]:
+                           season: int = None,
+                           dates: List[str] = None) -> List[Dict]:
         """Fetch advanced stats from BDL v2."""
         params: Dict[str, Any] = {"per_page": 100}
+        if dates:
+            params["dates[]"] = dates
         if player_ids:
             params["player_ids[]"] = player_ids
         if game_ids:
@@ -543,19 +567,21 @@ def get_box_scores(date: str = None, live: bool = False) -> List[Dict]:
 
 def get_advanced_stats(player_ids: List[int] = None,
                        game_ids: List[int] = None,
-                       season: int = None) -> List[Dict]:
+                       season: int = None,
+                       dates: List[str] = None) -> List[Dict]:
     return _get_client().get_advanced_stats(
-        player_ids=player_ids, game_ids=game_ids, season=season
+        player_ids=player_ids, game_ids=game_ids, season=season, dates=dates
     )
 
 
 def get_season_averages(player_ids: List[int] = None,
                         season: int = 2025,
                         category: str = "general",
-                        season_type: str = "regular") -> List[Dict]:
+                        season_type: str = "regular",
+                        stat_type: str = None) -> List[Dict]:
     return _get_client().get_season_averages(
         player_ids=player_ids, season=season,
-        category=category, season_type=season_type
+        category=category, season_type=season_type, stat_type=stat_type
     )
 
 
@@ -574,3 +600,8 @@ def get_player_stats(game_ids: List[int] = None,
         game_ids=game_ids, player_ids=player_ids,
         season=season, date=date
     )
+
+
+def get_standings(season: int = 2025) -> List[Dict]:
+    """Module-level convenience: fetch team standings."""
+    return _get_client().get_standings(season=season)

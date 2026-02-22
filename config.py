@@ -51,6 +51,13 @@ TANK01_HOST = "tank01-fantasy-stats.p.rapidapi.com"
 APISPORTS_KEY = os.getenv('APISPORTS_KEY')
 APISPORTS_HOST = "v2.nba.api-sports.io"
 
+# SPORTSDATA.IO (Box score enrichment: started, DK/FD fantasy pts, home/away, doubles)
+# Source: https://discoverylab.sportsdata.io/
+# Pricing: Free (100 calls/day) — Fantasy API path
+SPORTSDATA_API_KEY = os.getenv('SPORTSDATA_API_KEY')
+SPORTSDATA_TIER = os.getenv('SPORTSDATA_TIER', 'free')
+USE_SPORTSDATA = bool(SPORTSDATA_API_KEY)
+
 # BALLDONTLIE (Props Validation + Injuries + Play-by-Play)
 # Source: https://docs.balldontlie.io
 # Pricing: GOAT tier $39.99/mo (600 req/min)

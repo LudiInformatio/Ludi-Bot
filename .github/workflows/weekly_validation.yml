@@ -171,12 +171,24 @@ jobs:
           python scripts/sync_stint_profiles.py --days 60 || echo "WARNING: Stint profiles sync failed -- continuing"
         continue-on-error: true
 
+      - name: BDL Season Averages (tracking, hustle, shotdashboard, playtype — Ghost Protocol synergy demotion)
+        # Sprint D: Syncs all 18 category/subtype combos + standings
+        # playtype category replaces Ghost Protocol sync_synergy_playtypes.py (NBA.com browser scraping)
+        run: |
+          source .venv/bin/activate
+          echo "Running BDL Season Averages Sync..."
+          python scripts/sync_bdl_season_averages.py || echo "WARNING: BDL season averages sync failed -- continuing"
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+
       - name: Archive Backtest Logs
         run: |
           # Compress logs
           cd logs/backtest
           gzip *.log 2>/dev/null || true
-          
+
           # Keep last 8 weeks of backtest logs
           find . -name "*.log.gz" -mtime +56 -delete || true
           

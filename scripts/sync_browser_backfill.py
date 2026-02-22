@@ -743,7 +743,7 @@ def process_closest_defender(page, date_str, nba_date):
 # MAIN GHOST PROTOCOL LOOP
 # ============================================================
 
-def run_ghost_protocol(start_date, end_date, headless=False, closest_only=False):
+def run_ghost_protocol(start_date, end_date, headless=False, closest_only=False, skip_advanced=False):
     print("\n" + "="*50)
     print(f"👻 LUDI GHOST PROTOCOL v2.1 | HUMAN STEALTH MODE")
     print(f"📅 Range: {start_date} -> {end_date}")
@@ -812,6 +812,10 @@ def run_ghost_protocol(start_date, end_date, headless=False, closest_only=False)
                     # Skip closest_defender - it requires special multi-page handling
                     if config['type'] == 'closest_defender':
                         continue
+                    # Skip advanced stats when --skip-advanced is set
+                    # (BDL V2 now handles player_game_advanced via sync_bdl_advanced_stats.py)
+                    if skip_advanced and config['type'] == 'advanced':
+                        continue
 
                     label = config['label']
                     url_template = config['url']
@@ -855,6 +859,8 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, help="Number of days back to sync (1 = yesterday)")
     parser.add_argument("--headless", action="store_true", help="Run browser in headless mode (for CI)")
     parser.add_argument("--closest-only", action="store_true", help="Only sync closest defender data")
+    parser.add_argument("--skip-advanced", action="store_true",
+                        help="Skip player_game_advanced writes (BDL V2 now handles this via sync_bdl_advanced_stats.py)")
     args = parser.parse_args()
 
     end = datetime.now()
@@ -869,4 +875,5 @@ if __name__ == "__main__":
         if args.days == 1:
             end = start
 
-    run_ghost_protocol(start, end, headless=args.headless, closest_only=args.closest_only)
+    run_ghost_protocol(start, end, headless=args.headless, closest_only=args.closest_only,
+                       skip_advanced=args.skip_advanced)

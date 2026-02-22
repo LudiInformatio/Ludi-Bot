@@ -41,22 +41,19 @@ jobs:
         run: python3 -m playwright install chromium
 
       - name: Run Ghost Protocol sync (last 7 days)
+        # Phase 8.21 demotion: --skip-advanced skips player_game_advanced writes
+        # (BDL V2 advanced stats now via sync_bdl_advanced_stats.py in data_sync.yml)
+        # Ghost Protocol still handles: drives, catch_and_shoot, pull_up, closest_defender, clutch
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: |
           export PYTHONPATH=$PWD
-          caffeinate -i python3 scripts/sync_browser_backfill.py --days 7
+          caffeinate -i python3 scripts/sync_browser_backfill.py --days 7 --skip-advanced
 
-      - name: Sync Synergy Playtypes (NBA.com)
-        run: |
-          export PYTHONPATH=$PWD
-          caffeinate -i python3 scripts/sync_synergy_playtypes.py --all --season 2025-26
-
-      - name: Sync Defensive Synergy Playtypes (NBA.com)
-        run: |
-          export PYTHONPATH=$PWD
-          caffeinate -i python3 scripts/sync_synergy_playtypes.py --all --defensive --season 2025-26
+      # Synergy playtypes (isolation PPP, transition, handoff, cut, etc.) now via BDL API:
+      # sync_bdl_season_averages.py --category playtype runs weekly in weekly_validation.yml
+      # NBA.com browser scraping of synergy data is no longer needed.
 
       - name: Reclassify Player Archetypes
         run: |

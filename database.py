@@ -1062,6 +1062,129 @@ class LudiHistorian:
                 ON player_injury_history(player_id, injury_date)
         ''')
 
+
+        # =====================================================================
+        # MIGRATION: Box Score Enrichment + BDL V2 Advanced Stats (Sprint A/B/D)
+        # Added: 2026-02-22
+        # =====================================================================
+
+        # -- Sprint A: player_game_logs new columns --
+        sprint_a_cols = [
+            ('player_game_logs', 'started TINYINT'),
+            ('player_game_logs', 'fantasy_pts_dk REAL'),
+            ('player_game_logs', 'fantasy_pts_fd REAL'),
+            ('player_game_logs', 'home_or_away TEXT'),
+            ('player_game_logs', 'double_doubles INT'),
+            ('player_game_logs', 'triple_doubles INT'),
+        ]
+        for table, col_def in sprint_a_cols:
+            col_name = col_def.split()[0]
+            try:
+                c.execute(f'ALTER TABLE {table} ADD COLUMN {col_def}')
+                print(f'[MIGRATION] Added {col_name} to {table}')
+            except Exception as e:
+                print(f'[MIGRATION] {table}.{col_name}: {e}')
+                pass  # Column already exists
+
+        # -- Sprint B: player_game_advanced BDL V2 columns --
+        sprint_b_advanced_cols = [
+            'points_paint INT',
+            'points_fast_break INT',
+            'points_second_chance INT',
+            'points_off_turnovers INT',
+            'estimated_off_rating REAL',
+            'estimated_def_rating REAL',
+            'estimated_net_rating REAL',
+            'pct_pts_paint REAL',
+            'pct_pts_fast_break REAL',
+            'pct_pts_free_throw REAL',
+            'pct_pts_midrange_2pt REAL',
+            'bdl_source TINYINT DEFAULT 0',
+        ]
+        for col_def in sprint_b_advanced_cols:
+            col_name = col_def.split()[0]
+            try:
+                c.execute(f'ALTER TABLE player_game_advanced ADD COLUMN {col_def}')
+                print(f'[MIGRATION] Added {col_name} to player_game_advanced')
+            except Exception as e:
+                print(f'[MIGRATION] player_game_advanced.{col_name}: {e}')
+                pass  # Column already exists
+
+        # -- Sprint B: player_game_tracking BDL V2 columns (speed/distance/touches/passes only) --
+        sprint_b_tracking_cols = [
+            'speed REAL',
+            'distance REAL',
+            'touches INT',
+            'passes INT',
+            'bdl_source TINYINT DEFAULT 0',
+        ]
+        for col_def in sprint_b_tracking_cols:
+            col_name = col_def.split()[0]
+            try:
+                c.execute(f'ALTER TABLE player_game_tracking ADD COLUMN {col_def}')
+                print(f'[MIGRATION] Added {col_name} to player_game_tracking')
+            except Exception as e:
+                print(f'[MIGRATION] player_game_tracking.{col_name}: {e}')
+                pass  # Column already exists
+
+        # -- Sprint B: player_game_hustle bdl_source flag --
+        try:
+            c.execute('ALTER TABLE player_game_hustle ADD COLUMN bdl_source TINYINT DEFAULT 0')
+            print('[MIGRATION] Added bdl_source to player_game_hustle')
+        except Exception as e:
+            print(f'[MIGRATION] player_game_hustle.bdl_source: {e}')
+            pass  # Column already exists
+
+        # -- Sprint D: player_season_averages_bdl (BDL V2 season-level aggregates) --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_season_averages_bdl (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                canonical_id  TEXT,
+                player_id     INTEGER,
+                player_name   TEXT,
+                team_abbrev   TEXT,
+                season        INT,
+                category      TEXT,
+                stat_type     TEXT,
+                stats_json    TEXT,
+                ppp           REAL,
+                poss_pct      REAL,
+                efg_pct       REAL,
+                drives        INT,
+                avg_speed     REAL,
+                dist_miles    REAL,
+                deflections   REAL,
+                box_outs      REAL,
+                screen_assists REAL,
+                updated_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id, season, category, stat_type)
+            )
+        ''')
+
+        # -- Sprint D: team_standings_bdl (BDL V2 standings) --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS team_standings_bdl (
+                team_id        INTEGER PRIMARY KEY,
+                team_name      TEXT,
+                team_abbrev    TEXT,
+                wins           INT,
+                losses         INT,
+                win_pct        REAL,
+                conference     TEXT,
+                conference_rank INT,
+                division       TEXT,
+                division_rank  INT,
+                home_wins      INT,
+                home_losses    INT,
+                away_wins      INT,
+                away_losses    INT,
+                last_ten_wins  INT,
+                streak         TEXT,
+                season         INT,
+                updated_at     TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
