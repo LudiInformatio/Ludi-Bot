@@ -34,7 +34,9 @@ _MAX_BLOCK_CHARS = {
     'injury_intel_block': 600,
     'beneficiary_block': 400,
     'edges_block': 800,
-    'schedule_notes': 200,
+    'schedule_notes': 500,   # expanded from 200 — catches trade/rotation news
+    'rotation_block': 300,
+    'teammates_context': 150,
 }
 
 
@@ -43,6 +45,68 @@ def _safe_inject(text: str, max_chars: int) -> str:
     if text and len(text) > max_chars:
         return text[:max_chars] + "... [truncated]"
     return text if text else ""
+
+
+def _build_rotation_block(team_abbr: str, out_names: list, cursor) -> str:
+    """Return top-8 active rotation players for a team from ludi.db (last 14d).
+    Excludes tonight's OUT players so Claude only sees currently available names.
+    Prevents Claude from falling back on stale training-data roster knowledge."""
+    try:
+        if out_names:
+            placeholders = ','.join('?' * len(out_names))
+            cursor.execute(f"""
+                SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
+                FROM player_game_logs
+                WHERE team_abbreviation = ?
+                  AND game_date >= date('now', '-14 days')
+                  AND minutes > 0
+                  AND player_name NOT IN ({placeholders})
+                GROUP BY player_name
+                ORDER BY avg_min DESC
+                LIMIT 8
+            """, [team_abbr] + list(out_names))
+        else:
+            cursor.execute("""
+                SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
+                FROM player_game_logs
+                WHERE team_abbreviation = ?
+                  AND game_date >= date('now', '-14 days')
+                  AND minutes > 0
+                GROUP BY player_name
+                ORDER BY avg_min DESC
+                LIMIT 8
+            """, (team_abbr,))
+        rows = cursor.fetchall()
+        if not rows:
+            return f"No recent game logs for {team_abbr}."
+        return ", ".join(f"{r[0]} ({r[1]}min)" for r in rows)
+    except Exception as e:
+        return f"Rotation data unavailable ({e})"
+
+
+def _build_teammates_context(player_name: str, team_abbr: str, out_names: list, cursor) -> str:
+    """Return top-3 active teammates by avg minutes for spotlight grounding.
+    Prevents Claude from hallucinating lineup context (e.g. mentioning traded players)."""
+    try:
+        exclude = list(out_names) + [player_name]
+        placeholders = ','.join('?' * len(exclude))
+        cursor.execute(f"""
+            SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
+            FROM player_game_logs
+            WHERE team_abbreviation = ?
+              AND game_date >= date('now', '-14 days')
+              AND minutes > 0
+              AND player_name NOT IN ({placeholders})
+            GROUP BY player_name
+            ORDER BY avg_min DESC
+            LIMIT 3
+        """, [team_abbr] + exclude)
+        rows = cursor.fetchall()
+        if not rows:
+            return "Teammate data unavailable."
+        return ", ".join(f"{r[0]} ({r[1]}min)" for r in rows)
+    except Exception:
+        return "Teammate data unavailable."
 
 
 def _get_team_situation_note(team_abbr, cursor):
@@ -572,7 +636,19 @@ Return JSON only."""
                         if blowout_close_note else matchup_pace_note
                     
                     game_news = game_news_cache.get(gid, "")
-                    schedule_notes = game_news[:200] if game_news else "Standard rest"
+                    # schedule_notes feeds the {schedule_notes} row — expanded to 500 chars
+                    # (was 200) to capture trade/rotation blurbs that were previously cut
+                    schedule_notes = game_news if game_news else "Standard rest"
+
+                    # Build current rotation from ludi.db (anti-stale-roster grounding)
+                    # OUT players are excluded so Claude only writes about available names
+                    out_names_tonight = [r[0] for r in injuries if r[1] == 'OUT']
+                    try:
+                        away_rotation = _build_rotation_block(away_team, out_names_tonight, cursor)
+                        home_rotation = _build_rotation_block(home_team, out_names_tonight, cursor)
+                    except Exception as _re:
+                        away_rotation = f"Rotation data unavailable ({_re})"
+                        home_rotation = f"Rotation data unavailable ({_re})"
 
                     # Build date label: "TONIGHT · Feb 19" or "TOMORROW · Feb 20"
                     import pytz as _pytz_mb
@@ -638,6 +714,8 @@ Return JSON only."""
                             edges_block=_safe_inject(edges_block, _MAX_BLOCK_CHARS['edges_block']),
                             situational_context=_safe_inject(situational_context, _MAX_BLOCK_CHARS['situational_context']),
                             time_context_note=time_context_note,
+                            away_rotation=_safe_inject(away_rotation, _MAX_BLOCK_CHARS['rotation_block']),
+                            home_rotation=_safe_inject(home_rotation, _MAX_BLOCK_CHARS['rotation_block']),
                             **preservation_keys
                         )
                         
@@ -748,7 +826,12 @@ Return JSON only."""
                             scheme_row = cursor.fetchone()
                             opp_scheme = scheme_row[0] if scheme_row else "Standard"
 
-                            # 2d. Build Prompt
+                            # 2d. Active teammates for roster grounding (prevents hallucinated lineup refs)
+                            active_teammates = _build_teammates_context(
+                                player_name, team, out_teammates, cursor
+                            )
+
+                            # 2e. Build Prompt
                             prompt = SPOTLIGHT_TEMPLATE.format(
                                 player=player_name,
                                 team=team,
@@ -759,6 +842,7 @@ Return JSON only."""
                                 archetype=bet.get('archetype', 'Unknown'),
                                 opp_scheme=opp_scheme,
                                 injury_context=injury_context,
+                                active_teammates=_safe_inject(active_teammates, _MAX_BLOCK_CHARS['teammates_context']),
                                 trend_line=trend_line_str or "No trend data",
                                 minutes_trend=minutes_trend_str or "No minutes data",
                                 l10_avg=l10_avg,

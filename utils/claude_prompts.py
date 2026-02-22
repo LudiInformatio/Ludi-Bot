@@ -41,6 +41,11 @@ BEFORE SUBMITTING, verify:
 - No stats cited without a data source
 - No references to prior seasons rosters
 - All numbers match the injected data above
+
+ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Do NOT fill
+in team composition from training memory — the 2025-26 season has trades and role
+changes your training data does not reflect. If a player is not in CURRENT ROSTERS,
+do not mention them by name.
 """
 
 GAME_NOTES_TEMPLATE = """📅 {game_label}
@@ -68,6 +73,10 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 [Format: "OUT: {player} ({days_out}d {injury_type}) → {beneficiary} +{boost} {stat} proj"]
 [Or: "GTD: {player} ({injury_type}) — {update_time} update critical"]
 
+=== CURRENT ROSTERS (ludi.db · last 14d — use ONLY these players) ===
+{away_team}: {away_rotation}
+{home_team}: {home_rotation}
+
 === MATCHUP ANALYSIS ===
 **Scheme Edge:**
 - {away_team} ({away_archetype_summary}) vs {home_team} ({home_def_scheme}): {one_sentence}
@@ -89,6 +98,7 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 - Archetype: {archetype}
 - Opponent scheme: {opp_scheme}
 - Injury status: {injury_context}
+- Active teammates: {active_teammates}
 - Trend: {trend_line}
 - Minutes: {minutes_trend}
 - L10 avg: {l10_avg} ({hit_rate_l10} hit rate)
