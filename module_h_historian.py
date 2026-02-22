@@ -164,14 +164,18 @@ class LudiHistorian:
                     record.get('PLAYER_NAME', 'Unknown')
                 )
 
+                # Derive season_id from game_date (Phase 2A)
+                season_id = '2025-26' if game_date >= '2025-10-01' else '2024-25'
+
                 cursor.execute("""
                     INSERT INTO player_game_logs (
-                        game_id, game_date, player_id, player_name,
+                        game_id, game_date, season_id, player_id, player_name,
                         team_abbreviation, pts, ast, reb, minutes,
                         stl, blk, tov, fgm, fga, fg3m, fg3a,
                         ftm, fta, oreb, dreb, pf, fantasy_pts, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(player_id, game_date) DO UPDATE SET
+                        season_id = excluded.season_id,
                         pts = excluded.pts,
                         ast = excluded.ast,
                         reb = excluded.reb,
@@ -193,6 +197,7 @@ class LudiHistorian:
                 """, (
                     record['GAME_ID'],
                     game_date,
+                    season_id,
                     canonical_player_id,
                     record.get('PLAYER_NAME', 'Unknown'),
                     record.get('TEAM_ABBREVIATION', 'UNK'),

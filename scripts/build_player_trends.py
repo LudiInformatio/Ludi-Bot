@@ -111,10 +111,32 @@ def _compute_trends_for_player(conn, player_id, player_name, team_abbr, stat, mi
         SELECT AVG({expr}) as avg_val
         FROM player_game_logs
         WHERE player_id = ? AND team_abbreviation = ? AND minutes > 0
+          AND season_id = '2025-26'
     """, (str(player_id), team_abbr)).fetchone()
     season_avg = season_row['avg_val'] if season_row and season_row['avg_val'] else l15
 
-    # Trend delta and label
+    # Prior season average (Phase 2A — cross-season BREAKOUT/REGRESSION signal)
+    prior_row = conn.execute(f"""
+        SELECT AVG({expr}) as avg_val
+        FROM player_game_logs
+        WHERE player_id = ? AND minutes > 0
+          AND season_id = '2024-25'
+    """, (str(player_id),)).fetchone()
+    prior_season_avg = prior_row['avg_val'] if prior_row and prior_row['avg_val'] else None
+
+    # Season-over-season signal (only meaningful for stats with real volume, not BLK/STL for guards)
+    trend_signal = None
+    season_delta_pct = None
+    if prior_season_avg and prior_season_avg >= 1.0 and season_avg:
+        season_delta_pct = round((season_avg - prior_season_avg) / prior_season_avg, 3)
+        if season_delta_pct >= 0.20:
+            trend_signal = 'BREAKOUT'
+        elif season_delta_pct <= -0.20:
+            trend_signal = 'REGRESSION'
+        else:
+            trend_signal = 'STABLE'
+
+    # Trend delta and label (within-season: L7 vs L15)
     trend_delta = round(l7 - l15, 1)
     if trend_delta >= TREND_UP_THRESHOLD:
         trend_label = f"UP +{trend_delta}"
@@ -149,6 +171,9 @@ def _compute_trends_for_player(conn, player_id, player_name, team_abbr, stat, mi
         'trend_label': trend_label,
         'streak_vs_avg': streak,
         'games_found': games_found,
+        'prior_season_avg': round(prior_season_avg, 2) if prior_season_avg else None,
+        'season_delta_pct': season_delta_pct,
+        'trend_signal': trend_signal,
         'computed_at': datetime.now().isoformat(),
     }
 
@@ -204,6 +229,16 @@ def main():
         for r in streaks[:10]:
             direction = "above" if r['streak_vs_avg'] > 0 else "below"
             print(f"   {r['player_name']:<25} {r['stat']:<4} {abs(r['streak_vs_avg'])}g {direction} avg (avg:{r['season_avg']:.1f})")
+
+        breakouts = [r for r in results if r.get('trend_signal') == 'BREAKOUT']
+        regressions = [r for r in results if r.get('trend_signal') == 'REGRESSION']
+        if breakouts or regressions:
+            print(f"\n📈 SEASON-OVER-SEASON BREAKOUTS ({len(breakouts)}):")
+            for r in sorted(breakouts, key=lambda x: x.get('season_delta_pct', 0), reverse=True)[:8]:
+                print(f"   {r['player_name']:<25} {r['stat']:<4} {r['season_avg']:.1f} vs prior {r['prior_season_avg']:.1f} (+{r['season_delta_pct']*100:.0f}%)")
+            print(f"\n📉 SEASON-OVER-SEASON REGRESSIONS ({len(regressions)}):")
+            for r in sorted(regressions, key=lambda x: x.get('season_delta_pct', 0))[:8]:
+                print(f"   {r['player_name']:<25} {r['stat']:<4} {r['season_avg']:.1f} vs prior {r['prior_season_avg']:.1f} ({r['season_delta_pct']*100:.0f}%)")
     else:
         # Write to DB
         written = 0
@@ -213,12 +248,14 @@ def main():
                     INSERT OR REPLACE INTO player_trends
                     (player_id, player_name, team_abbreviation, stat,
                      l7_avg, l10_avg, l15_avg, season_avg,
-                     trend_delta, trend_label, streak_vs_avg, games_found, computed_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     trend_delta, trend_label, streak_vs_avg, games_found,
+                     prior_season_avg, season_delta_pct, trend_signal, computed_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     r['player_id'], r['player_name'], r['team_abbreviation'], r['stat'],
                     r['l7_avg'], r['l10_avg'], r['l15_avg'], r['season_avg'],
                     r['trend_delta'], r['trend_label'], r['streak_vs_avg'], r['games_found'],
+                    r.get('prior_season_avg'), r.get('season_delta_pct'), r.get('trend_signal'),
                     r['computed_at'],
                 ))
                 written += 1
@@ -226,7 +263,8 @@ def main():
                 print(f"   ⚠️ Write error {r['player_name']}/{r['stat']}: {e}")
 
         conn.commit()
-        print(f"✅ Wrote {written} rows to player_trends")
+        signals = sum(1 for r in results if r.get('trend_signal') in ('BREAKOUT', 'REGRESSION'))
+        print(f"✅ Wrote {written} rows to player_trends ({signals} cross-season signals)")
 
     conn.close()
     print("Done.")

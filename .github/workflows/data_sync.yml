@@ -323,6 +323,12 @@ jobs:
         run: |
           python3 scripts/build_rotation_profiles.py --window-days 21 --min-games 3
 
+      - name: Build WOWY Observed (Phase 2B — starter-filtered beneficiary performance)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          python3 scripts/build_wowy_observed.py || echo "WOWY observed build skipped"
+
       - name: Build Player Trends (Phase 8.15)
         continue-on-error: true
         timeout-minutes: 5

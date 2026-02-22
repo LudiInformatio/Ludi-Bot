@@ -1185,6 +1185,56 @@ class LudiHistorian:
             )
         ''')
 
+        # -- Phase 2A: player_trends cross-season signal columns --
+        for col in [
+            ('prior_season_avg', 'REAL'),
+            ('season_delta_pct', 'REAL'),
+            ('trend_signal', 'TEXT'),
+        ]:
+            try:
+                c.execute(f'ALTER TABLE player_trends ADD COLUMN {col[0]} {col[1]}')
+                print(f'[MIGRATION] Added player_trends.{col[0]}')
+            except Exception:
+                pass  # Column already exists
+
+        # -- Phase 2A: Backfill season_id in player_game_logs (idempotent) --
+        try:
+            # Fix any corrupt legacy values before backfilling NULLs
+            c.execute("""
+                UPDATE player_game_logs SET season_id = '2025-26'
+                WHERE game_date >= '2025-10-01' AND (season_id IS NULL OR season_id NOT IN ('2024-25','2025-26'))
+            """)
+            c.execute("""
+                UPDATE player_game_logs SET season_id = '2024-25'
+                WHERE game_date < '2025-10-01' AND (season_id IS NULL OR season_id NOT IN ('2024-25','2025-26'))
+            """)
+        except Exception as e:
+            print(f'[MIGRATION] season_id backfill: {e}')
+
+        # -- Phase 2B: Starter-filtered WOWY observed beneficiary performance --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_wowy_observed (
+                canonical_id        TEXT,
+                star_canonical_id   TEXT,
+                team_abbreviation   TEXT,
+                obs_pts             REAL,
+                obs_reb             REAL,
+                obs_ast             REAL,
+                obs_min             REAL,
+                obs_fga             REAL,
+                obs_usg_proxy       REAL,
+                base_pts            REAL,
+                base_min            REAL,
+                pts_delta           REAL,
+                min_delta           REAL,
+                obs_games           INT,
+                base_games          INT,
+                confidence          TEXT,
+                updated_at          TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(canonical_id, star_canonical_id)
+            )
+        ''')
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
