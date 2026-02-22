@@ -56,6 +56,7 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 | Away Total | {away_team_total} | Team scoring context |
 | Pace | {matchup_pace_note} | Context |
 | Schedule | {schedule_notes} | {fatigue_flag} |
+| Data Confidence | {time_context_note} | Adjust certainty accordingly |
 
 **Situational Intel:**
 {situational_context}

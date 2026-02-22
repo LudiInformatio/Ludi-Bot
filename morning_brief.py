@@ -24,6 +24,7 @@ from utils.claude_prompts import (
 import main
 from utils.perplexity_client import PerplexityClient
 from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line, get_matchup_analysis
+from utils.time_utils import get_time_context, format_time_context_note
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -232,6 +233,17 @@ class MorningBriefEngine:
         # 3. Build & Run Scenarios
         for game_id, game_data in self.gate.games.items():
             if not game_data.get('props'): continue
+
+            # Skip games that tipped off >45 min ago (e.g. 5pm game at 6pm evening lock)
+            _start = game_data.get('start_time')
+            if _start:
+                import pytz as _pytz_skip
+                _est_now = datetime.datetime.now(_pytz_skip.timezone('US/Eastern'))
+                _start_aware = _start if _start.tzinfo else _start.replace(
+                    tzinfo=_pytz_skip.timezone('US/Eastern'))
+                if _start_aware < _est_now - datetime.timedelta(minutes=45):
+                    print(f"   ⏭️  Skipping {game_data.get('matchup','?')} — tipped off >45min ago")
+                    continue
             
             print(f"   > Analyzing {game_data['matchup']}...")
             
@@ -353,7 +365,19 @@ class MorningBriefEngine:
                                     WHERE team_abbreviation IN (?, ?) AND resolved_at IS NULL AND status = 'OUT'
                                 """, (home, away))
                                 out_names = [r[0] for r in cursor_p.fetchall()]
-                                game_news_cache[gid] = perp_client.search_game_context(home, away, out_names)
+                                # Calculate hours_to_game for dynamic Perplexity recency filter
+                                _game_start = first.get('start_time')
+                                _hours_to_game = 12.0  # default
+                                if _game_start:
+                                    try:
+                                        import pytz as _pytz_perp
+                                        _now_est = datetime.datetime.now(_pytz_perp.timezone('US/Eastern'))
+                                        _start_aware = _game_start if _game_start.tzinfo else _game_start.replace(tzinfo=_pytz_perp.timezone('US/Eastern'))
+                                        _hours_to_game = max(0.0, (_start_aware - _now_est).total_seconds() / 3600)
+                                    except Exception:
+                                        pass
+                                game_news_cache[gid] = perp_client.search_game_context(
+                                    home, away, out_names, hours_to_game=_hours_to_game)
                     except Exception as e:
                         print(f"   ℹ️  Perplexity game news fetch failed: {e}")
 
@@ -447,11 +471,12 @@ Return JSON only."""
                     # 3. Query Injuries (By Team)
                     cursor = conn.cursor()
                     cursor.execute("""
-                        SELECT player_name, status, days_out, injury_type 
-                        FROM player_injuries 
-                        WHERE (team_abbreviation = ? OR team_abbreviation = ?) 
+                        SELECT player_name, status, days_out, injury_type
+                        FROM player_injuries
+                        WHERE (team_abbreviation = ? OR team_abbreviation = ?)
                           AND resolved_at IS NULL
                           AND status IN ('OUT', 'DOUBTFUL', 'GTD')
+                          AND snapshot_time >= datetime('now', '-14 days')
                     """, (home_team, away_team))
                     injuries = cursor.fetchall()
                     
@@ -538,6 +563,9 @@ Return JSON only."""
                     over_rate = env.get('over_hit_rate_14d', 0)
                     env_label = env.get('environment', 'NEUTRAL')
                     env_note = f"{env_label} ({over_rate:.0%} 14d OVER rate)" if over_rate else "Normal"
+
+                    # Time-aware confidence context (EARLY_LOOK / AFTERNOON / PRE_GAME / LOCK_TIME)
+                    time_context_note = format_time_context_note()
                     
                     # B3: Append blowout/close context to pace note
                     matchup_pace_note = f"{matchup_pace_note} | {blowout_close_note}".strip(" |") \
@@ -609,6 +637,7 @@ Return JSON only."""
                             away_def_scheme=schemes.get(away_team, "UNK"),
                             edges_block=_safe_inject(edges_block, _MAX_BLOCK_CHARS['edges_block']),
                             situational_context=_safe_inject(situational_context, _MAX_BLOCK_CHARS['situational_context']),
+                            time_context_note=time_context_note,
                             **preservation_keys
                         )
                         
@@ -635,7 +664,10 @@ Return JSON only."""
                             except Exception as e_db:
                                 print(f"      ⚠️ Failed to save game notes to DB: {e_db}")
                             if not self.dry_run:
-                                send_message(response, parse_mode="Markdown")
+                                # Truncate + fallback to plain text if Markdown parse fails (400)
+                                truncated = response[:4000]
+                                if not send_message(truncated, parse_mode="Markdown"):
+                                    send_message(truncated, parse_mode=None)
                             else:
                                 print(f"      [DRY RUN] Would send:\n{response[:100]}...")
                         else:
@@ -690,6 +722,7 @@ Return JSON only."""
                             cursor.execute("""
                                 SELECT player_name FROM player_injuries
                                 WHERE team_abbreviation = ? AND resolved_at IS NULL AND status = 'OUT'
+                                  AND snapshot_time >= datetime('now', '-14 days')
                             """, (team,))
                             out_teammates = [r[0] for r in cursor.fetchall()]
                             stagger_note = get_stagger_context(player_name, team, out_teammates) if out_teammates else ""
@@ -701,6 +734,7 @@ Return JSON only."""
                                 SELECT status, injury_type, days_out
                                 FROM player_injuries
                                 WHERE player_name = ? AND status != 'ACTIVE'
+                                  AND snapshot_time >= datetime('now', '-14 days')
                                 ORDER BY snapshot_time DESC LIMIT 1
                             """, (player_name,))
                             inj_row = cursor.fetchone()

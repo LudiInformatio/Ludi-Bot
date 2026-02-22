@@ -200,6 +200,12 @@ class LudiOrchestrator:
                 WHERE pi.resolved_at >= date('now', '-7 days')
                   AND pi.resolved_at IS NOT NULL
                   AND p.team = ?
+                  AND NOT EXISTS (
+                      SELECT 1 FROM player_injuries pi2
+                      WHERE pi2.player_name = pi.player_name
+                        AND pi2.resolved_at IS NULL
+                        AND pi2.status IN ('OUT', 'DOUBTFUL')
+                  )
             """, (team_abbr,))
             returned_ids = [r[0] for r in cursor2.fetchall() if r[0] not in tier1_ids]
 

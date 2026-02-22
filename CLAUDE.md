@@ -52,6 +52,11 @@ Instead, ALWAYS use these sources for current-season truth:
 3. Compare API data vs database to detect changes
 4. Never fill gaps with AI assumptions
 
+**Current NBA season is 2025-26.** Never use AI training data for current rosters, trades,
+or injury status — it will be wrong. Players change teams, get injured, and return throughout
+the season. The AI's knowledge cutoff predates this season's moves. Always verify against
+`ludi.db` or a live API call before making any roster or injury assumption.
+
 ---
 
 ## Quick Commands

@@ -36,3 +36,50 @@ def parse_game_date(date_str: str) -> datetime:
     """Parse a game date string to EST datetime."""
     dt = datetime.strptime(date_str, '%Y-%m-%d')
     return EST.localize(dt)
+
+
+def get_time_context() -> dict:
+    """Return current time-awareness mode for NBA game-day analysis (Ludi-Lite pattern).
+
+    Modes drive Claude prompt confidence framing:
+      EARLY_LOOK  (before noon ET)  — designations still evolving
+      AFTERNOON   (noon–5 PM ET)    — watch for GTD updates
+      PRE_GAME    (5–7 PM ET)       — lineups largely confirmed; evening lock window
+      LOCK_TIME   (after 7 PM ET)   — games in progress; data is final
+
+    Future: wire into Telegram bot + web app for real-time confidence display.
+    """
+    now = get_est_now()
+    h = now.hour
+
+    if h < 12:
+        return {
+            "mode": "EARLY_LOOK",
+            "confidence": "LOW",
+            "note": "Injury designations still evolving — verify closer to tipoff"
+        }
+    elif h < 17:
+        return {
+            "mode": "AFTERNOON",
+            "confidence": "MEDIUM",
+            "note": "Watch for GTD updates through 5 PM ET"
+        }
+    elif h < 19:
+        return {
+            "mode": "PRE_GAME",
+            "confidence": "HIGH",
+            "note": "Lineups largely confirmed — evening lock window"
+        }
+    else:
+        return {
+            "mode": "LOCK_TIME",
+            "confidence": "HIGHEST",
+            "note": "Games in progress — treat all data as final"
+        }
+
+
+def format_time_context_note(ctx: dict = None) -> str:
+    """Return a single formatted string for template injection."""
+    if ctx is None:
+        ctx = get_time_context()
+    return f"{ctx['mode']} ({ctx['confidence']}) | {ctx['note']}"

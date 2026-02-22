@@ -24,18 +24,36 @@ class PerplexityClient:
         return self._query(query)
 
     def search_game_context(self, home_team: str, away_team: str,
-                            out_players: list = None) -> str:
+                            out_players: list = None,
+                            hours_to_game: float = 12.0) -> str:
         """Combined query: injuries + lineup changes + role shifts.
-        Same API cost as search_game_news (one call), richer context."""
+        Same API cost as search_game_news (one call), richer context.
+        hours_to_game drives the recency filter — tighter window closer to tip."""
         out_str = f" Key absences: {', '.join(out_players[:3])}." if out_players else ""
         query = (
             f"NBA {away_team} at {home_team} tonight: "
             f"injury updates, lineup changes, rotation adjustments, role changes.{out_str}"
         )
-        return self._query(query)
+        recency = self._get_recency_filter(hours_to_game)
+        return self._query(query, recency_filter=recency)
 
-    def _query(self, query: str) -> str:
-        key = hashlib.md5(query.encode()).hexdigest()
+    def _get_recency_filter(self, hours_to_game: float) -> str:
+        """Dynamic recency filter based on time to tipoff (from Ludi-Lite pattern).
+        - <=2 hrs: 'hour'  — pre-game window, late scratches only
+        - <=12 hrs: 'day'  — game-day context
+        - >12 hrs: 'week'  — advance look, trends and matchup history
+        """
+        if hours_to_game <= 2:
+            return "hour"
+        elif hours_to_game <= 12:
+            return "day"
+        else:
+            return "week"
+
+    def _query(self, query: str, recency_filter: str = "day") -> str:
+        # Include recency filter in cache key so different windows don't collide
+        cache_key_str = f"{query}|{recency_filter}"
+        key = hashlib.md5(cache_key_str.encode()).hexdigest()
         if key in self._cache:
             entry = self._cache[key]
             if time.time() - entry["ts"] < CACHE_TTL:
@@ -51,11 +69,15 @@ class PerplexityClient:
                 json={
                     "model": "sonar",
                     "messages": [{"role": "user", "content": query}],
-                    "search_recency_filter": "day",
+                    "search_recency_filter": recency_filter,
                     "max_tokens": 200
                 },
                 timeout=10
             )
+            # Log empty responses so we can diagnose auth vs rate limit issues
+            if not resp.text.strip():
+                print(f"[Perplexity] Empty response. HTTP {resp.status_code}")
+                return ""
             text = resp.json()["choices"][0]["message"]["content"]
             self._cache[key] = {"text": text, "ts": time.time()}
             self._save_cache()

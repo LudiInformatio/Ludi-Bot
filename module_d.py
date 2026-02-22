@@ -226,8 +226,8 @@ class LudiYak:
     def get_refresh_interval(self):
         """
         [PHASE 2] Dynamic Refresh Rate based on EST Time:
-        - 11:00 AM - 5:00 PM EST -> 20 minutes
-        - 5:00 PM - 11:59 PM EST -> 10 minutes (Game Time)
+        - 11:00 AM - 5:59 PM EST -> 120 minutes (2 hrs — injury_refresh.yml fires 4x/day)
+        - 6:00 PM - 11:59 PM EST -> 20 minutes (Game Time — injury_refresh.yml fires every 20 min)
         - 12:00 AM - 10:59 AM EST -> 30 minutes (Off Hours)
         """
         est = pytz.timezone('US/Eastern')
