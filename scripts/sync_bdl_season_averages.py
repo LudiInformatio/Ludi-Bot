@@ -29,8 +29,10 @@ Date: February 22, 2026
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
+import unicodedata
 from typing import Dict, List, Optional, Tuple
 
 # Allow imports from project root
@@ -460,6 +462,51 @@ def _parse_record_string(record_str) -> Tuple[Optional[int], Optional[int]]:
 # Main sync orchestration
 # ---------------------------------------------------------------------------
 
+def _normalize_name(name: str) -> str:
+    """NFD normalization: strips accents, apostrophes, hyphens, lowercases."""
+    if not name:
+        return ""
+    nfd = unicodedata.normalize("NFD", name)
+    ascii_n = nfd.encode("ascii", "ignore").decode("ascii")
+    clean = re.sub(r"['\.\-]", "", ascii_n).lower().strip()
+    return re.sub(r"\s+", " ", clean)
+
+
+def _resolve_canonical_ids(conn: sqlite3.Connection) -> int:
+    """
+    Populate canonical_id in player_season_averages_bdl using player_canonical_ids.
+    Matches on normalized player_name → normalized_name in canonical_ids table.
+    Returns number of rows updated.
+    """
+    # Build lookup: normalized_name → canonical_id
+    lookup = {}
+    rows = conn.execute(
+        "SELECT canonical_id, normalized_name FROM player_canonical_ids WHERE normalized_name IS NOT NULL"
+    ).fetchall()
+    for cid, norm in rows:
+        if norm:
+            lookup[norm] = cid
+
+    # Get all unresolved player names
+    unresolved = conn.execute(
+        "SELECT DISTINCT player_name FROM player_season_averages_bdl WHERE canonical_id IS NULL"
+    ).fetchall()
+
+    updated = 0
+    for (player_name,) in unresolved:
+        norm = _normalize_name(player_name)
+        canonical_id = lookup.get(norm)
+        if canonical_id:
+            conn.execute(
+                "UPDATE player_season_averages_bdl SET canonical_id = ? WHERE player_name = ? AND canonical_id IS NULL",
+                (canonical_id, player_name),
+            )
+            updated += 1
+
+    conn.commit()
+    return updated
+
+
 def run_sync(
     season: int,
     category_filter: Optional[str],
@@ -545,15 +592,25 @@ def run_sync(
     else:
         print("  Standings: no data returned (skipped)")
 
+    # Resolve canonical_ids after all upserts
+    canonical_updated = 0
+    if conn and not dry_run:
+        canonical_updated = _resolve_canonical_ids(conn)
+        null_after = conn.execute(
+            "SELECT COUNT(*) FROM player_season_averages_bdl WHERE canonical_id IS NULL"
+        ).fetchone()[0]
+        print(f"  canonical_id resolution: {canonical_updated} new matches, {null_after} still unresolved")
+
     if conn:
         conn.close()
 
     # Summary
     print()
     print("  SUMMARY")
-    print(f"  Categories synced : {synced_categories}/{total_categories}")
+    print(f"  Categories synced  : {synced_categories}/{total_categories}")
     print(f"  Total rows upserted: {total_rows:,}")
     print(f"  Standings rows     : {standings_written}")
+    print(f"  canonical_id fills : {canonical_updated}")
     print(f"  Errors             : {error_count}")
     if dry_run:
         print("  (DRY RUN -- no data written to database)")
