@@ -985,16 +985,67 @@ def main():
     ).fetchall()
     if stale_players:
         print(f"\n[CLEANUP] {len(stale_players)} players skipped this run still have "
-              f"legacy defensive archetypes → resetting to GENERALIST")
+              f"legacy defensive archetypes → attempting 60d classification, then transferring defensive_tag")
+        _VALID_DEF_TAGS = {'PERIMETER_HAWK', 'RIM_GUARDIAN', 'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR'}
         for pid, pname, parch in stale_players:
-            print(f"  {pname}: {parch} → GENERALIST (inactive/injured this cycle)")
-            archetype_changes.append((pname, parch, 'GENERALIST'))
+            # Step 1: Attempt offensive classification with 60-day window data.
+            # These players have synergy + season data but < min_games in the normal window.
+            # Many (e.g. Jalen Williams) have full offensive profiles — don't default to GENERALIST.
+            position_row = conn.execute(
+                "SELECT position FROM players WHERE player_id = ?", (pid,)
+            ).fetchone()
+            position_60d = (position_row[0] if position_row else None)
+            synergy_60d = get_player_synergy(conn, pname)
+            shot_60d    = get_player_shot_quality(conn, pid)
+            l10_60d     = get_player_l10(conn, pid, window_days=60)   # extended window
+
+            # Use _gate2_fallback() to deterministically find the best offensive label.
+            # Doesn't require Claude — uses synergy + box stats only.
+            # If the primary fallback fails Gate 2 (e.g. HELIOCENTRIC_MAESTRO pts<18 by slim margin),
+            # try a secondary fallback using the rejected arch as the new starting point —
+            # this lets the chain resolve: PERIMETER_HAWK→HELIOCENTRIC(fail)→CONNECTOR/TWO_LEVEL_SCORER.
+            off_arch = _gate2_fallback(parch, synergy_60d, shot_60d, l10_60d, position=position_60d)
+            fb_valid = False
+            if off_arch:
+                fb_valid, _ = validate_archetype(off_arch, synergy_60d, shot_60d, l10_60d,
+                                                 position=position_60d)
+                if not fb_valid:
+                    # Primary fallback failed — try one more hop (e.g. HELIOCENTRIC → CONNECTOR)
+                    off_arch2 = _gate2_fallback(off_arch, synergy_60d, shot_60d, l10_60d,
+                                                position=position_60d)
+                    if off_arch2:
+                        fb2_valid, _ = validate_archetype(off_arch2, synergy_60d, shot_60d,
+                                                          l10_60d, position=position_60d)
+                        if fb2_valid:
+                            off_arch = off_arch2
+                            fb_valid = True
+                    if not fb_valid:
+                        off_arch = None  # both hops failed — fall to GENERALIST
+
+            final_arch = off_arch or 'GENERALIST'
+
+            # Step 2: Preserve defensive identity in defensive_tag.
+            transferred_tag = parch if parch in _VALID_DEF_TAGS else None
+            print(f"  {pname}: {parch} → {final_arch} | defensive_tag={transferred_tag or 'NULL'} "
+                  f"(60d games: {l10_60d.get('games', 0) if l10_60d else 0})")
+            archetype_changes.append((pname, parch, final_arch))
             changed += 1
             if not args.dry_run:
-                conn.execute(
-                    "UPDATE players SET archetype = 'GENERALIST', updated_at = datetime('now') "
-                    "WHERE player_id = ?",
-                    (pid,)
+                cur = conn.cursor()
+                # Only overwrite defensive_tag if current value is NULL or WEAK_LINK
+                # (WEAK_LINK from _assign_defensive_tag on sparse data is less reliable
+                # than the historical classification stored in the old archetype column).
+                cur.execute(
+                    """UPDATE players
+                       SET archetype = ?,
+                           defensive_tag = CASE
+                             WHEN defensive_tag IS NULL OR defensive_tag = 'WEAK_LINK'
+                             THEN ?
+                             ELSE defensive_tag
+                           END,
+                           updated_at = datetime('now')
+                       WHERE player_id = ?""",
+                    (final_arch, transferred_tag, pid)
                 )
 
     if not args.dry_run and (changed > 0 or stale_players):
