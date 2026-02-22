@@ -2,7 +2,7 @@ name: Capture Closing Lines
 
 on:
   schedule:
-    - cron: '30 23,0,1,2,3 * * *'  # 7:30, 8:30, 9:30, 10:30, 11:30 PM EST on game nights
+    - cron: '30 23,0,1,2,3,4 * * *'  # 6:30, 7:30, 8:30, 9:30, 10:30, 11:30 PM EST — covers West Coast late tips
   workflow_dispatch:
     inputs:
       game_date:
@@ -60,7 +60,8 @@ jobs:
       - name: Install dependencies
         run: pip3 install -r requirements.txt
 
-      - name: Sync Injuries (Pre-Tipoff Critical)
+      - name: Sync Injuries (Pre-Tipoff)
+        continue-on-error: true  # Tank01/BDL outage must not block CLV capture
         run: |
           source .venv/bin/activate
           python scripts/sync_injuries.py
@@ -75,11 +76,14 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
         run: |
+          # Always pass --game-date in EST to avoid UTC midnight date mismatch
+          # (e.g. 11:30 PM EST = next day UTC but still today's game slate)
           if [ -n "${{ github.event.inputs.game_date }}" ]; then
-            python3 scripts/capture_closing_lines.py --verbose --game-date "${{ github.event.inputs.game_date }}"
+            GAME_DATE="${{ github.event.inputs.game_date }}"
           else
-            python3 scripts/capture_closing_lines.py --verbose
+            GAME_DATE=$(TZ='America/New_York' date +%Y-%m-%d)
           fi
+          python3 scripts/capture_closing_lines.py --verbose --game-date "$GAME_DATE"
 
       - name: Report results
         if: success()
