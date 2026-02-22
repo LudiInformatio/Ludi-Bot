@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 21, 2026 9:39 PM EST
+**Last Updated:** February 22, 2026 EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅**
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -187,6 +187,25 @@ Third sprint of Feb 20 — hardened the morning/evening brief pipeline and compl
 - `scripts/sync_suspensions_espn.py`: 30-team scan, ESPN `INJURY_STATUS_SUSPENSION` type, returnDate, auto-resolve on expiry
 - First run found 5 active suspensions previously invisible to pipeline: Paul George (PHI, 32d, anti-drug), Isaiah Stewart (DET, 10d), Miles Bridges + Moussa Diabate (CHA, 3d), Rudy Gobert (MIN, 3d — same-day flagrant foul #6 catch)
 - Wired into `data_sync.yml` after injury sync step. $0 cost.
+
+---
+
+### BDL V2 Full Integration + SportsDataIO Enrichment ✅ COMPLETE (Feb 22, 2026)
+
+**Goal:** Eliminate Ghost Protocol advanced scraping dependency, fill critical `player_game_logs` gaps (started, fantasy pts, home/away, doubles), and replace NBA.com synergy scraping with BDL playtype API. All on existing GOAT tier ($39.99/mo, no new cost).
+
+**4 sprints shipped (commits 5d8576b + 6ccf4b6):**
+
+- **Sprint A — SportsDataIO enrichment** (`sync_sportsdata_enrichment.py`): Populates `started`, `fantasy_pts_dk`, `fantasy_pts_fd`, `home_or_away`, `double_doubles`, `triple_doubles` in `player_game_logs`. 3-day rolling default (3 API calls/day, 100/day budget). Backfill: 13,706 rows across 90 prior-season dates.
+- **Sprint B — BDL V2 advanced stats** (`sync_bdl_advanced_stats.py`): Daily advanced ratings (off/def/net rating, pace, PIE, usage, true shooting) + hustle (deflections, box outs, screen assists, charges drawn) + tracking (speed, distance, touches, passes). **Replaces Ghost Protocol advanced scraping.** Backfill: 82,785 advanced + 16,716 hustle + 12,804 tracking rows across 115 dates.
+- **Sprint C — BDL plus_minus fill** (`sync_bdl_plus_minus.py`): Tier 2 fill — COALESCE, never overwrites Tank01/SportsDataIO. Coverage: 58.9% → **99.2%** (18,260/18,405 rows).
+- **Sprint D — BDL season averages** (`sync_bdl_season_averages.py`): Weekly sync of all 18 category/subtype combos (general/tracking/hustle/shotdashboard/playtype) to `player_season_averages_bdl`. **Replaces Ghost Protocol synergy (NBA.com) scraping.** 7,958 rows, 100% canonical_id coverage. Standings to `team_standings_bdl`.
+
+**Ghost Protocol demotion:** `--skip-advanced` flag added; synergy NBA.com step removed from `ghost_protocol_sync.yml`. Ghost Protocol now handles only: drives/C&S/pull-up per game, closest defender, clutch stats.
+
+**Canonical ID hardening:** `_resolve_canonical_ids()` baked into season averages sync. 5 missing players added to `player_canonical_ids` (Cameron Payne/1626166, Trevor Keels/1631211, Alondes Williams/1631214, Patrick Baldwin Jr./1631116, Dillon Jones/1641794) — verified via `nba_api.stats.static.players`.
+
+**Note:** `SPORTSDATA_API_KEY` must be added as a GitHub Actions secret for the enrichment step to run in CI.
 
 ---
 
