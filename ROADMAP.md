@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 21, 2026 8:31 PM EST
+**Last Updated:** February 21, 2026 9:39 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅**
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -71,7 +71,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data to backtest. Phase 8.18 creates the slot for this to plug in.** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → response in Telegram thread. Architecture research complete (Feb 20): python-telegram-bot v21+ long polling, Haiku intent ($0.0001/call) → Sonnet analysis, read-only SQLite (`?mode=ro`), launchd keepalive, 3-file implementation (`bots/ask_ludi.py`, `ask_ludi_db.py`, `ask_ludi_handlers.py`). See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
-| 8.16 | Suspension Intelligence | MEDIUM | `sync_suspensions.py` (Perplexity → Claude Haiku → auto-insert into `player_injuries` as SUSPENDED). Module D + Module X pick up automatically. Three injection points: morning sync, game context query, Module D `get_injuries()`. | ~$0.02/day |
+| 8.16 ✅ | Suspension Intelligence | DONE | `scripts/sync_suspensions_espn.py` — scans all 30 teams via ESPN public API (no auth, no quota). Detects `INJURY_STATUS_SUSPENSION` (type.id=17) with `returnDate`. Auto-resolves served suspensions. Wired into `data_sync.yml`. $0 cost (ESPN is free). Found 5 active suspensions on first run including Paul George's 25-game anti-drug ban and same-day Gobert flagrant foul suspension. | $0 |
 | 8.17 | Foul Intelligence | MEDIUM | Extend `sync_stint_profiles.py` to parse foul events from PlayByPlayV3 (same API, same loop, no extra cost). New `player_foul_splits` table (period, clock, foul_number, ref_name). Unlocks: early foul trouble → Module C minutes dampener, ref-player bias rebuild, weekly Claude context. | $0 |
 
 ---
@@ -170,6 +170,22 @@ Third sprint of Feb 20 — hardened the morning/evening brief pipeline and compl
 
 **Game Lines Integration Planned (Phase 8.18):**
 - Confirmed: Odds API supports `team_totals` market (zero extra API calls — same request). BDL and Tank01 do NOT have team totals. Architecture: real team totals (Odds API) → derived implied totals (BDL fallback) → blanket modifier. Full plan ready for implementation.
+
+---
+
+### ESPN Research, Suspension Intelligence & Pipeline Hardening ✅ COMPLETE (Feb 21, 2026 Evening)
+
+**ESPN API Research (3-session sprint):**
+- Confirmed ESPN has no official NBA injury API — PDF-only (timestamped, no predictable URL). No direct endpoint.
+- ESPN public API (`site.api.espn.com`, `sports.core.api.espn.com`) verified live: injuries per game (shortComment/longComment/returnDate), DraftKings game lines (spread/O/U/ML open+close+live), scoreboard, news. **No player props** in any ESPN endpoint.
+- DraftKings pickcenter: game-level only (spread, O/U, moneyline with juice). No H1/H2 or Q1/Q4.
+- ESPN `longComment` names beneficiaries — potential future replacement for some Perplexity calls (free).
+- Full ESPN client plan documented at `~/.claude/plans/`. Integration (Phase 8.21) covers: ESPN client, espn_id crosswalk, game injuries enrichment, Tier 3 game lines fallback, longComment corpus for prompt training.
+
+**Phase 8.16 — Suspension Intelligence via ESPN (implemented same session):**
+- `scripts/sync_suspensions_espn.py`: 30-team scan, ESPN `INJURY_STATUS_SUSPENSION` type, returnDate, auto-resolve on expiry
+- First run found 5 active suspensions previously invisible to pipeline: Paul George (PHI, 32d, anti-drug), Isaiah Stewart (DET, 10d), Miles Bridges + Moussa Diabate (CHA, 3d), Rudy Gobert (MIN, 3d — same-day flagrant foul #6 catch)
+- Wired into `data_sync.yml` after injury sync step. $0 cost.
 
 ---
 

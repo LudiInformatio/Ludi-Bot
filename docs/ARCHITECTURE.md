@@ -46,10 +46,12 @@ The system uses a **sequential pipeline** where data flows through 9 specialized
                               v
 +-------------------------------------------------------------+
 |  MODULE D: Yak (Injury Intelligence)                        |
-|  - 15-minute refresh cycle (aligns with NBA rules)          |
+|  - 120-min day / 20-min game-time refresh cycle             |
 |  - Primary: Tank01 API, Secondary: BallDontLie              |
-|  - Nuance detection via DuckDuckGo search                   |
-|  - Classifies: OUT/DOUBTFUL/Q/PROBABLE/MINUTES_LIMIT        |
+|  - Corroboration: RotoWire RSS + RealGM RSS (dual-source)   |
+|  - Nuance: Perplexity search + Claude AI blurb parsing      |
+|  - Suspensions: ESPN sync (scripts/sync_suspensions_espn.py)|
+|  - Classifies: OUT/DOUBTFUL/Q/PROBABLE/MINUTES_LIMIT/SUSP  |
 +-----------------------------+-------------------------------+
                               |
                               v
@@ -94,7 +96,7 @@ Supporting Modules:
 | A: Gatekeeper | `module_a.py` | `Gatekeeper` | The-Odds-API (PAID) |
 | B: Engine | `module_b.py` | `print_sharp_box_score` (function) | None (display layer) |
 | C: Oracle | `module_c.py` | `LudiOracle` | None (pure math) |
-| D: Yak | `module_d.py` | `LudiYak` | Tank01 + RotoWire (RSS) + DuckDuckGo |
+| D: Yak | `module_d.py` | `LudiYak` | Tank01 + BDL fallback + RotoWire RSS + RealGM RSS + Perplexity nuance |
 | E: Calibrator | `module_e.py` | `LudiCalibrator` | None (matchup logic) |
 | F: Alchemist | `module_f.py` | `LudiReporter` | Devigging (local) |
 | G: Zebras | `module_g.py` | `LudiRefEngine` | NBA.com (scraping) |
@@ -233,6 +235,7 @@ if spread > 7.0:
 | Tank01 (RapidAPI) | PAID | 1K/day | Rosters, injuries, box scores |
 | PBP Stats | FREE | N/A | Shot quality, WOWY data |
 | NBA.com | Scraped | N/A | Referee assignments, tracking |
+| ESPN Public API | FREE | No auth | Suspension intelligence (`sync_suspensions_espn.py`), game injuries with beneficiary context (`longComment`), DraftKings game lines as Tier 3 fallback |
 
 ---
 

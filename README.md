@@ -16,7 +16,7 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 20, 2026 9:27 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 21, 2026 9:39 PM EST) |
 
 ### Key Features
 
@@ -31,7 +31,7 @@ A production-grade betting analytics engine that generates player prop recommend
 - **AI-Enhanced Pipeline** — Claude (Haiku/Sonnet) for play curation, S.A.V.A.G.E. game notes, and player spotlights
 - **Perplexity Integration** — Real-time news context injected into injury analysis, game notes, and curation
 - **Line Shopping** — NC Legal book integration with CLV tracking across 11 markets
-- **Real-time Injury Intelligence** — 15-minute refresh via BDL + Tank01, DB-driven smart vacuum; B2B fatigue detection
+- **Real-time Injury Intelligence** — Tank01 + BDL + RotoWire/RealGM RSS dual-source corroboration; ESPN suspension sync (all 30 teams, free); staleness guards; B2B fatigue detection
 - **Referee Impact Modeling** — Pace, whistle tendency, and star bias factors
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
 
@@ -53,7 +53,7 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 | **A: Gatekeeper** | Odds ingestion (The-Odds-API primary, BDL fallback) |
 | **B: Engine** | Historical analysis (L5, L10, season trends, hot streaks) |
 | **C: Oracle** | Monte Carlo simulation engine (10K iterations) + rotation projection |
-| **D: Yak** | Injury intelligence (BDL + Tank01 + Perplexity Sonar) |
+| **D: Yak** | Injury intelligence (Tank01 + BDL + RotoWire/RealGM RSS + Perplexity Sonar + ESPN suspension scan) |
 | **E: Calibrator** | Matchup adjustments (archetype vs scheme) + scoring environment dampener |
 | **F: Alchemist** | Edge calculation, devigging, OVER filters, bet sizing, tier classification |
 | **G: Zebras** | Referee impact (pace, fouls, star bias) |
@@ -133,7 +133,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 20, 2026 8:03 PM EST
+**Last Updated:** February 21, 2026 9:39 PM EST
 
 **Phase 8 Completions:**
 
@@ -151,15 +151,18 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.12 | Roster Intelligence — trade detection, stale profile cleanup, NEW_TO_TEAM dampener |
 | 8.14 | Scoring Environment Intelligence — dynamic OVER bias correction + 4 data-proven OVER filters |
 | 8.15 | Trend Engine — `player_trends` (4,500+ rows), hybrid pre-computed + live hit rates, enriched briefings |
-| Infra | Slack/Notification Split — ops alerts → Slack; betting product stays on Telegram |
-| Infra | Model Calibration — BLK OVER filter (33.6% WR), data-driven team situation notes |
-| Infra | Morning/Evening Brief Hardening — native Telegram text (no image cards), all-game processing (watchlist removed), spotlight Markdown fallback, injury `skip_resolve` pipeline bug fixed |
-| Research | BetIQ/TeamRankings Analysis — 6 cross-game ATS/O-U patterns; Tier 1 features buildable from existing data; `docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md` |
-| Research | BERT/NLP Prompt Architecture — 8 patterns from google-research/bert mapped to Claude prompts; few-shot examples, NSP relevance gate, domain WR injection; `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` |
+| 8.16 | Suspension Intelligence — `scripts/sync_suspensions_espn.py` (ESPN, free, 30-team scan); auto-resolves; found 5 active suspensions on first run including Paul George 25-game ban and same-day Gobert flagrant foul |
+| 8.18 | Game Lines Integration — `team_totals` Odds API market, Module E 3-tier team scoring modifier, fixed UnboundLocalError in module_e.py |
+| 8.19 | Prompt Engineering Upgrade — few-shot examples, Haiku NSP news gate, pre-truncation, parse failure logging |
+| 8.20 | Stat Confidence & Edge Calibration — per-stat multipliers, RMSE sizing, Wilson 95% WR grades in curation |
+| Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
+| Infra | Evening Lock Quality Sprint (Feb 21) — 9 fixes: game notes fallback, Tier 2 race condition, staleness guards, in-progress game skip, Perplexity hours_to_game, time-aware confidence mode |
+| Infra | Slack/Notification Split, Model Calibration, Morning/Evening Brief Hardening, Injury Intelligence Hardening |
 
 **Planned Next:**
-- Phase 8.18: Game Lines Integration — `team_totals` Odds API market, per-team scoring modifiers in Module E, `_score_game()` game line signals, team totals + ML in Claude prompt
-- Phase 8.19: Prompt Engineering Upgrade — few-shot examples in GAME_NOTES/SPOTLIGHT templates, domain WR stats in curation, Haiku NSP news relevance gate, text_a/text_b context separation
+- Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
+- Phase 8.17: Foul Intelligence — PlayByPlayV3 foul events → `player_foul_splits`, early foul trouble minutes dampener
+- Phase 8.21: ESPN Full Integration — `utils/espn_client.py`, espn_id crosswalk, game injuries enrichment (longComment/beneficiary), Tier 3 game lines fallback
 
 **Performance (Jan 7 – Feb 20, 2026):**
 - Settled Bets: 14,423+ | Win Rate: ~54.8% overall

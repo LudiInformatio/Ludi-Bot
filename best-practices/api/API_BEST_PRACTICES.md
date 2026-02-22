@@ -2441,6 +2441,8 @@ Industry standard is a layered trust stack — never one source:
 
 **Perplexity recency filter:** Use `_get_recency_filter(hours_to_game)` for dynamic search windows — `"hour"` (<2hrs to tip for late scratches), `"day"` (<12hrs for game-day context), `"week"` (advance look). Avoids paying for expensive "hour" searches on morning runs. Cache key must include recency filter to prevent stale cross-contamination.
 
+**Suspension gap:** Tank01 and BDL do not reliably surface suspension status as a distinct type. ESPN API returns `INJURY_STATUS_SUSPENSION` (type.id=17) with `returnDate` for all suspension categories: altercation bans, anti-drug violations, conduct violations. Use `scripts/sync_suspensions_espn.py` (30-team scan, free, no auth) to write to `player_injuries` daily. Found 5 active suspensions — including a same-day flagrant foul #6 auto-ban — on first run. Without ESPN, these players would generate bets incorrectly.
+
 ---
 
 ## Summary: GitHub Actions as API Orchestration Layer
