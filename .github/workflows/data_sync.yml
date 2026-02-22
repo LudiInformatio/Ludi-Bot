@@ -213,15 +213,31 @@ jobs:
 
       - name: Sync Four-Factor WOWY
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 25
+        id: sync_four_factor
         run: |
-          python3 scripts/sync_four_factor_wowy.py
+          python3 scripts/sync_four_factor_wowy.py --resume
+
+      - name: Alert on Four-Factor WOWY Failure
+        if: steps.sync_four_factor.outcome == 'failure' && always()
+        run: |
+          echo "⚠️ SYNC FAILED: Four-Factor WOWY"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Sync Team Leverage Profiles
         continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 20
+        id: sync_leverage
         run: |
-          python3 scripts/sync_team_leverage_profiles.py
+          python3 scripts/sync_team_leverage_profiles.py --resume
+
+      - name: Alert on Team Leverage Failure
+        if: steps.sync_leverage.outcome == 'failure' && always()
+        run: |
+          echo "⚠️ SYNC FAILED: Team Leverage Profiles"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Sync Injuries (Overnight Refresh)
         continue-on-error: true

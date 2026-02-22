@@ -12,13 +12,24 @@ from typing import Dict, List, Optional
 import os
 import json
 import hashlib
+import time
 from datetime import datetime, timedelta
+from threading import Lock
 
 
 BASE_URL = "https://api.pbpstats.com"
 CURRENT_SEASON = "2025-26"
 CACHE_DIR = "cache/pbp_stats"
 CACHE_TTL_HOURS = 24  # Cache expires after 24 hours
+
+# Rate limiting: minimum seconds between API calls
+REQUEST_DELAY_SECONDS = 1.5
+_last_request_time = 0.0
+_request_lock = Lock()
+
+# Rate limit tracking
+_rate_limit_remaining = None
+_rate_limit_reset = None
 
 def _get_session():
     session = requests.Session()
@@ -40,6 +51,36 @@ def _get_session():
     return session
 
 _session = _get_session()
+
+
+def _apply_rate_limit():
+    """Apply rate limiting between API calls to avoid 429 errors."""
+    global _last_request_time
+    with _request_lock:
+        now = time.time()
+        elapsed = now - _last_request_time
+        if elapsed < REQUEST_DELAY_SECONDS:
+            sleep_time = REQUEST_DELAY_SECONDS - elapsed
+            time.sleep(sleep_time)
+        _last_request_time = time.time()
+
+
+def _check_rate_limit_headers(response: requests.Response) -> None:
+    """Check and log rate limit headers from API response."""
+    global _rate_limit_remaining, _rate_limit_reset
+    
+    # Check for common rate limit headers
+    if 'X-RateLimit-Remaining' in response.headers:
+        _rate_limit_remaining = response.headers.get('X-RateLimit-Remaining')
+    if 'X-RateLimit-Reset' in response.headers:
+        _rate_limit_reset = response.headers.get('X-RateLimit-Reset')
+    
+    # Log warning if getting low on rate limits
+    if _rate_limit_remaining and int(_rate_limit_remaining) < 10:
+        print(f"[PBP_STATS] ⚠️ Rate limit low: {_rate_limit_remaining} remaining")
+        if _rate_limit_reset:
+            reset_time = datetime.fromtimestamp(int(_rate_limit_reset))
+            print(f"[PBP_STATS] ⚠️ Rate limit resets at {reset_time}")
 
 
 def _get_cache_path(endpoint: str, params: Dict) -> str:
@@ -134,7 +175,9 @@ def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
     }
     
     try:
+        _apply_rate_limit()
         response = _session.get(url, params=params, timeout=120)
+        _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -165,7 +208,9 @@ def get_game_logs(entity_id: str, entity_type: str = "Player",
     }
     
     try:
+        _apply_rate_limit()
         response = _session.get(url, params=params, timeout=120)
+        _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -202,7 +247,9 @@ def get_totals(entity_type: str = "Player", team_id: str = None,
         params["Leverage"] = leverage
     
     try:
+        _apply_rate_limit()
         response = _session.get(url, params=params, timeout=120)
+        _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -250,7 +297,9 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
     # Try with 120s timeout first, fallback to 180s on timeout
     for timeout in [120, 180]:
         try:
+            _apply_rate_limit()
             response = _session.get(url, params=params, timeout=timeout)
+            _check_rate_limit_headers(response)
             response.raise_for_status()
             data = response.json()
 
@@ -369,7 +418,9 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
     # Try with 120s timeout first, fallback to 180s on timeout
     for timeout in [120, 180]:
         try:
+            _apply_rate_limit()
             response = _session.get(url, params=params, timeout=timeout)
+            _check_rate_limit_headers(response)
             response.raise_for_status()
             data = response.json()
 
