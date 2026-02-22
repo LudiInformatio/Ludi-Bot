@@ -11,6 +11,7 @@ This is the single source of truth for project tasks and priorities.
 - **Prompt Engineering Reference:** `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` — 8 BERT-derived patterns mapped to Claude prompts + priority implementation order
 - **Tank01 Data Expansion:** `docs/projects/TANK01_DATA_EXPANSION.md` — 17-endpoint audit, O/U vs alt line parsing guide, model calibration findings, implementation phases
 - **Best-Practices API Guide:** `best-practices/api/API_BEST_PRACTICES.md` — BDL + Tank01 complete endpoint reference, lessons learned
+- **2024-25 Historical Backfill:** `docs/projects/HISTORICAL_BACKFILL_2024_25.md` — full plan to import prior season game logs (~18k rows), enrichment pipeline, 6-night automated backfill via Module H audit file mode
 
 ---
 
@@ -246,6 +247,12 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 **Current State:** Single SQLite database (`ludi.db`) — ~30 MB, 38+ tables
 
 **Phase 1: Consolidation** ✅ COMPLETE — Single source of truth, direct SQLite writes, no JSON staging
+
+**Phase 1.5: 2024-25 Historical Backfill** ← NEXT (plan ready)
+- [ ] Create `cache/pending_sync_dates.json` with Oct 22, 2024 → Apr 13, 2025 date range
+- [ ] Module H auto-backfill (~6 nights at 200 Tank01 req/day, fully automated)
+- [ ] BDL advanced stats + SportsDataIO enrichment fill new rows automatically
+- **Full plan:** `docs/projects/HISTORICAL_BACKFILL_2024_25.md`
 
 **Phase 2: Multi-Season Support (Before 2026-27 Season)**
 - [ ] Add season archive workflow: `archives/data/ludi_YYYY_YY.db`
