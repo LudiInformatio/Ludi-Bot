@@ -999,6 +999,11 @@ class LudiCalibrator:
         # 3.5 SCHEDULE FATIGUE (Phase 4 Integration - Jan 21, 2026)
         self._apply_fatigue_adjustments(calibrated, yak_report)
 
+        # Pre-fetch odds dict (needed by 3.6 and 4)
+        odds = calibrated.get('odds', {})
+        total = float(odds.get('total', 0)) if odds.get('total') else 0
+        spread = abs(float(odds.get('spread', 0))) if odds.get('spread') else 0
+
         # 3.6 TEAM TOTALS MODIFIER (Phase 8.18)
         if getattr(config, 'USE_TEAM_TOTALS_MODIFIER', False):
             team_total_home = odds.get('team_total_home')
@@ -1033,10 +1038,7 @@ class LudiCalibrator:
                 calibrated['notes'] += f" | ImpliedTT:{implied_team_total:.1f}"
 
         # 4. GAME SCRIPT
-        odds = calibrated.get('odds', {})
-        total = float(odds.get('total', 0)) if odds.get('total') else 0
-        spread = abs(float(odds.get('spread', 0))) if odds.get('spread') else 0
-        
+        # (odds/total/spread already extracted above in section 3.6 pre-fetch)
         # REMOVED: Blowout tax consolidated to Module F (smart blowout_tax.py)
         # Old logic: if spread > 12.5 → -6% for starters
         # New logic: Context-aware (favorite/underdog, starter/bench) in Module F

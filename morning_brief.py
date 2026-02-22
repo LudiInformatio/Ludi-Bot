@@ -1,6 +1,7 @@
 import logging
 import datetime
 import sqlite3
+import sys
 import config
 from module_a import Gatekeeper
 from module_c import LudiOracle
@@ -288,7 +289,7 @@ class MorningBriefEngine:
         # 4. Generate Final Report & Visuals (Delegated to Module F)
         if not all_bets:
             print("⚠️  No data processed. Aborting.")
-            return
+            sys.exit(1)  # Triggers workflow failure → Slack alert + Claude Ops Hub
 
         print(f"\n💎 Generating Report for {len(all_bets)} games...")
         
