@@ -4,6 +4,8 @@ on:
   schedule:
     # Run daily at 6 AM EST (11 AM UTC) - after data_sync completes
     - cron: '0 11 * * *'
+    # Run daily at 8 PM EST (1 AM UTC) - catch afternoon/evening pipeline failures
+    - cron: '0 1 * * *'
   workflow_dispatch:
     inputs:
       scope:

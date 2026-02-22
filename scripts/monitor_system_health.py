@@ -198,7 +198,7 @@ class SystemHealthMonitor:
                     'Module X (Scenario)': ['🔀 SCENARIO']
                 }
                 
-                for module, markers in module_checks:
+                for module, markers in module_checks.items():
                     count = sum(log_content.count(marker) for marker in markers)
                     if count > 0:
                         results[module] = {'status': '✅ ACTIVE', 'outputs': count}
