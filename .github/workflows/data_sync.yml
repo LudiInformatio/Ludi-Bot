@@ -234,6 +234,13 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
+      - name: Sync Suspensions (ESPN — no API key required)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          source .venv/bin/activate
+          python scripts/sync_suspensions_espn.py
+
       - name: Sync BDL Clutch Usage
         if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true
