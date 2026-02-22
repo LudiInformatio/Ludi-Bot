@@ -2,7 +2,9 @@ name: Capture Closing Lines
 
 on:
   schedule:
-    - cron: '30 23,0,1,2,3,4 * * *'  # 6:30, 7:30, 8:30, 9:30, 10:30, 11:30 PM EST — covers West Coast late tips
+    - cron: '25,55 23,0,1,2,3,4 * * *'  # :25 and :55 past each hour, 6:25 PM–11:55 PM EST
+                                          # Fires 5 min before every :00 and :30 tipoff
+                                          # 12 runs/night — check-slate gate keeps non-game-night runs cheap
   workflow_dispatch:
     inputs:
       game_date:
