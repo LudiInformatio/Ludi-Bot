@@ -194,14 +194,41 @@ def build_rotation_profiles(conn, window_days: int, situational_window_days: int
         def safe_avg(lst):
             return round(sum(lst) / len(lst), 2) if lst else None
 
-        # Starter approximation: use depth_charts depth_order == 1 as proxy
+        # Depth chart metadata (position only — starter splits now use real started field)
         dc = dc_lookup.get(str(player_id), (None, None))
         depth_order = dc[0]
         position = dc[1]
-        games_started = 1 if depth_order == 1 else 0  # simple proxy
-        start_rate = 1.0 if depth_order == 1 else (0.0 if depth_order and depth_order > 1 else 0.5)
-        avg_min_starter = avg_m if start_rate >= 0.7 else None
-        avg_min_bench = avg_m if start_rate < 0.3 else None
+
+        # Real starter/bench splits using started=1/0 from player_game_logs
+        # (populated by SportsDataIO enrichment — 74.5% coverage as of Feb 2026)
+        starter_row = conn.execute("""
+            SELECT AVG(minutes) as avg_m, COUNT(*) as n
+            FROM player_game_logs
+            WHERE player_id = ? AND team_abbreviation = ?
+              AND started = 1 AND minutes > 0
+              AND game_date >= ?
+        """, (str(player_id), team_abbr, window_cutoff_date)).fetchone()
+
+        bench_row = conn.execute("""
+            SELECT AVG(minutes) as avg_m, COUNT(*) as n
+            FROM player_game_logs
+            WHERE player_id = ? AND team_abbreviation = ?
+              AND started = 0 AND minutes > 0
+              AND game_date >= ?
+        """, (str(player_id), team_abbr, window_cutoff_date)).fetchone()
+
+        if starter_row and starter_row['n'] and starter_row['n'] >= 3:
+            # Real data available: use actual starter game average
+            avg_min_starter = round(starter_row['avg_m'], 2)
+            games_started = starter_row['n']
+            start_rate = games_started / n if n else 0.5
+        else:
+            # Fallback: depth_order proxy (no/sparse started data)
+            games_started = 1 if depth_order == 1 else 0
+            start_rate = 1.0 if depth_order == 1 else (0.0 if depth_order and depth_order > 1 else 0.5)
+            avg_min_starter = avg_m if start_rate >= 0.7 else None
+
+        avg_min_bench = round(bench_row['avg_m'], 2) if (bench_row and bench_row['n'] and bench_row['n'] >= 3) else None
 
         # Phase 8.12: count games on current team only (detects recently-traded players)
         current_team = current_teams.get(str(player_id))

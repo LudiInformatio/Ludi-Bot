@@ -191,9 +191,11 @@ class LudiOracle:
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
 
                 # Phase 8.9: build game_context for minutes projection
+                # Sprint 3: is_starter from player dict (populated by main.py from players.is_starter)
                 game_context = {
                     'spread': scenario.get('spread', 0.0),
                     'is_b2b': player_days_rest == 0,
+                    'is_starter': player.get('is_starter', None),
                 }
 
                 player_team = player.get('TEAM_ABBREVIATION', '')
@@ -324,6 +326,19 @@ class LudiOracle:
         if is_b2b and row['avg_min_b2b']:
             # B2B overrides other situational contexts (most predictive for fatigue)
             chosen = row['avg_min_b2b']
+
+        # Sprint 3: Use real starter/bench splits when starter context is known.
+        # is_starter=True → use avg_min_as_starter (from actual started=1 games)
+        # is_starter=False → use avg_min_off_bench  (from started=0 games)
+        # These are only applied if no higher-priority situational context already filled `chosen`.
+        is_starter_context = game_context.get('is_starter', None)
+        try:
+            if is_starter_context is True and not chosen and row['avg_min_as_starter']:
+                chosen = row['avg_min_as_starter']
+            elif is_starter_context is False and not chosen and row['avg_min_off_bench']:
+                chosen = row['avg_min_off_bench']
+        except (KeyError, TypeError):
+            pass  # Column not in DB; silently skip
 
         proj = chosen if chosen else row['avg_minutes']
         if not proj:

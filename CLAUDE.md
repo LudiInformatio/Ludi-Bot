@@ -57,6 +57,19 @@ or injury status — it will be wrong. Players change teams, get injured, and re
 the season. The AI's knowledge cutoff predates this season's moves. Always verify against
 `ludi.db` or a live API call before making any roster or injury assumption.
 
+**This rule applies to mock scenarios and prompt examples too.** When writing or editing
+example prompts, format templates, or test scenarios in `utils/claude_prompts.py` or
+anywhere else — never hardcode a player's team from AI training memory. Either:
+1. Query `ludi.db` first: `SELECT name, team FROM players WHERE name = '...';`
+2. Use clearly generic placeholders: `[PLAYER]`, `[TEAM]`, `[BOS starter]`
+3. Use `build_archetype_system_prompt(conn)` pattern — examples built from DB at runtime
+
+**Multi-team trade paths must be accepted as-is from the database.** Players can have
+offseason trades AND mid-season trades — `player_game_logs.team_abbreviation` is the
+authoritative record. Example: Anfernee Simons (POR → BOS offseason, BOS → CHI mid-season
+2025-26) — the database correctly shows BOS,CHI. Never question multi-team histories that
+look "wrong" from training data memory. The API data is always right; training data is stale.
+
 ---
 
 ## Quick Commands

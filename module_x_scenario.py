@@ -237,6 +237,40 @@ class ScenarioBuilder:
         
         return scenario
 
+    def _lookup_wowy_observed(self, star_canonical_id: str, team_abbr: str) -> list:
+        """
+        Sprint 4 / Tier 0A: Query player_wowy_observed for empirical beneficiary data.
+
+        Returns pairs sorted by (pts_delta × role_match_score) DESC.
+        Filters: confidence_adjusted != 'TOO_LOW', pts_delta > 0, obs_games >= 5.
+        Returns [] on any error (graceful degradation).
+        """
+        if not star_canonical_id or not team_abbr:
+            return []
+        try:
+            conn = sqlite3.connect('ludi.db')
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT wo.canonical_id, wo.pts_delta, wo.min_delta,
+                       wo.obs_games, wo.confidence, wo.confidence_adjusted,
+                       wo.role_match_score, wo.obs_min,
+                       pci.full_name AS beneficiary_name
+                FROM player_wowy_observed wo
+                JOIN player_canonical_ids pci ON pci.canonical_id = wo.canonical_id
+                WHERE wo.star_canonical_id = ?
+                  AND wo.team_abbreviation = ?
+                  AND wo.confidence_adjusted NOT IN ('TOO_LOW')
+                  AND wo.pts_delta > 0
+                  AND wo.obs_games >= 5
+                ORDER BY (wo.pts_delta * COALESCE(wo.role_match_score, 0.4)) DESC
+                LIMIT 5
+            """, (str(star_canonical_id), team_abbr)).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"[Module X] wowy_observed lookup failed: {e}")
+            return []
+
     def _lookup_beneficiary_minutes(self, out_player_id: str, team_abbr: str) -> list:
         """
         Phase 8.9 Tier 0: Query beneficiary_minutes table for data-driven backup estimation.
@@ -291,7 +325,29 @@ class ScenarioBuilder:
         # Phase 7.4: Set wowy_confidence for all players in game
         self._set_wowy_confidence_for_players(all_players)
 
-        # TIER 0: beneficiary_minutes — data-driven absence analysis (Phase 8.9)
+        # TIER 0A: player_wowy_observed — empirical, role-match weighted (Sprint 4)
+        # Only available after build_wowy_observed.py has run (Phase 2B+).
+        # Hybrid off/def system (Feb 22 2026): players.archetype is now always an offensive role.
+        # ALL players generate a scoring vacuum when absent. Defensive identity is in
+        # players.defensive_tag and used for matchup context — not for vacuum skip logic.
+        star_id = str(starter_out.get('PLAYER_ID', '') or starter_out.get('player_id', ''))
+        star_arch = starter_out.get('archetype', '') or ''
+        wowy_rows = self._lookup_wowy_observed(star_id, team_abbr)
+        if wowy_rows:
+            star_base_pts = starter_out.get('PTS', 20) or 20
+            absorption = {}
+            for r in wowy_rows:
+                ben_name = r.get('beneficiary_name')
+                pts_delta = r.get('pts_delta') or 0
+                if ben_name and pts_delta > 0:
+                    # Normalize to fraction of star's offensive output (absorption rate)
+                    absorption[ben_name] = round(min(pts_delta / max(star_base_pts, 1), 0.8), 3)
+            if absorption:
+                print(f"[Module X] TIER 0A wowy_observed for {starter_out.get('PLAYER_NAME', '?')}: "
+                      f"{list(absorption.keys())[:3]}")
+                return {'matrix': absorption, 'confidence': 'high'}
+
+        # TIER 0B: beneficiary_minutes — data-driven absence analysis (Phase 8.9)
         bene_data = self._lookup_beneficiary_minutes(
             starter_out.get('PLAYER_ID', ''), team_abbr
         )
@@ -302,7 +358,7 @@ class ScenarioBuilder:
                 if b['minutes_delta'] > 0:
                     absorption[b['name']] = round(b['minutes_delta'] / base_min, 3)
             if absorption:
-                print(f"[Module X] TIER 0 beneficiary data for {starter_out.get('PLAYER_NAME', '?')}: "
+                print(f"[Module X] TIER 0B beneficiary_minutes for {starter_out.get('PLAYER_NAME', '?')}: "
                       f"{list(absorption.keys())[:3]}")
                 return {'matrix': absorption, 'confidence': 'high'}
 

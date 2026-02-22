@@ -48,6 +48,167 @@ CONFIDENCE_THRESHOLDS = {
     'LOW':    3,
 }
 
+# ── Role families (off/def separated) ───────────────────────────────────────
+# Offensive families: scoring vacuums flow within these groups when a star sits out.
+OFFENSIVE_FAMILIES = {
+    'primary_creator':  {'HELIOCENTRIC_MAESTRO', 'SLASHING_CREATOR', 'ISO_ASSASSIN',
+                         'JUMBO_FACILITATOR'},
+    'secondary_scorer': {'TWO_LEVEL_SCORER', 'SNIPER_ELITE', 'CONNECTOR',
+                         'FACILITATOR', 'GENERALIST'},
+    'rim_finisher':     {'ROLL_MAN', 'WARRIOR_BIG', 'ENERGY_BIG', 'CUTTER_SPECIALIST'},
+    'stretch_role':     {'STRETCH_BIG', 'HUB_BIG'},
+}
+
+# Defensive families — kept for documentation / future analytics reference.
+# NOTE (Feb 22 2026): These archetypes no longer appear in players.archetype.
+# They live in players.defensive_tag under the hybrid off/def system.
+# _role_match_score no longer needs a 0.0 sentinel for these — archetype is always offensive.
+DEFENSIVE_FAMILIES = {
+    'perimeter_defender': {'PERIMETER_HAWK', 'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR'},
+    'paint_defender':     {'RIM_GUARDIAN'},
+}
+
+ALL_FAMILIES = {**OFFENSIVE_FAMILIES, **DEFENSIVE_FAMILIES}
+DEFENSIVE_ARCHETYPES = set().union(*DEFENSIVE_FAMILIES.values())
+OFFENSIVE_ARCHETYPES = set().union(*OFFENSIVE_FAMILIES.values())
+
+# Adjacent offensive family pairs — partial usage absorption across role groups.
+_ADJACENT_PAIRS = {
+    ('primary_creator',  'secondary_scorer'),  # creator out → secondary scorer absorbs
+    ('secondary_scorer', 'rim_finisher'),       # scorer out → finisher gets putbacks
+    ('rim_finisher',     'primary_creator'),    # big out → creator handles more touches
+    ('stretch_role',     'secondary_scorer'),   # stretch-4 out → wing shooters benefit
+}
+
+# ── Synergy sub-type adjacency (Axis 2) ─────────────────────────────────────
+# When star and beneficiary share the same dominant playtype, the beneficiary
+# absorbs the *specific* role, not just the general position.
+# Scores represent usage-absorption similarity (0.65 = loosely adjacent, 0.85 = near-identical).
+PLAYTYPE_ADJACENCY = {
+    # Ball-in-hand creation cluster
+    ('ISO',            'PR_BALL_HANDLER'): 0.85,
+    ('PR_BALL_HANDLER', 'ISO'):            0.85,
+    ('ISO',            'HANDOFF'):         0.70,
+    # Catch-and-shoot cluster
+    ('SPOT_UP',        'OFF_SCREEN'):      0.85,
+    ('OFF_SCREEN',     'SPOT_UP'):         0.85,
+    # Rim-run cluster
+    ('PUTBACK',        'TRANSITION'):      0.75,
+    ('TRANSITION',     'PUTBACK'):         0.75,
+    ('PR_ROLL_MAN',    'PUTBACK'):         0.80,
+    ('PUTBACK',        'PR_ROLL_MAN'):     0.80,
+    # Interior big cluster
+    ('POST_UP',        'PR_ROLL_MAN'):     0.70,
+    ('PR_ROLL_MAN',    'POST_UP'):         0.70,
+    # Off-ball movement cluster
+    ('CUT',            'TRANSITION'):      0.70,
+    ('SPOT_UP',        'CUT'):             0.65,
+}
+
+# Position normalization: collapses PG/SG/G-F → G, PF/SF/F-C → F, keeps C
+def _norm_pos(p: str | None) -> str | None:
+    if not p or p in ('UNK', ''):
+        return None
+    if p in ('PG', 'SG', 'G-F', 'G'):
+        return 'G'
+    if p in ('PF', 'SF', 'F-C', 'F'):
+        return 'F'
+    if p == 'C':
+        return 'C'
+    return None
+
+
+def _role_match_score(
+    arch_star: str | None, arch_ben: str | None,
+    pos_star: str | None = None, pos_ben: str | None = None,
+    playtype_star: str | None = None, playtype_ben: str | None = None,
+) -> float:
+    """
+    3-axis role similarity score:
+      Axis 1 — Primary archetype family (0.15 / 0.40 / 0.70 / 1.0)
+      Axis 2 — Dominant synergy playtype sub-type bonus (+0.00 to +0.20)
+      Axis 3 — Position match bonus (+0.10)
+
+    Returns 0.0 (defensive sentinel) or 0.10–1.0 (offensive similarity).
+    0.0 sentinel: star is a defensive specialist → Module X skips Tier 0A.
+    """
+    # ── Axis 1: Primary archetype family ─────────────────────────────────────
+    # Hybrid system (Feb 22 2026): arch_star is always an offensive archetype.
+    # DEFENSIVE_ARCHETYPES guard kept as safety net — should never fire in production.
+    if arch_star in DEFENSIVE_ARCHETYPES:
+        return 0.0  # Safety net only — archetype column no longer holds defensive labels
+
+    if not arch_star or not arch_ben:
+        archetype_score = 0.4   # Unknown → neutral assumption
+    elif arch_star == arch_ben:
+        archetype_score = 1.0
+    else:
+        star_fam = next((f for f, s in ALL_FAMILIES.items() if arch_star in s), None)
+        ben_fam  = next((f for f, s in ALL_FAMILIES.items() if arch_ben  in s), None)
+        if star_fam and star_fam == ben_fam:
+            archetype_score = 0.70
+        elif star_fam and ben_fam:
+            pair = (star_fam, ben_fam)
+            if pair in _ADJACENT_PAIRS or (pair[1], pair[0]) in _ADJACENT_PAIRS:
+                archetype_score = 0.40
+            else:
+                archetype_score = 0.15
+        else:
+            archetype_score = 0.40  # Unknown family → neutral
+
+    # ── Axis 2: Synergy sub-type bonus (capped at +0.20) ─────────────────────
+    playtype_bonus = 0.0
+    if playtype_star and playtype_ben:
+        if playtype_star == playtype_ben:
+            playtype_bonus = 0.20   # Exact sub-type match → strongest signal
+        else:
+            raw = PLAYTYPE_ADJACENCY.get((playtype_star, playtype_ben), 0.0)
+            playtype_bonus = round(raw * 0.15, 2)  # Scale 0.65–0.85 → 0.10–0.13
+
+    # ── Axis 3: Position match bonus (+0.10) ─────────────────────────────────
+    position_bonus = 0.0
+    ns = _norm_pos(pos_star)
+    nb = _norm_pos(pos_ben)
+    if ns and nb and ns == nb:
+        position_bonus = 0.10
+
+    return round(min(archetype_score + playtype_bonus + position_bonus, 1.0), 2)
+
+
+def _get_archetype(conn, player_id: str) -> str | None:
+    """Look up a player's archetype from the players table."""
+    row = conn.execute(
+        "SELECT archetype FROM players WHERE player_id = ?", (str(player_id),)
+    ).fetchone()
+    return row['archetype'] if row else None
+
+
+def _get_position(conn, player_id: str) -> str | None:
+    """Look up a player's position (G/F/C/UNK) from players table."""
+    row = conn.execute(
+        "SELECT position FROM players WHERE player_id = ?", (str(player_id),)
+    ).fetchone()
+    return row['position'] if row else None
+
+
+def _get_dominant_playtype(conn, player_id: str) -> str | None:
+    """
+    Returns the player's highest-frequency synergy playtype (sub-classification).
+    Skips MISC (too generic). Uses player_name join since synergy table is name-keyed.
+    """
+    name_row = conn.execute(
+        "SELECT name FROM players WHERE player_id = ?", (str(player_id),)
+    ).fetchone()
+    if not name_row:
+        return None
+    row = conn.execute("""
+        SELECT playtype FROM player_synergy_playtypes
+        WHERE player_name = ? AND playtype != 'MISC'
+          AND season = '2025-26'
+        ORDER BY freq_pct DESC LIMIT 1
+    """, (name_row['name'],)).fetchone()
+    return row['playtype'] if row else None
+
 
 def _get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -242,10 +403,53 @@ def main():
             star_canonical = _get_canonical_id(conn, star_id)
             ben_canonical = _get_canonical_id(conn, ben_id)
 
+            # 3-axis role similarity: archetype family + synergy playtype + position
+            star_arch     = _get_archetype(conn, star_canonical)
+            ben_arch      = _get_archetype(conn, ben_canonical)
+            star_pos      = _get_position(conn, star_canonical)
+            ben_pos       = _get_position(conn, ben_canonical)
+            star_playtype = _get_dominant_playtype(conn, star_canonical)
+            ben_playtype  = _get_dominant_playtype(conn, ben_canonical)
+            role_score = _role_match_score(
+                star_arch, ben_arch,
+                star_pos, ben_pos,
+                star_playtype, ben_playtype,
+            )
+
+            # Trade-awareness: star's games on current team from rotation_profiles.
+            # Filter by team_abbreviation to avoid stale old-team profile rows being
+            # returned by LIMIT 1 when a player has changed teams mid-season.
+            gon_row = conn.execute("""
+                SELECT games_on_current_team FROM rotation_profiles
+                WHERE player_id = ? AND team_abbreviation = ? LIMIT 1
+            """, (star_canonical, team)).fetchone()
+            # None means no rotation profile for this team → treat as 0 (new acquisition).
+            # COALESCE(None, 0) < 15 → always downgrade if we have no evidence of tenure.
+            games_on_team = gon_row['games_on_current_team'] if gon_row else None
+            games_on_team_safe = games_on_team if games_on_team is not None else 0
+
+            # Downgrade confidence one tier if star is a new acquisition (< 15 games on team).
+            # Research standard (RealGM/Cleaning the Glass): < 30 games = small sample.
+            # TOO_LOW pairs kept in DB for future growth but filtered by Module X.
+            confidence = data['confidence']
+            tier_map = {'HIGH': 'MEDIUM', 'MEDIUM': 'LOW', 'LOW': 'TOO_LOW'}
+            confidence_adjusted = (
+                tier_map.get(confidence, confidence)
+                if games_on_team_safe < 15
+                else confidence
+            )
+
             results.append({
-                'canonical_id':      ben_canonical,
-                'star_canonical_id': star_canonical,
-                'team_abbreviation': team,
+                'canonical_id':        ben_canonical,
+                'star_canonical_id':   star_canonical,
+                'team_abbreviation':   team,
+                'star_games_on_team':  games_on_team,
+                'star_archetype':      star_arch,
+                'ben_archetype':       ben_arch,
+                'role_match_score':    role_score,
+                'confidence_adjusted': confidence_adjusted,
+                'star_position':       star_pos,
+                'ben_position':        ben_pos,
                 **data,
             })
         except Exception as e:
@@ -273,8 +477,11 @@ def main():
     if top:
         print("\n🔥 Top pts_delta beneficiaries:")
         for r in top:
+            adj_label = r.get('confidence_adjusted', r['confidence'])
+            role_score = r.get('role_match_score', '?')
             print(f"   canonical_id={r['canonical_id']} vs star={r['star_canonical_id']}"
-                  f"  pts_delta=+{r['pts_delta']:.1f}  obs={r['obs_games']}g  [{r['confidence']}]")
+                  f"  pts_delta=+{r['pts_delta']:.1f}  obs={r['obs_games']}g"
+                  f"  [{r['confidence']}→{adj_label}]  role={role_score}")
 
     if args.dry_run:
         print("\n[DRY RUN] No writes performed.")
@@ -291,24 +498,34 @@ def main():
                  obs_pts, obs_reb, obs_ast, obs_min, obs_fga, obs_usg_proxy,
                  base_pts, base_min,
                  pts_delta, min_delta,
-                 obs_games, base_games, confidence, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 obs_games, base_games, confidence,
+                 star_games_on_team, star_archetype, ben_archetype,
+                 role_match_score, confidence_adjusted,
+                 star_position, ben_position, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(canonical_id, star_canonical_id) DO UPDATE SET
-                    team_abbreviation = excluded.team_abbreviation,
-                    obs_pts = excluded.obs_pts,
-                    obs_reb = excluded.obs_reb,
-                    obs_ast = excluded.obs_ast,
-                    obs_min = excluded.obs_min,
-                    obs_fga = excluded.obs_fga,
-                    obs_usg_proxy = excluded.obs_usg_proxy,
-                    base_pts = excluded.base_pts,
-                    base_min = excluded.base_min,
-                    pts_delta = excluded.pts_delta,
-                    min_delta = excluded.min_delta,
-                    obs_games = excluded.obs_games,
-                    base_games = excluded.base_games,
-                    confidence = excluded.confidence,
-                    updated_at = excluded.updated_at
+                    team_abbreviation    = excluded.team_abbreviation,
+                    obs_pts              = excluded.obs_pts,
+                    obs_reb              = excluded.obs_reb,
+                    obs_ast              = excluded.obs_ast,
+                    obs_min              = excluded.obs_min,
+                    obs_fga              = excluded.obs_fga,
+                    obs_usg_proxy        = excluded.obs_usg_proxy,
+                    base_pts             = excluded.base_pts,
+                    base_min             = excluded.base_min,
+                    pts_delta            = excluded.pts_delta,
+                    min_delta            = excluded.min_delta,
+                    obs_games            = excluded.obs_games,
+                    base_games           = excluded.base_games,
+                    confidence           = excluded.confidence,
+                    star_games_on_team   = excluded.star_games_on_team,
+                    star_archetype       = excluded.star_archetype,
+                    ben_archetype        = excluded.ben_archetype,
+                    role_match_score     = excluded.role_match_score,
+                    confidence_adjusted  = excluded.confidence_adjusted,
+                    star_position        = excluded.star_position,
+                    ben_position         = excluded.ben_position,
+                    updated_at           = excluded.updated_at
             """, (
                 r['canonical_id'], r['star_canonical_id'], r['team_abbreviation'],
                 r['obs_pts'], r['obs_reb'], r['obs_ast'], r['obs_min'],
@@ -316,6 +533,9 @@ def main():
                 r['base_pts'], r['base_min'],
                 r['pts_delta'], r['min_delta'],
                 r['obs_games'], r['base_games'], r['confidence'],
+                r.get('star_games_on_team'), r.get('star_archetype'), r.get('ben_archetype'),
+                r.get('role_match_score'), r.get('confidence_adjusted'),
+                r.get('star_position'), r.get('ben_position'),
                 datetime.now().isoformat(),
             ))
             written += 1

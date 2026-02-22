@@ -118,8 +118,31 @@ class LudiOrchestrator:
                 'FG_PCT': row[18], 'FG3_PCT': row[19], 'FT_PCT': row[20],
                 'pbp_shot_quality': round(shot_quality, 3),
                 'pbp_rim_freq': round(at_rim_freq, 3),
-                'pbp_corner3_freq': round(corner3_freq, 3)
+                'pbp_corner3_freq': round(corner3_freq, 3),
+                # Sprint 3: starter context for Module C minutes projection
+                # Source: players.is_starter (1=starter, 0=bench, NULL=unknown)
+                'is_starter': None,  # populated below from players table
             })
+
+        # Sprint 3: Populate is_starter for each roster player from players table
+        # This lets Module C choose avg_min_as_starter or avg_min_off_bench appropriately.
+        if roster:
+            try:
+                conn_s = sqlite3.connect(self.db_path)
+                cursor_s = conn_s.cursor()
+                ids = [p['player_id'] for p in roster]
+                placeholders = ','.join('?' * len(ids))
+                cursor_s.execute(
+                    f"SELECT player_id, is_starter FROM players WHERE player_id IN ({placeholders})",
+                    ids
+                )
+                starter_map = {str(r[0]): r[1] for r in cursor_s.fetchall()}
+                conn_s.close()
+                for p in roster:
+                    raw = starter_map.get(str(p['player_id']))
+                    p['is_starter'] = bool(raw) if raw is not None else None
+            except Exception:
+                pass  # Silently fall back to None (Module C will use avg_minutes)
 
         # --- Tier 1.5: Freshly Traded (on team per players table but no new-team logs yet) ---
         # Phase 8.12: catch players traded in last 1-2 days who haven't played for new team

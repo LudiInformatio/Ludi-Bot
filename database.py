@@ -1211,6 +1211,22 @@ class LudiHistorian:
         except Exception as e:
             print(f'[MIGRATION] season_id backfill: {e}')
 
+        # -- Sprint 2: player_wowy_observed trade-awareness + role scoring columns --
+        for col in [
+            ('star_games_on_team', 'INT'),
+            ('star_archetype',     'TEXT'),
+            ('ben_archetype',      'TEXT'),
+            ('role_match_score',   'REAL'),
+            ('confidence_adjusted','TEXT'),
+            ('star_position',      'TEXT'),   # Sprint 3: off/def + position axis
+            ('ben_position',       'TEXT'),
+        ]:
+            try:
+                c.execute(f'ALTER TABLE player_wowy_observed ADD COLUMN {col[0]} {col[1]}')
+                print(f'[MIGRATION] Added player_wowy_observed.{col[0]}')
+            except Exception:
+                pass  # Column already exists
+
         # -- Phase 2B: Starter-filtered WOWY observed beneficiary performance --
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_wowy_observed (
@@ -1230,6 +1246,13 @@ class LudiHistorian:
                 obs_games           INT,
                 base_games          INT,
                 confidence          TEXT,
+                star_games_on_team  INT,
+                star_archetype      TEXT,
+                ben_archetype       TEXT,
+                role_match_score    REAL,
+                confidence_adjusted TEXT,
+                star_position       TEXT,
+                ben_position        TEXT,
                 updated_at          TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(canonical_id, star_canonical_id)
             )

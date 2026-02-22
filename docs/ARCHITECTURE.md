@@ -134,19 +134,28 @@ from module_e import LudiEvaluator           # ImportError
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
 | `team_lineups` | 10,669 | WOWY lineup data |
 
-#### Player Classification Columns
+#### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
+
+Every player gets **two independent role tags**:
 
 | Column | Purpose | Values |
 |--------|---------|--------|
-| `archetype` | Primary role classification | GENERALIST, RIM_GUARDIAN, PERIMETER_HAWK, SNIPER_ELITE, etc. (19 types) |
-| `defensive_tag` | Secondary overlay for poor defenders ONLY | WEAK_LINK or NULL |
+| `archetype` | **Offensive role** — drives usage vacuum logic | 15 offensive archetypes (no defensive labels) |
+| `defensive_tag` | **Defensive role** — independent of offensive role | PERIMETER_HAWK, RIM_GUARDIAN, SWITCHABLE_ANCHOR, HUSTLE_DISRUPTOR, WEAK_LINK, or NULL |
 
-**Important**: Defensive archetypes (RIM_GUARDIAN, PERIMETER_HAWK, SWITCHABLE_ANCHOR, HUSTLE_DISRUPTOR)
-are stored in the `archetype` column, NOT `defensive_tag`. The `defensive_tag` column is reserved
-exclusively for the WEAK_LINK designation (poor defenders who allow >1.5% worse FG% on >8% frequency).
+**Offensive archetypes (15):** HELIOCENTRIC_MAESTRO, SLASHING_CREATOR, ISO_ASSASSIN, JUMBO_FACILITATOR, SNIPER_ELITE, TWO_LEVEL_SCORER, WARRIOR_BIG, STRETCH_BIG, ROLL_MAN, HUB_BIG, ENERGY_BIG, CUTTER_SPECIALIST, CONNECTOR, FACILITATOR, GENERALIST
 
-**GENERALIST Measurement**: The <25% target applies to **active players** (21-day window), not all 503
-players in database. Inactive players (injured, waived) default to GENERALIST but don't generate bets.
+**Defensive tags (assigned deterministically — no Claude):**
+- `PERIMETER_HAWK`: STL ≥ 0.9/g + SPOT_UP present in synergy
+- `RIM_GUARDIAN`: at_rim_freq ≥ 50% + BLK ≥ 1.0/g
+- `SWITCHABLE_ANCHOR`: STL+BLK ≥ 1.2/g (versatile, not pure rim or perimeter)
+- `HUSTLE_DISRUPTOR`: STL+BLK ≥ 1.0/g + 3+ synergy playtypes
+- `WEAK_LINK`: poor defender (existing threshold)
+- `NULL`: average/unknown defender
+
+**Why two columns:** A two-way wing like Jalen Williams is both a **scoring creator** (archetype=HELIOCENTRIC_MAESTRO/TWO_LEVEL_SCORER) AND a **perimeter defender** (defensive_tag=PERIMETER_HAWK). With one column, classifying him as PERIMETER_HAWK would cause Module X to skip his usage vacuum entirely — wrong, since his 25+ PPG absolutely creates an offensive void when he's out. The hybrid system ensures every player generates correct usage vacuum analysis via `archetype`, while defensive identity is visible separately in `defensive_tag`.
+
+**GENERALIST Measurement**: The <25% target applies to **active players** (21-day window, ≥3 games), not all players in database. Injured/inactive players default to GENERALIST but don't generate bets.
 
 ### Indexes for Performance
 - `idx_player_game_logs_player_date` (composite index for fast player queries)

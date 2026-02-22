@@ -117,7 +117,7 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 *Player spotlight - research only*
 """
 
-GAME_NOTES_EXAMPLE = """📅 Feb 21, 2026
+GAME_NOTES_EXAMPLE = """📅 Feb 22, 2026
 ## LAL @ BOS | S.A.V.A.G.E.
 
 === TONIGHT'S GAME DATA ===
@@ -132,21 +132,21 @@ GAME_NOTES_EXAMPLE = """📅 Feb 21, 2026
 | Schedule | LAL on B2B (road) | LAL fatigue |
 
 **Situational Intel:**
-LeBron (calf) returns tonight after missing 3 games. Lakers 2-1 without him. Celtics 8-2 in last 10 home games.
+Luka (ankle) is GTD tonight. Lakers 3-2 in last 5. Celtics 8-2 in last 10 home games.
 
 === INJURY & PERSONNEL ===
 **Injury Impact:**
-OUT: Kristaps Porzingis (calf, 2d) → Grant Williams +5 REB proj
-GTD: LeBron James (calf) — 6:00 PM update critical
+OUT: Sam Hauser (knee, 3d) → Baylor Scheierman +4 PTS proj
+GTD: Luka Doncic (ankle) — 6:00 PM update critical
 
 === MATCHUP ANALYSIS ===
 **Scheme Edge:**
-- LAL (HELIOCENTRIC) vs BOS (DROP): LeBron drives vs drop coverage → kick3s
--out  BOS (DROP) vs LAL (HELIOCENTRIC): Tatum posts up Lakers wings → mismatch
+- LAL (HELIOCENTRIC_MAESTRO) vs BOS (DROP): Luka drives vs drop coverage → kick3s
+- BOS (TWO_LEVEL_SCORER) vs LAL: Jaylen Brown attacks LAL wings off dribble → FTA
 
 **Key Edges Today:**
-LeBron PTS OVER 28.5 — LeBron vs drop coverage (64% hit rate L10) (+8.2% edge)
-Tatum REB OVER 7.5 — Lakers allow 9.2 REB to wings (+5.1% edge)
+Luka Doncic PTS OVER 24.5 — Luka vs drop coverage (64% hit rate L10) (+8.2% edge)
+Jaylen Brown PTS OVER 26.5 — Brown drives vs LAL wing defense (+5.1% edge)
 
 ---
 *S.A.V.A.G.E. analysis - research only*
@@ -167,11 +167,11 @@ LeBron James PTS OVER 28.5 (+100) — DIAMOND tier play vs DROP defense.
 - Edge: 8.2% above line
 
 **Why this play:**
-LeBron → vs BOS DROP defense → kicks out to shooters when doubled →，今晚 vs Lakers transition → high usage in return game.
+LeBron → vs BOS DROP defense → drives to rim, kicks out to shooters when doubled → high usage in return game.
 
 [STOP HERE if player is OUT/DOUBTFUL — do not analyze further]
 
-LeBron returns from a 3-game calf injury absence with fresh legs. Against Boston's drop coverage, he can operate in the mid-post where he's most efficient. The Lakers' spacing improves with DFS/Reddish, giving LeBron driving lanes. His L10 29.8 PPG on 70% hit rate vs the line shows strong form.
+LeBron returns from a 3-game calf injury absence with fresh legs. Against Boston's drop coverage, he can operate in the mid-post where he's most efficient. His L10 29.8 PPG on 70% hit rate vs the line shows strong form.
 
 ---
 *Player spotlight - research only*
@@ -235,3 +235,63 @@ Fields:
 - blurb_is_stale: true if blurb date is more than 3 days before today, false otherwise
 
 Return JSON only."""
+
+# ------------------------------------------------------------------
+# Phase 8.4: Archetype Classifier — Prompt Engineering Upgrade
+# Best-practices: BERT Pattern 1 (label space) + Pattern 3 (few-shot)
+# Persona: line-maker / usage-vacuum analyst — permanent structural role
+# Temperature: 0.0 (classification — deterministic output)
+# System prompt is IDENTICAL across all ~535 player calls → full caching benefit
+# ------------------------------------------------------------------
+
+ARCHETYPE_SYSTEM_PROMPT = """You are an NBA prop market-maker classifying player OFFENSIVE role identity for usage-vacuum modeling.
+Output EXACTLY ONE archetype name. No explanation. No extra text. Just the name.
+
+IMPORTANT: You are classifying the OFFENSIVE role only. Defensive identity is tracked separately.
+Do NOT output PERIMETER_HAWK, RIM_GUARDIAN, SWITCHABLE_ANCHOR, or HUSTLE_DISRUPTOR — those are
+not valid outputs. Even elite two-way players (Jalen Williams, Kawhi) get an offensive label here.
+
+VALID ARCHETYPES (offensive role only):
+HELIOCENTRIC_MAESTRO, SLASHING_CREATOR, ISO_ASSASSIN, JUMBO_FACILITATOR, SNIPER_ELITE,
+TWO_LEVEL_SCORER, WARRIOR_BIG, STRETCH_BIG, ROLL_MAN, HUB_BIG, ENERGY_BIG,
+CUTTER_SPECIALIST, CONNECTOR, FACILITATOR, GENERALIST
+
+POSITION CONSTRAINTS (check player's position before classifying):
+- G/F players: prefer HELIOCENTRIC, SLASHING_CREATOR, ISO_ASSASSIN, CONNECTOR, SNIPER_ELITE, TWO_LEVEL_SCORER
+- C players: prefer JUMBO_FACILITATOR, ROLL_MAN, HUB_BIG, ENERGY_BIG, WARRIOR_BIG, TWO_LEVEL_SCORER, STRETCH_BIG
+- C as HELIOCENTRIC_MAESTRO: ONLY if P&R_BALL_HANDLER ≥ 15% (Jokic/Sabonis pattern). A center who scores 25+ pts via POST_UP and ISO is a JUMBO_FACILITATOR or TWO_LEVEL_SCORER — NOT HELIOCENTRIC.
+- Do NOT assign G archetypes (HELIOCENTRIC, SLASHING_CREATOR, CONNECTOR) to C players based on scoring volume alone.
+
+KEY DISCRIMINATORS (resolve close calls with these first):
+- HELIOCENTRIC vs SLASHING_CREATOR: USG% > 25% + AST% > 18% → HELIOCENTRIC. FTA/FGA > 0.30 as standout ratio → SLASHING_CREATOR.
+- HELIOCENTRIC vs ISO_ASSASSIN: P&R top-2 playtype + AST > 5 → HELIOCENTRIC. ISO > 20% + A/TO < 1.5 → ISO_ASSASSIN.
+- HELIOCENTRIC vs JUMBO_FACILITATOR (for C): If player is C with POST_UP/ISO/ROLL dominant → JUMBO_FACILITATOR. HELIOCENTRIC requires guard-style P&R ball-handling.
+- GENERALIST is correct for multi-role players. Use it rather than forcing a bad specific label.
+
+RULES:
+- HELIOCENTRIC_MAESTRO: USG > 25%, primary orchestrator, P&R or ISO top playtype, AST% > 16%
+- ISO_ASSASSIN: ISO freq > 20%, low pass rate (A/TO < 1.5), pure self-creation
+- SLASHING_CREATOR: drive-first, FTA/FGA > 0.28, physical wing/guard
+- JUMBO_FACILITATOR: big-man (Jokic/Sabonis), P&R handler, AST > 5, high AST%
+- SNIPER_ELITE: SPOT_UP > 25%, 3PA > 5/g, corner-3 heavy, rarely drives
+- TWO_LEVEL_SCORER: efficient at rim + mid-range, no dominant playtype, TS% > 56%
+- WARRIOR_BIG: PUTBACK + TRANSITION heavy, draws fouls, FTA/FGA > 0.35
+- STRETCH_BIG: big with SPOT_UP/OFF_SCREEN > 25%, corner-3, low at-rim
+- ROLL_MAN: PR_ROLL_MAN > 20%, lob threat, high at-rim freq
+- HUB_BIG: passing-first big, AST > 4, FGA < 9, facilitator role
+- ENERGY_BIG: OREB + PUTBACK, consistent minutes, FGA < 9
+- RIM_GUARDIAN: at-rim > 50%, BLK rate, minimal perimeter shooting
+- PERIMETER_HAWK: STL > 0.9/g, opportunistic SPOT_UP scorer, wing defender
+- SWITCHABLE_ANCHOR: versatile defender, moderate BLK + STL, multi-position
+- HUSTLE_DISRUPTOR: deflections, multiple secondary playtypes, chaos agent
+- CUTTER_SPECIALIST: CUT freq > 20%, off-ball movement
+- CONNECTOR: secondary ball-handler, moderate AST, TRANSITION secondary
+- FACILITATOR: pure passer, high AST/USG, HANDOFF or P&R handler
+- GENERALIST: multi-role, no dominant pattern
+
+=== EXAMPLES ===
+
+{examples_block}
+=== YOUR TASK ===
+
+"""
