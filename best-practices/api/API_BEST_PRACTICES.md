@@ -2423,6 +2423,26 @@ We are on GOAT tier — all endpoints available.
 
 ---
 
+### NBA Injury Data Source Hierarchy (Feb 21, 2026 Research)
+
+Industry standard is a layered trust stack — never one source:
+
+| Tier | Source | Latency | Notes |
+|------|--------|---------|-------|
+| 1 — Ground Truth | NBA Official Injury Report (official.nba.com) | 15 min (new 2025-26 rule, was hourly) | League-mandated, timestamped |
+| 2 — Fastest Signal | Beat writers on X/Twitter | 0–2 min | Break news before official updates during warmups |
+| 2 — Paid Curation | RotoWire RSS, RealGM RSS | 2–5 min | Structured OUT/DOUBTFUL/GTD with context |
+| 3 — API Resellers | Tank01, BDL | 10–30 min | Downstream aggregators; our primary sources |
+| 4 — Enterprise | Sportradar, Stats Perform | 5 min (push) | B2B only; used by DK/FD/ESPN |
+
+**Our stack:** Tank01 primary → BDL fallback → RotoWire RSS + RealGM RSS dual-source corroboration (`_nuance_check()` in module_d.py). 2-source agreement bumps confidence to 0.95.
+
+**Staleness guard:** Any `player_injuries` record with `resolved_at IS NULL` and `snapshot_time > 14 days` is treated as stale. Ghost records from mid-season DB init can persist indefinitely otherwise. Always filter: `AND snapshot_time >= datetime('now', '-14 days')` when querying current injury status.
+
+**Perplexity recency filter:** Use `_get_recency_filter(hours_to_game)` for dynamic search windows — `"hour"` (<2hrs to tip for late scratches), `"day"` (<12hrs for game-day context), `"week"` (advance look). Avoids paying for expensive "hour" searches on morning runs. Cache key must include recency filter to prevent stale cross-contamination.
+
+---
+
 ## Summary: GitHub Actions as API Orchestration Layer
 
 GitHub Actions workflows are effectively **API orchestration** — they:

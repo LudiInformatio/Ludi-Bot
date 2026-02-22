@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 21, 2026 4:33 PM EST
+**Last Updated:** February 21, 2026 8:31 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -170,6 +170,26 @@ Third sprint of Feb 20 — hardened the morning/evening brief pipeline and compl
 
 **Game Lines Integration Planned (Phase 8.18):**
 - Confirmed: Odds API supports `team_totals` market (zero extra API calls — same request). BDL and Tank01 do NOT have team totals. Architecture: real team totals (Odds API) → derived implied totals (BDL fallback) → blanket modifier. Full plan ready for implementation.
+
+---
+
+### Evening Lock Bug Fixes & Injury Intelligence Tightening ✅ COMPLETE (Feb 21, 2026 PM)
+
+**Root cause:** Phase 8.18 introduced `UnboundLocalError` in `module_e.py` (odds/total/spread used before assignment in section 3.6). With `USE_TEAM_TOTALS_MODIFIER=True`, every game silently failed, producing zero Telegram output. Pipeline showed "success" (exit 0) so no alerts fired.
+
+**9 fixes across 7 files:**
+- `module_e.py`: Move odds/total/spread extraction before section 3.6 (root cause of silent outage)
+- `morning_brief.py`: `sys.exit(1)` when no bets processed → workflow now fails loudly + triggers Claude Ops Hub
+- `morning_brief.py`: Game notes markdown fallback (Markdown→plain text on 400, matching spotlight pattern)
+- `morning_brief.py`: `snapshot_time >= datetime('now', '-14 days')` staleness guard on all 3 `player_injuries` queries — eliminates ghost records from mid-season DB init appearing as currently OUT
+- `main.py`: Tier 2 NOT EXISTS guard — player with resolved injury + new same-day OUT was classified as WELCOME_BACK instead of OUT (Embiid pattern). Beneficiary vacuum now fires correctly.
+- `morning_brief.py`: Skip games tipped >45 min ago (ORL@PHX 5pm processed at 6pm evening lock)
+- `utils/perplexity_client.py`: Empty response logs HTTP status code; `_get_recency_filter()` switches "hour"/"day"/"week" based on hours_to_game (Ludi-Lite pattern — tighter search pre-tip, cheaper on morning runs)
+- `utils/time_utils.py`: `get_time_context()` + `format_time_context_note()` — EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME modes based on EST hour. Foundation for bot + web app confidence display.
+- `utils/claude_prompts.py`: `{time_context_note}` row in GAME_NOTES_TEMPLATE — Claude calibrates certainty to data confidence at call time
+- `CLAUDE.md`: 2025-26 season reminder added to Critical Data Rules — prevents AI roster drift
+
+**Industry research:** NBA official injury report now publishes every 15 min (2025-26 rule). Our RotoWire + RealGM dual-source corroboration already matches industry standard. Perplexity hours_to_game filter borrowed from Ludi-Lite for cost-efficient dynamic recency.
 
 ---
 
