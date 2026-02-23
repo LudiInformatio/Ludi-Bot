@@ -295,17 +295,17 @@ Over time, parse failure logs reveal which prompts are producing malformed outpu
 
 ## Implementation Priority
 
-| Priority | Pattern | Effort | Impact | File |
-|----------|---------|--------|--------|------|
-| 1 | Few-shot example in GAME_NOTES_TEMPLATE | 45 min | High | `claude_prompts.py` |
-| 2 | Few-shot example in SPOTLIGHT_TEMPLATE | 30 min | High | `claude_prompts.py` |
-| 3 | Domain WR stats in Sonnet curation | 20 min | Medium | `curate_plays.py` |
-| 4 | text_a/text_b separation in templates | 60 min | Medium | `claude_prompts.py` |
-| 5 | Label space in Haiku system prompt | 15 min | Medium | `curate_plays.py` |
-| 6 | Pre-truncate injected blocks | 30 min | Low-Med | `morning_brief.py` |
-| 7 | Haiku NSP news relevance gate | 2 hrs | Medium | `morning_brief.py` |
-| 8 | Parse failure logging | 15 min | Low | `curate_plays.py` |
-| 9 | Sonnet→Haiku feedback loop | Future | High | Phase 8.19 |
+| Priority | Pattern | Effort | Impact | File | Status |
+|----------|---------|--------|--------|------|--------|
+| 1 | Few-shot example in GAME_NOTES_TEMPLATE | 45 min | High | `claude_prompts.py` | ✅ Done (8.19) |
+| 2 | Few-shot example in SPOTLIGHT_TEMPLATE | 30 min | High | `claude_prompts.py` | ✅ Done (8.19) |
+| 3 | Domain WR stats in Sonnet curation | 20 min | Medium | `curate_plays.py` | ✅ Done (8.20) |
+| 4 | text_a/text_b separation in templates | 60 min | Medium | `claude_prompts.py` | ✅ Done (8.19) |
+| 5 | Label space in Haiku system prompt | 15 min | Medium | `curate_plays.py` | ✅ Done (8.19) |
+| 6 | Pre-truncate injected blocks | 30 min | Low-Med | `morning_brief.py` | ✅ Done (8.19) |
+| 7 | Haiku NSP news relevance gate | 2 hrs | Medium | `morning_brief.py` | ✅ Done (8.19) |
+| 8 | Parse failure logging | 15 min | Low | `curate_plays.py` | ✅ Done (8.19) |
+| 9 | Sonnet→Haiku feedback loop | Future | High | Phase 8.19 | 📋 Future |
 
 ---
 

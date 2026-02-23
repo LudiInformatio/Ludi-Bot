@@ -13,7 +13,7 @@
 | Game notes generation | Sonnet | `utils/claude_prompts.py::GAME_NOTES_TEMPLATE` | ~$0.12/day |
 | Player spotlight narrative | Sonnet | `utils/claude_prompts.py::SPOTLIGHT_TEMPLATE` | ~$0.15/day |
 | Play curation Top 5 | Sonnet | `utils/claude_prompts.py` | ~$0.08/day |
-| Archetype classification | Haiku | `scripts/classify_archetypes.py` | ~$0.03/week |
+| Archetype classification | Haiku (`temperature=0.0`) | `scripts/classify_archetypes.py` · `ARCHETYPE_SYSTEM_PROMPT` in `claude_prompts.py` | ~$0.03/week |
 | Game context search | Perplexity Sonar | `utils/perplexity_client.py` | ~$0.10/day |
 | Suspension detection | Perplexity Sonar | Phase 8.16 (planned) | ~$0.02/day |
 
