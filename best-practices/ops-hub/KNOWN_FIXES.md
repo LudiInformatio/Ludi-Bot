@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-02-23 — Evening Slate Lock: Graceful Quota Exit Check Failed
+
+- **Workflow**: `evening_slate_lock.yml`
+- **Symptom**: Pipeline failed with `exit code 1` and triggered Ops Hub alert. Logs showed `⚠️ The-Odds-API Failed: 422 Client Error...` followed by `⚠️ No data processed. Aborting.`.
+- **Root Cause**: The Odds API quota exhaustion is a known monthly event. `morning_brief.py` is supposed to detect this in `cache/odds_api_quota.json` and exit gracefully (exit code 0). However, the cache read was failing (either due to relative path resolution or an integer vs. string type mismatch in the JSON `remaining` field). Because it was wrapped in a bare `except Exception: pass`, the error was silently swallowed, and the script fell through to the hard `sys.exit(1)`.
+- **Fix Applied**: Tier 1 —
+  1. Updated the cache file lookup to use an absolute path resolved from `__file__`.
+  2. Checked for both integer `0` and string `"0"` in the JSON payload.
+  3. Changed `except Exception:` to `except Exception as e: print(e)` so future cache-read failures are visible.
+- **Commit**: 2d50f36
+
+---
+
 ## 2026-02-23 — Daily Morning Briefing: Telegram 400 Bad Request (Silent Failure)
 
 - **Workflow**: `daily_briefing.yml`
