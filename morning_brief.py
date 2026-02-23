@@ -48,46 +48,43 @@ def _safe_inject(text: str, max_chars: int) -> str:
     return text if text else ""
 
 
-def _build_hot_cool_trends_block(bets: list, conn) -> str:
+def _build_hot_cool_trends_block(home_team: str, away_team: str, conn) -> str:
     """
-    Build a hot/cool trend summary for all players with bets in this game.
+    Build a hot/cool trend summary scoped to the two teams playing tonight.
+
+    Queries player_trends by team_abbreviation (NOT player names from bets) so
+    the block covers the full rotation, not just prop-bet players. League-wide
+    trend analysis lives in the weekly report — this is game-specific only.
 
     Checks single stats (PTS, REB, AST, 3PM) AND combo props (PRA, PA, PR).
-    Shows the highest-delta trend per player — if a player's PRA delta is larger
-    than their PTS delta, PRA is shown (combo props surface when they're the
-    dominant signal, per user request).
+    Shows the highest-delta trend per player — largest ABS(delta) wins, so a
+    PRA delta of +8.6 beats a PTS delta of +2.8 (combo props surface naturally).
 
     HOT threshold:     trend_delta >= +2.5
     COOLING threshold: trend_delta <= -2.5
 
     Returns empty string if no meaningful trends found (graceful no-op).
     """
-    if not bets:
-        return ""
-    names = list({b['name'] for b in bets if b.get('name')})
-    if not names:
+    if not home_team or not away_team:
         return ""
 
-    # Combo stats listed first — ORDER BY ABS(delta) means biggest signal wins
-    # but we want to surface combo props if they're meaningful
     KEY_STATS = ('PTS', 'PRA', 'PA', 'PR', 'REB', 'AST', '3PM')
     HOT_THRESH, COOL_THRESH = 2.5, -2.5
 
     try:
         cursor = conn.cursor()
-        ph_n = ','.join('?' * len(names))
         ph_s = ','.join('?' * len(KEY_STATS))
         cursor.execute(
             f"""
             SELECT player_name, stat, l7_avg, season_avg, trend_delta
             FROM player_trends
-            WHERE player_name IN ({ph_n})
+            WHERE team_abbreviation IN (?, ?)
               AND stat IN ({ph_s})
               AND l7_avg IS NOT NULL
               AND trend_delta IS NOT NULL
             ORDER BY ABS(trend_delta) DESC
             """,
-            names + list(KEY_STATS)
+            (home_team, away_team) + KEY_STATS
         )
         rows = cursor.fetchall()
     except Exception:
@@ -675,8 +672,8 @@ Return JSON only."""
                     edges_block = "\n".join(edges_lines)
 
                     # 5b. Hot/cool player trends (player_trends table — L7 vs season)
-                    # Includes combo props (PRA, PA, PR) — shows strongest signal per player
-                    hot_cool_trends_block = _build_hot_cool_trends_block(bets, conn)
+                    # Scoped to this game's two teams only — league-wide is the weekly report
+                    hot_cool_trends_block = _build_hot_cool_trends_block(home_team, away_team, conn)
 
                     # 6. Build Prompt
                     # Handle template placeholders that are for Claude (e.g., {player}) by preserving them
