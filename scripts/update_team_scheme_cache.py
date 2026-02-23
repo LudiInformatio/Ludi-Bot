@@ -98,6 +98,58 @@ def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) 
     return result
 
 
+def compute_team_off_quality_14d(db_path: str, d14_start: str, window_end: str) -> dict:
+    """
+    Compute relative offensive quality tiers using player_game_advanced.off_rating.
+
+    off_rating is the team's offensive rating when that player is on the court
+    (points scored per 100 possessions). Averaging across all players on a team
+    approximates the team's overall 14d offensive efficiency.
+
+    Higher off_rating = better offense (inverse of defensive rating).
+    STRONG = ≥1 std dev above league average (offense is hot).
+    WEAK   = ≥1 std dev below league average (offense is struggling).
+
+    Returns dict: {team_abbr: 'STRONG' | 'AVERAGE' | 'WEAK'}
+    Falls back to empty dict if fewer than 15 teams have data.
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """
+            SELECT team_abbrev, AVG(off_rating) as avg_or, COUNT(*) as n
+            FROM player_game_advanced
+            WHERE game_date >= ? AND game_date <= ?
+              AND off_rating IS NOT NULL
+            GROUP BY team_abbrev
+            HAVING COUNT(*) >= 10
+            ORDER BY avg_or DESC
+            """,
+            (d14_start, window_end),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return {}
+
+    if len(rows) < 15:
+        return {}
+
+    vals = [r[1] for r in rows]
+    league_avg = sum(vals) / len(vals)
+    std = math.sqrt(sum((v - league_avg) ** 2 for v in vals) / len(vals))
+
+    result = {}
+    for team_abbrev, avg_or, _ in rows:
+        if avg_or > league_avg + std:     # Higher = better offense
+            result[team_abbrev] = "STRONG"
+        elif avg_or < league_avg - std:
+            result[team_abbrev] = "WEAK"
+        else:
+            result[team_abbrev] = "AVERAGE"
+
+    return result
+
+
 def resolve_window_end(db_path: str, end_date: str = None) -> str:
     if end_date:
         return end_date
@@ -158,6 +210,15 @@ def main():
     off_classifier = TeamOffensiveClassifier(db_path=args.db_path)
     def_classifier = TeamDefensiveClassifier(db_path=args.db_path)
 
+    # BDL-based 14d offensive quality tiers (STRONG / AVERAGE / WEAK).
+    # Uses player_game_advanced.off_rating (HIGHER = better offense).
+    # Z-score: STRONG ≥ league_avg + 1 std, WEAK ≤ league_avg - 1 std.
+    off_quality_14d = compute_team_off_quality_14d(args.db_path, d14_start, window_end)
+    if args.verbose and off_quality_14d:
+        print(f"[OFF QUALITY 14d] computed for {len(off_quality_14d)} teams "
+              f"(STRONG={sum(1 for v in off_quality_14d.values() if v=='STRONG')}, "
+              f"WEAK={sum(1 for v in off_quality_14d.values() if v=='WEAK')})")
+
     # BDL-based 14d defensive quality tiers (STRONG / AVERAGE / WEAK).
     # Used as fallback when Ghost Protocol tracking has INSUFFICIENT data for the 14d window.
     def_quality_14d = compute_team_def_quality_14d(args.db_path, d14_start, window_end)
@@ -168,7 +229,8 @@ def main():
 
     off_season = off_classifier.classify_all_teams(start_date=season_start, end_date=window_end, min_games=30)
     off_21 = off_classifier.classify_all_teams(start_date=d21_start, end_date=window_end, min_games=5)
-    off_14 = off_classifier.classify_all_teams(start_date=d14_start, end_date=window_end, min_games=5)
+    # min_games=3 for 14d: All-Star break reduces games to 2-4 per team in this window.
+    off_14 = off_classifier.classify_all_teams(start_date=d14_start, end_date=window_end, min_games=3)
 
     def_season_raw, def_season_stats = def_classifier.batch_classify_all_teams(
         start_date=season_start, end_date=window_end, min_games=10, return_stats=True
@@ -229,23 +291,27 @@ def main():
             quality_label = f" [{team_def_quality}]" if team_def_quality else ""
             print(f"[DEF] {team} season={s_def} 21d={d21_def} 14d={d14_def}{quality_label} active={a_def}")
 
+        team_off_quality = off_quality_14d.get(team)
+
         if not args.dry_run:
-            # Upsert offense
+            # Upsert offense (includes off_quality_14d for morning brief context)
             cur.execute(
                 """
                 INSERT INTO team_scheme_cache
-                    (team_abbr, scheme_type, season_style, d21_style, d14_style, active_style, window_end)
+                    (team_abbr, scheme_type, season_style, d21_style, d14_style,
+                     active_style, window_end, off_quality_14d)
                 VALUES
-                    (?, 'OFFENSE', ?, ?, ?, ?, ?)
+                    (?, 'OFFENSE', ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(team_abbr, scheme_type) DO UPDATE SET
                     season_style=excluded.season_style,
                     d21_style=excluded.d21_style,
                     d14_style=excluded.d14_style,
                     active_style=excluded.active_style,
                     window_end=excluded.window_end,
+                    off_quality_14d=excluded.off_quality_14d,
                     updated_at=CURRENT_TIMESTAMP
                 """,
-                (team, s_off, d21_off, d14_off, a_off, window_end)
+                (team, s_off, d21_off, d14_off, a_off, window_end, team_off_quality)
             )
 
             # Upsert defense (includes def_quality_14d for morning brief context)
