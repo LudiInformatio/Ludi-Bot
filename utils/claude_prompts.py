@@ -77,6 +77,9 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 {away_team}: {away_rotation}
 {home_team}: {home_rotation}
 
+=== PLAYER TRENDS (L7 vs Season) ===
+{hot_cool_trends_block}
+
 === MATCHUP ANALYSIS ===
 **Scheme Edge:**
 - {away_team} ({away_archetype_summary}) vs {home_team} ({home_def_scheme}): {one_sentence}
@@ -138,6 +141,10 @@ Luka (ankle) is GTD tonight. Lakers 3-2 in last 5. Celtics 8-2 in last 10 home g
 **Injury Impact:**
 OUT: Sam Hauser (knee, 3d) → Baylor Scheierman +4 PTS proj
 GTD: Luka Doncic (ankle) — 6:00 PM update critical
+
+=== PLAYER TRENDS (L7 vs Season) ===
+HOT: 🔥 Brown PTS +4.2 | Brown PRA +6.1
+COOLING: ❄️ Doncic REB -2.8
 
 === MATCHUP ANALYSIS ===
 **Scheme Edge:**

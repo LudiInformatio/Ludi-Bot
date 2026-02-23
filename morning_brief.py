@@ -37,6 +37,7 @@ _MAX_BLOCK_CHARS = {
     'schedule_notes': 500,   # expanded from 200 — catches trade/rotation news
     'rotation_block': 300,
     'teammates_context': 150,
+    'trends_block': 400,     # player hot/cool trends (L7 vs season) incl. combo props
 }
 
 
@@ -45,6 +46,77 @@ def _safe_inject(text: str, max_chars: int) -> str:
     if text and len(text) > max_chars:
         return text[:max_chars] + "... [truncated]"
     return text if text else ""
+
+
+def _build_hot_cool_trends_block(bets: list, conn) -> str:
+    """
+    Build a hot/cool trend summary for all players with bets in this game.
+
+    Checks single stats (PTS, REB, AST, 3PM) AND combo props (PRA, PA, PR).
+    Shows the highest-delta trend per player — if a player's PRA delta is larger
+    than their PTS delta, PRA is shown (combo props surface when they're the
+    dominant signal, per user request).
+
+    HOT threshold:     trend_delta >= +2.5
+    COOLING threshold: trend_delta <= -2.5
+
+    Returns empty string if no meaningful trends found (graceful no-op).
+    """
+    if not bets:
+        return ""
+    names = list({b['name'] for b in bets if b.get('name')})
+    if not names:
+        return ""
+
+    # Combo stats listed first — ORDER BY ABS(delta) means biggest signal wins
+    # but we want to surface combo props if they're meaningful
+    KEY_STATS = ('PTS', 'PRA', 'PA', 'PR', 'REB', 'AST', '3PM')
+    HOT_THRESH, COOL_THRESH = 2.5, -2.5
+
+    try:
+        cursor = conn.cursor()
+        ph_n = ','.join('?' * len(names))
+        ph_s = ','.join('?' * len(KEY_STATS))
+        cursor.execute(
+            f"""
+            SELECT player_name, stat, l7_avg, season_avg, trend_delta
+            FROM player_trends
+            WHERE player_name IN ({ph_n})
+              AND stat IN ({ph_s})
+              AND l7_avg IS NOT NULL
+              AND trend_delta IS NOT NULL
+            ORDER BY ABS(trend_delta) DESC
+            """,
+            names + list(KEY_STATS)
+        )
+        rows = cursor.fetchall()
+    except Exception:
+        return ""
+
+    hot, cool = [], []
+    seen = set()  # One entry per player — strongest ABS(delta) wins
+
+    for name, stat, l7, szn, delta in rows:
+        if name in seen:
+            continue
+        short = name.split()[-1]  # Last name for compactness in 400-char budget
+        sign = "+" if delta > 0 else ""
+        if delta >= HOT_THRESH:
+            hot.append(f"🔥 {short} {stat} {sign}{delta:.1f}")
+            seen.add(name)
+        elif delta <= COOL_THRESH:
+            cool.append(f"❄️ {short} {stat} {delta:.1f}")
+            seen.add(name)
+
+    if not hot and not cool:
+        return ""
+
+    parts = []
+    if hot:
+        parts.append("HOT: " + " | ".join(hot[:5]))
+    if cool:
+        parts.append("COOLING: " + " | ".join(cool[:3]))
+    return "\n".join(parts)
 
 
 def _build_rotation_block(team_abbr: str, out_names: list, cursor) -> str:
@@ -602,6 +674,10 @@ Return JSON only."""
                         )
                     edges_block = "\n".join(edges_lines)
 
+                    # 5b. Hot/cool player trends (player_trends table — L7 vs season)
+                    # Includes combo props (PRA, PA, PR) — shows strongest signal per player
+                    hot_cool_trends_block = _build_hot_cool_trends_block(bets, conn)
+
                     # 6. Build Prompt
                     # Handle template placeholders that are for Claude (e.g., {player}) by preserving them
                     # We pass them as literal strings "{key}" so python's .format() keeps them
@@ -716,6 +792,7 @@ Return JSON only."""
                             time_context_note=time_context_note,
                             away_rotation=_safe_inject(away_rotation, _MAX_BLOCK_CHARS['rotation_block']),
                             home_rotation=_safe_inject(home_rotation, _MAX_BLOCK_CHARS['rotation_block']),
+                            hot_cool_trends_block=_safe_inject(hot_cool_trends_block or "No notable trends.", _MAX_BLOCK_CHARS['trends_block']),
                             **preservation_keys
                         )
                         
