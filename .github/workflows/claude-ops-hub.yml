@@ -30,6 +30,8 @@ on:
       - "Claude QA & Debug Check"
     types:
       - completed
+  schedule:
+    - cron: '0 14 * * *'  # 9 AM EST daily — Claude OAuth token expiry check
 
 jobs:
   diagnose-failure:
@@ -115,10 +117,34 @@ jobs:
           additional_permissions: |
             actions: read
             issues: write
+          claude_args: '--allowedTools "Bash(gh:*),Bash(git:*)"'
           prompt: |
             # Claude Ops Hub — Workflow Failure Diagnosis & Fix
 
-            ## Failed Workflow
+            ## STEP 0: Read your institutional memory first
+            Run these commands before anything else:
+            - `cat best-practices/ops-hub/KNOWN_FIXES.md` — prior diagnosed failures
+            - `cat best-practices/ops-hub/DOMAIN_PATTERNS.md` — few-shot diagnosis examples per domain
+            If tonight's symptom matches a prior fix, skip investigation and apply the fix immediately.
+
+            ---
+
+            ## VALID OUTPUT SPACE (read before any analysis — only these values are valid)
+
+            Valid Tier Decisions:
+              TIER_1 — single-line auto-commit fix, zero logic impact
+              TIER_2 — multi-line fix, requires PR + human review
+              TIER_3 — issue only, no code change (uncertain, risky, or db-touching)
+              TRANSIENT — no action; retry would fix (rate limit, timing, external API down)
+
+            Valid Failure Types:
+              KNOWN_PATTERN — matches an entry in KNOWN_FIXES.md
+              NEW_FAILURE — not in KNOWN_FIXES.md, requires investigation
+              TRANSIENT — retryable; no code change needed
+
+            ---
+
+            === WORKFLOW METADATA ===
             - **Name:** ${{ github.event.workflow_run.name }}
             - **Run ID:** ${{ github.event.workflow_run.id }}
             - **Branch:** ${{ github.event.workflow_run.head_branch }}
@@ -126,21 +152,21 @@ jobs:
             - **Failed Steps:** ${{ steps.logs.outputs.failed_steps }}
             - **Existing open issue (if any):** ${{ steps.dedup.outputs.existing_issue }}
 
-            ## Log Preview
+            === WORKFLOW FAILURE LOGS (first 50 lines — run `cat /tmp/failure_log.txt` for full) ===
             ```
             ${{ steps.logs.outputs.log_preview }}
             ```
 
-            For the full log, run: `cat /tmp/failure_log.txt`
-
             ---
 
-            ## Your Task
+            ## Your Diagnosis Steps
 
-            ### Step 1: Read the full failure log
-            Run: `cat /tmp/failure_log.txt`
+            ### Step 1: Read full logs and context
+            - `cat /tmp/failure_log.txt`
+            - `cat best-practices/ops-hub/KNOWN_FIXES.md`
 
-            ### Step 2: Identify the root cause using the domain context below
+            ### Step 2: NSP Classification Gate (output this JSON FIRST, before any action)
+            {"failure_type": "KNOWN_PATTERN|NEW_FAILURE|TRANSIENT", "matched_fix": "<KNOWN_FIXES.md entry date+title or null>", "confidence": "HIGH|MEDIUM|LOW", "reasoning": "<one sentence>"}
 
             ### Step 3: Apply the fix tier below
 
@@ -185,6 +211,35 @@ jobs:
                 - Severity: Critical / Warning / Transient with reasoning
                 - Fix Applied: What tier action was taken (auto-fix / PR / issue-only)
                 - Log excerpt: Key error lines
+
+            ---
+
+            ## After Every Action (Required — runs after Tier 1, 2, 3, or TRANSIENT)
+
+            1. **Log your diagnosis** — append one entry to `best-practices/ops-hub/KNOWN_FIXES.md`:
+               ```
+               ## YYYY-MM-DD — WORKFLOW_NAME: one-line summary
+               - **Symptom**: ...
+               - **Root Cause**: ...
+               - **Fix Applied**: Tier N — description  OR  "No auto-fix — issue #N created"
+               - **Commit/PR/Issue**: reference
+               ```
+               Then commit: `git add best-practices/ops-hub/KNOWN_FIXES.md && git commit -m "chore(ops-hub): log diagnosis for WORKFLOW_NAME" && git push`
+
+            2. **Comment on the open issue + close it** (Tier 1 and Tier 2 only):
+               ```bash
+               ISSUE_NUM=$(gh issue list --label "ops-hub" \
+                 --search "[OpsHub] ${{ github.event.workflow_run.name }}" \
+                 --state open --json number --jq '.[0].number // empty')
+               if [ -n "$ISSUE_NUM" ]; then
+                 gh issue comment "$ISSUE_NUM" --body "**Tier N auto-fix applied**
+               Root cause: one-liner
+               Fix: file:line description
+               Commit: hash"
+                 gh issue close "$ISSUE_NUM"
+               fi
+               ```
+               (Replace Tier N and brackets with actuals from your diagnosis.)
 
             ---
 
@@ -250,6 +305,8 @@ jobs:
             **Common Failures:**
             - No bets to capture → not a real failure, may need graceful exit (TRANSIENT)
             - Odds API empty response → games may not have started yet (TRANSIENT)
+            - Odds API quota exhausted (x-requests-remaining: 0) → monthly 20K limit hit; BDL fallback activates (WARNING — check cache/odds_api_quota.json)
+            - BDL: 0 scheduled games → BDL V2 uses numeric status codes "1"/"2"/"3", NOT "Scheduled"/"Pre-Game" strings (CODE BUG — check fetch_bdl_games_today() status filter)
             - SQLite lock → concurrent write from another workflow (TRANSIENT)
 
             ### Validation Domain
@@ -273,12 +330,11 @@ jobs:
           set -e
           cd ${{ github.workspace }}
           
-          # Check if an ops-hub issue was created for this failure within the last 10 minutes
+          # Check if an ops-hub issue exists for this workflow (dedup step already handles open/comment logic)
           RECENT_ISSUE=$(gh issue list \
             --label "ops-hub" \
             --state open \
             --search "[OpsHub] ${WORKFLOW_NAME}" \
-            --createdAfter "-10m" \
             --json number 2>/dev/null | jq -r '.[0].number // empty' || echo "")
           
           if [ -n "$RECENT_ISSUE" ]; then
@@ -334,3 +390,51 @@ jobs:
           curl -s -X POST "${SLACK_WEBHOOK_URL}" \
             -H 'Content-type: application/json' \
             --data "{\"text\":\"${MESSAGE}\"}" || echo "Slack notification failed"
+
+  # ─── Daily Claude OAuth Token Expiry Check ─────────────────────────────────
+  # Requires GitHub Actions variable: CLAUDE_TOKEN_EXPIRES_AT (format: YYYY-MM-DD)
+  # Set this variable (repo Settings → Variables) when you refresh the OAuth token.
+  # To refresh: run `claude auth` on the self-hosted runner, then update both the
+  # CLAUDE_CODE_OAUTH_TOKEN secret AND the CLAUDE_TOKEN_EXPIRES_AT variable.
+  check-token-expiry:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check Claude OAuth token expiry
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          EXPIRES_AT: ${{ vars.CLAUDE_TOKEN_EXPIRES_AT }}
+        run: |
+          if [ -z "$EXPIRES_AT" ]; then
+            echo "CLAUDE_TOKEN_EXPIRES_AT variable not set — skipping expiry check"
+            echo "To enable: go to repo Settings → Variables and set CLAUDE_TOKEN_EXPIRES_AT=YYYY-MM-DD"
+            exit 0
+          fi
+
+          NOW=$(date +%s)
+          EXP=$(date -d "$EXPIRES_AT" +%s 2>/dev/null || echo "0")
+          DAYS_LEFT=$(( (EXP - NOW) / 86400 ))
+
+          echo "CLAUDE_CODE_OAUTH_TOKEN expires: $EXPIRES_AT ($DAYS_LEFT days remaining)"
+
+          if [ "$EXP" -eq 0 ]; then
+            echo "Could not parse CLAUDE_TOKEN_EXPIRES_AT='$EXPIRES_AT' — expected YYYY-MM-DD"
+            exit 0
+          fi
+
+          if [ "$DAYS_LEFT" -le 0 ]; then
+            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"🚨 *Claude OAuth Token EXPIRED* (${DAYS_LEFT#-} day(s) ago)\n\nCLAUDE_CODE_OAUTH_TOKEN expired *${EXPIRES_AT}*. Claude Ops Hub diagnosis is non-functional.\n1. Run: \`claude auth\` on the self-hosted runner\n2. Update CLAUDE_CODE_OAUTH_TOKEN secret in GitHub\n3. Update CLAUDE_TOKEN_EXPIRES_AT variable to new expiry date\"}" || true
+            echo "🚨 Slack CRITICAL alert sent — token expired"
+          elif [ "$DAYS_LEFT" -le 3 ]; then
+            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"⚠️ *Claude OAuth Token Expiring in ${DAYS_LEFT} Day(s)*\n\nCLAUDE_CODE_OAUTH_TOKEN expires on *${EXPIRES_AT}*.\n1. Run: \`claude auth\` on the self-hosted runner\n2. Update CLAUDE_CODE_OAUTH_TOKEN secret in GitHub\n3. Update CLAUDE_TOKEN_EXPIRES_AT variable to new expiry date\"}" || true
+            echo "⚠️ Slack warning sent — token expires in $DAYS_LEFT days"
+          else
+            echo "✅ Token valid for $DAYS_LEFT more days — no alert needed"
+          fi

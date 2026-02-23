@@ -8,17 +8,20 @@ Slack    = ops/work notes (pipeline failures, health alerts, diagnostics, QA, PM
 Uses Incoming Webhook — no OAuth, no bot token. Just a URL in SLACK_WEBHOOK_URL.
 Graceful degradation: if URL not set, prints warning but doesn't crash.
 """
+import os
 import requests
 
 try:
     from config import SLACK_WEBHOOK_URL
 except (ImportError, ModuleNotFoundError):
-    import os
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '')
 
 
 def _get_webhook() -> str:
-    return SLACK_WEBHOOK_URL or ''
+    # config.py skips load_dotenv() when IS_SELF_HOSTED=true, relying on injected env vars.
+    # Workflow steps without `env: SLACK_WEBHOOK_URL:` in their step definition get an empty
+    # string from the imported constant. os.getenv() catches the process-level env var directly.
+    return SLACK_WEBHOOK_URL or os.getenv('SLACK_WEBHOOK_URL', '')
 
 
 def send_slack_message(text: str) -> bool:
