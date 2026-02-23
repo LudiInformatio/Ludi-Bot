@@ -37,7 +37,6 @@ _MAX_BLOCK_CHARS = {
     'schedule_notes': 500,   # expanded from 200 — catches trade/rotation news
     'rotation_block': 300,
     'teammates_context': 150,
-    'trends_block': 400,     # player hot/cool trends (L7 vs season) incl. combo props
 }
 
 
@@ -48,24 +47,23 @@ def _safe_inject(text: str, max_chars: int) -> str:
     return text if text else ""
 
 
-def _build_hot_cool_trends_block(home_team: str, away_team: str, conn) -> str:
+def _build_slate_trends_header(tonight_teams: list, conn) -> str:
     """
-    Build a hot/cool trend summary scoped to the two teams playing tonight.
+    Build a single slate-wide trends header sent ONCE at the top of the brief.
 
-    Queries player_trends by team_abbreviation (NOT player names from bets) so
-    the block covers the full rotation, not just prop-bet players. League-wide
-    trend analysis lives in the weekly report — this is game-specific only.
+    Covers all teams playing tonight (full slate, not just top-4 games).
+    Auto-excludes OUT/DOUBTFUL players daily — futureproofed against injuries.
+    GTD and healthy players are included.
 
-    Checks single stats (PTS, REB, AST, 3PM) AND combo props (PRA, PA, PR).
-    Shows the highest-delta trend per player — largest ABS(delta) wins, so a
-    PRA delta of +8.6 beats a PTS delta of +2.8 (combo props surface naturally).
+    Sections:
+    - 3-4 team form signals (off_quality_14d from team_scheme_cache)
+    - 4-5 HOT players (largest positive trend_delta — combo props PRA/PA/PR
+      surface when they're the dominant signal, bigger than single-stat delta)
+    - 4-5 COOLING players (largest negative trend_delta)
 
-    HOT threshold:     trend_delta >= +2.5
-    COOLING threshold: trend_delta <= -2.5
-
-    Returns empty string if no meaningful trends found (graceful no-op).
+    Returns empty string on error or if no notable trends exist.
     """
-    if not home_team or not away_team:
+    if not tonight_teams:
         return ""
 
     KEY_STATS = ('PTS', 'PRA', 'PA', 'PR', 'REB', 'AST', '3PM')
@@ -73,47 +71,96 @@ def _build_hot_cool_trends_block(home_team: str, away_team: str, conn) -> str:
 
     try:
         cursor = conn.cursor()
+        ph_t = ','.join('?' * len(tonight_teams))
         ph_s = ','.join('?' * len(KEY_STATS))
-        cursor.execute(
-            f"""
-            SELECT player_name, stat, l7_avg, season_avg, trend_delta
+
+        # Players to exclude: OUT or DOUBTFUL on any team tonight
+        cursor.execute(f"""
+            SELECT DISTINCT player_name
+            FROM player_injuries
+            WHERE team_abbreviation IN ({ph_t})
+              AND resolved_at IS NULL
+              AND status IN ('OUT', 'DOUBTFUL')
+              AND snapshot_time >= datetime('now', '-14 days')
+        """, tonight_teams)
+        excluded = {r[0] for r in cursor.fetchall()}
+
+        # Team quality signals (off_quality_14d from OFFENSE rows)
+        cursor.execute(f"""
+            SELECT team_abbr, off_quality_14d
+            FROM team_scheme_cache
+            WHERE team_abbr IN ({ph_t}) AND scheme_type = 'OFFENSE'
+        """, tonight_teams)
+        off_quality = {r[0]: r[1] for r in cursor.fetchall()}
+
+        # Player trends — all teams on tonight's slate, injury-filtered
+        cursor.execute(f"""
+            SELECT player_name, team_abbreviation, stat, trend_delta
             FROM player_trends
-            WHERE team_abbreviation IN (?, ?)
+            WHERE team_abbreviation IN ({ph_t})
               AND stat IN ({ph_s})
-              AND l7_avg IS NOT NULL
               AND trend_delta IS NOT NULL
+              AND player_name NOT IN (
+                  SELECT DISTINCT player_name FROM player_injuries
+                  WHERE team_abbreviation IN ({ph_t})
+                    AND resolved_at IS NULL
+                    AND status IN ('OUT', 'DOUBTFUL')
+                    AND snapshot_time >= datetime('now', '-14 days')
+              )
             ORDER BY ABS(trend_delta) DESC
-            """,
-            (home_team, away_team) + KEY_STATS
-        )
+        """, tonight_teams + list(KEY_STATS) + tonight_teams)
         rows = cursor.fetchall()
+
     except Exception:
         return ""
 
-    hot, cool = [], []
-    seen = set()  # One entry per player — strongest ABS(delta) wins
+    # Team form (show STRONG/WEAK offense for tonight's teams — up to 4)
+    hot_teams, cool_teams = [], []
+    for team in tonight_teams:
+        q = off_quality.get(team)
+        if q == 'STRONG':
+            hot_teams.append(team)
+        elif q == 'WEAK':
+            cool_teams.append(team)
 
-    for name, stat, l7, szn, delta in rows:
+    # Player hot/cool (one entry per player — strongest ABS(delta) stat wins)
+    hot_players, cool_players = [], []
+    seen = set()
+    for name, team, stat, delta in rows:
         if name in seen:
             continue
-        short = name.split()[-1]  # Last name for compactness in 400-char budget
+        short = name.split()[-1]
         sign = "+" if delta > 0 else ""
         if delta >= HOT_THRESH:
-            hot.append(f"🔥 {short} {stat} {sign}{delta:.1f}")
+            hot_players.append(f"{short} ({team}) {stat} {sign}{delta:.1f}")
             seen.add(name)
         elif delta <= COOL_THRESH:
-            cool.append(f"❄️ {short} {stat} {delta:.1f}")
+            cool_players.append(f"{short} ({team}) {stat} {delta:.1f}")
             seen.add(name)
 
-    if not hot and not cool:
+    if not hot_teams and not cool_teams and not hot_players and not cool_players:
         return ""
 
-    parts = []
-    if hot:
-        parts.append("HOT: " + " | ".join(hot[:5]))
-    if cool:
-        parts.append("COOLING: " + " | ".join(cool[:3]))
-    return "\n".join(parts)
+    import datetime as _dt
+    today = _dt.datetime.now().strftime('%b %-d')
+    lines = [f"📊 TONIGHT'S TRENDS · {today}"]
+
+    # Team form block
+    team_parts = []
+    if hot_teams:
+        team_parts.append("🔥 Offenses running hot: " + " | ".join(hot_teams[:4]))
+    if cool_teams:
+        team_parts.append("❄️ Offenses running cold: " + " | ".join(cool_teams[:3]))
+    if team_parts:
+        lines.append("\n".join(team_parts))
+
+    # Player blocks
+    if hot_players:
+        lines.append("🔥 HOT (L7 vs season):\n" + " | ".join(hot_players[:5]))
+    if cool_players:
+        lines.append("❄️ COOLING (L7 vs season):\n" + " | ".join(cool_players[:4]))
+
+    return "\n\n".join(lines)
 
 
 def _build_rotation_block(team_abbr: str, out_names: list, cursor) -> str:
@@ -584,6 +631,24 @@ Return JSON only."""
                 if skipped > 0:
                     print(f"   ℹ️  {len(scored_games)} games on slate — generating notes for top {len(top_games)}, skipping {skipped} low-value games")
 
+                # Collect all teams on tonight's full slate (ALL scored games, not just top N)
+                # Used by slate trends header — ensures teams from lower-ranked games are included
+                tonight_teams = list({
+                    team
+                    for _, bets in scored_games if bets
+                    for team in [bets[0].get('home_team', ''), bets[0].get('away_team', '')]
+                    if team and team != 'UNK'
+                })
+
+                # Send slate-wide trends header ONCE before any per-game notes
+                slate_trends = _build_slate_trends_header(tonight_teams, conn)
+                if slate_trends:
+                    print(f"   📊 Sending slate trends header ({len(tonight_teams)} teams)...")
+                    if not self.dry_run:
+                        send_message(slate_trends, parse_mode=None)
+                    else:
+                        print(f"   [DRY RUN] Slate trends:\n{slate_trends}\n")
+
                 for gid, bets in top_games:
                     if not bets: continue
                     
@@ -670,10 +735,6 @@ Return JSON only."""
                             f"(Edge: {b.get('edge', 0)}%)"
                         )
                     edges_block = "\n".join(edges_lines)
-
-                    # 5b. Hot/cool player trends (player_trends table — L7 vs season)
-                    # Scoped to this game's two teams only — league-wide is the weekly report
-                    hot_cool_trends_block = _build_hot_cool_trends_block(home_team, away_team, conn)
 
                     # 6. Build Prompt
                     # Handle template placeholders that are for Claude (e.g., {player}) by preserving them
@@ -789,7 +850,6 @@ Return JSON only."""
                             time_context_note=time_context_note,
                             away_rotation=_safe_inject(away_rotation, _MAX_BLOCK_CHARS['rotation_block']),
                             home_rotation=_safe_inject(home_rotation, _MAX_BLOCK_CHARS['rotation_block']),
-                            hot_cool_trends_block=_safe_inject(hot_cool_trends_block or "No notable trends.", _MAX_BLOCK_CHARS['trends_block']),
                             **preservation_keys
                         )
                         
