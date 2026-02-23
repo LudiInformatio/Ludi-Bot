@@ -16,13 +16,13 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 21, 2026 9:39 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 22, 2026 7:42 PM EST) |
 
 ### Key Features
 
 - **Monte Carlo Simulations** — 10,000 iterations per player with Poisson/Normal hybrid distributions
 - **Usage Vacuum Theory** — Automatic usage redistribution when star players are OUT
-- **19-Archetype Matchup System** — Player style vs defensive scheme analysis (incl. 5 defensive archetypes)
+- **Hybrid Archetype System** — 15 offensive archetypes in `players.archetype`; deterministic `players.defensive_tag` (PERIMETER_HAWK/RIM_GUARDIAN/SWITCHABLE_ANCHOR/HUSTLE_DISRUPTOR/WEAK_LINK); weekly Haiku batch + Synergy validation gate
 - **Rotation Intelligence** — 396 player rotation profiles + 789 beneficiary pairs (e.g. Embiid OUT → Drummond +18 min)
 - **Trend Engine** — Pre-computed L7/L10/L15 trends + live hit rate/streak for 4,500+ player-stat rows; stagger context
 - **Scoring Environment** — Dynamic 14-day OVER hit rate tracker; auto-adjusts projections + 4 data-proven OVER filters
@@ -34,6 +34,8 @@ A production-grade betting analytics engine that generates player prop recommend
 - **Real-time Injury Intelligence** — Tank01 + BDL + RotoWire/RealGM RSS dual-source corroboration; ESPN suspension sync (all 30 teams, free); staleness guards; B2B fatigue detection
 - **Referee Impact Modeling** — Pace, whistle tendency, and star bias factors
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
+- **Slate Trends Header** — `_build_slate_trends_header()` sends injury-filtered HOT/COOLING signals once per briefing before per-game notes
+- **Advanced Stats Pipeline** — BDL V2 advanced/hustle/tracking stats + SportsDataIO enrichment (`started`, fantasy pts, doubles); Ghost Protocol reserved for on-court only
 
 ---
 
@@ -133,7 +135,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 21, 2026 9:39 PM EST
+**Last Updated:** February 22, 2026 7:42 PM EST
 
 **Phase 8 Completions:**
 
@@ -158,6 +160,10 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
 | Infra | Evening Lock Quality Sprint (Feb 21) — 9 fixes: game notes fallback, Tier 2 race condition, staleness guards, in-progress game skip, Perplexity hours_to_game, time-aware confidence mode |
 | Infra | Slack/Notification Split, Model Calibration, Morning/Evening Brief Hardening, Injury Intelligence Hardening |
+| Infra | Hybrid Off/Def Role Tagging (Feb 22) — `players.archetype` = 15 offensive archetypes; `players.defensive_tag` deterministic; `module_x` skips WOWY vacuum for pure defenders |
+| Infra | Scheme Cache d14 Fix + Quality Tiers (Feb 22) — self-referential subquery fix for tracking stats; BDL z-score `off_quality_14d`/`def_quality_14d` columns |
+| Infra | Morning Brief Slate Trends Header (Feb 22) — injury-filtered HOT/COOLING leader signals; single Telegram send before per-game notes loop |
+| Infra | BDL V2 + SportsDataIO Enrichment (Feb 22) — 4 new sync scripts; 100K+ rows backfilled (advanced/hustle/tracking/plus_minus/season avgs/started/fantasy pts); Ghost Protocol `--skip-advanced` |
 
 **Planned Next:**
 - Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
@@ -200,7 +206,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | Tank01 | Paid (1K/day) | Rosters, injuries, box scores |
 | PBP Stats | Free | Shot quality, WOWY data |
 | Perplexity Sonar | Paid | News context for injuries + game notes |
-| NBA.com | Scraped | Referee assignments, tracking data |
+| SportsDataIO | Free (100 calls/day) | Fantasy stats enrichment (`started`, fantasy pts, doubles) |
+| ESPN Public API | Free (no auth) | Suspension intelligence (30-team scan); future game injuries + Tier 3 lines |
+| NBA.com | Scraped | Referee assignments, on-court tracking data (Ghost Protocol) |
 
 ---
 
