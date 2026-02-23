@@ -197,6 +197,8 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 7:30-11:30 PM | `capture_closing_lines.yml` | CLV capture (5 runs/night) |
 | Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data (6hr sync) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
+| 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
+| 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
 | On failure | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
 
 ---
@@ -225,6 +227,8 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 ## Custom Skills
 
 This project has custom skills available:
+- `/session-brief` - Start-of-session orientation (ROADMAP + memory + git log — read-only)
+- `/session-debrief` - End-of-session wrap-up (update docs, commit, send PM bot break)
 - `/backtest` - Run validation suite and check model accuracy
 - `/daily` - Daily pipeline health check
 - `/sports-model` (alias: `/sma`) - Use `skills/sports-data-model-architect` for balanced audit-first data modeling + implementation support
