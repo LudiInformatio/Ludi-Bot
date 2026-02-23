@@ -249,11 +249,10 @@ jobs:
     timeout-minutes: 60  # Job-level ceiling: workflow dies after 60 min no matter what
 
     steps:
-      - name: Sync PBP Stats WOWY Data
-        timeout-minutes: 30  # Step-level cap: this specific step gets 30 min max
-        continue-on-error: true  # (only if non-critical)
+      - name: Run Module H (Fetch recent games)
+        timeout-minutes: 10  # Step-level cap: this specific step gets 10 min max
         run: |
-          python3 scripts/sync_pbp_wowy.py --top 10 --verbose --resume
+          python3 module_h_historian.py
 
       - name: Sync BDL Clutch Usage
         timeout-minutes: 10  # Faster step gets smaller cap
@@ -261,14 +260,16 @@ jobs:
           python3 scripts/sync_bdl_clutch_usage.py
 ```
 
+**Critical rule:** The sum of step timeouts must fit within the job-level ceiling. If 3 steps have 30+25+20=75 min of timeouts but the job ceiling is 60 min, the last steps will NEVER run. This caused the Feb 23 data sync cancellation — fix was to split heavy steps to their own workflow.
+
 **Guideline for timeout values:**
 | Step Type | Timeout |
 |-----------|---------|
 | Database operations | 5 min |
 | Single API call | 5–10 min |
 | Multi-page API sync | 15 min |
-| WOWY/heavy sync | 30 min |
-| Job-level ceiling | 60 min |
+| Heavy sync (own workflow) | 25–30 min |
+| Job-level ceiling | 60–90 min |
 
 ---
 
@@ -276,22 +277,24 @@ jobs:
 
 **Problem:** Scheduled health-check workflows (polling) don't know WHICH workflow failed or WHY. They're also noisy on healthy days.
 
-**Solution:** Use `workflow_run` with `conclusion == 'failure'` to trigger diagnosis only when a workflow actually fails.
+**Solution:** Use `workflow_run` with `conclusion == 'failure'` OR `'cancelled'` to trigger diagnosis when a workflow fails or times out.
 
 ```yaml
-# Claude Ops Hub pattern — fires on workflow failure
+# Claude Ops Hub pattern — fires on workflow failure OR cancellation
 on:
   workflow_run:
     workflows:
       - "Daily Data Sync"
       - "Daily Production Pipeline"
+      - "PBP Stats WOWY Sync"
       # ... 12 more
     types:
       - completed
 
 jobs:
   diagnose-failure:
-    if: github.event.workflow_run.conclusion == 'failure'  # ONLY on failure
+    # IMPORTANT: Include 'cancelled' — timeouts produce cancelled, not failure
+    if: github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled'
     runs-on: ubuntu-latest
     # ... Claude reads failure logs, creates issue, attempts fix
 ```
@@ -301,6 +304,8 @@ jobs:
 - Carries the failing workflow's run ID (`github.event.workflow_run.id`) → `gh run view --log-failed`
 - No false positives on healthy days
 - Can read the actual failure logs programmatically
+
+**Why include `cancelled`:** GitHub Actions timeouts produce `cancelled` conclusion, not `failure`. Without checking both, timeout-related outages go completely undetected. This was the root cause of the Feb 23 blind spot.
 
 ---
 

@@ -104,6 +104,20 @@ in `utils/claude_prompts.py` — one worked example is worth 10 instructions.
 
 ---
 
+## Data Sync Domain — Example Chain 2
+
+**Workflow**: Daily Data Sync
+**Logs**: Job cancelled after 60 minutes. Last output from `sync_pbp_wowy.py` or `sync_four_factor_wowy.py`.
+
+**Step 1 — NSP Classification**:
+{"failure_type": "KNOWN_PATTERN", "matched_fix": "2026-02-23 — PBP Stats Timeout Cascade", "confidence": "HIGH", "reasoning": "PBP Stats scripts exceed job timeout budget — already split to pbp_stats_sync.yml"}
+
+**Step 2 — Tier**: TRANSIENT (already fixed — PBP Stats scripts live in `pbp_stats_sync.yml` now, not `data_sync.yml`)
+
+**Step 3 — Action**: If this still happens after the split, check whether new steps were added to `data_sync.yml` that push total runtime over 60 min. Verify step timeout sum fits within job-level `timeout-minutes`.
+
+---
+
 ## When to Escalate TRANSIENT → TIER_3
 
 If the same TRANSIENT failure repeats 3+ times in a week:

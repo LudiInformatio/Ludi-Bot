@@ -33,9 +33,8 @@ _rate_limit_reset = None
 
 def _get_session():
     session = requests.Session()
-    # Add browser-like headers to avoid 403 Forbidden
     session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Referer': 'https://www.pbpstats.com/',
         'Origin': 'https://www.pbpstats.com'
     })
@@ -176,7 +175,7 @@ def get_game_stats(game_id: str, stat_type: str = "Player") -> Optional[Dict]:
     
     try:
         _apply_rate_limit()
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
@@ -209,7 +208,7 @@ def get_game_logs(entity_id: str, entity_type: str = "Player",
     
     try:
         _apply_rate_limit()
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
@@ -248,7 +247,7 @@ def get_totals(entity_type: str = "Player", team_id: str = None,
     
     try:
         _apply_rate_limit()
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         _check_rate_limit_headers(response)
         response.raise_for_status()
         return response.json()
@@ -294,8 +293,8 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
 
     url = f"{BASE_URL}/get-wowy-stats/nba"
 
-    # Try with 120s timeout first, fallback to 180s on timeout
-    for timeout in [120, 180]:
+    # Try with 60s timeout first, fallback to 90s on timeout
+    for timeout in [60, 90]:
         try:
             _apply_rate_limit()
             response = _session.get(url, params=params, timeout=timeout)
@@ -309,10 +308,10 @@ def get_wowy_stats(team_id: str, player_ids: List[str],
 
             return data
         except requests.exceptions.Timeout:
-            if timeout == 120:
-                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+            if timeout == 60:
+                print(f"[PBP_STATS] Timeout at 60s, retrying with 90s...")
                 continue  # Try next timeout
-            print(f"[PBP_STATS] Final timeout at 180s for WOWY stats")
+            print(f"[PBP_STATS] Final timeout at 90s for WOWY stats")
             return None
         except requests.RequestException as e:
             print(f"[PBP_STATS] Error fetching WOWY stats: {e}")
@@ -354,8 +353,8 @@ def get_wowy_combination_stats(team_id: str, player_ids: List[str],
 
     url = f"{BASE_URL}/get-wowy-combination-stats/nba"
 
-    # Try with 120s timeout first, fallback to 180s on timeout
-    for timeout in [120, 180]:
+    # Try with 60s timeout first, fallback to 90s on timeout
+    for timeout in [60, 90]:
         try:
             response = _session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
@@ -367,10 +366,10 @@ def get_wowy_combination_stats(team_id: str, player_ids: List[str],
 
             return data
         except requests.exceptions.Timeout:
-            if timeout == 120:
-                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+            if timeout == 60:
+                print(f"[PBP_STATS] Timeout at 60s, retrying with 90s...")
                 continue  # Try next timeout
-            print(f"[PBP_STATS] Final timeout at 180s for WOWY combo stats")
+            print(f"[PBP_STATS] Final timeout at 90s for WOWY combo stats")
             return None
         except requests.RequestException as e:
             print(f"[PBP_STATS] Error fetching WOWY combo stats: {e}")
@@ -415,8 +414,8 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
         if cached:
             return cached
 
-    # Try with 120s timeout first, fallback to 180s on timeout
-    for timeout in [120, 180]:
+    # Try with 60s timeout first, fallback to 90s on timeout
+    for timeout in [60, 90]:
         try:
             _apply_rate_limit()
             response = _session.get(url, params=params, timeout=timeout)
@@ -430,10 +429,10 @@ def get_on_off(team_id: str, player_id: str, stat_type: str = "player",
 
             return data
         except requests.exceptions.Timeout:
-            if timeout == 120:
-                print(f"[PBP_STATS] Timeout at 120s, retrying with 180s...")
+            if timeout == 60:
+                print(f"[PBP_STATS] Timeout at 60s, retrying with 90s...")
                 continue  # Try next timeout
-            print(f"[PBP_STATS] Final timeout at 180s for on/off data")
+            print(f"[PBP_STATS] Final timeout at 90s for on/off data")
             return None
         except requests.RequestException as e:
             print(f"[PBP_STATS] Error fetching on/off data: {e}")
@@ -488,7 +487,7 @@ def get_shots(entity_id: str, entity_type: str = "Player",
     }
     
     try:
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -515,7 +514,7 @@ def get_team_leverage_summary(season: str = CURRENT_SEASON,
         params["Leverage"] = leverage
     
     try:
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -666,7 +665,7 @@ def get_team_players(team_id: str, season: str = CURRENT_SEASON,
     }
     
     try:
-        response = _session.get(url, params=params, timeout=120)
+        response = _session.get(url, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

@@ -460,6 +460,8 @@ def main() -> None:
             print(f"     Updated (was NULL):       {updated}")
         print(f"     Already had value (skip): {already_had_value}")
         print(f"     No match in DB:           {no_match}")
+        if no_match > 0 and updated == 0:
+            print(f"     ℹ️  Expected if Module H hasn't ingested {game_date} yet.")
         print()
 
         total_updated += updated

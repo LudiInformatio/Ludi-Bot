@@ -186,7 +186,8 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | Time (EST) | Workflow | Purpose |
 |------------|----------|---------|
 | 1:00 AM | `db_backup.yml` | Automated database backup |
-| 3:00 AM | `data_sync.yml` | Sync game logs, WOWY, clutch, assists |
+| 3:00 AM | `data_sync.yml` | Sync game logs, clutch, assists, enrichment |
+| 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
 | 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
 | 9:00 AM | `daily_briefing.yml` | Morning Telegram cards |
@@ -199,7 +200,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
 | 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
-| On failure | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
+| On failure/cancel | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
 
 ---
 

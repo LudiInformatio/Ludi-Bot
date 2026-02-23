@@ -17,8 +17,11 @@ import json
 import os
 import sqlite3
 import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
+
+MAX_RUNTIME_SECONDS = 720  # 12 minutes
 
 sys.path.insert(0, '.')
 
@@ -325,8 +328,18 @@ def main():
 
     total_players = 0
     total_teams_success = 0
+    _start_time = time.time()
 
     for i, team in enumerate(teams):
+        # Check wall-clock time limit
+        if time.time() - _start_time > MAX_RUNTIME_SECONDS:
+            print(f"\n⚠️ Runtime limit ({MAX_RUNTIME_SECONDS}s) reached. Saving checkpoint...")
+            if args.resume:
+                completed_so_far = completed[:i]
+                remaining = teams[i:]
+                _save_resume_state(completed_so_far, remaining)
+            break
+
         result = sync_team(conn, team, verbose=args.verbose)
         if result['success']:
             total_teams_success += 1

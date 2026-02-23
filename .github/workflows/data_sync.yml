@@ -214,18 +214,6 @@ jobs:
         run: |
           python3 scripts/sync_pbp_totals.py
 
-      - name: Sync PBP Stats WOWY Data
-        if: steps.slate_check.outputs.is_extended_break != 'true'
-        continue-on-error: true  # Non-critical: partial success is acceptable
-        timeout-minutes: 30
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          TANK01_KEY: ${{ secrets.TANK01_KEY }}
-          ODDS_API_TIER: paid
-          TANK01_TIER: paid
-        run: |
-          python3 scripts/sync_pbp_wowy.py --top 10 --verbose --resume
-
       - name: Sync Depth Charts
         continue-on-error: true
         timeout-minutes: 5
@@ -245,34 +233,6 @@ jobs:
           TANK01_TIER: paid
         run: |
           python3 scripts/sync_pbp_shot_quality.py
-
-      - name: Sync Four-Factor WOWY
-        continue-on-error: true
-        timeout-minutes: 25
-        id: sync_four_factor
-        run: |
-          python3 scripts/sync_four_factor_wowy.py --resume
-
-      - name: Alert on Four-Factor WOWY Failure
-        if: steps.sync_four_factor.outcome == 'failure' && always()
-        run: |
-          echo "⚠️ SYNC FAILED: Four-Factor WOWY"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Sync Team Leverage Profiles
-        continue-on-error: true
-        timeout-minutes: 20
-        id: sync_leverage
-        run: |
-          python3 scripts/sync_team_leverage_profiles.py --resume
-
-      - name: Alert on Team Leverage Failure
-        if: steps.sync_leverage.outcome == 'failure' && always()
-        run: |
-          echo "⚠️ SYNC FAILED: Team Leverage Profiles"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Sync Injuries (Overnight Refresh)
         continue-on-error: true

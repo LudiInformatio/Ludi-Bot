@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-02-23 — Daily Data Sync: PBP Stats Timeout Cascade (Job Cancelled)
+
+- **Workflow**: `data_sync.yml`
+- **Symptom**: Job cancelled after 60 minutes. 22 downstream steps (injuries, rotations, trends, scheme cache, commit) skipped entirely. Ops Hub did NOT fire (only triggered on `failure`, not `cancelled`).
+- **Root Cause**: 3 PBP Stats scripts had step timeouts summing to 75 min (30+25+20) inside a 60-min job timeout budget. `sync_pbp_wowy.py` and `sync_four_factor_wowy.py` each hung until their individual timeouts, consuming 55 min. Job-level timeout killed everything before remaining steps could run.
+- **Fix Applied**: Tier 2 (multi-file) —
+  1. Split 3 PBP Stats scripts to own workflow `pbp_stats_sync.yml` (Mon/Wed/Fri 5 AM EST, 90-min budget)
+  2. Removed those steps from `data_sync.yml` (remaining steps ~25 min, well within 60-min budget)
+  3. Added `cancelled` trigger to `claude-ops-hub.yml` condition
+  4. Added wall-clock guards (`MAX_RUNTIME_SECONDS`) in all 3 scripts
+  5. Lowered HTTP timeouts in `pbp_stats_client.py` (120→60s, 180→90s)
+  6. Added BDL fallback to Module H (related: Tank01 returned 0 games for Feb 22 despite 11 games)
+- **Commit**: (this session)
+
+---
+
 ## 2026-02-22 — Capture Closing Lines: BDL V2 Status Filter + Quota Pre-flight
 
 - **Workflow**: `capture_closing_lines.yml`

@@ -16,7 +16,7 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 22, 2026 7:42 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 23, 2026 6:19 PM EST) |
 
 ### Key Features
 
@@ -118,7 +118,8 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Workflow | Schedule (EST) | Purpose |
 |----------|---------------|---------|
 | DB Backup | 1:00 AM | Automated database backup (7-day rotation) |
-| Daily Data Sync | 3:00 AM | Game logs, WOWY, injuries, rotation profiles, scoring environment |
+| Daily Data Sync | 3:00 AM | Game logs, injuries, rotation profiles, scoring environment, enrichment |
+| PBP Stats WOWY Sync | 5:00 AM Mon/Wed/Fri | PBP Stats WOWY + four-factor + team leverage profiles |
 | Daily Reports | 6:00 AM | Work notes + bet summary |
 | WOWY Sync | 7:00 AM | Daily WOWY sync |
 | Morning Briefing | 9:00 AM | AI game notes + player spotlights → Telegram |
@@ -128,14 +129,14 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Nightly Debrief | 8:30 PM | Bet settlement + daily P&L |
 | Closing Line Capture | 7:30-11:30 PM | CLV capture (5 runs/night) |
 | Weekly Validation | Tuesdays | Backtest + archetype classifier + league rankings + ops digest → Slack |
-| Claude Ops Hub | On failure | Auto-diagnosis → Slack; GitHub issue creation |
+| Claude Ops Hub | On failure/cancel | Auto-diagnosis → Slack; GitHub issue creation |
 
 ---
 
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 22, 2026 7:42 PM EST
+**Last Updated:** February 23, 2026 6:19 PM EST
 
 **Phase 8 Completions:**
 
@@ -164,6 +165,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Scheme Cache d14 Fix + Quality Tiers (Feb 22) — self-referential subquery fix for tracking stats; BDL z-score `off_quality_14d`/`def_quality_14d` columns |
 | Infra | Morning Brief Slate Trends Header (Feb 22) — injury-filtered HOT/COOLING leader signals; single Telegram send before per-game notes loop |
 | Infra | BDL V2 + SportsDataIO Enrichment (Feb 22) — 4 new sync scripts; 100K+ rows backfilled (advanced/hustle/tracking/plus_minus/season avgs/started/fantasy pts); Ghost Protocol `--skip-advanced` |
+| Infra | Data Sync Pipeline Fix (Feb 23) — PBP Stats split to own Mon/Wed/Fri workflow; Module H BDL fallback; Ops Hub `cancelled` trigger; wall-clock guards + HTTP timeout hardening |
 
 **Planned Next:**
 - Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready

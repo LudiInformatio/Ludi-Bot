@@ -11,6 +11,9 @@ import config
 from utils.api_monitor import get_monitor
 from utils.player_id_resolver import PlayerIDResolver
 
+# BDL fallback for Module H
+from utils.bdl_client import _get_client
+
 # =========================================================
 # LUDI INFORMATIO | MODULE H: THE HISTORIAN
 # V2.0 - DIRECT SQLITE WRITES (Eliminates JSON anti-pattern)
@@ -561,6 +564,7 @@ class LudiHistorian:
     def _fetch_tank01_boxscores(self, date_str):
         """
         Fetches all box scores for a specific date using Tank01.
+        Falls back to BDL if Tank01 returns 0 games.
         """
         if not self._check_budget():
             return []
@@ -579,7 +583,10 @@ class LudiHistorian:
             data = r.json()
             games = data.get('body', [])
             
-            if not games: return []
+            if not games:
+                # Tank01 returned 0 games - try BDL fallback
+                print(f"   ⚠️ Tank01 returned 0 games for {date_str}, trying BDL fallback...")
+                return self._fetch_bdl_boxscores(date_str)
 
             # Loop through games
             for game in games:
@@ -591,6 +598,93 @@ class LudiHistorian:
 
         except Exception as e:
             print(f"Error fetching date {date_str}: {e}")
+            # Try BDL fallback on exception
+            print(f"   ⚠️ Tank01 exception for {date_str}, trying BDL fallback...")
+            return self._fetch_bdl_boxscores(date_str)
+
+    def _fetch_bdl_boxscores(self, date_str):
+        """
+        BDL fallback: Fetch box scores from Ball Don't Lie API when Tank01 fails.
+        Uses COALESCE pattern - never overwrites existing rows.
+        """
+        try:
+            client = _get_client()
+            if not client:
+                print("   ⚠️ BDL client not available")
+                return []
+
+            # Convert date_str (YYYYMMDD) to YYYY-MM-DD for BDL
+            bdl_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+            
+            games = client.get_box_scores(date=bdl_date)
+            if not games:
+                print(f"   ⚠️ Module H: 0 game logs ingested for {bdl_date} (BDL also returned no games)")
+                return []
+
+            clean_stats = []
+            for game in games:
+                # Parse BDL game structure
+                game_id = game.get('id', f"BDL_{date_str}")
+                
+                for side_key in ("home_team", "visitor_team"):
+                    side = game.get(side_key)
+                    if not isinstance(side, dict):
+                        continue
+                    
+                    team_abbr = side.get('team', {}).get('abbreviation', 'UNK')
+                    players = side.get("players", [])
+                    
+                    for player_entry in players:
+                        if not isinstance(player_entry, dict):
+                            continue
+                        
+                        player_info = player_entry.get("player") or {}
+                        first = (player_info.get("first_name") or "").strip()
+                        last = (player_info.get("last_name") or "").strip()
+                        if not first and not last:
+                            continue
+                        
+                        player_name = f"{first} {last}"
+                        
+                        # Resolve player ID via canonical IDs
+                        canonical_player_id = self._resolve_player_id(
+                            str(player_info.get('id', '')),
+                            player_name
+                        )
+                        
+                        record = {
+                            "GAME_ID": game_id,
+                            "GAME_DATE": datetime.strptime(date_str, '%Y%m%d'),
+                            "PLAYER_ID": canonical_player_id,
+                            "PLAYER_NAME": player_name,
+                            "TEAM_ABBREVIATION": team_abbr,
+                            "PTS": float(player_entry.get('pts', 0) or 0),
+                            "AST": float(player_entry.get('ast', 0) or 0),
+                            "REB": float(player_entry.get('reb', 0) or 0),
+                            "MIN": self._clean_minutes(player_entry.get('min', 0)),
+                            "STL": float(player_entry.get('stl', 0) or 0),
+                            "BLK": float(player_entry.get('blk', 0) or 0),
+                            "TOV": float(player_entry.get('turnover', 0) or 0),
+                            "FGM": float(player_entry.get('fgm', 0) or 0),
+                            "FGA": float(player_entry.get('fga', 0) or 0),
+                            "FG3M": float(player_entry.get('fg3m', 0) or 0),
+                            "FG3A": float(player_entry.get('fg3a', 0) or 0),
+                            "FTM": float(player_entry.get('ftm', 0) or 0),
+                            "FTA": float(player_entry.get('fta', 0) or 0),
+                            "OREB": float(player_entry.get('oreb', 0) or 0),
+                            "DREB": float(player_entry.get('dreb', 0) or 0),
+                            "PF": float(player_entry.get('pf', 0) or 0),
+                            "FANTASY_PTS": 0.0,
+                        }
+                        clean_stats.append(record)
+            
+            if clean_stats:
+                print(f"   ✅ BDL fallback: {len(clean_stats)} records from {len(games)} games")
+            
+            return clean_stats
+
+        except Exception as e:
+            print(f"   ⚠️ BDL fallback failed for {date_str}: {e}")
             return []
 
     def _fetch_single_game_box(self, game_id, date_str, storage_list, headers):

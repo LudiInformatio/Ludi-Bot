@@ -20,8 +20,11 @@ import json
 import os
 import sqlite3
 import sys
+import time
 from datetime import datetime
 from typing import List, Dict, Optional
+
+MAX_RUNTIME_SECONDS = 1200  # 20 minutes
 
 # Add project root to path
 sys.path.insert(0, '.')
@@ -463,9 +466,19 @@ Examples:
     total_fail = 0
     all_players_synced = []
     newly_completed = []
+    _start_time = time.time()
 
     try:
         for team in teams_to_sync:
+            # Check wall-clock time limit
+            if time.time() - _start_time > MAX_RUNTIME_SECONDS:
+                print(f"\n⚠️ Runtime limit ({MAX_RUNTIME_SECONDS}s) reached. Saving checkpoint...")
+                if args.resume and not args.dry_run:
+                    all_completed = completed_teams + newly_completed
+                    remaining = [t for t in all_teams if t not in all_completed]
+                    _save_resume_state(all_completed, remaining, "paused", "runtime_limit")
+                break
+
             try:
                 result = sync_team(conn, team, args.top, args.verbose, args.dry_run)
 

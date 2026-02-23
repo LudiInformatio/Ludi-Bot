@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 22, 2026 9:20 PM EST
+**Last Updated:** February 23, 2026 6:19 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅**
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅** + **Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -233,6 +233,27 @@ Third sprint of Feb 20 — hardened the morning/evening brief pipeline and compl
 
 ---
 
+### Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅ COMPLETE (Feb 23, 2026)
+
+Daily Data Sync was cancelled after 60 minutes — 3 PBP Stats scripts consumed 55 of the 60-min job budget, causing 22 downstream steps to be skipped entirely. Ops Hub didn't fire because it only triggered on `failure`, not `cancelled`.
+
+**Fix 1 — PBP Stats Split (`pbp_stats_sync.yml`):**
+- Moved `sync_pbp_wowy.py`, `sync_four_factor_wowy.py`, `sync_team_leverage_profiles.py` to own workflow (Mon/Wed/Fri 5 AM EST, 90-min budget). Season-aggregate data doesn't need daily refresh. Cuts PBP Stats API calls 57% (7,140/week → 3,060/week).
+
+**Fix 2 — Ops Hub `cancelled` trigger:**
+- `claude-ops-hub.yml` now fires on both `failure` AND `cancelled` conclusions. Also monitors the new `PBP Stats WOWY Sync` workflow.
+
+**Fix 3 — Python-level hardening:**
+- Wall-clock guards (`MAX_RUNTIME_SECONDS`) in all 3 PBP Stats scripts — exit gracefully with checkpoint before step timeout kills the process.
+- `utils/pbp_stats_client.py`: HTTP timeouts lowered (120s→60s primary, 180s→90s fallback). User-Agent updated to Chrome/131.
+
+**Fix 4 — Module H BDL fallback:**
+- `module_h_historian.py`: When Tank01 returns 0 games for a date, automatically falls back to BDL `get_box_scores()`. Uses canonical ID resolution and COALESCE pattern. Prevents silent 0-row ingestion (Feb 22 bug: 11 games/382 players existed but Module H ingested nothing).
+
+**9 files changed:** `pbp_stats_sync.yml` (new), `data_sync.yml`, `claude-ops-hub.yml`, 3 PBP Stats scripts, `pbp_stats_client.py`, `module_h_historian.py`, `sync_bdl_plus_minus.py`.
+
+---
+
 ### Phase 7: All-Star Break Sprint ✅ COMPLETE (Feb 17–19, 2026)
 
 Module C/E/F overhauls (V4.0/V4.0/V5.2) · OVER bias fixed · GENERALIST 20.7% · 5 defensive archetypes · 10,780 duplicate rows removed · nba_api 10 endpoints integrated. Pipeline validated on first game day back (Feb 19). Full details: `docs/archive/phase_reports/PHASE_7_COMPLETION_SUMMARY.md`
@@ -301,12 +322,12 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 - [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
 - [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved per already-synced date in weekly backfills)
 - [ ] Ghost Protocol on/off scraping: uncomment/implement on/off tab in `WOWY_MANIFEST` (currently lineups-only)
-- [ ] Schedule `sync_pbp_wowy.py` weekly in `data_sync.yml` (season-level on/off splits, currently manual-only)
+- [x] ~~Schedule `sync_pbp_wowy.py` weekly in `data_sync.yml`~~ → Moved to own workflow `pbp_stats_sync.yml` (Mon/Wed/Fri 5 AM EST) — Feb 23, 2026
 - [ ] Multi-book arbitrage detection
 - [ ] Steam move detection (rapid line movement alerts)
 
 ### GH Actions / Claude Ops Improvements (identified Feb 20, 2026)
-- [ ] **`claude-ops-hub.yml` upgrade**: Use `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN` — proper tool, reads workflow logs, posts Slack diagnosis. Currently uses ad-hoc Sonnet call.
+- [x] **`claude-ops-hub.yml` upgrade**: Uses `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN`. BERT-trained diagnosis via KNOWN_FIXES.md few-shot context. Triggers on both `failure` and `cancelled` conclusions. — Feb 22-23, 2026
 - [ ] **PR review action**: Add `anthropics/claude-code-action@v1` to PR events for automated code review on push to main
 - [ ] **`pip-audit` step**: Add to `data_sync.yml` or a separate security workflow — fails build on known CVEs in `requirements.txt`
 - [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log` table, sends weekly $/1k-token summary to Slack

@@ -1,0 +1,80 @@
+name: PBP Stats WOWY Sync
+
+on:
+  schedule:
+    - cron: '0 10 * * 1,3,5'  # Mon/Wed/Fri at 5 AM EST
+  workflow_dispatch:
+
+concurrency:
+  group: pbp-stats-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-pbp-wowy:
+    runs-on: self-hosted
+    timeout-minutes: 90
+    env:
+      IS_SELF_HOSTED: 'true'
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: false
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r requirements.txt
+
+      - name: Sync PBP Stats WOWY Data
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          python3 scripts/sync_pbp_wowy.py --top 10 --verbose --resume
+
+      - name: Sync Four-Factor WOWY
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          python3 scripts/sync_four_factor_wowy.py --resume
+
+      - name: Sync Team Leverage Profiles
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          python3 scripts/sync_team_leverage_profiles.py --resume
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data '{"text":"❌ WORKFLOW FAILED: PBP Stats WOWY Sync - Check GitHub Actions"}' || echo "Slack notification failed"
