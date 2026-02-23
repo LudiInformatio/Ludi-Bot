@@ -7,6 +7,7 @@ import argparse
 import sqlite3
 import os
 import sys
+import math
 from datetime import datetime, timedelta
 from collections import Counter
 
@@ -44,6 +45,57 @@ CREATE TABLE IF NOT EXISTS team_scheme_cache (
     PRIMARY KEY (team_abbr, scheme_type)
 )
 """
+
+
+def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) -> dict:
+    """
+    Compute relative defensive quality tiers using player_game_advanced.def_rating.
+
+    Why player_game_advanced instead of tracking data: Ghost Protocol tracking only syncs
+    weekly, so the 14d window rarely has enough game rows (min_games=5). BDL advanced stats
+    sync daily and have 35k+ rows with full season coverage.
+
+    Returns dict: {team_abbr: 'STRONG' | 'AVERAGE' | 'WEAK'}
+    Tier cutoff: 1 standard deviation from league average (z-score threshold).
+    Lower def_rating = better defense (points allowed per 100 possessions).
+
+    Falls back to empty dict if fewer than 15 teams have data (can't compute relative tiers).
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """
+            SELECT team_abbrev, AVG(def_rating) as avg_dr, COUNT(*) as n
+            FROM player_game_advanced
+            WHERE game_date >= ? AND game_date <= ?
+              AND def_rating IS NOT NULL
+            GROUP BY team_abbrev
+            HAVING COUNT(*) >= 10
+            ORDER BY avg_dr
+            """,
+            (d14_start, window_end),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return {}
+
+    if len(rows) < 15:  # Need most teams to compute meaningful relative tiers
+        return {}
+
+    vals = [r[1] for r in rows]
+    league_avg = sum(vals) / len(vals)
+    std = math.sqrt(sum((v - league_avg) ** 2 for v in vals) / len(vals))
+
+    result = {}
+    for team_abbrev, avg_dr, _ in rows:
+        if avg_dr < league_avg - std:
+            result[team_abbrev] = "STRONG"
+        elif avg_dr > league_avg + std:
+            result[team_abbrev] = "WEAK"
+        else:
+            result[team_abbrev] = "AVERAGE"
+
+    return result
 
 
 def resolve_window_end(db_path: str, end_date: str = None) -> str:
@@ -106,6 +158,14 @@ def main():
     off_classifier = TeamOffensiveClassifier(db_path=args.db_path)
     def_classifier = TeamDefensiveClassifier(db_path=args.db_path)
 
+    # BDL-based 14d defensive quality tiers (STRONG / AVERAGE / WEAK).
+    # Used as fallback when Ghost Protocol tracking has INSUFFICIENT data for the 14d window.
+    def_quality_14d = compute_team_def_quality_14d(args.db_path, d14_start, window_end)
+    if args.verbose and def_quality_14d:
+        print(f"[DEF QUALITY 14d] computed for {len(def_quality_14d)} teams "
+              f"(STRONG={sum(1 for v in def_quality_14d.values() if v=='STRONG')}, "
+              f"WEAK={sum(1 for v in def_quality_14d.values() if v=='WEAK')})")
+
     off_season = off_classifier.classify_all_teams(start_date=season_start, end_date=window_end, min_games=30)
     off_21 = off_classifier.classify_all_teams(start_date=d21_start, end_date=window_end, min_games=5)
     off_14 = off_classifier.classify_all_teams(start_date=d14_start, end_date=window_end, min_games=5)
@@ -116,8 +176,10 @@ def main():
     def_21_raw, def_21_stats = def_classifier.batch_classify_all_teams(
         start_date=d21_start, end_date=window_end, min_games=5, return_stats=True
     )
+    # min_games=2 for 14d window: All-Star break reduces games to 2-4 per team.
+    # 2 game-dates × ~10 opponent tracking rows = sufficient for relative classification.
     def_14_raw, def_14_stats = def_classifier.batch_classify_all_teams(
-        start_date=d14_start, end_date=window_end, min_games=5, return_stats=True
+        start_date=d14_start, end_date=window_end, min_games=2, return_stats=True
     )
 
     if not args.dry_run:
@@ -151,10 +213,21 @@ def main():
         if not def_14_stats.get(team):
             d14_def = "INSUFFICIENT"
 
+        # ── BDL fallback: replace INSUFFICIENT d14_def with quality-based label ──────
+        # When Ghost Protocol tracking has no 14d rows, use BDL player_game_advanced
+        # def_rating (daily, 35k+ rows) to classify defensive quality via z-score tiers.
+        # WEAK (≥1 std dev above league avg) → NEUTRAL (scheme not executing)
+        # STRONG / AVERAGE → inherit season_style (scheme is intact / status quo)
+        team_def_quality = def_quality_14d.get(team)  # STRONG | AVERAGE | WEAK | None
+        if d14_def == "INSUFFICIENT" and team_def_quality is not None:
+            base = s_def if s_def not in ("INSUFFICIENT", None) else "NEUTRAL"
+            d14_def = "NEUTRAL" if team_def_quality == "WEAK" else base
+
         a_def = pick_active(s_def if s_def != "INSUFFICIENT" else "NEUTRAL", d21_def, d14_def)
 
         if args.verbose:
-            print(f"[DEF] {team} season={s_def} 21d={d21_def} 14d={d14_def} active={a_def}")
+            quality_label = f" [{team_def_quality}]" if team_def_quality else ""
+            print(f"[DEF] {team} season={s_def} 21d={d21_def} 14d={d14_def}{quality_label} active={a_def}")
 
         if not args.dry_run:
             # Upsert offense
@@ -175,22 +248,24 @@ def main():
                 (team, s_off, d21_off, d14_off, a_off, window_end)
             )
 
-            # Upsert defense
+            # Upsert defense (includes def_quality_14d for morning brief context)
             cur.execute(
                 """
                 INSERT INTO team_scheme_cache
-                    (team_abbr, scheme_type, season_style, d21_style, d14_style, active_style, window_end)
+                    (team_abbr, scheme_type, season_style, d21_style, d14_style,
+                     active_style, window_end, def_quality_14d)
                 VALUES
-                    (?, 'DEFENSE', ?, ?, ?, ?, ?)
+                    (?, 'DEFENSE', ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(team_abbr, scheme_type) DO UPDATE SET
                     season_style=excluded.season_style,
                     d21_style=excluded.d21_style,
                     d14_style=excluded.d14_style,
                     active_style=excluded.active_style,
                     window_end=excluded.window_end,
+                    def_quality_14d=excluded.def_quality_14d,
                     updated_at=CURRENT_TIMESTAMP
                 """,
-                (team, s_def, d21_def, d14_def, a_def, window_end)
+                (team, s_def, d21_def, d14_def, a_def, window_end, team_def_quality)
             )
 
     if not args.dry_run:

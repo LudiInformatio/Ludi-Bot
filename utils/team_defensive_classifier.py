@@ -177,7 +177,12 @@ class TeamDefensiveClassifier:
         }
 
     def _load_tracking_stats_range(self, team_name: str, start_date: str, end_date: str) -> Dict:
-        """Load team defensive stats for a specific date range."""
+        """Load team defensive stats for a specific date range.
+
+        Uses a self-referential subquery to find game_dates rather than joining
+        to the games table. This avoids INSUFFICIENT results when games is stale
+        (e.g. after the All-Star break or when recent entries haven't synced yet).
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -191,14 +196,19 @@ class TeamDefensiveClassifier:
                 AVG(pg.avg_speed_off) as opp_speed,
                 AVG(pg.avg_defender_dist) as opp_avg_defender_dist
             FROM player_game_tracking pg
-            JOIN games g ON pg.game_date = g.date
-            WHERE (g.home_team = ? OR g.away_team = ?)
+            WHERE pg.game_date IN (
+                SELECT DISTINCT game_date
+                FROM player_game_tracking
+                WHERE team_abbr = ?
+                  AND game_date >= ?
+                  AND game_date <= ?
+            )
             AND pg.team_abbr != ?
             AND pg.game_date >= ?
             AND pg.game_date <= ?
             GROUP BY pg.game_date
             ORDER BY pg.game_date DESC
-        """, (team_name, team_name, team_name, start_date, end_date))
+        """, (team_name, start_date, end_date, team_name, start_date, end_date))
 
         stats = cursor.fetchall()
         conn.close()
