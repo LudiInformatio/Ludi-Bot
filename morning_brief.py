@@ -1043,9 +1043,20 @@ Return JSON only."""
             # Telegram max message size is 4096 chars — split if needed
             MAX_CHARS = 4000
             if not self.dry_run:
+                telegram_success = True
                 for i in range(0, len(full_text), MAX_CHARS):
-                    send_message(full_text[i:i + MAX_CHARS], parse_mode="Markdown")
-                print("🚀 Bet list sent to Telegram!")
+                    chunk = full_text[i:i + MAX_CHARS]
+                    if not send_message(chunk, parse_mode="Markdown"):
+                        print("      ⚠️ Markdown send failed (likely split tag). Retrying as plain text...")
+                        if not send_message(chunk, parse_mode=None):
+                            print("      ❌ Plain text retry also failed.")
+                            telegram_success = False
+                
+                if telegram_success:
+                    print("🚀 Bet list sent to Telegram!")
+                else:
+                    print("🚨 CRITICAL: Telegram notifications failed. Exiting to trigger Ops Hub.")
+                    sys.exit(1)
             else:
                 print(f"🚫 [DRY RUN] Would send bet list ({len(full_text)} chars)")
 

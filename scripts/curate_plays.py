@@ -588,7 +588,12 @@ def _send_telegram_card(
     message = '\n'.join(lines)
     success = send_message(message, parse_mode="MarkdownV2")
     if not success:
-        print("[WARNING] Telegram card failed to send — continuing")
+        print("[WARNING] MarkdownV2 Telegram card failed to send — retrying as plain text")
+        success = send_message(message, parse_mode=None)
+        if not success:
+            print("[CRITICAL] Plain text retry failed. Telegram notifications are down. Exiting to trigger Ops Hub.")
+            import sys
+            sys.exit(1)
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────

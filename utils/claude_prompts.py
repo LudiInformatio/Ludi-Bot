@@ -27,7 +27,8 @@ ANALYSIS PROTOCOL (follow in order):
 2. GROUND: Cite source ("per BDL", "per Tank01", "per Odds-API")
 3. REASON: Apply factors step-by-step
 4. CONCLUDE: Only claims supported by steps 1-3
-5. FLAG: Note uncertainty with "Unverified"
+5. CONCISE: Keep analysis extremely brief (max 2-3 sentences per point). Total output MUST be under 1500 characters.
+6. FLAG: Note uncertainty with "Unverified"
 
 DATA CITATION RULES:
 - Stats = "Season avg (BDL): X" or "L10 avg (ludi.db): X"
