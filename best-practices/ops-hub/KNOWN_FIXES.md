@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-02-23 — Daily Morning Briefing: Telegram 400 Bad Request (Silent Failure)
+
+- **Workflow**: `daily_briefing.yml`
+- **Symptom**: Pipeline finished with a green checkmark (exit code 0), but no Telegram notifications were received. Logs showed multiple `❌ HTTP error: 400 Client Error: Bad Request for url: .../sendMessage`.
+- **Root Cause**: The 4000-character chunking logic in `morning_brief.py` blindly split Claude's output. If the split happened in the middle of a Markdown formatting tag (like `*bold*`), Telegram's MarkdownV2 parser rejected the entire chunk with a 400 error. The script caught the exception, printed a warning, and moved on without exiting, causing GitHub Actions to mark the step as successful and blinding Claude Ops Hub to the failure. AI outputs were also too long and frequently triggered chunking.
+- **Fix Applied**: Tier 2 (multi-file) —
+  1. Added a plain text fallback (`parse_mode=None`) if the Markdown send fails in `morning_brief.py` and `scripts/curate_plays.py`.
+  2. Forced a hard failure (`sys.exit(1)`) if both sending attempts fail, ensuring Ops Hub detects future outages.
+  3. Added a strict `CONCISE` rule to `ANALYSIS_PROTOCOL` in `utils/claude_prompts.py` to force Claude to keep responses under 1500 characters, heavily reducing the need for chunking.
+- **Commit**: 6f71f4c
+
+---
+
 ## 2026-02-23 — Daily Data Sync: PBP Stats Timeout Cascade (Job Cancelled)
 
 - **Workflow**: `data_sync.yml`
