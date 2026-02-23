@@ -36,6 +36,30 @@ import config
 
 EST = pytz.timezone('US/Eastern')
 
+# Quota cache — persists x-requests-remaining between runs to skip Odds API when exhausted
+QUOTA_CACHE_PATH = project_root / 'cache' / 'odds_api_quota.json'
+
+
+def _cache_quota(remaining: str) -> None:
+    """Write quota remaining to disk so next run skips Odds API if exhausted."""
+    try:
+        QUOTA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(QUOTA_CACHE_PATH, 'w') as f:
+            json.dump({"remaining": str(remaining), "at": datetime.now().isoformat()}, f)
+    except Exception:
+        pass
+
+
+def _read_cached_quota() -> Optional[str]:
+    """Read last known quota remaining. Returns None if cache missing or unreadable."""
+    try:
+        if QUOTA_CACHE_PATH.exists():
+            return str(json.loads(QUOTA_CACHE_PATH.read_text()).get("remaining", "unknown"))
+    except Exception:
+        pass
+    return None
+
+
 # High-quality vendor filter — matches module_a.py BDL quality gate
 HIGH_QUALITY_VENDORS = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm']
 
@@ -148,6 +172,7 @@ def _odds_api_get(url: str, params: dict) -> Optional[dict]:
         remaining = response.headers.get('x-requests-remaining', 'unknown')
         used = response.headers.get('x-requests-used', 'unknown')
         print(f"  Odds API quota: {remaining} remaining, {used} used")
+        _cache_quota(remaining)  # persist so next run can skip if exhausted
         return response.json()
 
     except Exception as e:
@@ -170,6 +195,12 @@ def fetch_all_closing_data(pending_bets: List[Dict], verbose: bool = False) -> L
 
     Returns: list of normalized game dicts.
     """
+    # Pre-flight: skip Odds API entirely if last run reported quota = 0
+    cached_quota = _read_cached_quota()
+    if cached_quota == "0":
+        print("  Odds API: quota exhausted (cached) — skipping to BDL fallback")
+        return []
+
     base = f"https://api.the-odds-api.com/v4/sports/basketball_nba"
 
     # Build set of tonight's (away, home) pairs from pending bets for matching
@@ -290,8 +321,9 @@ def fetch_bdl_games_today(game_date: str) -> Tuple[List[Dict], Optional[object]]
         resp = bdl.get_games(date=game_date)
         games = []
         for g in resp.get('data', []):
-            # Skip games already in progress
-            if g.get('status', '') not in ('Scheduled', 'Pre-Game', ''):
+            # BDL V2 uses numeric status codes: "1"=upcoming, "2"=in-progress, "3"=final
+            # (NOT string names like "Scheduled" or "Pre-Game")
+            if str(g.get('status', '1')) in ('2', '3'):
                 continue
             games.append(g)
         print(f"  BDL: {len(games)} scheduled games for {game_date}")
@@ -642,7 +674,10 @@ def main():
 
         # Step 8: Exit non-zero if we have bets but couldn't get any source data
         if not normalized_games:
-            print("ERROR: Could not fetch closing data from Odds API or BDL")
+            quota_note = ""
+            if _read_cached_quota() == "0":
+                quota_note = " (Odds API quota exhausted — BDL was only fallback)"
+            print(f"ERROR: Could not fetch closing data from Odds API or BDL{quota_note}")
             sys.exit(1)
 
         # Step 3: Match normalized games to pending bets by team name
