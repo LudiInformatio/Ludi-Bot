@@ -4,6 +4,8 @@ on:
   schedule:
     # Run daily at 6 AM EST (11 AM UTC) - after data_sync completes
     - cron: '0 11 * * *'
+    # Run daily at 5:30 PM EST (22:30 UTC) - proactive pre-evening-lock quota check
+    - cron: '30 22 * * *'
     # Run daily at 8 PM EST (1 AM UTC) - catch afternoon/evening pipeline failures
     - cron: '0 1 * * *'
   workflow_dispatch:
@@ -19,8 +21,53 @@ on:
           - debug-failures
 
 jobs:
+  # ── NEW: 5:30 PM pre-evening-lock health check ─────────────────────────────
+  # Runs ONLY on the 5:30 PM cron. QA = checking. If issues found → alert Slack.
+  # Ops Hub handles the actual fix. This job exists to give 30 min warning before
+  # the 6 PM evening lock fires (quota exhaustion, stale data, etc.).
+  pre-evening-check:
+    if: github.event.schedule == '30 22 * * *'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          fetch-depth: 1
+
+      - name: Pre-evening-lock quota and freshness check
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          ISSUES=""
+
+          # 1. Odds API quota cache check
+          QUOTA_FILE="cache/odds_api_quota.json"
+          if [ -f "$QUOTA_FILE" ]; then
+            REMAINING=$(python3 -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('remaining','unknown'))" 2>/dev/null || echo "unknown")
+            AT=$(python3 -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('at','unknown'))" 2>/dev/null || echo "unknown")
+            if [ "$REMAINING" = "0" ]; then
+              ISSUES="${ISSUES}:warning: *Odds API quota EXHAUSTED* (as of $AT)\n  Evening lock will rely on BDL fallback only — props may be too sparse to generate bets.\n"
+            elif echo "$REMAINING" | grep -qE '^[0-9]+$' && [ "$REMAINING" -lt 500 ]; then
+              ISSUES="${ISSUES}:warning: Odds API quota low: *$REMAINING credits remaining*\n"
+            fi
+          fi
+
+          # 2. Report to Slack if anything looks wrong
+          if [ -n "$ISSUES" ]; then
+            MSG=":mag: *Pre-Evening-Lock Health Check*\n\n${ISSUES}\n_Evening lock fires at 6:00 PM EST \u2014 ~30 min to respond._"
+            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"${MSG}\"}" || echo "Slack notification failed (non-fatal)"
+            echo "Pre-evening-lock issues reported to Slack"
+          else
+            echo "Pre-evening-lock check: all clear"
+          fi
+
+  # ── Schema validation — skipped on 5:30 PM cron (pre-evening-check handles that slot) ──
   # Always runs — schema validation is a daily health gate, not optional
   validate-schema:
+    if: github.event.schedule != '30 22 * * *'
     runs-on: self-hosted
     permissions:
       contents: read
@@ -95,19 +142,22 @@ jobs:
       - name: Get recent workflow failures
         id: failures
         run: |
-          # Get failed workflows from last 24 hours
+          # Filter to last 12 hours — prevents old failures bleeding into each run's window.
+          # --limit 50: on busy days (15 injury refreshes + 5 CLV + pipeline + briefing etc.)
+          # 25 slots exhaust in hours. 50 gives full 12h coverage on any slate day.
           # NOTE: Do NOT mask gh failures with || echo — if this step can't query GitHub,
           # the workflow should FAIL so Claude Ops Hub detects a broken QA layer.
-          FAILURES=$(gh run list --limit 25 --json name,conclusion,startedAt,databaseId \
-            --jq '[.[] | select(.conclusion == "failure")] | map("\(.name) (ID: \(.databaseId))") | join(", ")')
+          CUTOFF=$(date -u -d '12 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          FAILURES=$(gh run list --limit 50 --json name,conclusion,startedAt,databaseId \
+            --jq "[.[] | select(.conclusion == \"failure\" and .startedAt >= \"$CUTOFF\")] | map(\"\(.name) (ID: \(.databaseId))\") | join(\", \")")
 
           if [ -z "$FAILURES" ]; then
             FAILURES="none"
           fi
           echo "failures=$FAILURES" >> $GITHUB_OUTPUT
 
-          FAIL_COUNT=$(gh run list --limit 25 --json conclusion \
-            --jq '[.[] | select(.conclusion == "failure")] | length')
+          FAIL_COUNT=$(gh run list --limit 50 --json conclusion,startedAt \
+            --jq "[.[] | select(.conclusion == \"failure\" and .startedAt >= \"$CUTOFF\")] | length")
           echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -480,8 +480,18 @@ class MorningBriefEngine:
 
         # 4. Generate Final Report & Visuals (Delegated to Module F)
         if not all_bets:
+            # Check if Odds API quota exhaustion is the cause (expected monthly event, not a bug)
+            try:
+                import json, pathlib
+                _quota_cache = pathlib.Path("cache/odds_api_quota.json")
+                if _quota_cache.exists() and json.loads(_quota_cache.read_text()).get("remaining") == "0":
+                    print("⚠️  No bets generated — Odds API quota exhausted. BDL fallback had insufficient props.")
+                    print("ℹ️  Exiting gracefully — quota resets on the 1st of next month.")
+                    sys.exit(0)  # Known quota state — not a workflow failure, no ops-hub alert needed
+            except Exception:
+                pass  # Can't read quota cache — fall through to normal exit(1)
             print("⚠️  No data processed. Aborting.")
-            sys.exit(1)  # Triggers workflow failure → Slack alert + Claude Ops Hub
+            sys.exit(1)  # Genuine unexpected failure → triggers ops-hub alert
 
         print(f"\n💎 Generating Report for {len(all_bets)} games...")
         
