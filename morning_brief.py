@@ -483,13 +483,17 @@ class MorningBriefEngine:
             # Check if Odds API quota exhaustion is the cause (expected monthly event, not a bug)
             try:
                 import json, pathlib
-                _quota_cache = pathlib.Path("cache/odds_api_quota.json")
-                if _quota_cache.exists() and json.loads(_quota_cache.read_text()).get("remaining") == "0":
-                    print("⚠️  No bets generated — Odds API quota exhausted. BDL fallback had insufficient props.")
-                    print("ℹ️  Exiting gracefully — quota resets on the 1st of next month.")
-                    sys.exit(0)  # Known quota state — not a workflow failure, no ops-hub alert needed
-            except Exception:
-                pass  # Can't read quota cache — fall through to normal exit(1)
+                # Use absolute path to ensure we find the cache file correctly from any working directory
+                _cwd = pathlib.Path(__file__).parent.resolve()
+                _quota_cache = _cwd / "cache" / "odds_api_quota.json"
+                if _quota_cache.exists():
+                    _quota_data = json.loads(_quota_cache.read_text())
+                    if _quota_data.get("remaining") == "0" or _quota_data.get("remaining") == 0:
+                        print("⚠️  No bets generated — Odds API quota exhausted. BDL fallback had insufficient props.")
+                        print("ℹ️  Exiting gracefully — quota resets on the 1st of next month.")
+                        sys.exit(0)  # Known quota state — not a workflow failure, no ops-hub alert needed
+            except Exception as e:
+                print(f"⚠️  Error reading quota cache: {e}")  # Can't read quota cache — fall through to normal exit(1)
             print("⚠️  No data processed. Aborting.")
             sys.exit(1)  # Genuine unexpected failure → triggers ops-hub alert
 
