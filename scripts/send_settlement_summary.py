@@ -17,54 +17,103 @@ from utils.telegram_notifier import send_message
 from utils.time_utils import get_est_yesterday
 
 
-def get_settlement_summary():
-    """Query yesterday's settled bets from database."""
-    conn = sqlite3.connect('ludi.db')
-    c = conn.cursor()
-
-    # Get yesterday's date (EST)
-    yesterday = get_est_yesterday()
-
-    # Query settled bets from yesterday
-    # Column names: outcome (WIN/LOSS/PUSH), profit_loss (units won/lost)
-    c.execute('''
-        SELECT
-            COUNT(*) as total,
-            SUM(CASE WHEN outcome = 'WIN' THEN 1 ELSE 0 END) as wins,
-            SUM(CASE WHEN outcome = 'LOSS' THEN 1 ELSE 0 END) as losses,
-            SUM(CASE WHEN outcome = 'PUSH' THEN 1 ELSE 0 END) as pushes,
-            SUM(COALESCE(profit_loss, 0)) as net_units
-        FROM bet_recommendations
-        WHERE DATE(settled_at) = ? AND outcome IS NOT NULL
-    ''', (yesterday,))
-
-    row = c.fetchone()
-    conn.close()
-
-    if not row or row[0] == 0:
-        return None
-
-    total, wins, losses, pushes, net_units = row
-
-    if abs(net_units) > 50:
-        anomaly_msg = f"⚠️ P&L ANOMALY: {net_units:.1f}u exceeds ±50u threshold — verify before trusting"
-        print(anomaly_msg)
-        from utils.slack_notifier import send_slack_alert
-        send_slack_alert("P&L Anomaly Detected", anomaly_msg)
-
-    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
-    roi = (net_units / total * 100) if total > 0 else 0
-
+def _calc_stats(row):
+    """Shared helper: unpack a query row into a stats dict."""
+    total, wins, losses, pushes, net_units, units_risked = row
+    decided = wins + losses
+    win_rate = (wins / decided * 100) if decided > 0 else 0
+    # True ROI = net profit / total units risked (not per-bet average)
+    roi = (net_units / units_risked * 100) if units_risked and units_risked > 0 else 0
     return {
-        'date': yesterday,
         'total': total,
         'wins': wins,
         'losses': losses,
         'pushes': pushes or 0,
-        'win_rate': win_rate,
         'net_units': net_units or 0,
-        'roi': roi
+        'units_risked': round(units_risked or 0, 2),
+        'win_rate': win_rate,
+        'roi': roi,
     }
+
+
+def get_settlement_summary():
+    """Query yesterday's settled bets and season-to-date totals."""
+    conn = sqlite3.connect('ludi.db')
+    c = conn.cursor()
+
+    yesterday = get_est_yesterday()
+
+    # Shared SELECT columns for both daily and overall queries.
+    # units_risked excludes PUSH and 0-unit bets — correct ROI denominator.
+    _cols = '''
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome = 'WIN'  THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome = 'LOSS' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome = 'PUSH' THEN 1 ELSE 0 END) as pushes,
+        SUM(COALESCE(profit_loss, 0))  as net_units,
+        SUM(CASE WHEN outcome IN ('WIN','LOSS') AND units > 0 THEN units ELSE 0 END) as units_risked
+    '''
+
+    # --- Daily: games played yesterday (game_date, not settled_at).
+    # Using game_date is the correct semantic: "how did yesterday's slate perform?"
+    # settled_at gets overwritten on re-settlement, making it unreliable as a day marker.
+    c.execute(f'SELECT {_cols} FROM bet_recommendations WHERE game_date = ? AND outcome IS NOT NULL', (yesterday,))
+    daily_row = c.fetchone()
+
+    # --- L10D: last 10 game dates with settled bets (rolling window, not calendar days) ---
+    c.execute('''
+        SELECT DISTINCT game_date FROM bet_recommendations
+        WHERE outcome IN ('WIN','LOSS','PUSH') AND units > 0
+        ORDER BY game_date DESC LIMIT 10
+    ''')
+    l10_dates = [r[0] for r in c.fetchall()]
+    if l10_dates:
+        placeholders = ','.join('?' * len(l10_dates))
+        c.execute(f'SELECT {_cols} FROM bet_recommendations WHERE game_date IN ({placeholders}) AND outcome IN (\'WIN\',\'LOSS\',\'PUSH\') AND units > 0', l10_dates)
+        l10_row = c.fetchone()
+    else:
+        l10_row = None
+
+    # --- Overall: all settled bets with real outcomes (units > 0 guards legacy 0-unit rows) ---
+    c.execute(f'SELECT {_cols} FROM bet_recommendations WHERE outcome IN (\'WIN\',\'LOSS\',\'PUSH\') AND units > 0')
+    overall_row = c.fetchone()
+
+    conn.close()
+
+    if not daily_row or daily_row[0] == 0:
+        return None
+
+    daily = _calc_stats(daily_row)
+
+    # All bets voided (DNP/no game) — nothing meaningful to report
+    if daily['wins'] + daily['losses'] == 0:
+        print(f"ℹ️  All {daily['total']} bets from yesterday were voided — skipping Telegram")
+        return None
+
+    if abs(daily['net_units']) > 50:
+        anomaly_msg = f"⚠️ P&L ANOMALY: {daily['net_units']:.1f}u exceeds ±50u threshold — verify before trusting"
+        print(anomaly_msg)
+        from utils.slack_notifier import send_slack_alert
+        send_slack_alert("P&L Anomaly Detected", anomaly_msg)
+
+    l10 = _calc_stats(l10_row) if l10_row and l10_row[0] else None
+    overall = _calc_stats(overall_row) if overall_row and overall_row[0] else None
+
+    return {
+        'date': yesterday,
+        'daily': daily,
+        'l10': l10,
+        'overall': overall,
+    }
+
+
+def _fmt_section(stats):
+    """Format one stats block: record, units, ROI on two lines."""
+    emoji = "🟢" if stats['net_units'] >= 0 else "🔴"
+    return (
+        f"{emoji} {stats['wins']}-{stats['losses']} ({stats['win_rate']:.1f}%)\n"
+        f"💰 {stats['net_units']:+.2f}u on {stats['units_risked']:.1f}u risked  |  ROI: {stats['roi']:+.1f}%"
+    )
 
 
 def main():
@@ -79,27 +128,27 @@ def main():
         print("No settled bets from yesterday - skipping Telegram")
         return
 
-    # Determine emoji based on P&L
-    if summary['net_units'] >= 0:
-        emoji = "🟢"
-        vibe = "Let's build on it."
-    else:
-        emoji = "🔴"
-        vibe = "Recalibrating."
+    d = summary['daily']
+    l10 = summary['l10']
+    ov = summary['overall']
 
-    # Format message
-    msg = f"""📊 **SETTLEMENT REPORT | {summary['date']}**
-────────────────────────
-{emoji} **{summary['wins']}-{summary['losses']}** ({summary['win_rate']:.1f}%)
-💰 **{summary['net_units']:+.2f}u** ({summary['roi']:+.1f}% ROI)
-────────────────────────
-_{vibe} Bets graded: {summary['total']}_"""
+    lines = [f"📊 **SETTLEMENT | {summary['date']}** `[BETA]`", ""]
+
+    lines += ["📅 **YESTERDAY**", _fmt_section(d), ""]
+
+    if l10:
+        lines += ["📉 **LAST 10 DAYS**", _fmt_section(l10), ""]
+
+    if ov:
+        lines += ["🏦 **SINCE LAUNCH (Jan 7)**", _fmt_section(ov)]
+
+    msg = "\n".join(lines)
 
     # Send to Telegram
     success = send_message(msg)
 
     if success:
-        print(f"✅ Settlement summary sent: {summary['wins']}-{summary['losses']} ({summary['net_units']:+.2f}u)")
+        print(f"✅ Sent: {d['wins']}-{d['losses']} ({d['net_units']:+.2f}u) | L10: {l10['net_units']:+.2f}u | Overall: {ov['net_units']:+.2f}u")
     else:
         print("❌ Failed to send settlement summary")
 

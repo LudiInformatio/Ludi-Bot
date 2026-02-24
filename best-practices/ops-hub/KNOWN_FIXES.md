@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-02-24 — Settlement All-Void: Game Logs Not Ingested Before Settlement Ran
+
+- **Symptom**: Settlement Telegram showed "no bets" / 0-0 record. DB showed 348 bets settled as PUSH with `actual_result = -998.0` (VOID-DNP code).
+- **Root Cause**: `player_game_logs` for Feb 22 were not inserted until Feb 24 08:29 AM (due to Module H `c35fed5` bug). Settlement ran Feb 23 10:49 AM — found no game logs — voided all 348 bets as DNP. Same pattern hit Feb 23 bets (445 bets, same day).
+- **Diagnosis Signal**: `actual_result = -998` for ALL bets on a given date + `player_game_logs` `created_at` timestamp AFTER `settled_at` timestamp = game logs arrived after settlement ran.
+- **Recovery**: `python settle_bets.py --date YYYY-MM-DD` re-settles all bets for that `game_date` regardless of current outcome. Verify game log coverage first: `SELECT team_abbreviation, COUNT(*) FROM player_game_logs WHERE game_date = 'YYYY-MM-DD' GROUP BY team_abbreviation`.
+- **Fix Applied**: `settle_bets.py` — date ceiling guard: normal runs now filter `game_date <= get_est_yesterday()`, preventing settlement of today's future slate. Also added Strategy 3 canonical name fallback (`resolve_canonical_name`) for accent mismatches.
+- **Pattern**: When all bets on a date are `-998`, check game log `created_at` vs `settled_at`. If logs arrived after settlement → re-settle with `--date`. Not a model failure, a data timing failure.
+
+---
+
+---
+
 ## 2026-02-24 — Capture Closing Lines: Graceful Quota Exit + Live Game Filter
 
 - **Workflow**: `capture_closing_lines.yml`

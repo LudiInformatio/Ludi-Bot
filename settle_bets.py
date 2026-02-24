@@ -1,7 +1,8 @@
 import sqlite3
 import datetime
 from utils.bet_logger import get_bet_logger
-from utils.player_id_resolver import PlayerIDResolver
+from utils.player_id_resolver import PlayerIDResolver, resolve_canonical_name
+from utils.time_utils import get_est_yesterday
 
 # =========================================================
 # LUDI LENS v2.0 | THE SETTLEMENT LEDGER
@@ -33,7 +34,15 @@ class BetSettler:
             c.execute("SELECT * FROM bet_recommendations WHERE game_date = ?", (target_date,))
             pending_bets = [dict(row) for row in c.fetchall()]
         else:
-            pending_bets = self.logger.get_pending_bets(target_date)
+            all_pending = self.logger.get_pending_bets(target_date)
+            # Only settle bets for games that have already been played.
+            # game_date <= yesterday_est prevents settling today's slate before it tips off.
+            # This also correctly picks up any multi-day backlog (e.g. Feb 22 bets on Feb 24).
+            yesterday_est = get_est_yesterday()
+            pending_bets = [b for b in all_pending if b['game_date'] <= yesterday_est]
+            skipped = len(all_pending) - len(pending_bets)
+            if skipped:
+                print(f"⏭️  Skipping {skipped} bets for today's games (game_date > {yesterday_est})")
 
         if not pending_bets:
             print("✅ No bets found.")
@@ -201,6 +210,16 @@ class BetSettler:
         val, mins = fetch_stats_by_name(player_name)
         if val is not None:
             return val, mins
+
+        # Strategy 3: Canonical name resolution — handles accent mismatches.
+        # Odds API stores 'Nikola Jokic' but game_logs has 'Nikola Jokić'.
+        # resolve_canonical_name() looks up player_canonical_ids by normalized_name
+        # and returns the authoritative full_name with correct accents.
+        canonical_name = resolve_canonical_name(self.conn, player_name)
+        if canonical_name != player_name:
+            val, mins = fetch_stats_by_name(canonical_name)
+            if val is not None:
+                return val, mins
 
         return None, None
 
