@@ -27,9 +27,36 @@ def simulate_human_interaction(page):
         # Silently fail for interaction errors to prevent workflow breaks
         pass
 
+def setup_page(page):
+    """Call immediately after context.new_page() in any scraper.
+    Registers a dialog handler that auto-dismisses JS alert/confirm/prompt dialogs.
+    Without this, a JS alert() on any target page hangs Playwright until timeout."""
+    try:
+        page.on('dialog', lambda dialog: dialog.accept())
+    except Exception:
+        pass
+
+
 def close_popups(page):
     """Checks for and closes common NBA.com, Covers, and OddsShark popups."""
     try:
+        # 0. Consent / Accept button (text-based) — NBA.com and general sites
+        # Handles popups that don't use OneTrust (e.g. custom consent modals)
+        for sel in [
+            'button:has-text("Accept")',
+            'button:has-text("I Accept")',
+            'button:has-text("Agree")',
+            '[id*="consent"] button',
+            '[class*="consent"] button',
+        ]:
+            try:
+                if page.is_visible(sel, timeout=2000):
+                    page.click(sel, timeout=3000)
+                    page.wait_for_timeout(1000)
+                    break
+            except Exception:
+                continue
+
         # 1. OneTrust / Cookie Banners (Common on NBA.com and others)
         onetrust_selectors = [
             "#onetrust-accept-btn-handler",

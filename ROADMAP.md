@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 23, 2026 6:19 PM EST
+**Last Updated:** February 23, 2026 7:35 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅** + **Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅**
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅** + **Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅** + **Injury Pipeline Hardening + ESPN Injury Source + Referee Timing Fix ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -251,6 +251,48 @@ Daily Data Sync was cancelled after 60 minutes — 3 PBP Stats scripts consumed 
 - `module_h_historian.py`: When Tank01 returns 0 games for a date, automatically falls back to BDL `get_box_scores()`. Uses canonical ID resolution and COALESCE pattern. Prevents silent 0-row ingestion (Feb 22 bug: 11 games/382 players existed but Module H ingested nothing).
 
 **9 files changed:** `pbp_stats_sync.yml` (new), `data_sync.yml`, `claude-ops-hub.yml`, 3 PBP Stats scripts, `pbp_stats_client.py`, `module_h_historian.py`, `sync_bdl_plus_minus.py`.
+
+---
+
+### Injury Pipeline Hardening + ESPN Injury Source + Referee Timing Fix ✅ COMPLETE (Feb 23, 2026 7:35 PM EST)
+
+Tonight's evening lock revealed 3 systemic problems: (1) Jaren Jackson Jr. (UTA, injured) shown as healthy — no entry in `player_injuries`, BDL/Tank01 not yet reporting; (2) Nurkic (UTA, OUT) injury in DB from RSS but `team_abbreviation` blank → query excluded him silently; (3) referee sync runs at 9:30 AM but morning brief at 9:00 AM — race condition every day.
+
+**Root cause confirmed via live DB queries and workflow logs — no assumptions.**
+
+**Fix 1 — `player_canonical_ids` as name resolution source:**
+- `sync_injuries.py`: Added `_normalize_for_canonical()` (Unicode NFD accent strip + suffix removal: Jr./Sr./III) and `_get_canonical_lookup_from_db()` (normalized_name → full_name + team).
+- Team resolution in `sync_to_database()` now routes through `player_canonical_ids.normalized_name` instead of `players.name` with `.lower()` only.
+- Canonical `full_name` now stored in `player_injuries.player_name` (e.g. `Jusuf Nurkić` not `Jusuf Nurkic`) — ensures consistent downstream name matching.
+
+**Fix 2 — Dedup guard in `sync_injuries.py`:**
+- INSERT now skips if identical `(player_name, status, DATE(snapshot_time))` already exists today. Eliminates Naji Marshall 7-duplicate-row pattern.
+
+**Fix 3 — Resolve scope scoped to non-ESPN sources:**
+- BDL/Tank01 resolve step now filters `AND source NOT IN ('ESPN', 'espn_suspension')` — prevents BDL from wiping ESPN-sourced injuries when BDL API hasn't caught up yet. ESPN resolves its own.
+
+**Fix 4 — ESPN as faster injury source (`scripts/sync_injuries_espn.py` — partial Phase 8.21):**
+- New script following `sync_suspensions_espn.py` pattern. 30-team scan via `sports.core.api.espn.com` (free, no auth, 15-30 min lag vs BDL/Tank01 2-6 hr lag).
+- Maps ESPN `displayName` → `player_canonical_ids.normalized_name` for canonical name + team resolution.
+- Skips suspensions (type_id=17) — those belong to `sync_suspensions_espn.py`.
+- Source-scoped resolve: only resolves its own `source='ESPN'` entries.
+- Wired into: `daily_briefing.yml` (before morning briefing), `evening_slate_lock.yml` (before force injury sync), `injury_refresh.yml` (first step every 20-min cycle).
+
+**Fix 5 — Morning brief injury query hardened:**
+- UNION clause added: catches injuries where `team_abbreviation` is blank via `player_canonical_ids` join (the Nurkic bug).
+- `AND (days_out IS NULL OR days_out < 75)` filter: Steven Adams (220d) and season-ending outs no longer consume Claude's 600-char injury context budget.
+- Status conflict dedup: when ESPN and BDL/Tank01 report different status for same player, highest-severity wins (OUT > DOUBTFUL > GTD). Prevents Claude seeing same player listed twice.
+- `if not player_name: continue` guard in spotlight to prevent None names flowing through.
+
+**Fix 6 — Referee timing + popup:**
+- `daily_briefing.yml` moved from 9:00 AM → 11:00 AM EST. Morning brief now runs after referee_sync (9:30 AM) and simulation pipeline (10:00 AM). Refs always in DB when brief generates.
+- `module_g.build_ref_database()`: DB-first check added. If `games.referee_crew` populated for today → load from DB, skip Playwright. Eliminates 3× redundant browser scrapes per briefing.
+- `utils/browser_utils.py` + `browser_utils_async.py`: Consent button selectors (`has-text("Accept/Agree/I Accept")`) added before OneTrust block. `setup_page()` helper added for JS dialog auto-dismiss.
+- `scripts/sync_daily_referees.py`: Removed redundant consent block (now handled by `close_popups()`).
+
+**Phase 8.21 status update:** ESPN injury pipeline (this sprint) complete. Remaining Phase 8.21 items deferred: ESPN client utility, athlete ID crosswalk, game lines Tier 3 fallback, longComment corpus.
+
+**11 files changed:** `sync_injuries.py`, `sync_injuries_espn.py` (new), `morning_brief.py`, `module_g.py`, `utils/browser_utils.py`, `utils/browser_utils_async.py`, `scripts/sync_daily_referees.py`, `daily_briefing.yml`, `evening_slate_lock.yml`, `injury_refresh.yml`, `ROADMAP.md`.
 
 ---
 

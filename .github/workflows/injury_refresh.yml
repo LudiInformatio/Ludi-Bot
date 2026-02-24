@@ -43,6 +43,14 @@ jobs:
         with:
           clean: false
 
+      - name: ESPN Injury Sync (Fast Source)
+        run: |
+          # ESPN is the fastest injury source (15-30 min lag vs BDL/Tank01 2-6 hr).
+          # Runs first so BDL/Tank01 sync can corroborate ESPN findings.
+          export PYTHONPATH=$PWD
+          source .venv/bin/activate 2>/dev/null || true
+          python3 scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
+
       - name: Sync Injuries
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}

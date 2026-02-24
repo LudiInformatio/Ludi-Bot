@@ -163,23 +163,8 @@ class DailyRefereeSync:
                         try:
                             print(f"   [SYNC] Attempt {attempt+1}: Navigating to {url}...")
                             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                            close_popups(page)
+                            close_popups(page)  # now handles consent buttons via browser_utils
                             simulate_human_interaction(page)
-                            
-                            # FIX 1: Dismiss any consent/cookie popup (sync Playwright)
-                            try:
-                                consent_btn = page.wait_for_selector(
-                                    'button:has-text("Accept"), button:has-text("I Accept"), '
-                                    'button:has-text("Agree"), [id*="consent"] button, [class*="consent"] button',
-                                    timeout=5000
-                                )
-                                if consent_btn:
-                                    consent_btn.click(timeout=5000)
-                                    page.wait_for_timeout(1000)
-                            except Exception as e:
-                                print(f"[TAG] Context: {e}")
-                                pass  # No popup, continue
-                            
                             break
                         except Exception as e:
                             if attempt == max_retries - 1: raise e

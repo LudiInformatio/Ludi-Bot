@@ -75,14 +75,22 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
         ph_s = ','.join('?' * len(KEY_STATS))
 
         # Players to exclude: OUT or DOUBTFUL on any team tonight
+        # UNION: catch injuries with blank team_abbreviation via canonical_ids (e.g. Nurkic RSS entries)
+        tonight_teams_list = list(tonight_teams)
+        ph_t2 = ','.join('?' * len(tonight_teams_list))
         cursor.execute(f"""
-            SELECT DISTINCT player_name
-            FROM player_injuries
+            SELECT DISTINCT player_name FROM player_injuries
             WHERE team_abbreviation IN ({ph_t})
-              AND resolved_at IS NULL
-              AND status IN ('OUT', 'DOUBTFUL')
+              AND resolved_at IS NULL AND status IN ('OUT', 'DOUBTFUL')
               AND snapshot_time >= datetime('now', '-14 days')
-        """, tonight_teams)
+            UNION
+            SELECT DISTINCT pi.player_name FROM player_injuries pi
+            JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
+            WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
+              AND ci.team IN ({ph_t2})
+              AND pi.resolved_at IS NULL AND pi.status IN ('OUT', 'DOUBTFUL')
+              AND pi.snapshot_time >= datetime('now', '-14 days')
+        """, tonight_teams + tonight_teams_list)
         excluded = {r[0] for r in cursor.fetchall()}
 
         # Team quality signals (off_quality_14d from OFFENSE rows)
@@ -681,6 +689,9 @@ Return JSON only."""
                     print(f"   > Notes for {matchup}...")
                     
                     # 3. Query Injuries (By Team)
+                    # UNION: also catch injuries where team_abbreviation is blank (e.g. Nurkic from RSS)
+                    # resolved via player_canonical_ids. Filter days_out < 75 so long-term season
+                    # outs (Steven Adams 220d) don't consume Claude's 600-char injury budget.
                     cursor = conn.cursor()
                     cursor.execute("""
                         SELECT player_name, status, days_out, injury_type
@@ -689,12 +700,33 @@ Return JSON only."""
                           AND resolved_at IS NULL
                           AND status IN ('OUT', 'DOUBTFUL', 'GTD')
                           AND snapshot_time >= datetime('now', '-14 days')
-                    """, (home_team, away_team))
+                          AND (days_out IS NULL OR days_out < 75)
+                        UNION
+                        SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type
+                        FROM player_injuries pi
+                        JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
+                        WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
+                          AND ci.team IN (?, ?)
+                          AND pi.resolved_at IS NULL
+                          AND pi.status IN ('OUT', 'DOUBTFUL', 'GTD')
+                          AND pi.snapshot_time >= datetime('now', '-14 days')
+                          AND (pi.days_out IS NULL OR pi.days_out < 75)
+                    """, (home_team, away_team, home_team, away_team))
                     injuries = cursor.fetchall()
                     
-                    injury_lines = []
+                    # Deduplicate by player: when ESPN and BDL/Tank01 conflict, keep most severe status.
+                    # Status severity: OUT(4) > DOUBTFUL(3) > GTD(2) > PROBABLE(1)
+                    STATUS_SEVERITY = {'OUT': 4, 'DOUBTFUL': 3, 'GTD': 2, 'PROBABLE': 1}
+                    best_injury = {}
                     for row in injuries:
-                        injury_lines.append(f"{row[1]}: {row[0]} ({row[3]})")
+                        pname, status, days_out, inj_type = row[0], row[1], row[2], row[3]
+                        severity = STATUS_SEVERITY.get(status, 0)
+                        if pname not in best_injury or severity > STATUS_SEVERITY.get(best_injury[pname][0], 0):
+                            best_injury[pname] = (status, days_out, inj_type)
+
+                    injury_lines = []
+                    for pname, (status, days_out, inj_type) in best_injury.items():
+                        injury_lines.append(f"{status}: {pname} ({inj_type})")
                     injury_intel_block = "\n".join(injury_lines) if injury_lines else "No major injuries reported."
 
                     # 3b. Beneficiary context (Phase 8.15)
@@ -921,6 +953,9 @@ Return JSON only."""
                     for bet in top_bets:
                         try:
                             player_name = bet.get('player_name') or bet.get('name')
+                            if not player_name:
+                                print(f"   ⏭️  Spotlight skipped: no player_name in bet record")
+                                continue
                             team = bet.get('team')
                             opponent = bet.get('opponent')
                             stat_cat = bet.get('stat_category') or bet.get('stat', 'PTS')

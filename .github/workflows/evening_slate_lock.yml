@@ -58,6 +58,13 @@ jobs:
 
 
 
+      - name: ESPN Injury Sync (Fast Source — 15-30min lag vs BDL/Tank01 2-6hr lag)
+        run: |
+          # ESPN updates within 15-30 min of team announcements (free, no auth).
+          # Catches same-day rulings (surgery, GTD) before BDL/Tank01 pick them up.
+          export PYTHONPATH=$PWD
+          python3 scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
+
       - name: Refresh Injuries (Late Scratches)
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}

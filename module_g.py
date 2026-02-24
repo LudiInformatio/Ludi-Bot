@@ -200,9 +200,32 @@ class LudiRefEngine:
 
     def build_ref_database(self):
         """
-        Scrapes the official NBA Referee Assignments page using Playwright.
-        Handles dynamic JavaScript rendering.
+        Loads referee assignments for today. Checks the database first (populated by
+        referee_sync.yml at 9:30 AM) and skips the Playwright scrape if refs are already
+        present. Falls back to web scraping when the DB is empty (e.g. manual trigger
+        before 9:30 AM, or if referee_sync.yml failed).
         """
+        # DB-FIRST: If referee_sync.yml already ran today, load from games.referee_crew.
+        # Eliminates redundant Playwright scrapes during morning brief + evening lock.
+        try:
+            import sqlite3
+            from datetime import date
+            _conn = sqlite3.connect(self.db_path)
+            today_str = date.today().strftime('%Y-%m-%d')
+            _rows = _conn.execute(
+                "SELECT home_team, referee_crew FROM games "
+                "WHERE date = ? AND referee_crew IS NOT NULL AND referee_crew != ''",
+                (today_str,)
+            ).fetchall()
+            _conn.close()
+            if _rows:
+                for _home, _crew in _rows:
+                    self.daily_assignments[_home] = [r.strip() for r in _crew.split(',')]
+                print(f"   [ZEBRAS] ✅ Loaded {len(_rows)} ref crew(s) from DB (skip scrape)")
+                return self.daily_assignments
+        except Exception as _e:
+            print(f"   [ZEBRAS] DB-first check failed ({_e}), falling back to scraper")
+
         url = "https://official.nba.com/referee-assignments/"
         print("   [ZEBRAS] 🦓 Scraping Official NBA Assignments (Playwright)...", end=" ")
         

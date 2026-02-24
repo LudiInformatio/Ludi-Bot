@@ -2,9 +2,11 @@ name: Daily Morning Briefing
 
 on:
   schedule:
-    # 9:00 AM EST is 14:00 UTC (offset from pipeline at 10 AM to avoid SQLite lock)
+    # 11:00 AM EST = 16:00 UTC — runs AFTER referee_sync (9:30 AM) and pipeline (10:00 AM)
+    # NBA referee assignments publish at ~9 AM; ref sync runs at 9:30 AM; pipeline at 10 AM.
+    # Morning brief at 11 AM has all data ready: refs in DB, pipeline output complete.
     # Note: GitHub Actions uses UTC.
-    - cron: '0 14 * * *'
+    - cron: '0 16 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -57,6 +59,14 @@ jobs:
       - name: Verify image pipeline dependencies
         run: |
           python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
+
+      - name: ESPN Injury Sync (Fast Source — catch morning scratches)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          export PYTHONPATH=$PWD
+          source .venv/bin/activate 2>/dev/null || true
+          python3 scripts/sync_injuries_espn.py
 
       - name: Sync Injuries (Pre-Brief Refresh)
         timeout-minutes: 5

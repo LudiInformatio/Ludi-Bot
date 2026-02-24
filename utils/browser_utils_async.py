@@ -26,9 +26,33 @@ async def simulate_human_interaction_async(page):
         print(f"[TAG] Context: {e}")
         pass
 
+def setup_page_async(page):
+    """Register async-safe dialog handler. Call after new_page() in async scrapers."""
+    try:
+        page.on('dialog', lambda dialog: asyncio.create_task(dialog.accept()))
+    except Exception:
+        pass
+
+
 async def close_popups_async(page):
     """Asynchronous version: Checks for and closes common popups."""
     try:
+        # 0. Consent / Accept button (text-based) — NBA.com and general sites
+        for sel in [
+            'button:has-text("Accept")',
+            'button:has-text("I Accept")',
+            'button:has-text("Agree")',
+            '[id*="consent"] button',
+            '[class*="consent"] button',
+        ]:
+            try:
+                if await page.is_visible(sel, timeout=2000):
+                    await page.click(sel, timeout=3000)
+                    await asyncio.sleep(1)
+                    break
+            except Exception:
+                continue
+
         # 1. Cookie Banners
         onetrust_selectors = [
             "#onetrust-accept-btn-handler",

@@ -175,6 +175,26 @@ class InjurySync:
         cursor.execute('SELECT name, team FROM players')
         return {(row[0], row[1]) for row in cursor.fetchall()}
 
+    def _get_canonical_lookup_from_db(self, conn):
+        """Build normalized_name → (full_name, team) lookup from player_canonical_ids.
+        Used for accent-safe, suffix-safe name resolution.
+        Handles: Nurkić→Nurkic, Porziņģis→Porzingis, Jackson Jr.→Jackson, etc."""
+        cursor = conn.cursor()
+        cursor.execute('SELECT normalized_name, full_name, team FROM player_canonical_ids WHERE is_active = 1')
+        return {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+
+    def _normalize_for_canonical(self, name: str) -> str:
+        """Normalize player name to match player_canonical_ids.normalized_name format.
+        Strips accents via NFD decomposition + removes common suffixes (Jr., Sr., II, III)."""
+        import unicodedata
+        # Strip accent marks via Unicode NFD decomposition
+        nfd = unicodedata.normalize('NFD', name)
+        without_accents = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+        # Lowercase, strip trailing punctuation, remove name suffixes
+        clean = without_accents.lower().strip()
+        clean = re.sub(r'\s+(jr|sr|ii|iii|iv)\.?\s*$', '', clean).strip()
+        return clean
+
     def fetch_injuries_bdl(self):
         """
         Fetch injuries from BallDontLie API (primary source).
@@ -449,6 +469,8 @@ class InjurySync:
 
         active_player_names = {inj['player_name'] for inj in injury_data["injuries"]}
         all_db_players = self._get_active_players_from_db(conn)
+        # Canonical lookup: normalized_name → (full_name, team) — accent+suffix safe
+        canonical_lookup = self._get_canonical_lookup_from_db(conn)
 
         try:
             for injury in injury_data["injuries"]:
@@ -459,16 +481,50 @@ class InjurySync:
                 injury_type = injury.get('injury_type')
                 source = injury.get('source', 'Unknown')
 
-                # Resolve team abbreviation from our players table (BDL doesn't return it)
+                # Resolve team + canonical name via player_canonical_ids.normalized_name
+                # This handles accented names (Nurkić→Nurkic) and suffixes (Jr./Sr./III).
+                # Using .lower() only (old approach) silently failed for these cases.
                 team_abbreviation = injury.get('team_abbreviation')
-                if not team_abbreviation:
+                normalized_input = self._normalize_for_canonical(player_name)
+                canonical_match = canonical_lookup.get(normalized_input)
+
+                if canonical_match:
+                    canonical_full_name, canonical_team = canonical_match
+                    # Always use the canonical full_name for consistent DB storage
+                    player_name = canonical_full_name
+                    active_player_names.discard(injury['player_name'])
+                    active_player_names.add(player_name)
+                    if not team_abbreviation:
+                        team_abbreviation = canonical_team
+                elif not team_abbreviation:
+                    # Fallback: plain .lower() match against players table
                     for pname, team in all_db_players:
                         if pname.lower() == player_name.lower():
                             team_abbreviation = team
                             break
+
                 injury['team_abbreviation'] = team_abbreviation
 
                 last_injury = self._get_last_injury_record(conn, player_name)
+
+                # ESPN PROTECTION: If ESPN already recorded a MORE severe status today,
+                # do not let BDL/Tank01 downgrade it (they lag behind ESPN by 2-6 hours).
+                # Example: ESPN=OUT (5PM surgery), BDL=GTD (3PM stale) → keep OUT.
+                # Status severity: OUT(4) > DOUBTFUL(3) > GTD(2) > PROBABLE(1)
+                _STATUS_SEVERITY = {'OUT': 4, 'DOUBTFUL': 3, 'GTD': 2, 'QUESTIONABLE': 2, 'PROBABLE': 1}
+                _espn_row = cursor.execute('''
+                    SELECT status FROM player_injuries
+                    WHERE player_name = ? AND source = 'ESPN'
+                      AND resolved_at IS NULL
+                    ORDER BY snapshot_time DESC LIMIT 1
+                ''', (player_name,)).fetchone()
+                if _espn_row:
+                    _espn_severity = _STATUS_SEVERITY.get(_espn_row[0], 0)
+                    _new_severity = _STATUS_SEVERITY.get(new_status, 0)
+                    if _espn_severity > _new_severity:
+                        # ESPN has fresher, more severe status — skip BDL/Tank01 downgrade
+                        self._log(f"  🛡️  ESPN PROTECTION: {player_name} kept as {_espn_row[0]} (BDL reported {new_status})")
+                        continue
 
                 should_insert = False
                 onset_date = None
@@ -483,6 +539,19 @@ class InjurySync:
 
                 if should_insert and new_status != 'ACTIVE':
                     onset_date = datetime.now().strftime('%Y-%m-%d')
+
+                if should_insert and not self.dry_run:
+                    # Dedup guard: skip if identical (player, status, date) already exists today
+                    # Prevents the Naji Marshall 7-row problem from recurring
+                    _existing = cursor.execute('''
+                        SELECT id FROM player_injuries
+                        WHERE player_name = ? AND status = ? AND DATE(snapshot_time) = DATE('now')
+                          AND resolved_at IS NULL
+                        LIMIT 1
+                    ''', (player_name, new_status)).fetchone()
+                    if _existing:
+                        self._log(f"  ⏭️  Dedup skip: {player_name} ({new_status}) already recorded today")
+                        should_insert = False
 
                 if should_insert and not self.dry_run:
                     try:
@@ -510,12 +579,7 @@ class InjurySync:
                         errors.append(f"Insert error for {player_name}: {e}")
 
                 if not self.dry_run:
-                    player_team = None
-                    for pname, team in all_db_players:
-                        if pname.lower() == player_name.lower():
-                            player_team = team
-                            break
-
+                    # Update players table — match by canonical full_name (already normalized above)
                     cursor.execute('''
                         UPDATE players SET
                             current_injury_status = ?,
@@ -532,13 +596,18 @@ class InjurySync:
                     ))
 
             # skip_resolve=True when called for supplementary data (e.g. RSS-only additions)
-            # to avoid wiping injuries that were synced in the primary BDL/Tank01 pass
+            # to avoid wiping injuries that were synced in the primary BDL/Tank01 pass.
+            # IMPORTANT: Only resolve BDL/Tank01/RSS-sourced entries — never touch ESPN records.
+            # ESPN has its own resolve logic in sync_injuries_espn.py (source-scoped).
+            # Without this filter, BDL sync would resolve ESPN-sourced injuries when BDL
+            # hasn't caught up yet (e.g. JJJ injury: ESPN=OUT, BDL=not listed yet → wipes ESPN entry).
             if not skip_resolve:
                 resolved_cursor = conn.cursor()
                 resolved_cursor.execute('''
                     SELECT DISTINCT player_name
                     FROM player_injuries
                     WHERE resolved_at IS NULL
+                      AND source NOT IN ('ESPN', 'espn_suspension')
                 ''')
                 currently_injured = {row[0] for row in resolved_cursor.fetchall()}
 
