@@ -154,7 +154,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 module_h_historian.py
+          python3 module_h_historian.py --mode daily+backfill
 
       # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
 
@@ -313,27 +313,61 @@ jobs:
         run: |
           python3 -c "
           import sqlite3
-          from datetime import date, timedelta
+          from datetime import date, timedelta, datetime, timezone
+
+          STALE_DAYS = 8
+
+          def calendar_expectation(cursor, date_str):
+              try:
+                  row = cursor.execute(
+                      'SELECT has_games, game_count, synced_at FROM nba_calendar WHERE date = ?',
+                      (date_str,),
+                  ).fetchone()
+              except Exception:
+                  return None
+
+              if not row or not row[2]:
+                  return None
+
+              try:
+                  sync_dt = datetime.fromisoformat(str(row[2]).replace('Z', '+00:00'))
+                  now_dt = datetime.now(timezone.utc)
+                  if (now_dt - sync_dt).days > STALE_DAYS:
+                      return None
+              except Exception:
+                  return None
+
+              has_games = row[0] == 1
+              game_count = row[1] if row[1] is not None else 0
+              expected_label = str(game_count) if game_count else 'unknown'
+              return has_games, game_count, expected_label
 
           conn = sqlite3.connect('ludi.db')
           c = conn.cursor()
           yesterday = (date.today() - timedelta(days=1)).isoformat()
 
-          # Were there NBA games yesterday?
-          c.execute('SELECT COUNT(*) FROM games WHERE date = ?', (yesterday,))
-          games_yesterday = c.fetchone()[0]
+          expected = calendar_expectation(c, yesterday)
+          if expected is not None:
+              has_games, expected_count, expected_label = expected
+              if not has_games:
+                  print(f'✅ No games on {yesterday} (nba_calendar) — stale data expected, skipping freshness check')
+                  conn.close()
+                  exit(0)
+          else:
+              c.execute('SELECT COUNT(*) FROM games WHERE date = ?', (yesterday,))
+              expected_count = c.fetchone()[0]
+              expected_label = str(expected_count)
+              if expected_count == 0:
+                  print(f'✅ No games on {yesterday} — stale data expected, skipping freshness check')
+                  conn.close()
+                  exit(0)
 
-          if games_yesterday == 0:
-              print(f'✅ No games on {yesterday} — stale data expected, skipping freshness check')
-              conn.close()
-              exit(0)
-
-          # Games existed — verify we got game log data
+          # Games expected — verify we got game log data
           c.execute('SELECT COUNT(*) FROM player_game_logs WHERE game_date = ?', (yesterday,))
           logs_count = c.fetchone()[0]
 
           if logs_count == 0:
-              print(f'❌ CRITICAL: {games_yesterday} games on {yesterday} but 0 player_game_logs synced')
+              print(f'❌ CRITICAL: {expected_label} games expected on {yesterday} but 0 player_game_logs synced')
               print('Module H (Historian) may have failed silently')
               conn.close()
               exit(1)
@@ -360,7 +394,7 @@ jobs:
           else:
               print(f'✅ All enrichment tables populated')
 
-          print(f'✅ Freshness check passed: {logs_count} game logs for {yesterday} ({games_yesterday} games)')
+          print(f'✅ Freshness check passed: {logs_count} game logs for {yesterday} ({expected_label} games expected)')
           conn.close()
           "
 

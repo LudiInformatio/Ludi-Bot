@@ -348,7 +348,7 @@ class LudiHistorian:
             print(f"   ⚠️ Error loading audit: {e}")
             return None
 
-    def update_database(self):
+    def update_database(self, mode="backfill"):
         """
         Main Routine: Checks for resume state, audit file, or runs incremental sync.
 
@@ -361,19 +361,45 @@ class LudiHistorian:
         current_count = self._get_current_record_count()
         print(f"   📂 Current Database: {current_count} game log records")
 
-        # MODE 1: Resume from state file (highest priority)
+        valid_modes = {"daily", "daily+backfill", "backfill"}
+        if mode not in valid_modes:
+            print(f"   ⚠️ Unknown mode '{mode}' — defaulting to 'backfill'")
+            mode = "backfill"
+
+        if mode == "daily":
+            print("   ▶️ Mode: daily (incremental only)")
+            return self._incremental_sync()
+
+        if mode == "daily+backfill":
+            print("   ▶️ Mode: daily+backfill (incremental first, then resume backfill if present)")
+            self._incremental_sync()
+
+            state = self._load_sync_state()
+            if state and state.get("status") in ("paused", "in_progress"):
+                print(f"   🔄 Resuming sync: {len(state['remaining_dates'])} dates remaining")
+                return self._resume_from_state(state)
+
+            audit_dates = self._load_audit_file()
+            if audit_dates:
+                print(f"   📋 Starting audit-based sync: {len(audit_dates)} dates to process")
+                return self._sync_from_audit(audit_dates)
+
+            print("   ✅ No backfill state found — daily sync complete")
+            return
+
+        # Default: backfill behavior (state/audit priority, then incremental)
+        print("   ▶️ Mode: backfill (state/audit priority)")
+
         state = self._load_sync_state()
-        if state and state.get('status') == 'paused':
+        if state and state.get("status") in ("paused", "in_progress"):
             print(f"   🔄 Resuming sync: {len(state['remaining_dates'])} dates remaining")
             return self._resume_from_state(state)
 
-        # MODE 2: Start from audit file (second priority)
         audit_dates = self._load_audit_file()
         if audit_dates:
             print(f"   📋 Starting audit-based sync: {len(audit_dates)} dates to process")
             return self._sync_from_audit(audit_dates)
 
-        # MODE 3: Incremental sync (existing behavior)
         print(f"   🔄 Running incremental sync")
         return self._incremental_sync()
 
@@ -828,8 +854,14 @@ class LudiHistorian:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ludi Historian Module")
     parser.add_argument("--budget", type=int, help="Override daily API request budget")
+    parser.add_argument(
+        "--mode",
+        choices=["daily", "daily+backfill", "backfill"],
+        default="backfill",
+        help="daily = incremental only; daily+backfill = incremental then resume; backfill = state/audit priority",
+    )
     args = parser.parse_args()
 
     config.validate_config()
     h = LudiHistorian(budget=args.budget)
-    h.update_database()
+    h.update_database(mode=args.mode)
