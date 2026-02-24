@@ -59,6 +59,9 @@ class PlayerIDResolver:
         if not name:
             return ''
         
+        # Normalize whitespace (e.g., NBSP) before stripping accents
+        name = ''.join(' ' if ch.isspace() else ch for ch in name)
+
         # Remove accents using Unicode normalization
         name = unicodedata.normalize('NFKD', name)
         name = name.encode('ASCII', 'ignore').decode('ASCII')

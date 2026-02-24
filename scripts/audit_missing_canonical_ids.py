@@ -43,14 +43,16 @@ TIMEOUT = 15
 LOG_PATTERN = re.compile(r"No canonical ID for:\s+(?P<name>.+?)\s+\((?P<id>[^)]+)\)")
 
 
-def normalize_name(name: str) -> str:
+def normalize_name(name: str, strip_suffix: bool = True) -> str:
     if not name:
         return ""
+    name = ''.join(' ' if ch.isspace() else ch for ch in name)
     name = unicodedata.normalize('NFKD', name)
     name = name.encode('ASCII', 'ignore').decode('ASCII')
     name = name.lower().strip()
-    for suffix in [' jr.', ' jr', ' sr.', ' sr', ' iii', ' ii', ' iv', ' v']:
-        name = name.replace(suffix, '')
+    if strip_suffix:
+        for suffix in [' jr.', ' jr', ' sr.', ' sr', ' iii', ' ii', ' iv', ' v']:
+            name = name.replace(suffix, '')
     return ' '.join(name.split())
 
 
@@ -224,7 +226,7 @@ def main():
     player_rows = conn.execute(
         "SELECT player_id, name FROM players"
     ).fetchall()
-    players_map = {normalize_name(r["name"]): (r["player_id"], r["name"]) for r in player_rows}
+    players_map = {normalize_name(r["name"], strip_suffix=False): (r["player_id"], r["name"]) for r in player_rows}
 
     espn_map = fetch_espn_roster_map(conn) if args.check_espn else {}
 
@@ -236,10 +238,12 @@ def main():
     report = []
     for e in missing:
         name = e.get("player_name")
-        norm = e.get("normalized_name") or normalize_name(name)
-        canonical_match = canonical_map.get(norm)
-        players_match = players_map.get(norm)
-        espn_match = espn_map.get(norm)
+        norm_basic = e.get("normalized_name") or normalize_name(name, strip_suffix=False)
+        norm_suffix_stripped = normalize_name(name, strip_suffix=True)
+
+        canonical_match = canonical_map.get(norm_suffix_stripped) or canonical_map.get(norm_basic)
+        players_match = players_map.get(norm_basic) or players_map.get(norm_suffix_stripped)
+        espn_match = espn_map.get(norm_suffix_stripped) or espn_map.get(norm_basic)
 
         if canonical_match:
             matched_canonical += 1
@@ -257,7 +261,7 @@ def main():
             "source": e.get("source"),
             "source_player_id": e.get("source_player_id"),
             "player_name": name,
-            "normalized_name": norm,
+            "normalized_name": norm_basic,
             "canonical_match": {
                 "canonical_id": canonical_match[0],
                 "full_name": canonical_match[1],
