@@ -181,6 +181,14 @@ except Exception as e:
 - Tertiary: Stale cache
 - Result: 99.9% uptime even with API outages
 
+### 6. Distinguish Expected Noise from Real Failures at the Exit Point
+- `capture_closing_lines.py` exited `1` every night in Feb when Odds API quota = 0 — triggering false Ops Hub alerts
+- Root cause: all `sys.exit(1)` paths fired without checking whether the "failure" was a known expected state
+- Fix: check `cache/odds_api_quota.json` before exiting — quota=0 is a known monthly event → `exit(0)`
+- **Pattern**: "Expected noise = known state = `exit(0)` with informative log. Unknown failure = `exit(1)` = alert."
+- Applied to: `capture_closing_lines.py` (Feb 2026), `morning_brief.py` (Feb 2026)
+- Also applies to: any script that runs daily but depends on a monthly-quota API
+
 ---
 
 ## Quick Decision Tree

@@ -184,6 +184,38 @@ except QuotaExceeded:
     data = self._fetch_from_balldontlie()
 ```
 
+### Graceful Exit for Known Quota States
+
+**Problem:** Monthly quota exhaustion is a *known, expected* event for paid APIs (e.g., The-Odds-API 20K/month). Scripts that exit(1) on this state trigger false operational alerts — "boy who cried wolf" that drowns out real failures.
+
+**Pattern:** Check the cached quota state at every `exit(1)` point. If the failure is caused by a known expected state, exit(0) with an informative message.
+
+```python
+# cache/odds_api_quota.json is written after every Odds API call
+# {"remaining": "0", "at": "2026-02-24T03:33:25"}
+
+def _read_cached_quota() -> Optional[str]:
+    try:
+        with open(QUOTA_CACHE_PATH) as f:
+            return str(json.load(f).get('remaining', ''))
+    except Exception:
+        return None
+
+# ❌ Before: fires exit(1) even for known monthly quota state
+if total_updated == 0 and pending_bets:
+    sys.exit(1)  # Triggers Ops Hub false alarm
+
+# ✅ After: distinguish expected noise from real failures
+if total_updated == 0 and pending_bets:
+    if _read_cached_quota() == "0":
+        print("Odds API quota exhausted (expected monthly event) — exiting cleanly.")
+        sys.exit(0)   # Known state — NOT an ops-hub alert
+    sys.exit(1)       # Genuine failure — alert fires
+```
+
+> **Lessons from Ludi-Bot:**
+> `capture_closing_lines.py` triggered false Ops Hub alerts every night in Feb 2026 after the monthly Odds API quota hit 0. The script had no knowledge of the quota state — it just saw "0 captures" and exited 1. The fix was a single quota-cache check at each `exit(1)` point, the same pattern already used in `morning_brief.py`. **Rule:** any script that depends on a monthly-budget API needs this guard. Apply it to ALL exit points — not just the main one.
+
 ### Request Prioritization
 
 **Principle:** Not all requests are equal.

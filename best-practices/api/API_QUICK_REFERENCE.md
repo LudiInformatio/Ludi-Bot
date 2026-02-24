@@ -282,6 +282,39 @@ ON CONFLICT(player_id, game_date) DO UPDATE SET pts = excluded.pts
 - `games` table had ONE path: Odds API. When quota hit, table froze for 8 days.
 - Fix: Add BDL/Tank01 fallback. Any critical table needs ≥ 2 independent population paths.
 
+### CLV Quota Graceful Exit (Feb 2026) — New Pattern
+```python
+# ❌ exit(1) on expected monthly quota exhaustion → false Ops Hub alerts
+if total_updated == 0 and len(pending_bets) > 0:
+    sys.exit(1)  # Fires even when quota=0 is a known monthly state
+
+# ✅ Distinguish expected noise from real failures at the exit point
+if total_updated == 0 and len(pending_bets) > 0:
+    if _read_cached_quota() == "0":
+        print("Odds API quota exhausted (expected monthly event) — exiting cleanly.")
+        sys.exit(0)  # Known state — not an ops-hub alert
+    sys.exit(1)  # Genuine failure — alert
+```
+**Rule:** Apply `exit(0)` checks for every known, expected state before `exit(1)`. Monthly quota exhaustion = expected noise. Real data fetch failures = genuine failure.
+
+### Live Game Filtering for Odds API (Feb 2026)
+```python
+# ❌ Odds API matched games by team name only — live games served in-game odds
+matched_events = [ev for ev in events_data if teams_match(ev)]
+
+# ✅ Filter by commence_time — reject live games and future-date games
+def _game_is_on_slate(ev, game_date):
+    ct = ev.get('commence_time', '')
+    if not ct: return True
+    game_utc = datetime.fromisoformat(ct.replace('Z', '+00:00'))
+    game_est_date = game_utc.astimezone(EST).strftime('%Y-%m-%d')
+    if game_est_date != game_date: return False       # wrong date
+    if game_utc < datetime.now(timezone.utc) - timedelta(minutes=15): return False  # live
+    return True
+
+matched_events = [ev for ev in events_data if teams_match(ev) and _game_is_on_slate(ev, game_date)]
+```
+
 ---
 
 ## Pre-Integration Checklist

@@ -27,14 +27,20 @@ in `utils/claude_prompts.py` — one worked example is worth 10 instructions.
 ## Settlement Domain — Example Chain 2
 
 **Workflow**: Capture Closing Lines
-**Logs**: "Odds API: quota exhausted (cached) — skipping to BDL fallback" then "ERROR: Could not fetch closing data"
+**Logs**: "Odds API: quota exhausted (cached) — skipping to BDL fallback" then "0 updated, 96 skipped" then exit code 1
+
+**⚠️ NOTE (Feb 24 2026 update):** If Ops Hub fires for this symptom, it means the graceful quota-exit fix (commit 44c4297) has not yet been deployed, OR a different code path is exiting(1). After commit 44c4297, quota=0 should produce exit(0) — Ops Hub will NOT fire for this pattern under normal quota exhaustion.
 
 **Step 1 — NSP Classification**:
-{"failure_type": "TRANSIENT", "matched_fix": "2026-02-22 — Quota Pre-flight", "confidence": "HIGH", "reasoning": "Odds API monthly 20K quota exhausted; BDL should have served as fallback"}
+{"failure_type": "KNOWN_PATTERN", "matched_fix": "2026-02-24 — Graceful Quota Exit + Live Game Filter", "confidence": "HIGH", "reasoning": "Odds API monthly quota exhausted; script should exit(0) per known monthly event pattern — check if fix was deployed"}
 
-**Step 2 — Tier**: TRANSIENT (monthly reset auto-resolves; if BDL also failing, escalate to TIER_3)
+**Step 2 — Tier**: TIER_1 if fix not deployed (re-apply graceful exit pattern). TRANSIENT if fix is deployed and this is a one-off re-run.
 
-**Step 3 — Action**: Check if BDL fallback is actually working. If BDL returned 0 games, check BDL status filter (see prior fix). If BDL is down, TIER_3 issue only.
+**Step 3 — Action**:
+1. Check if commit 44c4297 is in the deployed branch (`git log --oneline | grep 44c4297`)
+2. If NOT deployed: apply the three `_read_cached_quota() == "0" → sys.exit(0)` guards to `capture_closing_lines.py`
+3. If DEPLOYED and still firing: inspect which specific exit point triggered — use `--verbose` flag. Check if BDL is returning live odds instead of props (TIER_3)
+4. Monthly quota exhaustion is documented in ROADMAP.md as "Blocked until: March 2026" — verify `cache/odds_api_quota.json` shows `remaining=0`
 
 ---
 

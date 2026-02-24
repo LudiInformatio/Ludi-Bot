@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-02-24 — Capture Closing Lines: Graceful Quota Exit + Live Game Filter
+
+- **Workflow**: `capture_closing_lines.yml`
+- **Symptom**: `exit code 1` at 10:32 PM EST. Logs: "Found 322 uncaptured bets → Odds API: quota exhausted (cached) → BDL: 3 scheduled games → Matched 1 game(s) → 0 updated, 96 skipped → WARNING: Had pending bets but captured 0 closing lines".
+- **Root Cause**: Odds API monthly quota was exhausted (known Feb event, documented in ROADMAP.md). BDL fallback correctly filtered out `status=2/3` (in-progress/final) games — all earlier games had finished. Only 3 late upcoming games remained; only Utah@Houston matched; BDL had only 4 player props for that game, none matching our 96 bets (which were for earlier, now-completed games). Three `exit(1)` paths in `capture_closing_lines.py` did NOT check `odds_api_quota.json` before exiting — unlike `morning_brief.py` which already had this pattern. Also: Odds API event matching had no `commence_time` filter — could have served in-game live odds if quota was available.
+- **Fix Applied**: Tier 2 —
+  1. Three exit points (normalized_games empty, game_bet_map empty, 0 captures) now check `_read_cached_quota() == "0"` first → `sys.exit(0)` with informative message (matches `morning_brief.py` pattern)
+  2. Added `_game_is_on_slate(ev, game_date)` helper: filters Odds API events by `commence_time` date == today EST AND game has not started >15 min ago (rejects live games and future-date games)
+  3. BDL `fetch_bdl_games_today()` now logs how many in-progress/final games were filtered out (`"X in-progress/final game(s) skipped (status 2/3)"`)
+- **Pattern**: "Distinguish expected noise from real failures at the exit point." Quota=0 → monthly known event → `exit(0)`. Genuine data failure → `exit(1)` → Ops Hub fires. Same pattern applies to any API with monthly quota exhaustion.
+- **Commit**: 44c4297
+
+---
+
 ## 2026-02-23 — Injury Pipeline: ESPN/BDL Source Conflict + Name Normalization
 
 - **Symptom**: Players (Nurkić/Nurkic, Porziņģis/Porzingis) had injury records with `team_abbreviation = ''` — invisible to morning brief query `WHERE team_abbreviation IN (...)`. JJJ appeared healthy despite being injured (no record in DB).
