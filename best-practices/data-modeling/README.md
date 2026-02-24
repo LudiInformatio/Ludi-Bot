@@ -1,6 +1,6 @@
 # Data Modeling Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-21)
+**Status:** ✅ Complete (updated 2026-02-24)
 
 This guide covers SQLite schema design, data integrity, and ETL patterns for the Ludi-Bot analytics database. Every pattern is derived from a real incident or confirmed working design in the production `ludi.db`.
 
@@ -369,13 +369,18 @@ PRAGMA table_info(player_game_logs);
 ### BDL Team Abbreviation Mismatch
 **Problem:** BDL uses GS/NO/NY/PHO/SA vs our standard GSW/NOP/NYK/PHX/SAS
 **Impact:** Team joins silently fail, affecting WOWY and injury lookups
-**Fix:** Normalization layer in `utils/bdl_client.py` applies `TEAM_ABBR_MAP`
-**Reference:** `MEMORY.md` — "BDL abbreviations differ" entry
+**Fix:** `normalize_bdl_abbr(abbr)` from `utils/mappings.py` — centralized Feb 24, idempotent. DO NOT add local dicts in new scripts. ESPN team IDs live in `canonical_teams` table (30 rows), not hardcoded dicts.
 
-### Accent Mismatches
-**Problem:** Tank01 returns ASCII names (Doncic), NBA API returns UTF-8 (Dončić)
-**Impact:** Name matching fails silently between data sources
-**Fix:** Strip accents with `unicodedata.normalize('NFD', name)` before any name comparison
+### Accent Mismatches — Two-Direction Problem
+**Problem:** Accent mismatches go in two directions with different fixes:
+1. Odds API / bet_recommendations → DB: "Jokic" must match "Jokić" in `player_injuries` (canonical has accent)
+2. `players.name` → synergy/season tables: "Jokić" must match "Jokic" in BDL-sourced tables (no accent)
+
+**Impact:** Haiku sanity gate receives "No injury on record" for OUT accented players → bad bets pass. Archetype classifier silently downgrades accented players to GENERALIST.
+
+**Fix (direction 1 — resolve TO canonical):** `resolve_canonical_name(conn, name)` from `utils/player_id_resolver.py` — NFKD strip → look up `player_canonical_ids.normalized_name` → return `full_name` with correct accents. Graceful fallback if not found. Use before any Claude prompt injection.
+
+**Fix (direction 2 — resolve AWAY FROM canonical):** `_strip_accents(name)` — `unicodedata.normalize('NFKD', name)` + strip `Mn` category chars. Try exact match first, then stripped form. Used in `classify_archetypes.py` synergy/season lookups.
 
 ### `players.team` After Trade
 **Problem:** `players.team` snapshots current team; historical logs show old-team stats

@@ -136,7 +136,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 23, 2026 7:55 PM EST
+**Last Updated:** February 24, 2026 1:21 AM EST
 
 **Phase 8 Completions:**
 
@@ -167,11 +167,14 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | BDL V2 + SportsDataIO Enrichment (Feb 22) — 4 new sync scripts; 100K+ rows backfilled (advanced/hustle/tracking/plus_minus/season avgs/started/fantasy pts); Ghost Protocol `--skip-advanced` |
 | Infra | Data Sync Pipeline Fix (Feb 23) — PBP Stats split to own Mon/Wed/Fri workflow; Module H BDL fallback; Ops Hub `cancelled` trigger; wall-clock guards + HTTP timeout hardening |
 | Infra | Injury Pipeline Hardening (Feb 23 PM) — ESPN fast source (`sync_injuries_espn.py`); `player_canonical_ids.normalized_name` accent-safe resolution; source-scoped resolve; ESPN status protection; morning brief UNION query + 75-day filter; module_g DB-first (no Playwright during briefings); Module D DB-first (skips Perplexity for OUT/DOUBTFUL); yak_cache _save_cache fix; `daily_briefing.yml` 9 AM → 11 AM |
+| Infra | RSS Feed Parsing Hardening (Feb 23-24) — RotoWire 100% parse rate verified; RealGM verb list expanded (22 ACTION_WORDS); `_classify_rss_headline()` OUT/DOUBTFUL keywords expanded; canonical validation gate; `getattr` safety on feedparser fields; `module_d.py` `_extract_realgm_player_name()` proper extraction |
+| Infra | Canonical Table Hardening + ESPN Foundation (Feb 24) — `player_canonical_ids` CREATE TABLE restored in `database.py` (was orphaned); `canonical_teams` table added (30 teams, BDL/Tank01/ESPN IDs); `espn_id` column added to `player_canonical_ids`; `normalize_bdl_abbr()` centralized in `utils/mappings.py` eliminating 6 copy-pasted dicts; `build_espn_crosswalk.py` (new); ESPN scripts load team IDs from DB; opportunistic `espn_id` write-back during injury scans |
+| Infra | Claude Name Resolution Pipeline (Feb 24) — `resolve_canonical_name(conn, name)` added to `player_id_resolver.py`; wired into `curate_plays.py` (Haiku sanity gate), `morning_brief.py` (hit rate + spotlight), `trend_engine.py` (matchup analysis entry point + `_resolve_player_id()` tier 4), `classify_archetypes.py` (synergy + season lookups with dual accent/ASCII fallback); fixes silent GENERALIST downgrades + Haiku receiving "No injury on record" for accented OUT players |
 
 **Planned Next:**
 - Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
 - Phase 8.17: Foul Intelligence — PlayByPlayV3 foul events → `player_foul_splits`, early foul trouble minutes dampener
-- Phase 8.21: ESPN Full Integration — injuries wired ✅ (partial Feb 23); remaining: `utils/espn_client.py`, espn_id crosswalk, longComment beneficiary corpus, Tier 3 game lines fallback
+- Phase 8.21: ESPN Full Integration — injuries wired ✅ (Feb 23); `espn_id` crosswalk wired ✅ (Feb 24); remaining: `utils/espn_client.py`, longComment beneficiary corpus, Tier 3 game lines fallback
 
 **Performance (Jan 7 – Feb 20, 2026):**
 - Settled Bets: 14,423+ | Win Rate: ~54.8% overall

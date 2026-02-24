@@ -133,6 +133,8 @@ from module_e import LudiEvaluator           # ImportError
 | `player_synergy_playtypes` | 1,326 | Synergy playtype data |
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
 | `team_lineups` | 10,669 | WOWY lineup data |
+| `player_canonical_ids` | 559+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `team`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); CREATE TABLE restored in `database.py` |
+| `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 

@@ -220,8 +220,10 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 - DuckDuckGo search in Module D can be rate-limited — use sparingly
 - Module I (Aggregator) is placeholder code — not yet implemented
 - Runner DB symlink: `actions-runner/.../ludi.db` → local project DB. Don't break the symlink.
-- BDL team abbreviation mismatches: GS/NO/NY/PHO/SA vs our GSW/NOP/NYK/PHX/SAS — always normalize
+- BDL team abbreviation mismatches: GS/NO/NY/PHO/SA vs our GSW/NOP/NYK/PHX/SAS — use `normalize_bdl_abbr()` from `utils/mappings.py` (centralized Feb 24; do NOT add local dicts)
 - Always use correct class names (see Module Reference above)
+- Player name resolution: Odds API returns non-accented names (e.g. "Nikola Jokic") but `player_injuries` + `players` tables store canonical names with accents (e.g. "Nikola Jokić"). Always call `resolve_canonical_name(conn, player_name)` from `utils/player_id_resolver.py` before any name-based DB query in Claude prompt pipelines
+- `canonical_teams` table (30 rows) is the single source of truth for BDL/Tank01/ESPN team ID mappings — do NOT hardcode `ESPN_TEAM_IDS` dicts in new scripts
 
 ---
 
