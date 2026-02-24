@@ -371,11 +371,25 @@ class LudiYak:
             print(f"   [YAK] ⚠️ RealGM Intel Error: {e}")
             return None
 
+    def _save_cache(self):
+        """Persist self.cache to yak_cache.json for cross-run durability."""
+        try:
+            with open(self.cache_file, 'w') as f:
+                json.dump(self.cache, f)
+        except Exception as e:
+            print(f"   [YAK] ⚠️ Cache save error: {e}")
+
     def search_news(self, query):
+        # In-memory cache check (20-min TTL) — prevents repeat API calls within same pipeline run
         if query in self.cache:
             entry = self.cache[query]
-            if datetime.now() - datetime.fromisoformat(entry['timestamp']) < timedelta(minutes=20):
-                return entry['data']
+            try:
+                if datetime.now() - datetime.fromisoformat(entry['timestamp']) < timedelta(minutes=20):
+                    return entry['data']
+            except Exception:
+                pass
+
+        result = {"items": []}
 
         if getattr(config, 'PERPLEXITY_API_KEY', None):
             try:
@@ -383,18 +397,23 @@ class LudiYak:
                 perp = PerplexityClient()
                 text = perp._query(query)
                 if text:
-                    return {"items": [{"snippet": text, "link": "perplexity.ai"}]}
+                    result = {"items": [{"snippet": text, "link": "perplexity.ai"}]}
             except Exception as e:
                 print(f"   [YAK] Perplexity failed, falling back to DuckDuckGo: {e}")
 
-        try:
-            results = DDGS().text(query, max_results=3, timelimit="w") 
-            formatted = [{"snippet": r['body'], "link": r['href']} for r in results]
+        if not result["items"]:
+            try:
+                results = DDGS().text(query, max_results=3, timelimit="w")
+                result = {"items": [{"snippet": r['body'], "link": r['href']} for r in results]}
+            except Exception as e:
+                print(f"   [YAK] ⚠️ Search error for '{query}': {e}")
+
+        # Cache the result (in-memory + disk) so repeat queries in the same pipeline don't re-hit APIs
+        if result["items"]:
+            self.cache[query] = {'timestamp': datetime.now().isoformat(), 'data': result}
             self._save_cache()
-            return {"items": formatted}
-        except Exception as e:
-            print(f"   [YAK] ⚠️ Search error for '{query}': {e}")
-            return {"items": []}
+
+        return result
 
     def targeted_search(self, player_name, team_name, context="injury"):
         """
@@ -543,9 +562,47 @@ class LudiYak:
             conn.close()
     
     def get_player_status(self, player_name, team_name="NBA"):
+        # DB-FIRST: Check player_injuries table before hitting any API.
+        # player_injuries now has ESPN (15-30min lag) + BDL/Tank01 + RSS — more current than
+        # Module D's in-memory Tank01 cache (15-min TTL) for same-day rulings.
+        # OUT/DOUBTFUL → return immediately (skip Perplexity + Claude).
+        # GTD/QUESTIONABLE → fall through to nuance checks (Perplexity/Claude still valuable).
+        try:
+            _db_path = getattr(config, 'DB_PATH', 'ludi.db')
+            _conn = sqlite3.connect(_db_path, timeout=5)
+            _row = _conn.execute('''
+                SELECT status, injury_type, days_out, source
+                FROM player_injuries
+                WHERE LOWER(player_name) = LOWER(?)
+                  AND resolved_at IS NULL
+                  AND status NOT IN ('ACTIVE', 'PROBABLE')
+                  AND snapshot_time >= datetime('now', '-14 days')
+                ORDER BY
+                  CASE source WHEN 'ESPN' THEN 0 WHEN 'Tank01' THEN 1 WHEN 'BDL' THEN 2 ELSE 3 END,
+                  snapshot_time DESC
+                LIMIT 1
+            ''', (player_name,)).fetchone()
+            _conn.close()
+            if _row:
+                _status, _inj_type, _days_out, _source = _row
+                if _status in ('OUT', 'DOUBTFUL'):
+                    # Hard status confirmed in DB — skip API calls entirely
+                    days_note = f" ({_days_out}d)" if _days_out and _days_out > 0 else ""
+                    return {
+                        "status": _status,
+                        "note": f"[DB/{_source}] {_inj_type or _status}{days_note}",
+                        "confidence": 1.0
+                    }
+                # GTD/QUESTIONABLE in DB — fall through to nuance check but skip Tank01 re-fetch
+                elif _status in ('GTD', 'QUESTIONABLE'):
+                    return self._nuance_check(player_name, team_name, _status,
+                                              f"{_inj_type or _status} [{_source}]")
+        except Exception as _e:
+            pass  # DB unavailable — fall through to standard flow
+
         clean_name = unidecode.unidecode(player_name).replace('.', '').replace(' ', '').lower()
         self.refresh_official_injuries()
-            
+
         status_tag = self.official_injuries.get(clean_name)
         
         # --- LAYER 1: HARD STATUS (Official) ---
