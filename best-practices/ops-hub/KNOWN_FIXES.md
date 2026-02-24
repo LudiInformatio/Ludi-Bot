@@ -89,3 +89,13 @@
   the `Claude Ops Diagnosis` step `with:` block. Removed invalid `--createdAfter` flag from the
   verification step.
 - **Commit**: (this session)
+
+---
+
+## 2026-02-24 -- Capture Closing Lines: Odds API Quota Exhausted + BDL Post-Game Props Unavailable
+
+- **Workflow**: `capture_closing_lines.yml`
+- **Symptom**: 322 uncaptured bets, 0 CLV captures. All bets SKIPd with no match [bdl]. Script exits non-zero.
+- **Root Cause**: Two compounding TRANSIENT factors -- (1) Odds API monthly quota exhausted (cache pre-flight working correctly, skipped to BDL). (2) Run at 10:32 PM EST after games concluded; BDL does not serve historical closing line data for completed games, only returned 4 players with props for UTA@HOU (none matching bet records for Sengun, A. Thompson, etc.).
+- **Fix Applied**: No code change -- TRANSIENT. If this pattern repeats 3+ nights consecutively, escalate to TIER_3 to evaluate earlier CLV window or graceful exit on quota exhaustion.
+- **Commit/PR/Issue**: Issue created (severity:transient)
