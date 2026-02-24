@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-02-23 — Injury Pipeline: ESPN/BDL Source Conflict + Name Normalization
+
+- **Symptom**: Players (Nurkić/Nurkic, Porziņģis/Porzingis) had injury records with `team_abbreviation = ''` — invisible to morning brief query `WHERE team_abbreviation IN (...)`. JJJ appeared healthy despite being injured (no record in DB).
+- **Root Cause**: `sync_injuries.py` used `.lower()` only for team resolution → accented names never matched `players.name` → blank team. JJJ: BDL/Tank01 hadn't reported his injury; only ESPN had it.
+- **Fix Applied**: Tier 2 —
+  1. `_normalize_for_canonical()` in `sync_injuries.py` — NFD accent strip + suffix removal (Jr./Sr./III) matching `player_canonical_ids.normalized_name`
+  2. `_get_canonical_lookup_from_db()` — preload canonical lookup once per sync run
+  3. Stores canonical `full_name` (e.g. `Jusuf Nurkić`) in `player_injuries` for consistent downstream joins
+  4. `morning_brief.py` UNION query catches blank `team_abbreviation` via canonical_ids join
+  5. `scripts/sync_injuries_espn.py` (new) — ESPN 30-team scan, 15-30 min lag, source-scoped resolve
+  6. ESPN protection in `sync_injuries.py` — BDL/Tank01 cannot downgrade an ESPN OUT to GTD/PROBABLE
+  7. BDL resolve step scoped: `AND source NOT IN ('ESPN', 'espn_suspension')` — prevents BDL wiping ESPN entries
+- **Commit**: 5e8f6ac
+
+---
+
+## 2026-02-23 — Module D: yak_cache Never Written + Perplexity Not Cached
+
+- **Symptom**: `yak_cache.json` never existed. Perplexity was called on every `search_news()` invocation even for repeat queries in the same pipeline run.
+- **Root Cause**: `_save_cache()` was called in `search_news()` but never defined — `AttributeError` silently caught by `except Exception`. Perplexity path returned without writing to `self.cache` at all.
+- **Fix Applied**: Tier 1 — Added `_save_cache()` definition. Both Perplexity and DuckDuckGo results now written to `self.cache` + flushed to disk. 20-min TTL prevents repeat API calls within same pipeline run.
+- **Commit**: 8b1366b
+
+---
+
 ## 2026-02-23 — Evening Slate Lock: Graceful Quota Exit Check Failed
 
 - **Workflow**: `evening_slate_lock.yml`

@@ -190,7 +190,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
 | 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
-| 9:00 AM | `daily_briefing.yml` | Morning Telegram cards |
+| 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
 | 9:30 AM | `referee_sync.yml` | Daily referee assignments |
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
 | 6:00 PM | `evening_slate_lock.yml` | Evening Telegram cards |

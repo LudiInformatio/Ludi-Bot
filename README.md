@@ -16,7 +16,7 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 23, 2026 6:19 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 23, 2026 7:55 PM EST) |
 
 ### Key Features
 
@@ -31,7 +31,7 @@ A production-grade betting analytics engine that generates player prop recommend
 - **AI-Enhanced Pipeline** — Claude (Haiku/Sonnet) for play curation, S.A.V.A.G.E. game notes, and player spotlights
 - **Perplexity Integration** — Real-time news context injected into injury analysis, game notes, and curation
 - **Line Shopping** — NC Legal book integration with CLV tracking across 11 markets
-- **Real-time Injury Intelligence** — Tank01 + BDL + RotoWire/RealGM RSS dual-source corroboration; ESPN suspension sync (all 30 teams, free); staleness guards; B2B fatigue detection
+- **Real-time Injury Intelligence** — ESPN injuries (15-30min lag, primary fast source) + Tank01 + BDL + RotoWire/RealGM RSS; `player_canonical_ids.normalized_name` for accent-safe name resolution; source-scoped resolve (ESPN, BDL, suspension independently); status severity hierarchy (OUT > DOUBTFUL > GTD); 75-day filter excludes season-enders from Claude context
 - **Referee Impact Modeling** — Pace, whistle tendency, and star bias factors
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
 - **Slate Trends Header** — `_build_slate_trends_header()` sends injury-filtered HOT/COOLING signals once per briefing before per-game notes
@@ -122,7 +122,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | PBP Stats WOWY Sync | 5:00 AM Mon/Wed/Fri | PBP Stats WOWY + four-factor + team leverage profiles |
 | Daily Reports | 6:00 AM | Work notes + bet summary |
 | WOWY Sync | 7:00 AM | Daily WOWY sync |
-| Morning Briefing | 9:00 AM | AI game notes + player spotlights → Telegram |
+| Morning Briefing | 11:00 AM | AI game notes + player spotlights → Telegram (moved from 9 AM; refs+pipeline run first) |
 | Daily Referee Sync | 9:30 AM | Scrape referee assignments |
 | Production Pipeline | 10:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
 | Evening Slate Lock | 6:00 PM | Final pre-game Telegram cards |
@@ -136,7 +136,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 23, 2026 6:19 PM EST
+**Last Updated:** February 23, 2026 7:55 PM EST
 
 **Phase 8 Completions:**
 
@@ -166,11 +166,12 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Morning Brief Slate Trends Header (Feb 22) — injury-filtered HOT/COOLING leader signals; single Telegram send before per-game notes loop |
 | Infra | BDL V2 + SportsDataIO Enrichment (Feb 22) — 4 new sync scripts; 100K+ rows backfilled (advanced/hustle/tracking/plus_minus/season avgs/started/fantasy pts); Ghost Protocol `--skip-advanced` |
 | Infra | Data Sync Pipeline Fix (Feb 23) — PBP Stats split to own Mon/Wed/Fri workflow; Module H BDL fallback; Ops Hub `cancelled` trigger; wall-clock guards + HTTP timeout hardening |
+| Infra | Injury Pipeline Hardening (Feb 23 PM) — ESPN fast source (`sync_injuries_espn.py`); `player_canonical_ids.normalized_name` accent-safe resolution; source-scoped resolve; ESPN status protection; morning brief UNION query + 75-day filter; module_g DB-first (no Playwright during briefings); Module D DB-first (skips Perplexity for OUT/DOUBTFUL); yak_cache _save_cache fix; `daily_briefing.yml` 9 AM → 11 AM |
 
 **Planned Next:**
 - Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
 - Phase 8.17: Foul Intelligence — PlayByPlayV3 foul events → `player_foul_splits`, early foul trouble minutes dampener
-- Phase 8.21: ESPN Full Integration — `utils/espn_client.py`, espn_id crosswalk, game injuries enrichment (longComment/beneficiary), Tier 3 game lines fallback
+- Phase 8.21: ESPN Full Integration — injuries wired ✅ (partial Feb 23); remaining: `utils/espn_client.py`, espn_id crosswalk, longComment beneficiary corpus, Tier 3 game lines fallback
 
 **Performance (Jan 7 – Feb 20, 2026):**
 - Settled Bets: 14,423+ | Win Rate: ~54.8% overall
