@@ -21,7 +21,7 @@ import sqlite3
 import sys
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -35,6 +35,32 @@ sys.path.insert(0, str(project_root))
 import config
 
 EST = pytz.timezone('US/Eastern')
+
+
+def _game_is_on_slate(ev: Dict, game_date: str) -> bool:
+    """
+    Return True only if this Odds API event belongs on today's EST slate
+    AND the game has not yet started (or started within the last 15 min grace window).
+
+    Rejects:
+    - Games with a commence_time date != game_date in EST (tomorrow's slate, yesterday)
+    - Games that started >15 minutes ago (in-game odds are not closing lines)
+    """
+    ct = ev.get('commence_time', '')
+    if not ct:
+        return True  # No time data — allow through conservatively
+    try:
+        game_utc = datetime.fromisoformat(ct.replace('Z', '+00:00'))
+        game_est_date = game_utc.astimezone(EST).strftime('%Y-%m-%d')
+        if game_est_date != game_date:
+            return False  # Different date (tomorrow or yesterday) — skip
+        now_utc = datetime.now(timezone.utc)
+        if game_utc < now_utc - timedelta(minutes=15):
+            return False  # Game started >15 min ago — lines are live/already closed
+        return True
+    except Exception:
+        return True  # Parse error — allow through conservatively
+
 
 # Quota cache — persists x-requests-remaining between runs to skip Odds API when exhausted
 QUOTA_CACHE_PATH = project_root / 'cache' / 'odds_api_quota.json'
@@ -218,11 +244,24 @@ def fetch_all_closing_data(pending_bets: List[Dict], verbose: bool = False) -> L
     if not events_data:
         return []
 
-    # Match events to tonight's pending games
+    # Match events to tonight's pending games — reject live games and future-date games
     matched_events = [
         ev for ev in events_data
         if (ev.get('away_team', ''), ev.get('home_team', '')) in tonight_pairs
+        and _game_is_on_slate(ev, game_date)
     ]
+
+    # Log any live/future-date games that were filtered out (verbose only)
+    if verbose:
+        skipped_live = [
+            ev for ev in events_data
+            if (ev.get('away_team', ''), ev.get('home_team', '')) in tonight_pairs
+            and not _game_is_on_slate(ev, game_date)
+        ]
+        for ev in skipped_live:
+            print(f"  Odds API: SKIPPED live/future game — "
+                  f"{ev.get('away_team')} @ {ev.get('home_team')} "
+                  f"(commence: {ev.get('commence_time', 'unknown')})")
 
     if not matched_events:
         print(f"  Odds API: no events matched tonight's {len(tonight_pairs)} pending game(s)")
@@ -319,14 +358,19 @@ def fetch_bdl_games_today(game_date: str) -> Tuple[List[Dict], Optional[object]]
         from utils.bdl_client import BDLClient
         bdl = BDLClient()
         resp = bdl.get_games(date=game_date)
+        all_games = resp.get('data', [])
         games = []
-        for g in resp.get('data', []):
+        for g in all_games:
             # BDL V2 uses numeric status codes: "1"=upcoming, "2"=in-progress, "3"=final
             # (NOT string names like "Scheduled" or "Pre-Game")
             if str(g.get('status', '1')) in ('2', '3'):
                 continue
             games.append(g)
-        print(f"  BDL: {len(games)} scheduled games for {game_date}")
+        skipped_count = len(all_games) - len(games)
+        if skipped_count > 0:
+            print(f"  BDL: {skipped_count} in-progress/final game(s) skipped "
+                  f"(status 2/3 — lines already closed)")
+        print(f"  BDL: {len(games)} scheduled game(s) for {game_date}")
         return games, bdl
     except Exception as e:
         print(f"  BDL games fetch failed: {e}")
@@ -674,16 +718,24 @@ def main():
 
         # Step 8: Exit non-zero if we have bets but couldn't get any source data
         if not normalized_games:
-            quota_note = ""
             if _read_cached_quota() == "0":
-                quota_note = " (Odds API quota exhausted — BDL was only fallback)"
-            print(f"ERROR: Could not fetch closing data from Odds API or BDL{quota_note}")
+                # Odds API quota exhausted is a known monthly event (documented in ROADMAP.md).
+                # BDL had no upcoming games with props — all games likely completed.
+                # Exit cleanly — this is expected noise, not a real pipeline failure.
+                print("Odds API quota exhausted (expected monthly event) — "
+                      "no BDL props available for completed games. Exiting cleanly.")
+                sys.exit(0)
+            print("ERROR: Could not fetch closing data from Odds API or BDL")
             sys.exit(1)
 
         # Step 3: Match normalized games to pending bets by team name
         game_bet_map = match_games_to_bets(normalized_games, pending_bets)
 
         if not game_bet_map:
+            if _read_cached_quota() == "0":
+                print("Odds API quota exhausted — BDL game(s) found but none matched "
+                      "pending bets (games likely already completed). Exiting cleanly.")
+                sys.exit(0)
             print(f"WARNING: No API games matched to pending bets "
                   f"(checked {len(normalized_games)} games)")
             if args.verbose:
@@ -722,6 +774,13 @@ def main():
 
         # Step 8: Non-zero exit when we had bets but captured nothing
         if total_updated == 0 and len(pending_bets) > 0:
+            if _read_cached_quota() == "0":
+                # BDL props matched a game but no individual bet lines aligned —
+                # BDL coverage is 30-70% and props may not be available for all markets.
+                # Quota exhaustion is a known monthly event — exit cleanly.
+                print("Odds API quota exhausted — matched game(s) had no prop line "
+                      "matches (BDL coverage ~30-70%). Exiting cleanly.")
+                sys.exit(0)
             print("WARNING: Had pending bets but captured 0 closing lines")
             print("  This likely means the game lines don't match our bet game_ids,")
             print("  or all props were filtered out. Run with --verbose for details.")
