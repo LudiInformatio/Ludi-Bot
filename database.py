@@ -1285,6 +1285,26 @@ class LudiHistorian:
         except Exception:
             pass  # Column already exists — safe to ignore
 
+        # -- Canonical ID staging table (auto-ingest missing IDs for review) --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_canonical_ids_staging (
+                source           TEXT NOT NULL,
+                source_player_id TEXT NOT NULL,
+                player_name      TEXT NOT NULL,
+                normalized_name  TEXT,
+                first_game_date  TEXT,
+                last_game_date   TEXT,
+                seen_count       INTEGER DEFAULT 1,
+                first_seen_at    TEXT NOT NULL,
+                last_seen_at     TEXT NOT NULL,
+                PRIMARY KEY (source, source_player_id)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_canonical_staging_last_seen
+                ON player_canonical_ids_staging(last_seen_at)
+        ''')
+
         # -- 30-team canonical crosswalk: standard_abbr ↔ BDL / Tank01 / ESPN IDs --
         # Foundation for Phase 8.21 ESPN full integration.
         # bdl_abbr = NULL means team abbr matches standard (e.g. ATL, BOS, CHI...).

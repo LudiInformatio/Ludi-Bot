@@ -52,6 +52,7 @@ class LudiHistorian:
 
         # Ensure unique index exists for upsert operations
         self._ensure_unique_index()
+        self._ensure_canonical_staging_table()
 
     def get_db_connection(self) -> sqlite3.Connection:
         """Get SQLite connection with WAL mode enabled."""
@@ -76,7 +77,76 @@ class LudiHistorian:
         finally:
             conn.close()
 
-    def _resolve_player_id(self, tank01_id: str, player_name: str) -> str:
+    def _ensure_canonical_staging_table(self):
+        """Ensure staging table exists for missing canonical IDs."""
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS player_canonical_ids_staging (
+                    source           TEXT NOT NULL,
+                    source_player_id TEXT NOT NULL,
+                    player_name      TEXT NOT NULL,
+                    normalized_name  TEXT,
+                    first_game_date  TEXT,
+                    last_game_date   TEXT,
+                    seen_count       INTEGER DEFAULT 1,
+                    first_seen_at    TEXT NOT NULL,
+                    last_seen_at     TEXT NOT NULL,
+                    PRIMARY KEY (source, source_player_id)
+                )
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_canonical_staging_last_seen
+                ON player_canonical_ids_staging(last_seen_at)
+            """)
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"   ⚠️ Canonical staging table note: {e}")
+        finally:
+            conn.close()
+
+    def _record_missing_canonical_id(self, source_player_id: str, player_name: str, source=None, game_date=None):
+        """Persist missing canonical IDs for review (deduped + counted)."""
+        if not player_name:
+            return
+
+        source_label = source or "unknown"
+        source_id = str(source_player_id).strip() if source_player_id else player_name
+        normalized = self.resolver.normalize_name(player_name)
+        now_ts = datetime.now().isoformat()
+
+        try:
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO player_canonical_ids_staging (
+                    source, source_player_id, player_name, normalized_name,
+                    first_game_date, last_game_date, seen_count,
+                    first_seen_at, last_seen_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+                ON CONFLICT(source, source_player_id) DO UPDATE SET
+                    player_name = excluded.player_name,
+                    normalized_name = COALESCE(excluded.normalized_name, player_canonical_ids_staging.normalized_name),
+                    last_game_date = COALESCE(excluded.last_game_date, player_canonical_ids_staging.last_game_date),
+                    last_seen_at = excluded.last_seen_at,
+                    seen_count = player_canonical_ids_staging.seen_count + 1
+            """, (
+                source_label,
+                source_id,
+                player_name,
+                normalized,
+                game_date,
+                game_date,
+                now_ts,
+                now_ts
+            ))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"   ⚠️ Failed to stage missing canonical ID for {player_name}: {e}")
+
+    def _resolve_player_id(self, tank01_id: str, player_name: str, source=None, game_date=None) -> str:
         """
         Resolve Tank01 composite ID to canonical NBA ID.
 
@@ -114,6 +184,12 @@ class LudiHistorian:
                 # No match at all - log warning and return original
                 # This is expected for rookies or recently added players
                 print(f"   ⚠️ No canonical ID for: {player_name} ({tank01_id})")
+                self._record_missing_canonical_id(
+                    source_player_id=tank01_id,
+                    player_name=player_name,
+                    source=source,
+                    game_date=game_date
+                )
                 return tank01_id
 
     def _check_budget(self):
@@ -164,7 +240,9 @@ class LudiHistorian:
                 # Resolve player ID to canonical format (Phase 6.5b Step 5.5)
                 canonical_player_id = self._resolve_player_id(
                     str(record['PLAYER_ID']),
-                    record.get('PLAYER_NAME', 'Unknown')
+                    record.get('PLAYER_NAME', 'Unknown'),
+                    source="tank01",
+                    game_date=game_date
                 )
 
                 # Derive season_id from game_date (Phase 2A)
@@ -675,7 +753,9 @@ class LudiHistorian:
                         # Resolve player ID via canonical IDs
                         canonical_player_id = self._resolve_player_id(
                             str(player_info.get('id', '')),
-                            player_name
+                            player_name,
+                            source="bdl",
+                            game_date=bdl_date
                         )
                         
                         record = {
