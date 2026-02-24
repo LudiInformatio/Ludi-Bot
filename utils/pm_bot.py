@@ -63,11 +63,17 @@ class ProjectManagerBot:
         Parse ROADMAP.md into structured sections.
 
         Returns dict with:
-            - current_phase: str (from header)
-            - pending: list ([ ] items from High/Medium Priority)
-            - in_progress: list ([-] items)
-            - completed: list ([x] items from Recently Completed)
+            - current_phase: str (from **Current Phase:** header line)
+            - pending: list (- [ ] items from High/Medium Priority sections)
+            - in_progress: list (**Active Work:** header line — primary source)
+            - completed: list (last 3 sprints from **Completed:** header line)
+
+        NOTE: ROADMAP.md uses a 6-line header block for current state tracking
+        (**Current Phase:**, **Active Work:**, **Completed:**) and table format
+        for Phase 8 sub-phases. The parser reads the header block first, which
+        is always up-to-date, then falls back to - [-] checkboxes if they exist.
         """
+        import re
         base_dir = Path(__file__).resolve().parent.parent
         roadmap_file = base_dir / "ROADMAP.md"
 
@@ -87,48 +93,56 @@ class ProjectManagerBot:
         current_section = None
 
         for line in lines:
-            # Detect current phase from header
+            # ── PRIMARY: Parse 6-line header block ─────────────────────────────
+            # These are always maintained and reflect the true current state.
+
             if line.startswith('**Current Phase:**'):
                 current_phase = line.replace('**Current Phase:**', '').strip()
 
-            # Detect sections
+            elif line.startswith('**Active Work:**'):
+                # Active Work = what's in progress right now
+                active = line.replace('**Active Work:**', '').strip()
+                if active:
+                    in_progress.append(active)
+
+            elif line.startswith('**Completed:**'):
+                # Extract last 3 sprint names — most recent are at the end
+                completed_str = line.replace('**Completed:**', '').strip()
+                parts = completed_str.split(' + ')
+                for part in parts[-3:]:
+                    clean = part.strip().replace('**', '').replace('✅', '').strip()
+                    clean = re.sub(r'\s+', ' ', clean).strip()
+                    if clean:
+                        completed.append(clean)
+
+            # ── SECONDARY: Section-based scanning for - [ ] / - [-] items ─────
+            # These exist in Medium/Low Priority for non-Phase-8 tasks.
+
             if '## High Priority' in line or '## Medium Priority' in line:
                 current_section = 'tasks'
-            elif '## Recently Completed' in line:
-                current_section = 'completed'
-            elif '## Low Priority' in line:
-                current_section = 'low'  # Skip low priority for briefs
+            elif '## Low Priority' in line or '## Archive' in line:
+                current_section = 'low'
             elif line.startswith('## ') and current_section:
                 current_section = None
 
-            # Extract tasks based on section
             if current_section == 'tasks':
                 if '- [ ]' in line:
-                    task = line.replace('- [ ]', '').strip()
-                    # Clean up markdown backticks but keep the content
-                    task = task.replace('`', '')
+                    task = line.replace('- [ ]', '').strip().replace('`', '')
                     if task:
                         pending.append(task)
                 elif '- [-]' in line:
+                    # Fallback: explicit in-progress checkbox (if used)
                     task = line.replace('- [-]', '').strip()
-                    # Remove timestamp emoji if present, clean backticks
                     task = task.split('🏗️')[0].strip() if '🏗️' in task else task
                     task = task.replace('`', '')
-                    if task:
+                    if task and task not in in_progress:
                         in_progress.append(task)
-            elif current_section == 'completed':
-                if '- [x]' in line:
-                    task = line.replace('- [x]', '').strip()
-                    # Remove timestamp emoji if present
-                    task = task.split('✅')[0].strip() if '✅' in task else task
-                    if task:
-                        completed.append(task)
 
         return {
             'current_phase': current_phase,
-            'pending': pending[:10],      # Limit to top 10
+            'pending': pending[:10],
             'in_progress': in_progress[:5],
-            'completed': completed[:5]     # Most recent 5 wins
+            'completed': completed[:5],
         }
 
     def _get_context(self, mode="morning"):

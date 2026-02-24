@@ -25,6 +25,15 @@ This is the single source of truth for project tasks and priorities.
 
 ## High Priority
 
+### Current Sprint
+
+- [-] Phase 8.13 — Ask Ludi Telegram Bot (`bots/ask_ludi.py`) — architecture complete, 3-file implementation ready
+- [x] Canonical Table Hardening + ESPN Integration Foundation (Feb 24) — `canonical_teams` table, `normalize_bdl_abbr()` centralized, `build_espn_crosswalk.py`, `espn_id` column wired
+- [x] Claude Name Resolution Pipeline (Feb 24) — `resolve_canonical_name()` in Haiku gate, spotlights, matchup analysis, archetype classifier; fixes accent mismatch silent failures
+- [x] RSS Feed Parsing Hardening (Feb 23-24) — RotoWire + RealGM verb list expanded, canonical validation gate, `getattr` safety
+
+---
+
 ### Phase 8: AI-Enhanced Pipeline (Claude Integration)
 
 **Goal:** Add Claude as an analytical reasoning layer on top of the deterministic pipeline
