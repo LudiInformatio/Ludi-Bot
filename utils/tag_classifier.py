@@ -8,6 +8,7 @@
 import json
 import sqlite3
 from typing import Dict, List, Optional
+from utils.mappings import normalize_bdl_abbr
 
 class TagClassifier:
     """
@@ -70,13 +71,6 @@ class TagClassifier:
             "WAS": "NEUTRAL",
         }
         self._load_defensive_schemes_from_cache()
-
-        # Historical aliases for team codes
-        self.TEAM_ALIASES = {
-            "PHO": "PHX",  # Phoenix Suns (NBA.com historical)
-            "NO": "NOP",   # New Orleans Pelicans
-            "NY": "NYK",   # New York Knicks
-        }
 
         self.ARCHETYPE_RULES = {}
 
@@ -278,8 +272,7 @@ class TagClassifier:
         opponent_upper = opponent_team.upper().strip()
 
         # Check for historical alias (PHO → PHX)
-        if opponent_upper in self.TEAM_ALIASES:
-            opponent_upper = self.TEAM_ALIASES[opponent_upper]
+        opponent_upper = normalize_bdl_abbr(opponent_upper)
 
         # Lookup scheme
         scheme = self.DEFENSIVE_SCHEMES.get(opponent_upper, "NEUTRAL")

@@ -10,17 +10,7 @@ Updated: Feb 2, 2026
 import sqlite3
 from typing import Dict
 from pathlib import Path
-
-# Team abbreviation normalization
-TEAM_ABBR_MAP = {
-    'GS': 'GSW', 'PHO': 'PHX', 'NO': 'NOP', 'SA': 'SAS', 'NY': 'NYK',
-    'GSW': 'GSW', 'PHX': 'PHX', 'NOP': 'NOP', 'SAS': 'SAS', 'NYK': 'NYK',
-    'BOS': 'BOS', 'LAL': 'LAL', 'MIA': 'MIA', 'DEN': 'DEN', 'MIL': 'MIL',
-    'CLE': 'CLE', 'OKC': 'OKC', 'MIN': 'MIN', 'DAL': 'DAL', 'MEM': 'MEM',
-    'HOU': 'HOU', 'ATL': 'ATL', 'CHI': 'CHI', 'TOR': 'TOR', 'IND': 'IND',
-    'WAS': 'WAS', 'SAC': 'SAC', 'UTA': 'UTA', 'ORL': 'ORL', 'CHA': 'CHA',
-    'DET': 'DET', 'POR': 'POR', 'BKN': 'BKN', 'LAC': 'LAC', 'PHI': 'PHI',
-}
+from utils.mappings import normalize_bdl_abbr
 
 class TeamOffensiveClassifier:
     def __init__(self, db_path='ludi.db'):
@@ -62,7 +52,7 @@ class TeamOffensiveClassifier:
         team_stats = self._fetch_team_stats(start_date, end_date, min_games)
 
         for team_abbr, stats in team_stats.items():
-            normalized = TEAM_ABBR_MAP.get(team_abbr, team_abbr)
+            normalized = normalize_bdl_abbr(team_abbr)
             off_type = self._classify_team(normalized, stats)
             self.TEAM_OFFENSIVE_TYPES[normalized] = off_type
 
@@ -97,7 +87,7 @@ class TeamOffensiveClassifier:
             team_stats = {}
             for row in c.fetchall():
                 team, games, ppg, apg, t3pa, t3pm, fga, spg, ast_per_fgm = row
-                normalized = TEAM_ABBR_MAP.get(team, team)
+                normalized = normalize_bdl_abbr(team)
 
                 # Calculate derived metrics
                 t3pa_rate = t3pa / fga if fga > 0 else 0.35

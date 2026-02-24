@@ -23,20 +23,10 @@ import pytz
 # Add project root so we can import config and utils
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
-from utils.mappings import TEAM_MAP
+from utils.mappings import TEAM_MAP, normalize_bdl_abbr
 
 DB_PATH = 'ludi.db'
 EST_TZ = pytz.timezone('US/Eastern')
-
-# Both BDL and Tank01 use short codes — normalize to standard NBA abbreviations.
-# MEMORY.md: "BDL abbreviation mismatches: GS/NO/NY/PHO/SA vs our GSW/NOP/NYK/PHX/SAS"
-SHORT_ABBREV_MAP = {
-    "GS": "GSW",
-    "NO": "NOP",
-    "NY": "NYK",
-    "PHO": "PHX",
-    "SA": "SAS",
-}
 
 
 def resolve_team(name: str) -> str:
@@ -46,7 +36,7 @@ def resolve_team(name: str) -> str:
 
 def normalize_abbrev(abbrev: str) -> str:
     """Normalize short-code abbreviations (Tank01/BDL) to standard NBA abbreviations."""
-    return SHORT_ABBREV_MAP.get(abbrev, abbrev)
+    return normalize_bdl_abbr(abbrev)
 
 
 # ---------------------------------------------------------------------------

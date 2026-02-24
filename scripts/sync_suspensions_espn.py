@@ -34,8 +34,9 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
-# ESPN team ID mapping (ESPN IDs differ from NBA.com IDs)
-ESPN_TEAM_IDS = {
+# ESPN team ID mapping — sourced from canonical_teams DB at runtime.
+# Fallback used only if canonical_teams table isn't populated yet (e.g. first-ever init).
+_ESPN_TEAM_IDS_FALLBACK = {
     'ATL': 1,  'BOS': 2,  'NOP': 3,  'CHI': 4,  'CLE': 5,
     'DAL': 6,  'DEN': 7,  'DET': 8,  'GSW': 9,  'HOU': 10,
     'IND': 11, 'LAC': 12, 'LAL': 13, 'MIA': 14, 'MIL': 15,
@@ -44,8 +45,18 @@ ESPN_TEAM_IDS = {
     'UTA': 26, 'WAS': 27, 'TOR': 28, 'MEM': 29, 'CHA': 30
 }
 
-# Reverse map: ESPN team_id → our abbreviation
-ESPN_ID_TO_ABBR = {v: k for k, v in ESPN_TEAM_IDS.items()}
+
+def _load_espn_team_ids(conn) -> dict:
+    """Load ESPN team IDs from canonical_teams table. Falls back to hardcoded if unavailable."""
+    try:
+        rows = conn.execute(
+            "SELECT standard_abbr, espn_id FROM canonical_teams WHERE espn_id IS NOT NULL"
+        ).fetchall()
+        if rows:
+            return {row[0]: row[1] for row in rows}
+    except Exception:
+        pass
+    return _ESPN_TEAM_IDS_FALLBACK
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -232,6 +243,11 @@ def main():
     conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA journal_mode=WAL;")
 
+    # Load ESPN team IDs from canonical_teams (single source of truth)
+    espn_team_ids = _load_espn_team_ids(conn)
+    print(f"   📋 ESPN team map loaded: {len(espn_team_ids)} teams "
+          f"({'canonical_teams DB' if len(espn_team_ids) == 30 else 'fallback'})")
+
     # Step 1: Resolve any ESPN suspensions where returnDate has passed
     resolved = resolve_stale_espn_suspensions(conn)
     if resolved:
@@ -240,12 +256,12 @@ def main():
     # Step 2: Determine which teams to scan
     if args.team:
         team_abbr = args.team.upper()
-        if team_abbr not in ESPN_TEAM_IDS:
+        if team_abbr not in espn_team_ids:
             print(f"❌ Unknown team: {team_abbr}")
             sys.exit(1)
-        teams_to_scan = [(ESPN_TEAM_IDS[team_abbr], team_abbr)]
+        teams_to_scan = [(espn_team_ids[team_abbr], team_abbr)]
     else:
-        teams_to_scan = [(v, k) for k, v in ESPN_TEAM_IDS.items()]
+        teams_to_scan = [(v, k) for k, v in espn_team_ids.items()]
 
     print(f"\n📡 Scanning {len(teams_to_scan)} team(s)...")
 

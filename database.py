@@ -1258,6 +1258,84 @@ class LudiHistorian:
             )
         ''')
 
+        # -- Canonical ID mapping (restored Feb 2026 — was orphaned; creation script lost) --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_canonical_ids (
+                canonical_id     TEXT PRIMARY KEY,
+                full_name        TEXT NOT NULL,
+                normalized_name  TEXT NOT NULL UNIQUE,
+                team             TEXT,
+                position         TEXT,
+                is_active        INTEGER DEFAULT 1,
+                tank01_aliases   TEXT,
+                nba_api_id       TEXT,
+                sportsdata_id    TEXT,
+                dk_player_id     TEXT,
+                fd_player_id     TEXT,
+                espn_id          TEXT,
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_canonical_norm ON player_canonical_ids(normalized_name)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_canonical_active ON player_canonical_ids(is_active)")
+        # Migration guard: add espn_id to existing DBs that pre-date this column
+        try:
+            c.execute("ALTER TABLE player_canonical_ids ADD COLUMN espn_id TEXT")
+        except Exception:
+            pass  # Column already exists — safe to ignore
+
+        # -- 30-team canonical crosswalk: standard_abbr ↔ BDL / Tank01 / ESPN IDs --
+        # Foundation for Phase 8.21 ESPN full integration.
+        # bdl_abbr = NULL means team abbr matches standard (e.g. ATL, BOS, CHI...).
+        # Only 5 teams differ from BDL: GS, NO, NY, PHO, SA.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS canonical_teams (
+                standard_abbr  TEXT PRIMARY KEY,   -- our internal standard: GSW, NOP, NYK, PHX, SAS
+                full_name      TEXT NOT NULL,
+                bdl_abbr       TEXT,               -- BDL short code; NULL if same as standard_abbr
+                tank01_abbr    TEXT,               -- same as BDL for all 30 teams
+                espn_id        INTEGER             -- ESPN numeric team ID (stable, 1-30)
+            )
+        ''')
+        _team_seed = [
+            ('ATL', 'Atlanta Hawks',          None,  None,  1),
+            ('BOS', 'Boston Celtics',         None,  None,  2),
+            ('NOP', 'New Orleans Pelicans',   'NO',  'NO',  3),
+            ('CHI', 'Chicago Bulls',          None,  None,  4),
+            ('CLE', 'Cleveland Cavaliers',    None,  None,  5),
+            ('DAL', 'Dallas Mavericks',       None,  None,  6),
+            ('DEN', 'Denver Nuggets',         None,  None,  7),
+            ('DET', 'Detroit Pistons',        None,  None,  8),
+            ('GSW', 'Golden State Warriors',  'GS',  'GS',  9),
+            ('HOU', 'Houston Rockets',        None,  None,  10),
+            ('IND', 'Indiana Pacers',         None,  None,  11),
+            ('LAC', 'LA Clippers',            None,  None,  12),
+            ('LAL', 'Los Angeles Lakers',     None,  None,  13),
+            ('MIA', 'Miami Heat',             None,  None,  14),
+            ('MIL', 'Milwaukee Bucks',        None,  None,  15),
+            ('MIN', 'Minnesota Timberwolves', None,  None,  16),
+            ('BKN', 'Brooklyn Nets',          None,  None,  17),
+            ('NYK', 'New York Knicks',        'NY',  'NY',  18),
+            ('ORL', 'Orlando Magic',          None,  None,  19),
+            ('PHI', 'Philadelphia 76ers',     None,  None,  20),
+            ('PHX', 'Phoenix Suns',           'PHO', 'PHO', 21),
+            ('POR', 'Portland Trail Blazers', None,  None,  22),
+            ('SAC', 'Sacramento Kings',       None,  None,  23),
+            ('SAS', 'San Antonio Spurs',      'SA',  'SA',  24),
+            ('OKC', 'Oklahoma City Thunder',  None,  None,  25),
+            ('UTA', 'Utah Jazz',              None,  None,  26),
+            ('WAS', 'Washington Wizards',     None,  None,  27),
+            ('TOR', 'Toronto Raptors',        None,  None,  28),
+            ('MEM', 'Memphis Grizzlies',      None,  None,  29),
+            ('CHA', 'Charlotte Hornets',      None,  None,  30),
+        ]
+        c.executemany(
+            "INSERT OR IGNORE INTO canonical_teams "
+            "(standard_abbr, full_name, bdl_abbr, tank01_abbr, espn_id) VALUES (?,?,?,?,?)",
+            _team_seed
+        )
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
@@ -1296,8 +1374,11 @@ class LudiHistorian:
     #   bet_recommendations       — Primary bet log (15,575+ records, settlement target)
     #   bet_daily_summaries       — Daily P&L rollup (one row per date)
     #
+    # Restored to init_db() above (Feb 2026):
+    #   player_canonical_ids      — ID mapping table (559+ rows); CREATE TABLE restored Feb 24 2026
+    #   canonical_teams           — 30-team BDL/Tank01/ESPN ID crosswalk; added Feb 24 2026
+    #
     # Unresolved (referenced in production but CREATE TABLE source not found):
-    #   player_canonical_ids      — ID mapping table (500+ rows); creation script likely deleted
     #   players_archived          — Referenced in migration_enable.sql; presumed manual creation
     # -------------------------------------------------------------------------
 

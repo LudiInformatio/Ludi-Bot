@@ -29,6 +29,8 @@ from typing import Optional, Any
 
 import requests
 
+from utils.mappings import normalize_bdl_abbr
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -84,15 +86,6 @@ class SportsDataClient:
 
     BASE_URL = "https://api.sportsdata.io/api/nba/fantasy/json"
 
-    # Team abbreviation normalization — identical to BDL's mismatches
-    TEAM_ABBREVIATION_MAP = {
-        'GS': 'GSW',
-        'NO': 'NOP',
-        'NY': 'NYK',
-        'PHO': 'PHX',
-        'SA': 'SAS',
-    }
-
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("SPORTSDATA_API_KEY")
         if not self.api_key:
@@ -126,16 +119,12 @@ class SportsDataClient:
                 pass  # api_monitor unavailable — continue without tracking
         return self._monitor
 
-    def _normalize_team(self, abbrev: str) -> str:
-        """Normalize SportsDataIO team codes to standard NBA codes."""
-        return self.TEAM_ABBREVIATION_MAP.get(abbrev, abbrev)
-
     def _normalize_team_data(self, data: Any) -> Any:
         """Recursively normalize team abbreviations in response data."""
         if isinstance(data, dict):
             for field in ('Team', 'HomeTeam', 'AwayTeam', 'team_abbreviation'):
                 if field in data and isinstance(data[field], str):
-                    data[field] = self._normalize_team(data[field])
+                    data[field] = normalize_bdl_abbr(data[field])
             for key, val in data.items():
                 data[key] = self._normalize_team_data(val)
         elif isinstance(data, list):

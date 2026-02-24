@@ -69,5 +69,33 @@ def resolve_team_abbr(raw_name: str) -> str:
     # Final check for cases where the abbreviation itself is passed
     if len(clean_name) == 3 and clean_name.isupper() and clean_name in TEAM_MAP.values():
         return clean_name
-        
+
     return None
+
+
+# BDL and Tank01 use 5 non-standard short codes; all other 25 teams match our standard abbr.
+_BDL_TO_STANDARD = {
+    'GS':  'GSW',   # Golden State Warriors
+    'NO':  'NOP',   # New Orleans Pelicans
+    'NY':  'NYK',   # New York Knicks
+    'PHO': 'PHX',   # Phoenix Suns
+    'SA':  'SAS',   # San Antonio Spurs
+}
+
+
+def normalize_bdl_abbr(abbr: str) -> str:
+    """
+    Convert a BDL/Tank01 short-code team abbreviation to our standard 3-letter form.
+
+    Idempotent — passing an already-standard abbreviation returns it unchanged:
+        normalize_bdl_abbr('GS')  → 'GSW'
+        normalize_bdl_abbr('GSW') → 'GSW'
+        normalize_bdl_abbr('PHO') → 'PHX'
+        normalize_bdl_abbr('PHX') → 'PHX'
+
+    This is the single source of truth for BDL abbreviation normalization.
+    All modules and scripts must import from here instead of maintaining local dicts.
+    """
+    if not abbr:
+        return abbr
+    return _BDL_TO_STANDARD.get(abbr.upper(), abbr.upper())

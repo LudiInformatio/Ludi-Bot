@@ -9,6 +9,9 @@ import sys
 import sqlite3
 import requests
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.mappings import normalize_bdl_abbr
+
 # ---------- ENV LOADING (Python 3.14 safe) ----------
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
 if os.path.exists(env_path):
@@ -22,20 +25,11 @@ if os.path.exists(env_path):
 BDL_KEY = os.environ.get('BALLDONTLIE_KEY', '')
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ludi.db')
 
-# BDL abbreviations → our standard abbreviations
-BDL_ABBREV_MAP = {
-    'GS':  'GSW',
-    'NO':  'NOP',
-    'NY':  'NYK',
-    'PHO': 'PHX',
-    'SA':  'SAS',
-}
-
 DATES = ['2026-02-19', '2026-02-20']
 
 
 def normalize_abbrev(abbrev: str) -> str:
-    return BDL_ABBREV_MAP.get(abbrev, abbrev)
+    return normalize_bdl_abbr(abbrev)
 
 
 def fetch_games_from_bdl(dates: list) -> list:

@@ -41,8 +41,9 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
-# ESPN team ID mapping (same as sync_suspensions_espn.py)
-ESPN_TEAM_IDS = {
+# ESPN team ID mapping — sourced from canonical_teams DB at runtime.
+# Fallback used only if canonical_teams table isn't populated yet (e.g. first-ever init).
+_ESPN_TEAM_IDS_FALLBACK = {
     'ATL': 1,  'BOS': 2,  'NOP': 3,  'CHI': 4,  'CLE': 5,
     'DAL': 6,  'DEN': 7,  'DET': 8,  'GSW': 9,  'HOU': 10,
     'IND': 11, 'LAC': 12, 'LAL': 13, 'MIA': 14, 'MIL': 15,
@@ -50,6 +51,19 @@ ESPN_TEAM_IDS = {
     'PHX': 21, 'POR': 22, 'SAC': 23, 'SAS': 24, 'OKC': 25,
     'UTA': 26, 'WAS': 27, 'TOR': 28, 'MEM': 29, 'CHA': 30
 }
+
+
+def _load_espn_team_ids(conn) -> dict:
+    """Load ESPN team IDs from canonical_teams table. Falls back to hardcoded if unavailable."""
+    try:
+        rows = conn.execute(
+            "SELECT standard_abbr, espn_id FROM canonical_teams WHERE espn_id IS NOT NULL"
+        ).fetchall()
+        if rows:
+            return {row[0]: row[1] for row in rows}
+    except Exception:
+        pass
+    return _ESPN_TEAM_IDS_FALLBACK
 
 # ESPN status → our status mapping
 ESPN_STATUS_MAP = {
@@ -127,12 +141,14 @@ def fetch_team_injuries(espn_team_id: int, team_abbr: str) -> list:
         if not our_status:
             continue  # Skip statuses we don't track (Active, Probable not worth recording)
 
-        # Get player name via athlete $ref
+        # Get player name + ESPN athlete ID via athlete $ref
         athlete_ref = injury.get('athlete', {}).get('$ref', '')
         player_name = None
+        espn_athlete_id = None
         if athlete_ref:
             athlete = _get(athlete_ref)
             player_name = athlete.get('displayName') or athlete.get('fullName')
+            espn_athlete_id = str(athlete.get('id', '')) or None
 
         if not player_name:
             continue
@@ -170,6 +186,7 @@ def fetch_team_injuries(espn_team_id: int, team_abbr: str) -> list:
             'source': 'ESPN',
             'snapshot_time': datetime.now().isoformat(),
             'is_game_day_report': 0,
+            'espn_athlete_id': espn_athlete_id,  # for espn_id write-back to canonical
         })
 
     return injuries
@@ -201,6 +218,15 @@ def sync_to_db(injuries: list, conn: sqlite3.Connection,
             player_name = canonical_match[0]  # Use canonical full_name (e.g. Jusuf Nurkić)
             if not team_abbreviation:
                 team_abbreviation = canonical_match[1]
+
+            # Opportunistically write back espn_id to player_canonical_ids at no extra API cost
+            espn_athlete_id = inj.get('espn_athlete_id')
+            if espn_athlete_id and not dry_run:
+                cursor.execute(
+                    "UPDATE player_canonical_ids SET espn_id = COALESCE(espn_id, ?) "
+                    "WHERE normalized_name = ?",
+                    (espn_athlete_id, normalized)
+                )
 
         # Dedup guard: skip if identical (player, status, date) already exists today
         existing_today = cursor.execute('''
@@ -304,6 +330,11 @@ def main():
     conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA journal_mode=WAL;")
 
+    # Load ESPN team IDs from canonical_teams (single source of truth)
+    espn_team_ids = _load_espn_team_ids(conn)
+    print(f"   📋 ESPN team map loaded: {len(espn_team_ids)} teams "
+          f"({'canonical_teams DB' if len(espn_team_ids) == 30 else 'fallback'})")
+
     # Load canonical name lookup once
     canonical_lookup = _load_canonical_lookup(conn)
     print(f"   📋 Canonical lookup loaded: {len(canonical_lookup)} players")
@@ -311,12 +342,12 @@ def main():
     # Determine teams to scan
     if args.team:
         team_abbr = args.team.upper()
-        if team_abbr not in ESPN_TEAM_IDS:
+        if team_abbr not in espn_team_ids:
             print(f"❌ Unknown team: {team_abbr}")
             sys.exit(1)
-        teams_to_scan = [(ESPN_TEAM_IDS[team_abbr], team_abbr)]
+        teams_to_scan = [(espn_team_ids[team_abbr], team_abbr)]
     else:
-        teams_to_scan = [(v, k) for k, v in ESPN_TEAM_IDS.items()]
+        teams_to_scan = [(v, k) for k, v in espn_team_ids.items()]
 
     print(f"\n📡 Scanning {len(teams_to_scan)} team(s) for injuries...")
 

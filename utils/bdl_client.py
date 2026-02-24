@@ -18,6 +18,7 @@ import pytz
 from datetime import datetime
 from typing import Optional, Dict, List, Any
 from functools import lru_cache
+from utils.mappings import normalize_bdl_abbr
 
 _BDL_EST = pytz.timezone('US/Eastern')
 
@@ -80,15 +81,6 @@ class BDLClient:
     BASE_URL_V1 = "https://api.balldontlie.io/nba/v1"
     BASE_URL_V2 = "https://api.balldontlie.io/nba/v2"
 
-    # Team abbreviation normalization (BDL → Standard NBA codes)
-    TEAM_ABBREVIATION_MAP = {
-        'GS': 'GSW',
-        'NO': 'NOP',
-        'NY': 'NYK',
-        'PHO': 'PHX',
-        'SA': 'SAS'
-    }
-
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("BALLDONTLIE_KEY")
         if not self.api_key:
@@ -108,15 +100,11 @@ class BDLClient:
     # Internal HTTP
     # ------------------------------------------------------------------
 
-    def _normalize_team_abbreviation(self, abbrev: str) -> str:
-        """Normalize BDL team abbreviations to standard NBA codes."""
-        return self.TEAM_ABBREVIATION_MAP.get(abbrev, abbrev)
-
     def _normalize_team_data(self, data: Any) -> Any:
         """Recursively normalize team abbreviations in API response data."""
         if isinstance(data, dict):
             if 'abbreviation' in data:
-                data['abbreviation'] = self._normalize_team_abbreviation(data['abbreviation'])
+                data['abbreviation'] = normalize_bdl_abbr(data['abbreviation'])
             if 'team_abbreviation' in data:
                 data['team_abbreviation'] = self._normalize_team_abbreviation(data['team_abbreviation'])
             # Recursively process nested dicts
