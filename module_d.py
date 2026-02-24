@@ -63,6 +63,9 @@ class LudiYak:
         # [PHASE 3] Load Keyword Taxonomy
         self.keywords_config = self._load_keyword_config()
 
+        # [RSS] Canonical player name set for validation (lazy-loaded on first RealGM fetch)
+        self._canonical_names = None
+
 
     def _load_cache(self):
         if os.path.exists(self.cache_file):
@@ -274,9 +277,9 @@ class LudiYak:
                 new_cache.append({
                     'player_name': player_name,
                     'headline': headline,
-                    'description': entry.description,
-                    'pub_date': entry.published,
-                    'link': entry.link
+                    'description': getattr(entry, 'description', ''),
+                    'pub_date': getattr(entry, 'published', ''),
+                    'link': getattr(entry, 'link', '')
                 })
             
             self.rss_cache = new_cache
@@ -309,40 +312,109 @@ class LudiYak:
                     
         return None
 
+    def _load_canonical_names(self):
+        """Lazy-load canonical player name set for RSS validation.
+        Prevents college players and non-NBA names from polluting cache."""
+        if self._canonical_names is not None:
+            return self._canonical_names
+        try:
+            db_path = getattr(config, 'DB_PATH', 'ludi.db')
+            _conn = sqlite3.connect(db_path, timeout=5)
+            self._canonical_names = {r[0] for r in _conn.execute(
+                "SELECT normalized_name FROM player_canonical_ids WHERE is_active = 1"
+            ).fetchall()}
+            _conn.close()
+        except Exception:
+            self._canonical_names = set()
+        return self._canonical_names
+
+    def _extract_realgm_player_name(self, title):
+        """Extract player name from free-form RealGM article headline.
+        Mirrors sync_injuries.py._extract_player_from_realgm_title() with expanded verb list.
+        Returns None for articles where a player is not the subject (team news, stats, etc.)."""
+        TEAM_WORDS = {
+            'cavaliers','warriors','lakers','celtics','nets','knicks','76ers',
+            'raptors','bulls','bucks','pacers','pistons','wizards','hornets',
+            'heat','magic','hawks','spurs','suns','nuggets','thunder','trail',
+            'blazers','jazz','clippers','kings','timberwolves','grizzlies',
+            'mavericks','pelicans','rockets','nba','report','sources',
+            'chicago','boston','golden','new','los','san','oklahoma','portland',
+            'minnesota','memphis','dallas','denver','houston','indiana','detroit',
+            'washington','charlotte','miami','orlando','atlanta',
+        }
+        first_word = title.split()[0].lower().rstrip(',') if title.split() else ''
+        if first_word in TEAM_WORDS:
+            return None
+
+        ACTION_WORDS = [
+            ' Out ', ' Will ', ' Is ', ' Has ', ' To ', " Won't ",
+            ' Not ', ' Returns ', ' Ruled ', ' Expected ', ' Listed ',
+            ' Leaves ', ' Underwent ', ' Undergo ', ' Undergoes ',
+            ' Suffered ', ' Suffers ', ' Diagnosed ', ' Shut ',
+            ' Plans ', ' Pushes ', ' Misses ', ' Missing ',
+        ]
+        name_part = title
+        for verb in ACTION_WORDS:
+            if verb in title:
+                name_part = title[:title.index(verb)].strip()
+                break
+
+        words = name_part.split()
+        if 2 <= len(words) <= 4 and ',' not in name_part:
+            # Validate against canonical IDs — reject non-NBA players
+            canonical = self._load_canonical_names()
+            if canonical:
+                import unicodedata, re as _re
+                nfd = unicodedata.normalize('NFD', name_part)
+                normalized = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+                normalized = _re.sub(r'\s+(jr|sr|ii|iii|iv)\.?\s*$', '', normalized.lower().strip())
+                if normalized not in canonical:
+                    return None
+            return name_part
+        return None
+
     def refresh_realgm_rss(self):
-        """[PHASE 2.5] Fetch RealGM RSS Feed with dynamic cache."""
+        """[PHASE 2.5] Fetch RealGM RSS Feed with dynamic cache.
+        Updated Feb 24, 2026 — now extracts player names properly instead of
+        storing full article titles as player_name."""
         interval = self.get_refresh_interval()
-        
+
         if self.last_realgm_refresh:
             elapsed = datetime.now() - self.last_realgm_refresh
             if elapsed < timedelta(minutes=interval):
                 return self.realgm_cache
-        
+
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
             r = requests.get(self.realgm_url, headers=headers, timeout=10)
-            
+
             if r.status_code != 200:
                 print(f"   [YAK] ⚠️ RealGM RSS Fetch Fail: {r.status_code}")
                 return self.realgm_cache
 
             feed = feedparser.parse(r.content)
             new_cache = []
-            
+
             for entry in feed.entries:
                 entry_title = entry.title if isinstance(entry.title, str) else str(entry.title)
+                # Extract player name — skip articles where no valid NBA player is the subject
+                extracted_name = self._extract_realgm_player_name(entry_title)
+                if not extracted_name:
+                    continue
+
                 new_cache.append({
-                    'player_name': entry_title,
-                    'headline': entry_title,
+                    'player_name': extracted_name,   # clean player name (not full title)
+                    'headline': entry_title,          # full title preserved for classification
                     'description': getattr(entry, 'description', ''),
                     'pub_date': getattr(entry, 'published', ''),
                     'link': getattr(entry, 'link', '')
                 })
-            
+
             self.realgm_cache = new_cache
             self.last_realgm_refresh = datetime.now()
+            # print(f"   [YAK] 📡 RealGM RSS Synced ({len(new_cache)} injury-relevant items)")
             return self.realgm_cache
-            
+
         except Exception as e:
             print(f"   [YAK] ⚠️ RealGM RSS Sync Error: {e}")
             return self.realgm_cache

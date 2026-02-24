@@ -110,39 +110,75 @@ class InjurySync:
         return ' '.join(words) if words else None
 
     def _classify_rss_headline(self, text):
-        """Classify RSS headline text into injury status."""
+        """Classify RSS headline text into injury status.
+        Updated Feb 24, 2026 — expanded from live verb audit of both feeds."""
         t = text.lower()
-        if any(k in t for k in ['ruled out', "won't play", 'will not play',
-                                  'not traveling', 'sit out', ' out ', 'out for',
-                                  'out friday', 'out saturday', 'out sunday',
-                                  'out monday', 'out tuesday', 'out wednesday',
-                                  'out thursday', 'out tonight', 'out indefinitely']):
+        if any(k in t for k in [
+            # Existing (verified working)
+            'ruled out', "won't play", 'will not play',
+            'not traveling', 'sit out', ' out ', 'out for',
+            'out friday', 'out saturday', 'out sunday',
+            'out monday', 'out tuesday', 'out wednesday',
+            'out thursday', 'out tonight', 'out indefinitely',
+            # NEW — from Feb 23 live audit (previously missed injury patterns)
+            'surgery', 'season-ending', 'shut down',
+            'diagnosed with', 'suffers ', 'suffered ',
+            'leaves game', 'leaves practice', 'left the game',
+            'out for the season', 'out for the remainder',
+        ]):
             return 'OUT'
-        if 'doubtful' in t:
+        if any(k in t for k in [
+            'doubtful', 'unlikely to play', 'not expected to play',
+        ]):
             return 'DOUBTFUL'
-        if any(k in t for k in ['questionable', 'day-to-day', 'game-time decision',
-                                  'game time decision', 'gtd']):
-            return 'QUESTIONABLE'
+        if any(k in t for k in [
+            # "undergo" anything = imaging/procedure pending → treat as DOUBTFUL
+            'undergo imaging', 'undergo an mri', 'undergo surgery', 'undergo a procedure',
+            'questionable', 'day-to-day', 'game-time decision',
+            'game time decision', 'gtd', 'iffy',
+        ]):
+            return 'DOUBTFUL'
         if any(k in t for k in ['probable', 'expected to play', 'cleared',
                                   're-evaluated', 'return from']):
             return 'PROBABLE'
         return None
 
     def _extract_player_from_realgm_title(self, title):
-        """Extract player name from free-form RealGM sentence headlines."""
+        """Extract player name from free-form RealGM sentence headlines.
+        Updated Feb 24, 2026 — expanded ACTION_WORDS from live feed verb audit."""
         TEAM_WORDS = {
             'cavaliers','warriors','lakers','celtics','nets','knicks','76ers',
             'raptors','bulls','bucks','pacers','pistons','wizards','hornets',
             'heat','magic','hawks','spurs','suns','nuggets','thunder','trail',
             'blazers','jazz','clippers','kings','timberwolves','grizzlies',
-            'mavericks','pelicans','rockets','nba','report','sources'
+            'mavericks','pelicans','rockets','nba','report','sources',
+            # City names that appear as first word
+            'chicago','boston','golden','new','los','san','oklahoma','portland',
+            'minnesota','memphis','dallas','denver','houston','indiana','detroit',
+            'washington','charlotte','miami','orlando','atlanta',
         }
         first_word = title.split()[0].lower().rstrip(',') if title.split() else ''
         if first_word in TEAM_WORDS:
             return None
 
-        ACTION_WORDS = [' Out ', ' Will ', ' Is ', ' Has ', ' To ', " Won't ",
-                        ' Not ', ' Returns ', ' Ruled ', ' Expected ', ' Listed ']
+        ACTION_WORDS = [
+            # Current (verified working)
+            ' Out ', ' Will ', ' Is ', ' Has ', ' To ', " Won't ",
+            ' Not ', ' Returns ', ' Ruled ', ' Expected ', ' Listed ',
+            # NEW — from Feb 23 live feed verb audit:
+            ' Leaves ',      # "Avdija Leaves Game With Lower Back Injury"
+            ' Underwent ',   # past tense surgery/procedure
+            ' Undergo ',     # "Simons To Undergo Imaging" (also caught by ' To ')
+            ' Undergoes ',   # present tense
+            ' Suffered ',    # "Broome Suffered Torn Meniscus"
+            ' Suffers ',     # present tense
+            ' Diagnosed ',   # "Haliburton Diagnosed With Shingles"
+            ' Shut ',        # "Collins Shut Down By Team" (player as subject)
+            ' Plans ',       # "Durant Plans To Play" → ACTIVE (filtered by classification)
+            ' Pushes ',      # "Peterson Pushes Back" → ACTIVE (filtered by classification)
+            ' Misses ',      # "Player Misses Practice"
+            ' Missing ',     # "Player Missing With Injury"
+        ]
         name_part = title
         for verb in ACTION_WORDS:
             if verb in title:
@@ -385,6 +421,18 @@ class InjurySync:
         except ImportError:
             return {"success": False, "injuries": [], "errors": ["feedparser not installed"]}
 
+        # Load canonical names once for player validation (prevents college/non-NBA players)
+        canonical_names = set()
+        try:
+            _conn = sqlite3.connect(self.db_path, timeout=5)
+            canonical_names = {r[0] for r in _conn.execute(
+                "SELECT normalized_name FROM player_canonical_ids WHERE is_active = 1"
+            ).fetchall()}
+            _conn.close()
+            self._log(f"   📋 Canonical lookup loaded: {len(canonical_names)} players")
+        except Exception as _e:
+            self._log(f"   ⚠️  Could not load canonical names: {_e} (validation skipped)")
+
         parsed_injuries = []
         feeds = [
             ("RotoWire", "https://www.rotowire.com/rss/news.php?sport=NBA", "rotowire"),
@@ -414,6 +462,14 @@ class InjurySync:
 
                     if not player_name:
                         continue
+
+                    # Validate extracted name against player_canonical_ids
+                    # Rejects college players, coaches, and headline fragments
+                    if canonical_names:
+                        normalized_check = self._normalize_for_canonical(player_name)
+                        if normalized_check not in canonical_names:
+                            self._log(f"   ⚠️  RSS skip (not in roster): '{player_name}'")
+                            continue
 
                     status = self._classify_rss_headline(f"{headline} {getattr(entry, 'description', '')}")
                     if status not in ('OUT', 'DOUBTFUL'):

@@ -17,7 +17,13 @@
                 "torn",
                 "rupture",
                 "won't return",
-                "out for the remainder"
+                "out for the remainder",
+                "shut down",
+                "diagnosed with",
+                "suffered",
+                "suffers",
+                "leaves game",
+                "left the game"
             ],
             "confidence": 1.0,
             "status": "OUT"
@@ -26,7 +32,10 @@
             "keywords": [
                 "doubtful",
                 "unlikely to play",
-                "not expected to played"
+                "not expected to play",
+                "undergo imaging",
+                "undergo an mri",
+                "iffy"
             ],
             "confidence": 0.9,
             "status": "DOUBTFUL"
