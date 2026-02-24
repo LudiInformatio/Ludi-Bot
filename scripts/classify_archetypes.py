@@ -22,8 +22,20 @@ import argparse
 import sqlite3
 import sys
 import os
+import unicodedata
 from datetime import datetime, timedelta
 from collections import Counter
+
+
+def _strip_accents(name: str) -> str:
+    """Strip Unicode accents from a name (NFKD, preserves casing and spaces).
+
+    Use this when querying tables populated by BDL/NBA API which store names
+    in ASCII form (e.g. 'Nikola Jokic'), while players.name may have accents
+    (e.g. 'Nikola Jokić').
+    """
+    normalized = unicodedata.normalize('NFKD', name)
+    return ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -102,18 +114,29 @@ def get_active_players(conn, window_days=21, min_games=3):
 
 
 def get_player_synergy(conn, player_name):
-    """Get all synergy playtypes for a Player, ordered by freq_pct DESC."""
-    query = """
+    """Get all synergy playtypes for a player, ordered by freq_pct DESC.
+
+    Tries the name as-is first (handles tables that store accented names),
+    then falls back to accent-stripped form (handles BDL/NBA API data which
+    stores ASCII names like 'Nikola Jokic' while players.name has 'Nikola Jokić').
+    """
+    _SYNERGY_SQL = """
         SELECT playtype, freq_pct, ppp, score_freq_pct, percentile
         FROM player_synergy_playtypes
         WHERE player_name = ?
         ORDER BY freq_pct DESC
     """
     cur = conn.cursor()
-    cur.execute(query, (player_name,))
-    rows = cur.fetchall()
-    # Filter out rows with None freq_pct
-    return [r for r in rows if r[1] is not None]
+    cur.execute(_SYNERGY_SQL, (player_name,))
+    rows = [r for r in cur.fetchall() if r[1] is not None]
+    if rows:
+        return rows
+    # Fallback: try accent-stripped form (e.g. 'Nikola Jokić' → 'Nikola Jokic')
+    stripped = _strip_accents(player_name)
+    if stripped != player_name:
+        cur.execute(_SYNERGY_SQL, (stripped,))
+        rows = [r for r in cur.fetchall() if r[1] is not None]
+    return rows
 
 
 def get_player_shot_quality(conn, player_id):
@@ -160,14 +183,21 @@ def get_player_season_advanced(conn, player_name: str) -> dict | None:
     """Season-level advanced stats from player_season_averages_bdl.
     100% coverage (535 players). Single row query per player.
     Returns: usg_pct, ast_pct, ast_to, off_rating, def_rating — the key discriminators
-    that resolve HELIOCENTRIC vs SLASHING vs ISO close calls."""
+    that resolve HELIOCENTRIC vs SLASHING vs ISO close calls.
+
+    Tries both accented and stripped forms — player_season_averages_bdl is BDL-sourced
+    so it may store ASCII names while players.name has accents.
+    """
     import json
-    row = conn.execute(
-        """SELECT stats_json FROM player_season_averages_bdl
+    _SEASON_SQL = """SELECT stats_json FROM player_season_averages_bdl
            WHERE player_name = ? AND category = 'general' AND stat_type = 'advanced'
-           LIMIT 1""",
-        (player_name,)
-    ).fetchone()
+           LIMIT 1"""
+    row = conn.execute(_SEASON_SQL, (player_name,)).fetchone()
+    if not row or not row[0]:
+        # Fallback: try accent-stripped form
+        stripped = _strip_accents(player_name)
+        if stripped != player_name:
+            row = conn.execute(_SEASON_SQL, (stripped,)).fetchone()
     if not row or not row[0]:
         return None
     try:

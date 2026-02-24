@@ -34,6 +34,15 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'ludi.db')
 
+# Lazy import to avoid circular import — only used in _resolve_player_id and matchup helpers
+def _resolve_canonical(conn, player_name: str) -> str:
+    """Thin wrapper around resolve_canonical_name for trend engine use."""
+    try:
+        from utils.player_id_resolver import resolve_canonical_name
+        return resolve_canonical_name(conn, player_name)
+    except Exception:
+        return player_name
+
 # Stat column mapping — matches player_game_logs schema exactly
 STAT_COL = {
     'PTS': 'pts', 'REB': 'reb', 'AST': 'ast', '3PM': 'fg3m',
@@ -86,6 +95,16 @@ def _resolve_player_id(conn, player_name: str, team_abbr: str) -> str:
     ).fetchone()
     if row:
         return str(row['player_id'])
+
+    # Tier 4: canonical name resolution — handles Odds API non-accented names
+    # (e.g. 'Nikola Jokic' → 'Nikola Jokić') then retry players table
+    canonical = _resolve_canonical(conn, player_name)
+    if canonical != player_name:
+        row = conn.execute(
+            "SELECT player_id FROM players WHERE name = ? LIMIT 1", (canonical,)
+        ).fetchone()
+        if row:
+            return str(row['player_id'])
 
     return None
 
@@ -399,7 +418,7 @@ def get_matchup_analysis(player_name, opponent_abbr, cursor, stat_category='PTS'
     """
     Build a structured archetype-vs-scheme matchup block for Spotlight cards.
     Returns a 1-2 line string, or empty string if data unavailable.
-    
+
     Example outputs:
     - PTS OVER: "P&R Handler (1.18 PPP, 22%) | ISO (0.95 PPP, 18%) vs BLITZ defense"
     - BLK OVER: "Defends 18% of possessions | Allows 42.3% FG (-4.1% vs avg) vs P&R_HEAVY offense"
@@ -407,6 +426,12 @@ def get_matchup_analysis(player_name, opponent_abbr, cursor, stat_category='PTS'
     - MIN OVER: "Starter: 34.2 avg | B2B: 31.5 | Blowout: 28.3 | Close: 36.1"
     """
     try:
+        # Resolve to canonical name before all synergy/defense/rotation lookups.
+        # Synergy and season tables store canonical names (with accents).
+        # Input from morning_brief may be non-accented (e.g. 'Jokic' vs 'Jokić').
+        conn = cursor.connection
+        player_name = _resolve_canonical(conn, player_name)
+
         # Pull opponent's current scheme
         scheme_row = cursor.execute("""
             SELECT active_style

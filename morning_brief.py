@@ -25,6 +25,7 @@ import main
 from utils.perplexity_client import PerplexityClient
 from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line, get_matchup_analysis
 from utils.time_utils import get_time_context, format_time_context_note
+from utils.player_id_resolver import resolve_canonical_name
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -332,11 +333,13 @@ class MorningBriefEngine:
             return {'avg': 0, 'hit_rate': 0}
             
         try:
-            # Get player_id first (assuming name match)
+            # Resolve to canonical name before lookup so accented names match
+            # (e.g. 'Nikola Jokic' from bet_recommendations → 'Nikola Jokić' in players table)
+            canonical_name = resolve_canonical_name(conn, player_name)
             cursor = conn.cursor()
-            cursor.execute("SELECT player_id FROM players WHERE name = ? LIMIT 1", (player_name,))
+            cursor.execute("SELECT player_id FROM players WHERE name = ? LIMIT 1", (canonical_name,))
             pid_row = cursor.fetchone()
-            
+
             if not pid_row:
                 return {'avg': 0, 'hit_rate': 0}
                 
@@ -960,6 +963,11 @@ Return JSON only."""
                             opponent = bet.get('opponent')
                             stat_cat = bet.get('stat_category') or bet.get('stat', 'PTS')
                             line = bet.get('line', 0.0)
+
+                            # Resolve to canonical name so Claude receives consistent names
+                            # that match what's in injury_intel_block and player_injuries table.
+                            # e.g. 'Nikola Jokic' (from Odds API) → 'Nikola Jokić' (canonical)
+                            player_name = resolve_canonical_name(conn, player_name)
 
                             print(f"   > Spotlight analysis for {player_name} ({stat_cat})...")
 

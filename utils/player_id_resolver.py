@@ -251,6 +251,50 @@ def normalize_player_name(name: str, db_path: str = 'ludi.db') -> str:
     return name  # Fallback to original if no match
 
 
+def resolve_canonical_name(conn: sqlite3.Connection, player_name: str) -> str:
+    """
+    Resolve a raw player display name to its canonical full_name stored in
+    player_canonical_ids (e.g. 'Nikola Jokic' → 'Nikola Jokić').
+
+    Uses NFKD normalization (same as PlayerIDResolver.normalize_name) to strip
+    accents from the input before the lookup — so both accented AND non-accented
+    inputs resolve to the same canonical full_name.
+
+    Call this before any query that matches player_name against:
+      - player_injuries          (stores canonical full_name with accents)
+      - player_synergy_playtypes (mixed encoding — canonical is safest)
+      - player_season_averages_bdl
+      - player_trends
+      - beneficiary_minutes
+
+    Args:
+        conn: Open SQLite connection (caller's existing connection — no extra opens)
+        player_name: Raw name from bet_recommendations, Odds API, etc.
+
+    Returns:
+        Canonical full_name string (e.g. 'Jusuf Nurkić'), or original player_name
+        unchanged if no canonical match exists (graceful fallback, never raises).
+    """
+    if not player_name:
+        return player_name
+    try:
+        # NFKD normalization — identical to PlayerIDResolver.normalize_name()
+        norm = unicodedata.normalize('NFKD', player_name).encode('ASCII', 'ignore').decode('ASCII')
+        norm = norm.lower().strip()
+        for suffix in [' jr.', ' jr', ' sr.', ' sr', ' iii', ' ii', ' iv', ' v']:
+            norm = norm.replace(suffix, '')
+        norm = ' '.join(norm.split())
+        row = conn.execute(
+            "SELECT full_name FROM player_canonical_ids WHERE normalized_name = ? LIMIT 1",
+            (norm,)
+        ).fetchone()
+        if row and row[0]:
+            return row[0]
+    except Exception:
+        pass
+    return player_name  # Graceful fallback — never breaks caller
+
+
 if __name__ == '__main__':
     # Quick test
     resolver = PlayerIDResolver()

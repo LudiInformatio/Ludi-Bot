@@ -40,6 +40,7 @@ import config
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
 from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
 from utils.telegram_notifier import send_message
+from utils.player_id_resolver import resolve_canonical_name
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
@@ -96,7 +97,15 @@ def _fetch_todays_bets(conn: sqlite3.Connection, run_date: str) -> list[dict]:
 
 
 def _fetch_player_injury(conn: sqlite3.Connection, player_name: str) -> dict | None:
-    """Fetch most recent active injury record for a player. Returns None if table missing."""
+    """Fetch most recent active injury record for a player. Returns None if table missing.
+
+    Uses canonical name resolution so that non-accented names from bet_recommendations
+    (e.g. 'Nikola Jokic' from Odds API) correctly match accented canonical names
+    (e.g. 'Nikola Jokić') stored in player_injuries. Without this, Haiku receives
+    'No injury on record' for OUT players and passes bad bets.
+    """
+    # Resolve to canonical full_name (e.g. 'Nikola Jokic' → 'Nikola Jokić')
+    canonical_name = resolve_canonical_name(conn, player_name)
     try:
         cursor = conn.execute("""
             SELECT status, days_out, description, is_game_day_report
@@ -105,7 +114,7 @@ def _fetch_player_injury(conn: sqlite3.Connection, player_name: str) -> dict | N
               AND resolved_at IS NULL
             ORDER BY snapshot_time DESC
             LIMIT 1
-        """, (player_name,))
+        """, (canonical_name,))
         row = cursor.fetchone()
         if row:
             return {
