@@ -174,6 +174,22 @@ jobs:
           python scripts/verify_team_classifications.py --window-days 30 || echo "WARNING: Classification mismatches found — review logs"
         continue-on-error: true
 
+      - name: Claude Smart Scheme Update
+        run: |
+          source .venv/bin/activate
+          echo "Calling Claude Haiku to review scheme labels and apply HIGH-confidence corrections..."
+          python scripts/claude_classify_schemes.py || echo "WARNING: Claude scheme update failed -- continuing"
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Update Team Scheme Cache (60d/21d/7d windows)
+        run: |
+          source .venv/bin/activate
+          echo "Re-running scheme cache with [60d, 21d, 7d] voting windows..."
+          python scripts/update_team_scheme_cache.py --verbose || echo "WARNING: Scheme cache update failed"
+        continue-on-error: true
+
       - name: Generate League Rankings (Phase 8.10)
         run: |
           source .venv/bin/activate

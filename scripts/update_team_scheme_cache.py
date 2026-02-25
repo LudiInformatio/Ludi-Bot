@@ -201,47 +201,49 @@ def main():
     args = parser.parse_args()
 
     window_end = resolve_window_end(args.db_path, args.window_end)
-    season_start = args.season_start
 
     end_dt = datetime.strptime(window_end, "%Y-%m-%d")
+    # 3-window voting: 60d (baseline trend) / 21d (medium-term) / 7d (hot/recent)
+    # Replaces [season, 21d, 14d] — 7d catches injury-driven shifts and scheme changes
+    # that a 14d window would smooth over. All three vote equally in pick_active().
+    d60_start = (end_dt - timedelta(days=59)).strftime("%Y-%m-%d")
     d21_start = (end_dt - timedelta(days=20)).strftime("%Y-%m-%d")
-    d14_start = (end_dt - timedelta(days=13)).strftime("%Y-%m-%d")
+    d7_start  = (end_dt - timedelta(days=6)).strftime("%Y-%m-%d")
+
+    # Backwards-compatible: --season-start still accepted but 60d is now the baseline
+    season_start = d60_start  # override: use 60d rolling window, not fixed season start
 
     off_classifier = TeamOffensiveClassifier(db_path=args.db_path)
     def_classifier = TeamDefensiveClassifier(db_path=args.db_path)
 
-    # BDL-based 14d offensive quality tiers (STRONG / AVERAGE / WEAK).
-    # Uses player_game_advanced.off_rating (HIGHER = better offense).
-    # Z-score: STRONG ≥ league_avg + 1 std, WEAK ≤ league_avg - 1 std.
-    off_quality_14d = compute_team_off_quality_14d(args.db_path, d14_start, window_end)
+    # BDL-based 7d quality tiers (STRONG / AVERAGE / WEAK) — short window shows recent form.
+    off_quality_14d = compute_team_off_quality_14d(args.db_path, d7_start, window_end)
     if args.verbose and off_quality_14d:
-        print(f"[OFF QUALITY 14d] computed for {len(off_quality_14d)} teams "
+        print(f"[OFF QUALITY 7d] computed for {len(off_quality_14d)} teams "
               f"(STRONG={sum(1 for v in off_quality_14d.values() if v=='STRONG')}, "
               f"WEAK={sum(1 for v in off_quality_14d.values() if v=='WEAK')})")
 
-    # BDL-based 14d defensive quality tiers (STRONG / AVERAGE / WEAK).
-    # Used as fallback when Ghost Protocol tracking has INSUFFICIENT data for the 14d window.
-    def_quality_14d = compute_team_def_quality_14d(args.db_path, d14_start, window_end)
+    def_quality_14d = compute_team_def_quality_14d(args.db_path, d7_start, window_end)
     if args.verbose and def_quality_14d:
-        print(f"[DEF QUALITY 14d] computed for {len(def_quality_14d)} teams "
+        print(f"[DEF QUALITY 7d] computed for {len(def_quality_14d)} teams "
               f"(STRONG={sum(1 for v in def_quality_14d.values() if v=='STRONG')}, "
               f"WEAK={sum(1 for v in def_quality_14d.values() if v=='WEAK')})")
 
-    off_season = off_classifier.classify_all_teams(start_date=season_start, end_date=window_end, min_games=30)
-    off_21 = off_classifier.classify_all_teams(start_date=d21_start, end_date=window_end, min_games=5)
-    # min_games=3 for 14d: All-Star break reduces games to 2-4 per team in this window.
-    off_14 = off_classifier.classify_all_teams(start_date=d14_start, end_date=window_end, min_games=3)
+    # Offense: [60d, 21d, 7d] windows
+    off_season = off_classifier.classify_all_teams(start_date=d60_start, end_date=window_end, min_games=20)
+    off_21     = off_classifier.classify_all_teams(start_date=d21_start, end_date=window_end, min_games=5)
+    off_14     = off_classifier.classify_all_teams(start_date=d7_start,  end_date=window_end, min_games=2)
 
+    # Defense: [60d, 21d, 7d] windows
     def_season_raw, def_season_stats = def_classifier.batch_classify_all_teams(
-        start_date=season_start, end_date=window_end, min_games=10, return_stats=True
+        start_date=d60_start, end_date=window_end, min_games=8, return_stats=True
     )
     def_21_raw, def_21_stats = def_classifier.batch_classify_all_teams(
-        start_date=d21_start, end_date=window_end, min_games=5, return_stats=True
+        start_date=d21_start, end_date=window_end, min_games=4, return_stats=True
     )
-    # min_games=2 for 14d window: All-Star break reduces games to 2-4 per team.
-    # 2 game-dates × ~10 opponent tracking rows = sufficient for relative classification.
+    # min_games=1 for 7d: as few as 2-3 games in a week; relative thresholds still valid
     def_14_raw, def_14_stats = def_classifier.batch_classify_all_teams(
-        start_date=d14_start, end_date=window_end, min_games=2, return_stats=True
+        start_date=d7_start, end_date=window_end, min_games=1, return_stats=True
     )
 
     if not args.dry_run:
