@@ -97,15 +97,31 @@ def get_active_players(conn, window_days=21, min_games=3):
     """Query active players with sufficient game sample."""
     cutoff_date = (datetime.now() - timedelta(days=window_days)).strftime('%Y-%m-%d')
     
+    # COALESCE position: prefer player_canonical_ids.position (ESPN fine-grained PG/SG/SF/PF/C)
+    # over players.position (Tank01 coarse G/F/C/UNK). player_canonical_ids is refreshed
+    # weekly by build_espn_crosswalk.py. Tank01 daily sync only returns G/F/C so we never
+    # store fine-grained data in players.position — canonical_ids is the authoritative source.
     query = """
-        SELECT DISTINCT p.player_id, p.name, p.position, p.team, p.archetype as current_archetype
-        FROM players p
-        JOIN player_game_logs pgl ON p.player_id = pgl.player_id
-        WHERE pgl.game_date >= ?
-          AND p.status = 'ACTIVE'
-        GROUP BY p.player_id, p.name, p.position, p.team, p.archetype
-        HAVING COUNT(DISTINCT pgl.game_id) >= ?
-        ORDER BY p.name
+        SELECT player_id, name, position, team, current_archetype
+        FROM (
+            SELECT p.player_id, p.name,
+                COALESCE(
+                    CASE WHEN pc.position NOT IN ('UNK', '') AND pc.position IS NOT NULL
+                         THEN pc.position ELSE NULL END,
+                    CASE WHEN p.position NOT IN ('UNK', '') AND p.position IS NOT NULL
+                         THEN p.position ELSE NULL END,
+                    'UNK'
+                ) as position,
+                p.team, p.archetype as current_archetype
+            FROM players p
+            LEFT JOIN player_canonical_ids pc ON p.name = pc.full_name
+            JOIN player_game_logs pgl ON p.player_id = pgl.player_id
+            WHERE pgl.game_date >= ?
+              AND p.status = 'ACTIVE'
+            GROUP BY p.player_id, p.name, p.position, pc.position, p.team, p.archetype
+            HAVING COUNT(DISTINCT pgl.game_id) >= ?
+        )
+        ORDER BY name
     """
     
     cur = conn.cursor()

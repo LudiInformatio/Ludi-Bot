@@ -94,7 +94,8 @@ def _load_espn_team_ids(conn) -> dict:
 def fetch_team_athletes(espn_team_id: int, team_abbr: str) -> list:
     """
     Fetch all active athletes for an ESPN team.
-    Returns list of {espn_id, display_name}.
+    Returns list of {espn_id, display_name, position}.
+    ESPN returns fine-grained positions: PG, SG, SF, PF, C (unlike Tank01 which returns G/F/C only).
     """
     url = (f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
            f"/teams/{espn_team_id}/athletes?limit=100")
@@ -110,8 +111,10 @@ def fetch_team_athletes(espn_team_id: int, team_abbr: str) -> list:
             continue
         espn_id = str(athlete_data.get('id', ''))
         display_name = athlete_data.get('displayName') or athlete_data.get('fullName', '')
+        pos_obj = athlete_data.get('position') or {}
+        espn_pos = pos_obj.get('abbreviation', '') if isinstance(pos_obj, dict) else ''
         if espn_id and display_name:
-            athletes.append({'espn_id': espn_id, 'display_name': display_name})
+            athletes.append({'espn_id': espn_id, 'display_name': display_name, 'position': espn_pos})
         time.sleep(ATHLETE_RATE_LIMIT)
 
     return athletes
@@ -119,6 +122,27 @@ def fetch_team_athletes(espn_team_id: int, team_abbr: str) -> list:
 
 def run(dry_run: bool = False, verbose: bool = False):
     conn = sqlite3.connect(DB_PATH)
+
+    # Position normalization: ESPN abbreviations → canonical storage format.
+    # ESPN returns fine-grained PG/SG/SF/PF/C — far more useful than Tank01's G/F/C.
+    _POS_MAP = {
+        'PG': 'PG', 'SG': 'SG', 'SF': 'SF', 'PF': 'PF', 'C': 'C',
+        'G': 'G', 'F': 'F', 'G-F': 'F', 'F-C': 'C',
+    }
+    pos_updated = 0
+
+    # Cleanup: reset players.position values that are team abbreviations (data corruption).
+    # These occur when Tank01 returns no pos field and roster code stores the team abbrev instead.
+    if not dry_run:
+        corrupt_fixed = conn.execute("""
+            UPDATE players SET position = 'UNK'
+            WHERE length(position) IN (2, 3)
+              AND position = upper(position)
+              AND position NOT IN ('PG','SG','SF','PF','C','G','F','UNK')
+        """).rowcount
+        if corrupt_fixed > 0:
+            conn.commit()
+            print(f"  🔧  Cleaned {corrupt_fixed} corrupt team-abbrev position values")
 
     # Load source data
     espn_team_ids = _load_espn_team_ids(conn)
@@ -149,22 +173,43 @@ def run(dry_run: bool = False, verbose: bool = False):
 
         for athlete in athletes:
             norm = normalize_for_lookup(athlete['display_name'])
+            # Normalize ESPN position abbreviation to our canonical format
+            canonical_pos = _POS_MAP.get((athlete.get('position') or '').upper(), '')
+
             if norm in canonical:
-                # Check if already has an espn_id
+                # Fetch espn_id AND current position so we can decide whether to update both
                 existing = conn.execute(
-                    "SELECT espn_id FROM player_canonical_ids WHERE normalized_name = ?", (norm,)
+                    "SELECT espn_id, position FROM player_canonical_ids WHERE normalized_name = ?",
+                    (norm,)
                 ).fetchone()
                 if existing and existing[0]:
                     already_had_id += 1
+                    # Still refresh position for already-matched players if canonical lacks it.
+                    # ESPN has PG/SG/SF/PF/C; player_canonical_ids may still show UNK from Tank01.
+                    if canonical_pos and not dry_run:
+                        existing_pos = existing[1] or ''
+                        if existing_pos in ('UNK', ''):
+                            conn.execute(
+                                "UPDATE player_canonical_ids SET position = ? WHERE normalized_name = ?",
+                                (canonical_pos, norm)
+                            )
+                            pos_updated += 1
+                            if verbose:
+                                print(f"    📍 {athlete['display_name']} → position {canonical_pos}")
                     if verbose:
                         print(f"    ⏭️  {athlete['display_name']} — already has ESPN ID {existing[0]}")
                     continue
 
                 if not dry_run:
                     conn.execute(
-                        "UPDATE player_canonical_ids SET espn_id = ? WHERE normalized_name = ?",
-                        (athlete['espn_id'], norm)
+                        "UPDATE player_canonical_ids "
+                        "SET espn_id = ?, "
+                        "    position = CASE WHEN ? != '' THEN ? ELSE position END "
+                        "WHERE normalized_name = ?",
+                        (athlete['espn_id'], canonical_pos, canonical_pos, norm)
                     )
+                    if canonical_pos:
+                        pos_updated += 1
                 print(f"    ✅  {athlete['display_name']} → espn_id {athlete['espn_id']}")
                 matched += 1
             else:
@@ -182,6 +227,7 @@ def run(dry_run: bool = False, verbose: bool = False):
     print(f"\n{'=' * 55}")
     print(f"{'[DRY RUN] ' if dry_run else ''}Results:")
     print(f"  ✅  New espn_ids written: {matched}")
+    print(f"  📍  Positions updated:   {pos_updated}")
     print(f"  ⏭️   Already had espn_id: {already_had_id}")
     print(f"  ⚠️   No canonical match:  {len(unmatched)}")
     if unmatched and verbose:
