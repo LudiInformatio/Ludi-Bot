@@ -85,3 +85,4 @@ ludi_history_db.json
 # Tool logs (MCP, opencode, etc.)
 .playwright-mcp/
 .opencode/
+.gemini/
