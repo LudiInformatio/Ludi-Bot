@@ -763,16 +763,40 @@ Return JSON only."""
                         print(f"[TAG] Context: {e}")
                         pass
 
-                    # 4. Opponent Scheme
-                    # Fetch for both teams
-                    schemes = {}
+                    # 4. Opponent Scheme + Intelligence Context
+                    # Fix: scheme_type = 'DEFENSE' (not 'DEFENSIVE') to match the DB.
+                    # Enriched: also pull team_playtype_allowed for intelligence layer context.
+                    schemes = {}        # {team: def_style}
+                    off_schemes = {}    # {team: off_style}
+                    playtype_ctx = {}   # {team: "allows X drives/g (Yth), Z C&S/g (Wth)"}
                     for tm in [home_team, away_team]:
+                        # Defense style
                         cursor.execute("""
-                            SELECT active_style FROM team_scheme_cache 
-                            WHERE team_abbr = ? AND scheme_type = 'DEFENSIVE'
+                            SELECT active_style FROM team_scheme_cache
+                            WHERE team_abbr = ? AND scheme_type = 'DEFENSE'
                         """, (tm,))
                         row = cursor.fetchone()
-                        schemes[tm] = row[0] if row else "Standard"
+                        schemes[tm] = row[0] if row else "NEUTRAL"
+                        # Offense style
+                        cursor.execute("""
+                            SELECT active_style FROM team_scheme_cache
+                            WHERE team_abbr = ? AND scheme_type = 'OFFENSE'
+                        """, (tm,))
+                        off_row = cursor.fetchone()
+                        off_schemes[tm] = off_row[0] if off_row else "BALANCED"
+                        # Playtype allowed context (from intelligence table)
+                        cursor.execute("""
+                            SELECT ROUND(drives_fga_allowed_pg,2) as drives, drives_rank,
+                                   ROUND(cs_3pa_allowed_pg,2) as cs3pa, cs_3pa_rank,
+                                   def_quality
+                            FROM team_playtype_allowed WHERE team_abbr = ? AND season = '2025-26'
+                        """, (tm,))
+                        pt_row = cursor.fetchone()
+                        if pt_row:
+                            playtype_ctx[tm] = (
+                                f"allows {pt_row[0]} drives/g (#{pt_row[1]}), "
+                                f"{pt_row[2]} C&S 3PA/g (#{pt_row[3]}) [{pt_row[4] or 'AVERAGE'} D]"
+                            )
 
                     # 5. Edges Block (Top 3 bets)
                     # Sort by edge descending
@@ -890,10 +914,26 @@ Return JSON only."""
                             fatigue_flag=fatigue_flag,
                             injury_intel_block=_safe_inject(injury_intel_block, _MAX_BLOCK_CHARS['injury_intel_block']),
                             beneficiary_block=_safe_inject(beneficiary_block, _MAX_BLOCK_CHARS['beneficiary_block']),
-                            away_archetype_summary="Style: " + schemes.get(away_team, "UNK"),
-                            home_def_scheme=schemes.get(home_team, "UNK"),
-                            home_archetype_summary="Style: " + schemes.get(home_team, "UNK"),
-                            away_def_scheme=schemes.get(away_team, "UNK"),
+                            # Enriched scheme context (fixed 'DEFENSIVE'→'DEFENSE' typo + intelligence layer)
+                            # Format: "OFF:MOTION · DEF:PAINT_PACK [WEAK] — allows 1.8 drives/g (#2)"
+                            away_archetype_summary=(
+                                f"OFF:{off_schemes.get(away_team,'?')} · "
+                                f"DEF:{schemes.get(away_team,'NEUTRAL')}"
+                                + (f" — {playtype_ctx[away_team]}" if away_team in playtype_ctx else "")
+                            ),
+                            home_def_scheme=(
+                                f"{schemes.get(home_team,'NEUTRAL')}"
+                                + (f" · {playtype_ctx[home_team]}" if home_team in playtype_ctx else "")
+                            ),
+                            home_archetype_summary=(
+                                f"OFF:{off_schemes.get(home_team,'?')} · "
+                                f"DEF:{schemes.get(home_team,'NEUTRAL')}"
+                                + (f" — {playtype_ctx[home_team]}" if home_team in playtype_ctx else "")
+                            ),
+                            away_def_scheme=(
+                                f"{schemes.get(away_team,'NEUTRAL')}"
+                                + (f" · {playtype_ctx[away_team]}" if away_team in playtype_ctx else "")
+                            ),
                             edges_block=_safe_inject(edges_block, _MAX_BLOCK_CHARS['edges_block']),
                             situational_context=_safe_inject(situational_context, _MAX_BLOCK_CHARS['situational_context']),
                             time_context_note=time_context_note,

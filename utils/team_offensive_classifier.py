@@ -145,24 +145,27 @@ class TeamOffensiveClassifier:
         pace = stats.get('pace', 98)
 
         # MOTION: High ball movement (top quartile assists/FGM)
-        # Threshold: ast_per_fgm > 0.675 (top 20% based on 2025-26 quartiles)
+        # Threshold: ast_per_fgm > 0.675 (top ~20% based on 2025-26 distribution)
         if ast_per_fgm > 0.675:
             return "MOTION"
 
-        # ISO_HEAVY: Low ball movement, star-dependent
-        # Threshold: ast_per_fgm < 0.600 (bottom 20%, Q1 is 0.603)
-        if ast_per_fgm < 0.600:
+        # ISO_HEAVY: Low ball movement, star-dependent — guards against false positives.
+        # ppg < 117 guard: high-scoring teams (OKC, DEN) with low ast_per_fgm are
+        # PACE_PUSH (they score through tempo/transition), NOT isolation-dominant.
+        # True ISO-HEAVY teams are Luka-style: low assists AND below high-tempo scoring.
+        if ast_per_fgm < 0.600 and ppg < 117:
             return "ISO_HEAVY"
 
-        # HALF_COURT: Methodical, low pace
-        # Threshold: pace < 99 (captures slower third of teams)
-        if pace < 99:
-            return "HALF_COURT"
-
-        # PACE_PUSH: High pace, transition-focused
-        # Threshold: pace > 101 OR ppg > 120
-        if pace > 101 or ppg > 120:
+        # PACE_PUSH: Transition-heavy, high-tempo offense (top ~25% scorers not caught above).
+        # Replaces broken pace estimation formula (98 + (ppg-110)*0.15 required ppg>130 to fire).
+        # Captures: OKC, DEN, MIA, MIN, CLE, NYK — teams running high-scoring, fast offenses.
+        if ppg >= 117:
             return "PACE_PUSH"
+
+        # HALF_COURT: Methodical, below-average scoring offense.
+        # Teams below 112 PPG tend to play deliberate, set-piece basketball.
+        if ppg < 112:
+            return "HALF_COURT"
 
         return "BALANCED"
     

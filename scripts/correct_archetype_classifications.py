@@ -299,6 +299,14 @@ def run(apply: bool = False, rebuild: bool = False) -> None:
     print(f"\n[APPLIED] {arch_updated} archetype corrections written to players table.")
     print(f"[APPLIED] {len(dominance_updates)} synergy_dominance + effective_label rows updated.")
 
+    # Log correction summary for weekly validation report visibility
+    if arch_updated > 0:
+        print(f"\n[CORRECTION LOG] {datetime.now().strftime('%Y-%m-%d %H:%M')} — {arch_updated} archetype changes:")
+        for c in corrections:
+            print(f"  {c['player_name']:<28} {c['old_arch']:<22} → {c['new_arch']} ({c['synergy']})")
+    else:
+        print(f"\n[CORRECTION LOG] No archetype drift detected — classifications stable.")
+
     if rebuild:
         print("\n[REBUILD] Re-running build_classification_profiles.py...")
         import subprocess
