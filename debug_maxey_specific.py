@@ -116,8 +116,8 @@ def investigate_specific_multiplier():
     
     modifiers = []
     
-    # 1. ELITE_SCORER vs BLITZ (doesn't exist, only vs PERIMETER)
-    # modifiers.append(('ELITE_SCORER vs BLITZ', 1.0))  # No modifier
+    # 1. ISO_ASSASSIN vs BLITZ (doesn't exist, only vs PERIMETER)
+    # modifiers.append(('ISO_ASSASSIN vs BLITZ', 1.0))  # No modifier
     
     # 2. ISO_SCORER vs BLITZ 
     modifiers.append(('ISO_SCORER vs BLITZ', 0.92))

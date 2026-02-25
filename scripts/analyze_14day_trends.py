@@ -293,8 +293,8 @@ def analyze_archetype_trends():
 
             # Find archetype tag
             archetypes = [
-                'STRETCH_BIG', 'SLASHER', 'SNIPER', 'RIM_RUNNER',
-                'HELIOCENTRIC', 'GENERALIST', 'TWO_WAY_WING', 'HUB_BIG'
+                'STRETCH_BIG', 'SLASHING_CREATOR', 'SNIPER_ELITE', 'ROLL_MAN',
+                'HELIOCENTRIC_MAESTRO', 'GENERALIST', 'TWO_LEVEL_SCORER', 'HUB_BIG'
             ]
 
             archetype = None

@@ -75,16 +75,16 @@ class ArchetypeAuditor:
         tpm = stats['base_3pm']
         usg = stats['base_usg']
 
-        if archetype == "SNIPER" and tpm < 2.0:
+        if archetype == "SNIPER_ELITE" and tpm < 2.0:
             warnings.append(f"Low 3PM ({tpm:.1f})")
-        
-        if archetype == "RIM_RUNNER" and reb < 6.0:
+
+        if archetype == "ROLL_MAN" and reb < 6.0:
             warnings.append(f"Low REB ({reb:.1f})")
-            
-        if archetype == "HELIOCENTRIC" and usg < 0.25:
+
+        if archetype == "HELIOCENTRIC_MAESTRO" and usg < 0.25:
             warnings.append(f"Low USG ({usg:.2f})")
-            
-        if archetype == "SLASHER" and pts < 18.0:
+
+        if archetype == "SLASHING_CREATOR" and pts < 18.0:
             warnings.append(f"Low PTS ({pts:.1f})")
 
         if archetype == "FACILITATOR" and ast < 4.0:
@@ -169,16 +169,16 @@ class ArchetypeAuditor:
             print("-" * 75)
             
             # Sort players by key stat
-            if arch in ['SNIPER', 'STRETCH_BIG', 'ELITE_SCORER']:
+            if arch in ['SNIPER_ELITE', 'STRETCH_BIG', 'ISO_ASSASSIN']:
                 players.sort(key=lambda x: x['stats']['base_3pm'], reverse=True)
                 stat_fmt = "3PM: {base_3pm:.1f} | PTS: {base_pts:.1f}"
-            elif arch in ['RIM_RUNNER', 'HUB_BIG', 'JUMBO_CREATOR']:
+            elif arch in ['ROLL_MAN', 'HUB_BIG', 'JUMBO_FACILITATOR']:
                 players.sort(key=lambda x: x['stats']['base_reb'], reverse=True)
                 stat_fmt = "REB: {base_reb:.1f} | AST: {base_ast:.1f}"
-            elif arch in ['HELIOCENTRIC', 'FACILITATOR']:
+            elif arch in ['HELIOCENTRIC_MAESTRO', 'FACILITATOR']:
                 players.sort(key=lambda x: x['stats']['base_ast'], reverse=True)
                 stat_fmt = "AST: {base_ast:.1f} | USG: {base_usg:.2f}"
-            else: # GENERALIST, TWO_WAY_WING, SLASHER
+            else: # GENERALIST, TWO_LEVEL_SCORER, SLASHING_CREATOR
                 players.sort(key=lambda x: x['stats']['base_pts'], reverse=True)
                 stat_fmt = "PTS: {base_pts:.1f} | 3PM: {base_3pm:.1f}"
 

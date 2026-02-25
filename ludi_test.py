@@ -11,13 +11,13 @@ if __name__ == "__main__":
                     "name": "Cade Cunningham", "team": "DET",
                     "proj_min": 36, "proj_pts": 28.2, "proj_ast": 10.1,
                     "sportsbook_props": {"pts": 26.5, "ast": 9.5},
-                    "notes": "[HELIOCENTRIC] vs MIA Blitz. Detroit #2 Def Advantage."
+                    "notes": "[HELIOCENTRIC_MAESTRO] vs MIA Blitz. Detroit #2 Def Advantage."
                 },
                 {
                     "name": "Jalen Duren", "team": "DET",
                     "proj_min": 33, "proj_pts": 19.5, "proj_oreb": 4.8,
                     "sportsbook_props": {"pts": 18.1, "oreb": 3.5},
-                    "notes": "[RIM_RUNNER] vs Miami Small Ball."
+                    "notes": "[ROLL_MAN] vs Miami Small Ball."
                 }
             ]
         },

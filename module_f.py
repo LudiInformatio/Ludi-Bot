@@ -267,8 +267,8 @@ class LudiReporter:
                             if player_3pa_avg < 5.0:
                                 continue  # Skip low-volume shooters
 
-                        # Filter 3: TWO_WAY_WING OVER — systematically over-projected (35.7%, n=314)
-                        if p.get('archetype') == 'TWO_WAY_WING' and bet_direction == 'over':
+                        # Filter 3: TWO_LEVEL_SCORER OVER — systematically over-projected (35.7%, n=314)
+                        if p.get('archetype') == 'TWO_LEVEL_SCORER' and bet_direction == 'over':
                             continue
 
                         # Filter: BLK OVER hard skip (33.6% WR on 378 bets — books price this well)
@@ -1071,7 +1071,7 @@ if __name__ == "__main__":
                     }
                 },
                 "status": "Active",
-                "archetype": "SLASHER"
+                "archetype": "SLASHING_CREATOR"
             }
         ]
     }]

@@ -16,7 +16,7 @@ def test_tyrese_maxey():
         'PLAYER_NAME': 'Tyrese Maxey',
         'team': 'PHI',
         'opponent': 'TOR',  # Assume Toronto has BLITZ defense
-        'archetype': 'ELITE_SCORER',
+        'archetype': 'ISO_ASSASSIN',
         'secondary_playtypes': ['ISO_SCORER', 'P&R_HANDLER'],
         'proj_pts': 27.5,  # Base projection
         'proj_ast': 4.0,
@@ -38,14 +38,13 @@ def test_tyrese_maxey():
     # Test each modifier step by step
     test_copy = test_player.copy()
     
-    # Step 1: Apply ELITE_SCORER vs BLITZ (if it exists)
-    print(f"\n=== STEP 1: ELITE_SCORER vs {tor_defense} ===")
+    # Step 1: Apply ISO_ASSASSIN vs BLITZ (if it exists)
+    print(f"\n=== STEP 1: ISO_ASSASSIN vs {tor_defense} ===")
     if tor_defense == 'BLITZ':
-        # Check if ELITE_SCORER has BLITZ logic in module_e.py:632
-        # Current code only has ELITE_SCORER vs PERIMETER, not BLITZ
-        print("No ELITE_SCORER vs BLITZ modifier found in code")
+        # ISO_ASSASSIN vs BLITZ: no direct pts modifier, covered by ISO_SCORER secondary
+        print("No ISO_ASSASSIN vs BLITZ modifier found in code")
     elif tor_defense == 'PERIMETER':
-        print("ELITE_SCORER vs PERIMETER: proj_pts *= 1.08")
+        print("ISO_ASSASSIN vs PERIMETER: proj_pts *= 1.08")
         test_copy['proj_pts'] *= 1.08
     
     # Step 2: Apply ISO_SCORER vs BLITZ

@@ -128,32 +128,32 @@ class LudiCalibrator:
         # Position refines archetype selection when multiple stat matches exist
         # Higher score = stronger affinity for that position
         self.POSITION_ARCHETYPE_AFFINITY = {
-            # Centers: Prioritize big archetypes over guard archetypes
+            # Centers: Prioritize big archetypes
             'C': {
-                'HUB_BIG': 1.0,        # Strongest affinity (Jokic, Sabonis)
-                'STRETCH_BIG': 0.9,    # High affinity (KAT, Porzingis)
-                'RIM_RUNNER': 0.8,     # Natural fit (Capela, Gobert)
-                'HELIOCENTRIC': 0.3,   # Low affinity (rare center ballhandlers)
-                'JUMBO_CREATOR': 0.2,  # Very rare (penalize)
+                'HUB_BIG': 1.0,
+                'STRETCH_BIG': 0.9,
+                'ROLL_MAN': 0.8,
+                'HELIOCENTRIC_MAESTRO': 0.3,  # Rare for centers
+                'JUMBO_FACILITATOR': 0.2,
             },
 
-            # Forwards: Balanced, slight preference for versatile archetypes
+            # Forwards: Balanced
             'F': {
-                'JUMBO_CREATOR': 1.0,  # LeBron, Giannis (when passing)
-                'SLASHER': 0.9,        # Giannis, Zion
-                'ELITE_SCORER': 0.9,   # Tatum, Durant
-                'STRETCH_BIG': 0.7,    # Forwards who play big
-                'TWO_WAY_WING': 0.8,   # Kawhi, Butler
+                'JUMBO_FACILITATOR': 1.0,
+                'SLASHING_CREATOR': 0.9,
+                'ISO_ASSASSIN': 0.9,
+                'TWO_LEVEL_SCORER': 0.8,
+                'STRETCH_BIG': 0.7,
             },
 
             # Guards: Prioritize ball-handler archetypes
             'G': {
-                'HELIOCENTRIC': 1.0,   # Luka, Trae (guard engines)
-                'JUMBO_CREATOR': 0.9,  # LeBron-like guards (tall creators)
-                'FACILITATOR': 0.9,    # CP3, Rondo
-                'SNIPER': 0.8,         # Curry, Dame (shooters)
-                'ELITE_SCORER': 0.8,   # Scoring guards
-                'HUB_BIG': 0.1,        # Very rare (penalize heavily)
+                'HELIOCENTRIC_MAESTRO': 1.0,
+                'JUMBO_FACILITATOR': 0.9,
+                'FACILITATOR': 0.9,
+                'SNIPER_ELITE': 0.8,
+                'ISO_ASSASSIN': 0.8,
+                'HUB_BIG': 0.1,  # Very rare for guards
             },
 
             # Unknown: No preference (existing logic)
@@ -1266,7 +1266,7 @@ class LudiCalibrator:
         # If Rim Freq > 40%, they are legitimate paint threats -> Foul magnets
         if rim_freq > 0.40:
             self._boost_stat(calibrated, 'proj_fta', 1.15)
-            if archetype == "SLASHER":
+            if archetype == "SLASHING_CREATOR":
                 calibrated['notes'] += " | Confirmed Rim Pressure"
         elif rim_freq < 0.15:
             self._boost_stat(calibrated, 'proj_fta', 0.92)
@@ -1337,7 +1337,7 @@ class LudiCalibrator:
 
         # === 8. NUANCE CHECKS ===
         # Westbrook/Giddey Rule: Guards who crash boards
-        if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_CREATOR"] and calibrated.get('base_reb', 0) > 5.5:
+        if archetype in ["FACILITATOR", "GENERALIST", "JUMBO_FACILITATOR"] and calibrated.get('base_reb', 0) > 5.5:
             self._boost_stat(calibrated, 'proj_reb', 1.10)
 
         # --- GLOBAL MODIFIER CAP ---

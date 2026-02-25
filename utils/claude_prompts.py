@@ -158,7 +158,7 @@ SPOTLIGHT_EXAMPLE = """## LeBron James | LAL @ BOS
 LeBron James PTS OVER 28.5 (+100) — DIAMOND tier play vs DROP defense.
 
 **Context:**
-- Archetype: HELIOCENTRIC
+- Archetype: HELIOCENTRIC_MAESTRO
 - Opponent scheme: DROP (allows rim pressure + kickout 3s)
 - Injury status: GTD (calf) — confirmed active
 - Trend: +4.2 PTS L5

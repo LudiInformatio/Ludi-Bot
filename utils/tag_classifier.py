@@ -355,7 +355,7 @@ class TagClassifier:
             >>> game_ctx = {'opponent': 'OKC', 'spread': 6.5, 'players': [...]}
             >>> tags = classifier.assign_all_tags(player, game_ctx)
             >>> print(tags)
-            ['SNIPER', 'BENEFICIARY', 'vs_PAINT_PACK']
+            ['SNIPER_ELITE', 'BENEFICIARY', 'vs_PAINT_PACK']
         """
         all_tags = []
 
