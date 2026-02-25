@@ -151,3 +151,30 @@
 - **Root Cause**: Two compounding TRANSIENT factors -- (1) Odds API monthly quota exhausted (cache pre-flight working correctly, skipped to BDL). (2) Run at 10:32 PM EST after games concluded; BDL does not serve historical closing line data for completed games, only returned 4 players with props for UTA@HOU (none matching bet records for Sengun, A. Thompson, etc.).
 - **Fix Applied**: No code change -- TRANSIENT. If this pattern repeats 3+ nights consecutively, escalate to TIER_3 to evaluate earlier CLV window or graceful exit on quota exhaustion.
 - **Commit/PR/Issue**: Issue created (severity:transient)
+
+---
+
+## 2026-02-25 — ESPN Crosswalk 404: Season-Aware URL Required
+
+- **Script**: `scripts/build_espn_crosswalk.py`
+- **Symptom**: All 30 teams return 404. `espn_id` and position writes fail entirely.
+- **Root Cause**: ESPN changed their API. The season-less path `/teams/{id}/athletes` no longer works.
+  Correct URL: `/seasons/2026/teams/{id}/athletes?limit=100`
+- **Fix Applied**: Updated `fetch_team_athletes()` to include `/seasons/2026/` in path.
+- **Additional Finding**: ESPN athlete endpoint returns `position.leaf=false` (G/F/C parent nodes only).
+  Fine-grained PG/SG/SF/PF unavailable from ESPN, BDL, or Tank01 — only from SportsDataIO `/Players`.
+
+---
+
+## 2026-02-25 — UNK Position Coverage (155 players bypassing Gate 2)
+
+- **Context**: `players.position='UNK'` for 155 active players — bypasses all Gate 2 position gates.
+- **Root Cause**: Tank01 only returns G/F/C. `player_canonical_ids.position` existed but was 96% UNK.
+  14 additional rows had team abbrevs (IND/LAC) as position — data corruption from missing `pos` field.
+- **Fix Applied**:
+  1. `sync_sportsdata_enrichment.py --sync-positions` — SportsDataIO `/Players` has PG/SG/SF/PF/C.
+     Upgrade-only rank system (UNK=0 < G/F/C=1-2 < PG/SG/SF/PF=3). 391 upgraded in first run.
+  2. `classify_archetypes.py` — COALESCE query: prefers `player_canonical_ids.position` → `players.position` → UNK.
+  3. `build_espn_crosswalk.py` — corrupt team-abbrev cleanup runs on every execution.
+  4. Wired `--sync-positions` into `data_sync.yml` (1 cached API call/day, no extra quota cost).
+- **Result**: Active 21d window: 155 UNK → 4 (97% reduction). Gate 2 coverage: 17% → 88%.
