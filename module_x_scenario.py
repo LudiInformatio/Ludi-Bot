@@ -153,7 +153,7 @@ class ScenarioBuilder:
             new_p = p.copy()
             
             # --- CASE A: The Player Who Is Out ---
-            if p['PLAYER_ID'] == starter_out['PLAYER_ID']:
+            if (p.get('PLAYER_ID') or p.get('player_id')) == (starter_out.get('PLAYER_ID') or starter_out.get('player_id')):
                 # KILL LIST: Updated to match LIVE SCHEMA (Uppercase)
                 keys_to_zero = [
                     'MIN', 'PTS', 'AST', 'REB', 'FG3M',
@@ -386,7 +386,7 @@ class ScenarioBuilder:
         star_name = starter_out.get('PLAYER_NAME', '')
         teammate_names = [
             p['PLAYER_NAME'] for p in all_players
-            if p.get('TEAM_ABBREVIATION') == team_abbr and p['PLAYER_ID'] != starter_out['PLAYER_ID']
+            if p.get('TEAM_ABBREVIATION') == team_abbr and (p.get('PLAYER_ID') or p.get('player_id')) != (starter_out.get('PLAYER_ID') or starter_out.get('player_id'))
         ]
         assist_shares = self._get_assist_share(star_name, teammate_names)
 
@@ -406,7 +406,7 @@ class ScenarioBuilder:
 
         for p in all_players:
             # Must be same team, different player
-            if p.get('TEAM_ABBREVIATION') == team_abbr and p['PLAYER_ID'] != starter_out['PLAYER_ID']:
+            if p.get('TEAM_ABBREVIATION') == team_abbr and (p.get('PLAYER_ID') or p.get('player_id')) != (starter_out.get('PLAYER_ID') or starter_out.get('player_id')):
                 # Bench Player Criteria: plays between 10 and 28 minutes
                 p_min = p.get('base_min', 0)
                 if 10.0 < p_min < 28.0:
