@@ -69,6 +69,61 @@ _STAT_RMSE = {
     'pa':  4.80,  'pr': 4.96,  'pra': 5.51,
 }
 #
+# --- CANONICAL STAT CATEGORY MAP (Feb 25, 2026) ────────────────────────────
+# All prop market names normalize to these canonical keys at write time.
+# This prevents BLOCKS vs BLK split in analytics (same prop, two names across
+# pipeline versions). Applied at bet_recommendations write + player_props dict.
+_STAT_CATEGORY_CANONICAL = {
+    # Verbose → short
+    'POINTS': 'PTS',       'REBOUNDS': 'REB',      'ASSISTS': 'AST',
+    'BLOCKS': 'BLK',       'STEALS': 'STL',         'TURNOVERS': 'TOV',
+    'THREES': '3PM',       'THREE_POINTERS': '3PM', 'THREE_POINT_FIELD_GOALS': '3PM',
+    'DEFENSIVE_REBOUNDS': 'DREB',
+    'OFFENSIVE_REBOUNDS': 'OREB',
+    # Already canonical — pass through unchanged
+    'PTS': 'PTS', 'REB': 'REB', 'AST': 'AST',
+    'BLK': 'BLK', 'STL': 'STL', 'TOV': 'TOV', '3PM': '3PM',
+    'PRA': 'PRA', 'PA': 'PA',   'PR': 'PR',   'RA': 'RA',
+    'DREB': 'DREB', 'OREB': 'OREB',
+}
+
+def _normalize_stat_category(raw: str) -> str:
+    """Map any prop market name → canonical short form. Falls back to raw.upper()."""
+    return _STAT_CATEGORY_CANONICAL.get((raw or '').upper(), (raw or '').upper())
+
+
+# --- ARCHETYPE SANITIZATION (Feb 25, 2026) ───────────────────────────────────
+# Prevents defensive tags (RIM_GUARDIAN, PERIMETER_HAWK, etc.) and legacy
+# pre-Phase-7 archetype names from propagating into bet_recommendations.archetype.
+# Root cause: players.archetype was historically set to defensive tags for some
+# players before the Phase 7 hybrid off/def split; those snapshots froze in bets.
+_VALID_OFFENSIVE_ARCHETYPES = frozenset({
+    'GENERALIST', 'SNIPER_ELITE', 'CONNECTOR', 'ENERGY_BIG', 'CUTTER_SPECIALIST',
+    'STRETCH_BIG', 'HELIOCENTRIC_MAESTRO', 'ROLL_MAN', 'TWO_LEVEL_SCORER', 'WARRIOR_BIG',
+    'SLASHING_CREATOR', 'JUMBO_FACILITATOR', 'ISO_ASSASSIN', 'FACILITATOR', 'HUB_BIG',
+})
+_DEFENSIVE_TAGS = frozenset({
+    'RIM_GUARDIAN', 'PERIMETER_HAWK', 'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR', 'WEAK_LINK'
+})
+# Pre-Phase-7 archetype names → current equivalents
+_LEGACY_ARCHETYPE_MAP = {
+    'POST_ANCHOR': 'HUB_BIG',      'RIM_RUNNER': 'ROLL_MAN',
+    'HELIOCENTRIC': 'HELIOCENTRIC_MAESTRO',
+    'SNIPER': 'SNIPER_ELITE',      'ELITE_SCORER': 'ISO_ASSASSIN',
+    'TWO_WAY_WING': 'TWO_LEVEL_SCORER', 'JUMBO_CREATOR': 'JUMBO_FACILITATOR',
+    'SLASHER': 'SLASHING_CREATOR', 'STRETCH_BIG_SHOOTER': 'STRETCH_BIG',
+}
+
+def _sanitize_archetype(raw: str) -> str:
+    """Return a valid offensive archetype. Rejects defensive tags + maps legacy names."""
+    arch = (raw or '').upper().strip()
+    if arch in _VALID_OFFENSIVE_ARCHETYPES:
+        return arch
+    if arch in _DEFENSIVE_TAGS:
+        return 'GENERALIST'  # Defensive identity ≠ offensive role for prop betting
+    return _LEGACY_ARCHETYPE_MAP.get(arch, 'GENERALIST')
+
+
 # CHANGELOG V5.1 (Feb 2, 2026):
 # - Added REB OVER filter (skip until calibration - was -198u leak)
 # - Added 3PM OVER filter for low-volume shooters (<5 3PA)
@@ -441,10 +496,10 @@ class LudiReporter:
                                         'player_name': p['name'],
                                         'team': p['team'],
                                         'opponent': p.get('opponent', game.get('opponent', '')),
-                                        'archetype': p.get('archetype', ''),
+                                        'archetype': _sanitize_archetype(p.get('archetype', '')),
                                         'status': p.get('status', 'Active'),
                                         'scenario': p.get('scenario', 'BASE'),
-                                        'stat_category': stat_key.upper(),
+                                        'stat_category': _normalize_stat_category(stat_key),
                                         'bet_side': bet_direction.upper(),
                                         'line': line,
                                         'odds_over': odds_over,
@@ -488,7 +543,7 @@ class LudiReporter:
                                 "spread": game.get('spread', 0),
                                 "total": game.get('total', 0),
                                 "confidence_tier": confidence_tier,
-                                "archetype": p.get('archetype', ''),
+                                "archetype": _sanitize_archetype(p.get('archetype', '')),
                                 "opponent": game.get('opponent', ''),
                                 "book_over": book_over,
                                 "book_under": book_under,
