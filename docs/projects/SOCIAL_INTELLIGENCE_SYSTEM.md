@@ -2,9 +2,8 @@
 ## Market Research, Architecture Plan & Competitive Reverse Engineering
 
 **Created:** February 24, 2026 — 7:48 PM EST
-**Session:** Content Strategy + Social Intelligence Research Sprint
+**Updated:** February 24, 2026 — 8:15 PM EST (OpenClaw architecture patterns integrated)
 **Status:** Research Complete — Architecture Defined — Ready to Build
-**Branch Context:** Full planning session captured here for IDE continuity
 
 ---
 
@@ -230,7 +229,7 @@ This is actually *better* for VIP content — your judgment filter acts as a qua
 
 | Source | Signal Type | API/Access | Quality |
 |--------|------------|------------|---------|
-| Reddit (r/sportsbook, r/nba, r/nbabetting) | Organic public discourse | PRAW, free | High — reasoning included |
+| Reddit (r/sportsbook, r/nba, r/nbabetting) | Organic public discourse | `old.reddit.com` JSON, no auth | High — reasoning included |
 | Action Network public % | Structured bet/money percentages | Scrape public pages | Clean, quantified |
 | Discord (dedicated account) | Group sentiment, real-time discussion | Account token | Rich but messy |
 | Screenshot pipeline | High-signal curated content | Manual | Highest quality, least volume |
@@ -248,6 +247,8 @@ This is actually *better* for VIP content — your judgment filter acts as a qua
 - No agent does analysis outside its lane
 - PM maintains state; specialists operate statelessly per call
 - All inter-agent communication happens through `ludi.db` — no custom messaging infrastructure needed
+- **Gardener model** (OpenClaw best practice): hot-path collection (Scout writes raw rows, no LLM) is separate from async refinement (Analyst classifies in background). Never block the pipeline waiting for social signal processing.
+- **Just-in-time prompt loading**: Analyst Team Haiku prompt loads only when the Analyst step fires — not in every `curate_plays.py` bootstrap. Saves ~3-5K tokens per curation call.
 
 ### Full Architecture Diagram
 
@@ -305,7 +306,11 @@ This is actually *better* for VIP content — your judgment filter acts as a qua
 - **One job:** Collect raw data from sources. No analysis, no opinions.
 - **Outputs:** Raw text + source + timestamp → `social_signals` table in ludi.db
 - **Model:** No LLM needed. Pure collection scripts. Zero cost at this layer.
-- **Runs:** Every 30 minutes via cron
+- **Runs:** Every 30 min (active hours: 6 AM–midnight EST). Every 2 hours overnight (1–6 AM EST) — don't skip entirely, opening odds/lines/props can drop overnight and early injury news emerges before morning brief.
+- **Reddit method:** `old.reddit.com` public JSON endpoints — no PRAW, no OAuth, no API key required. Fetch hot/new/top + comment threads per subreddit. Pattern validated by Reddit Claw v1.1 (OpenClaw community skill). Do NOT install unverified third-party skills — replicate the `old.reddit.com` technique directly in Python.
+- **Tool access:** Collection scripts ONLY. No LLM calls, no DB writes outside `social_signals`.
+- **`hours_to_tip`:** Calculated at insert time using tonight's game start from `games` table. Stored on every `social_signals` row — powers late-signal detection downstream.
+- **Late-signal surge:** Scout script checks if any game tips in <2 hours. If yes, it re-scans all sources immediately regardless of last-run time and sets `late_signal_flag=1` on new rows. Cron stays at :10/:40 — the escalation happens inside the script, not via a new cron.
 
 #### Analyst Team — Classification Only
 - **One job:** Classify each piece of Scout Team output. Nothing else.
@@ -345,7 +350,7 @@ Output: {direction: BULLISH, confidence: LOW,
 - **One job:** Track line movement and detect sharp signals.
 - **Data source:** The-Odds-API (already paid, already integrated in Module A)
 - **New requirement:** `odds_snapshots` table for time-series storage (see data model below)
-- **Runs:** 4x per day — morning open, midday, afternoon, pregame lock
+- **Runs:** 5x per day — overnight open (2:05 AM EST, captures lines as they drop), morning (8:30 AM), midday (12:30 PM), afternoon (4:00 PM), pregame lock (5:45 PM — before Evening Slate Lock at 6 PM)
 - **Outputs:** Line delta, steam flag, RLM flag, book disagreement flag, bet/money %
 
 #### Synthesis Team — Heat Index + Score Calculation
@@ -375,6 +380,39 @@ Each agent never receives:
   ❌ The full pipeline state
   ❌ Anything outside its lane
 ```
+
+### Inter-Agent Communication Model
+
+Agents communicate exclusively through `ludi.db` — no sockets, no queues, no custom bus. A `social_pipeline_state` table acts as the explicit handoff layer the PM Agent reads to track where each signal is:
+
+```sql
+CREATE TABLE social_pipeline_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_date TEXT,         -- game_date this session covers
+    signal_id INTEGER,         -- FK to social_signals
+    stage TEXT,                -- 'scout', 'analyst', 'research', 'synthesis', 'complete'
+    status TEXT,               -- 'pending', 'in_progress', 'done', 'error'
+    agent TEXT,                -- which agent owns this row
+    handoff_note TEXT,         -- brief context passed to the next agent (e.g. "new_info: injury update")
+    created_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+This table is the **working/temporary database** — it holds in-flight state only. Rows are purged after 48 hours (cleanup step in `data_sync.yml`). The PM Agent reads it to decide routing: if `stage='analyst'` and `new_info=true`, it routes to Research Team next. If `stage='synthesis'` and `conflict=true`, it flags for Sonnet conflict resolution.
+
+This also gives you an audit trail: every signal's journey from collection → classification → score is logged. Invaluable for debugging why a play was or wasn't surfaced.
+
+### Token Budget Per Agent (OpenClaw best practice)
+
+| Agent | Token Cap | Rationale |
+|-------|-----------|-----------|
+| Scout Team | No LLM | Pure collection — $0 |
+| Analyst Team (Haiku) | 50K | Narrow classification task |
+| Research Team (Perplexity) | 50K | Only fires on `new_info=true` |
+| Market Intelligence | No LLM | Pure math signals |
+| Synthesis Team | 50K | Score calculation + Sonnet conflict resolution |
+| PM Agent (Sonnet) | 80K | Orchestrator — needs more context |
+| `curate_plays.py` injection | ≤5K | Prop Pulse block must stay concise — use `_safe_inject()` pattern |
 
 ---
 
@@ -419,7 +457,7 @@ CREATE TABLE odds_snapshots (
     under_odds INTEGER,
     book TEXT,                -- 'draftkings', 'fanduel', 'betmgm', etc.
     snapshot_time TEXT,       -- ISO timestamp
-    session TEXT              -- 'open', 'midday', 'afternoon', 'pregame'
+    session TEXT              -- 'overnight'(2:05AM), 'open'(8:30AM), 'midday'(12:30PM), 'afternoon'(4PM), 'pregame'(5:45PM)
 );
 ```
 
@@ -571,6 +609,50 @@ CREATE TABLE prop_intelligence (
 );
 ```
 
+### BERT Training Table
+
+Separate from operational tables. Captures every Analyst Team classification + its eventual outcome for future model fine-tuning. A nightly script joins against `bet_recommendations` + `player_game_logs` to fill `actual_result` after games are settled.
+
+```sql
+CREATE TABLE bert_training_signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id INTEGER,         -- FK to social_signals (raw text preserved there)
+    player_id INTEGER,
+    prop_type TEXT,
+    line REAL,
+    game_date TEXT,
+
+    -- Source context
+    source TEXT,               -- 'reddit', 'discord', 'action_network', 'screenshot'
+    subreddit TEXT,            -- r/sportsbook, r/nba, etc. (if Reddit)
+    hours_to_tip REAL,         -- hours between signal timestamp and game start
+
+    -- Analyst Team classification (labels)
+    direction TEXT,            -- BULLISH / BEARISH / NEUTRAL
+    confidence_level TEXT,     -- HIGH / MEDIUM / LOW
+    reasoning_quality TEXT,    -- DATA_BASED / GUT_FEEL / HYPE
+    new_info_flag INTEGER,     -- 1 if Analyst flagged novel information
+    late_signal_flag INTEGER,  -- 1 if hours_to_tip < 2 (pre-tip surge window)
+
+    -- Outcome (backfilled nightly by sync_bert_outcomes.py)
+    actual_result TEXT,        -- 'OVER_HIT' / 'UNDER_HIT' / 'PUSH' / 'NO_BET'
+    direction_correct INTEGER, -- 1 if direction matched actual_result, 0 if not
+    was_high_confidence INTEGER, -- 1 if HIGH confidence AND direction_correct
+
+    -- Calibration (updated weekly by scripts/calibrate_social_weights.py)
+    source_weight REAL,        -- rolling accuracy weight for this source (default 1.0)
+
+    classified_at TEXT,
+    outcome_recorded_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+**What this unlocks over time:**
+- **14 days (~Mar 10):** First pattern scan — validate collection, check for early signal separation. Not for fine-tuning; for course-correcting Scout configuration if collection is broken.
+- **90 days (late May 2026 — offseason):** Full accuracy report per source × reasoning_quality × `hours_to_tip` bucket. Example query: "Reddit DATA_BASED + `hours_to_tip` < 3 + BULLISH → actual OVER_HIT rate?" Fine-tune Haiku Analyst prompt weights from empirical results.
+- **Offseason (Jun–Sep 2026):** No live pipeline pressure. Calibrate all weights, evaluate literal BERT fine-tuning (requires n > 500 per class), deploy updated classifier before 2026-27 preseason.
+
 ### Prop Pulse Score Formula
 
 ```
@@ -702,12 +784,40 @@ Jayson Tatum PTS OVER 28.5:
 - [ ] **Decide on dedicated Discord account** — Create it, manually join and verify in target servers during one session.
 - [ ] **Identify Action Network scraping targets** — Which pages, what fields, what update frequency.
 
+### Workflow Schedule & Conflict Avoidance
+
+All crons are UTC (GitHub Actions). SQLite WAL allows concurrent reads, but avoid heavy-write windows.
+
+**Blocked slots — never schedule here:**
+
+| EST | UTC | Why |
+|-----|-----|-----|
+| 1:00 AM | `0 6` | DB Backup |
+| 3:00 AM | `0 8` | Data Sync — heaviest writer |
+| 10:00 AM | `0 15` | Daily Simulation — heavy reads |
+| 11:00 AM | `0 16` | Daily Briefing — Claude API burst |
+| 6:00 PM | `0 23` | Evening Slate Lock |
+
+**Game-time pattern (6 PM–midnight EST):** Injury Refresh fires at `:02/:22/:42` past each hour. Capture Closing Lines fires at `:25/:55`. Use **`:10` and `:40`** for all game-time Social Intel runs.
+
+**Proposed Social Intelligence cron slots:**
+
+| Workflow | UTC Cron | EST Time | Notes |
+|----------|----------|----------|-------|
+| Reddit Scout (active) | `10,40 11-23,0,1,2,3,4 * * *` | 6 AM–11 PM, :10/:40 | Avoids :02/:22/:42 injury + :25/:55 closing lines |
+| Reddit Scout (overnight) | `0 7 * * *`, `0 9 * * *` | 2 AM, 4 AM | 2 AM = clear; 4 AM = after Data Sync finishes, before Daily Reports |
+| Action Network scraper | `0 13 * * *`, `0 19 * * *` | 8 AM, 2 PM | Clean windows both |
+| Market Intel snapshots | `5 7 * * *`, `30 13 * * *`, `30 17 * * *`, `0 21 * * *`, `45 22 * * *` | 2:05 AM, 8:30 AM, 12:30 PM, 4 PM, 5:45 PM | 5:45 PM captures pre-game lines before 6 PM Evening Lock |
+| Analyst Team Haiku | Within Scout workflow | Same as Scout | Not a separate cron — Analyst runs as the final step of each Scout job |
+
 ### Phase 1: Foundation (Social + Market Layers)
 
-- [ ] Create `social_signals` table in ludi.db
+- [ ] Create `social_signals` table in ludi.db (include `hours_to_tip`, `late_signal_flag`)
 - [ ] Create `odds_snapshots` table in ludi.db
 - [ ] Create `prop_intelligence` table in ludi.db
-- [ ] Build Reddit Scout (PRAW, target subreddits, 30-min cron)
+- [ ] Create `social_pipeline_state` table in ludi.db (inter-agent handoff + working state, 48-hr purge)
+- [ ] Create `bert_training_signals` table in ludi.db (separate from ops tables — training data only)
+- [ ] Build Reddit Scout (`old.reddit.com` JSON polling, r/sportsbook + r/nba + r/nbabetting, 30-min active / 2-hr overnight cron)
 - [ ] Build Action Network scraper (public bet %, 2x/day)
 - [ ] Build Market Intelligence Agent (odds snapshot collection, 4x/day via existing Odds API)
 
@@ -727,9 +837,23 @@ Jayson Tatum PTS OVER 28.5:
 
 ### Phase 4: Training Loop
 
-- [ ] Track outcome per `social_signal` classification (hit/miss)
-- [ ] After 90 days: calibrate source weights by actual predictive value
-- [ ] After 6 months: evaluate literal BERT fine-tuning on your labeled dataset
+- [ ] Build `scripts/sync_bert_outcomes.py` — nightly join of `bert_training_signals` against `bet_recommendations` + `player_game_logs` to backfill `actual_result` + `direction_correct`
+- [ ] Build `scripts/calibrate_social_weights.py` — weekly Wilson confidence intervals per source/reasoning_quality combination → updates `source_weight` column
+
+**14-day first scan (~Mar 10, 2026):** Early pattern detection — not enough data for fine-tuning but enough to validate collection is working. Questions to answer:
+- Are any sources showing signal above 55% accuracy at 14 days?
+- Is `hours_to_tip < 2` (`late_signal_flag=1`) already outperforming earlier signals?
+- Is DATA_BASED reasoning quality separating from HYPE at any confidence level?
+- Are enough rows in `bert_training_signals` to trust the Wilson floors?
+
+If all four answers are no → investigate Scout Team configuration before continuing. If even one shows signal → collection is working, stay the course.
+
+**90-day window (late May 2026 — offseason):** Regular season ends ~Apr 13. Playoffs through ~Jun 19. The 90-day mark lands squarely in the offseason — ideal timing. No live pipeline pressure, no quota risk from running calibration jobs. Plan:
+- [ ] After 90 days: full `bert_training_signals` accuracy report — source × reasoning_quality × `hours_to_tip` bucket → which combinations predict outcomes?
+- [ ] Fine-tune Haiku Analyst prompt weights based on empirical accuracy (not assumed)
+- [ ] Calibrate Perplexity `hours_to_game` recency filter using `claude_analysis_log` accuracy (Phase 8.23 data)
+- [ ] Evaluate literal BERT fine-tuning if labeled dataset is large enough (n > 500 per class)
+- [ ] Deploy updated classifier weights before 2026-27 preseason (Oct 2026)
 
 ### Decisions to Make Before Phase 1
 
@@ -742,14 +866,18 @@ Jayson Tatum PTS OVER 28.5:
 
 ## Reference Sources
 
+### Agent Architecture (OpenClaw)
+- [OpenClaw GitHub](https://github.com/openclaw/openclaw) — open-source agent runtime; multi-agent routing, AGENTS.md/SOUL.md pattern, Gardener model, token budgeting
+- [Multi-Agent Scaling Best Practices — GitHub Issue #4561](https://github.com/openclaw/openclaw/issues/4561) — token budgets, context overflow, handoffs, session isolation
+- [OpenClaw BEST_PRACTICES.md](https://github.com/CodeAlive-AI/awesome-openclaw/blob/main/OPENCLAW_BEST_PRACTICES.md) — bootstrap file limits, Gardener model, just-in-time loading
+- [Reddit Claw v1.1 — GitHub Discussion](https://github.com/openclaw/openclaw/discussions/21321) — `old.reddit.com` JSON pattern, no API auth required
+- [Alex Finn — 3 Things to Build with OpenClaw](https://x.com/AlexFinn/status/2019816560190521563) — competitor monitoring + morning brief workflow reference
+
+### Competitor Intelligence
 - [LunarCrush API v4 Documentation](https://github.com/lunarcrush/api)
-- [LunarCrush API v3 Overview](https://medium.com/lunarcrush/lunarcrush-api-v3-is-now-available-426148edb826)
 - [Outlier Prop Finder Help Docs](https://help.outlier.bet/en/articles/6711738-research-player-propositions-with-outlier-s-prop-finder)
-- [Outlier.bet Full Review](https://windailysports.com/reviews/outlier-bet/)
 - [Rithmm AI Platform](https://www.rithmm.com/)
 - [Understanding Betting Splits — RG.org](https://rg.org/guides/sportsbetting-guides/betting-splits)
-- [Public Betting Splits Guide — OddsJam](https://oddsjam.com/betting-education/public-money-reports-betting-splits)
 - [Action Network Social Feature](https://www.actionnetwork.com/legal-online-sports-betting/draftkings-social-feed-engagement-interaction-bettors)
 - [DK Network NBA Player Pulse](https://dknetwork.draftkings.com/2026/02/24/nba-best-bets-top-nba-player-pulse-betting-group-picks-for-tuesday-2-24-26-transcript/)
 - [Unabated Sports Platform](https://unabated.com/education/the-art-of-sports-betting)
-- [Captain Jack Andrews — USBets Profile](https://www.usbets.com/captain-jack-andrews-youtube-sports-betting-series/)
