@@ -4,6 +4,7 @@ import os
 import requests
 import time
 import argparse
+import sys
 from datetime import datetime, timedelta
 import config
 
@@ -49,6 +50,11 @@ class LudiHistorian:
 
         # Initialize Player ID Resolver (Phase 6.5b Step 5.5)
         self.resolver = PlayerIDResolver(db_path=self.db_path)
+
+        # Runtime budget (set at update start)
+        self._start_time = None
+        self._max_runtime_seconds = None
+        self._time_budget_hit = False
 
         # Ensure unique index exists for upsert operations
         self._ensure_unique_index()
@@ -203,6 +209,39 @@ class LudiHistorian:
 
         self.requests_made += 1
         return True
+
+    def _init_run_timer(self):
+        """Initialize runtime budget for this run (CI can set HISTORIAN_MAX_RUNTIME_SEC)."""
+        self._time_budget_hit = False
+        max_runtime_env = os.getenv("HISTORIAN_MAX_RUNTIME_SEC", "").strip()
+        if not max_runtime_env:
+            self._max_runtime_seconds = None
+            return
+        try:
+            max_runtime = int(max_runtime_env)
+        except ValueError:
+            print(f"   ⚠️ Invalid HISTORIAN_MAX_RUNTIME_SEC='{max_runtime_env}', ignoring.")
+            self._max_runtime_seconds = None
+            return
+        if max_runtime <= 0:
+            print(f"   ⚠️ HISTORIAN_MAX_RUNTIME_SEC must be > 0, ignoring.")
+            self._max_runtime_seconds = None
+            return
+        self._max_runtime_seconds = max_runtime
+        self._start_time = time.monotonic()
+        print(f"   ⏱️ Runtime budget: {self._max_runtime_seconds}s")
+
+    def _time_budget_exceeded(self) -> bool:
+        """Return True if the run has exceeded the configured runtime budget."""
+        if not self._max_runtime_seconds:
+            return False
+        if self._start_time is None:
+            self._start_time = time.monotonic()
+            return False
+        if (time.monotonic() - self._start_time) >= self._max_runtime_seconds:
+            self._time_budget_hit = True
+            return True
+        return False
 
     # =========================================================
     # DIRECT SQLITE WRITE METHOD (Step 5 Implementation)
@@ -435,6 +474,8 @@ class LudiHistorian:
         2. Start from audit file (cache/pending_sync_dates.json)
         3. Incremental sync (existing behavior: last_date to yesterday)
         """
+        self._init_run_timer()
+
         # Show current DB status
         current_count = self._get_current_record_count()
         print(f"   📂 Current Database: {current_count} game log records")
@@ -451,6 +492,9 @@ class LudiHistorian:
         if mode == "daily+backfill":
             print("   ▶️ Mode: daily+backfill (incremental first, then resume backfill if present)")
             self._incremental_sync()
+            if self._time_budget_hit:
+                print("   ⏱️ Runtime budget reached during incremental sync. Deferring backfill.")
+                return
 
             state = self._load_sync_state()
             if state and state.get("status") in ("paused", "in_progress"):
@@ -550,6 +594,37 @@ class LudiHistorian:
         for i, date_str in enumerate(process_dates):
             print(f"   📅 Processing {date_str} ({i+1}/{len(process_dates)})...", end=" ")
 
+            # Check runtime budget before processing this date
+            if self._time_budget_exceeded():
+                remaining = process_dates[i:] + deferred_dates
+                self._save_sync_state(
+                    completed=completed_dates,
+                    remaining=remaining,
+                    status="paused",
+                    reason="time_budget"
+                )
+
+                if all_new_records:
+                    inserted = self._write_game_logs_to_db(all_new_records)
+                    print(f"\n   💾 Saved {inserted} records before pause")
+                    all_new_records = []
+
+                # Send Telegram alert
+                try:
+                    progress_pct = len(completed_dates) / (len(completed_dates) + len(remaining)) * 100
+                    send_message(
+                        f"⏱️ *Historian Sync Paused (Time Budget)*\n"
+                        f"Progress: {len(completed_dates)}/{len(completed_dates) + len(remaining)} ({progress_pct:.0f}%)\n"
+                        f"Remaining: {len(remaining)} dates\n"
+                        f"Last completed: `{completed_dates[-1] if completed_dates else 'N/A'}`\n"
+                        f"_Will resume on next workflow run_"
+                    )
+                except Exception as e:
+                    print(f"\n   ⚠️ Failed to send Telegram alert: {e}")
+
+                print(f"\n   ⏸️ Paused before {date_str} due to time budget. Resume on next run.")
+                break
+
             # Check budget before processing
             if not self._check_budget():
                 # Budget exhausted - save state and pause
@@ -565,6 +640,7 @@ class LudiHistorian:
                 if all_new_records:
                     inserted = self._write_game_logs_to_db(all_new_records)
                     print(f"\n   💾 Saved {inserted} records before pause")
+                    all_new_records = []
 
                 # Send Telegram alert
                 try:
@@ -671,32 +747,18 @@ class LudiHistorian:
         print(f"   🗓️ Last recorded game: {last_date.strftime('%Y-%m-%d')}")
         print(f"   🔄 Fetching missing games for {days_diff} days...")
 
-        # 2. FETCH & ACCUMULATE
-        new_records = []
-
-        # Iterate from (Last Date + 1 Day) up to (Yesterday)
+        # Build date list for processing (YYYY-MM-DD)
+        dates_to_sync = []
         current_check = last_date + timedelta(days=1)
         while current_check.date() < today.date():
-            date_str = current_check.strftime('%Y%m%d') # Tank01 format: 20231025
-            print(f"      > Checking Date: {date_str}...", end=" ")
-
-            daily_stats = self._fetch_tank01_boxscores(date_str)
-            if daily_stats:
-                print(f"Found {len(daily_stats)} stat lines.")
-                new_records.extend(daily_stats)
-            else:
-                print("No games.")
-
+            dates_to_sync.append(current_check.strftime('%Y-%m-%d'))
             current_check += timedelta(days=1)
 
-        # 3. WRITE DIRECTLY TO SQLITE (was: JSON file)
-        if new_records:
-            inserted = self._write_game_logs_to_db(new_records)
-            new_total = self._get_current_record_count()
-            print(f"\n   💾 SUCCESS: Added {inserted} new rows to database.")
-            print(f"   📈 New Total: {new_total} rows.")
-        else:
+        if not dates_to_sync:
             print("\n   ℹ️ No new data found to append.")
+            return 0
+
+        return self._process_date_list(dates_to_sync, [])
 
     def _fetch_tank01_boxscores(self, date_str):
         """
@@ -969,6 +1031,11 @@ class LudiHistorian:
             return []
 
 if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(description="Ludi Historian Module")
     parser.add_argument("--budget", type=int, help="Override daily API request budget")
     parser.add_argument(

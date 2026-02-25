@@ -153,6 +153,8 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
+          HISTORIAN_MAX_RUNTIME_SEC: 540
+          PYTHONUNBUFFERED: "1"
         run: |
           python3 module_h_historian.py --mode daily+backfill
 
