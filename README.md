@@ -136,7 +136,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 24, 2026 1:21 AM EST
+**Last Updated:** February 24, 2026 — 9:55 PM EST
 
 **Phase 8 Completions:**
 
@@ -170,15 +170,18 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | RSS Feed Parsing Hardening (Feb 23-24) — RotoWire 100% parse rate verified; RealGM verb list expanded (22 ACTION_WORDS); `_classify_rss_headline()` OUT/DOUBTFUL keywords expanded; canonical validation gate; `getattr` safety on feedparser fields; `module_d.py` `_extract_realgm_player_name()` proper extraction |
 | Infra | Canonical Table Hardening + ESPN Foundation (Feb 24) — `player_canonical_ids` CREATE TABLE restored in `database.py` (was orphaned); `canonical_teams` table added (30 teams, BDL/Tank01/ESPN IDs); `espn_id` column added to `player_canonical_ids`; `normalize_bdl_abbr()` centralized in `utils/mappings.py` eliminating 6 copy-pasted dicts; `build_espn_crosswalk.py` (new); ESPN scripts load team IDs from DB; opportunistic `espn_id` write-back during injury scans |
 | Infra | Claude Name Resolution Pipeline (Feb 24) — `resolve_canonical_name(conn, name)` added to `player_id_resolver.py`; wired into `curate_plays.py` (Haiku sanity gate), `morning_brief.py` (hit rate + spotlight), `trend_engine.py` (matchup analysis entry point + `_resolve_player_id()` tier 4), `classify_archetypes.py` (synergy + season lookups with dual accent/ASCII fallback); fixes silent GENERALIST downgrades + Haiku receiving "No injury on record" for accented OUT players |
+| Infra | Settlement Pipeline Hardening + Report Upgrade (Feb 24) — date-ceiling guard (`game_date <= get_est_yesterday()`) prevents future game settlement; canonical name fallback for accented players (Jokić/Nurkić) in `_lookup_game_log`; three-section settlement report (daily / L10 / since-launch); all-void guard skips Telegram when `wins + losses == 0`; ROI formula excludes PUSH + zero-unit legacy bets from denominator |
 
 **Planned Next:**
 - Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
 - Phase 8.17: Foul Intelligence — PlayByPlayV3 foul events → `player_foul_splits`, early foul trouble minutes dampener
 - Phase 8.21: ESPN Full Integration — injuries wired ✅ (Feb 23); `espn_id` crosswalk wired ✅ (Feb 24); remaining: `utils/espn_client.py`, longComment beneficiary corpus, Tier 3 game lines fallback
+- Phase 8.22: Social Intelligence System — architecture complete (Feb 24); Phase 1 = `social_signals` + `odds_snapshots` + `prop_intelligence` DB tables, Reddit Scout (PRAW), Action Network scraper, Market Intelligence Agent; Prop Pulse Score 0–100 injects into `curate_plays.py`
+- Phase 8.23: Claude/Perplexity Analysis Feedback Loop — `claude_analysis_log` Layer 1 (raw call + decision); `calibrate_claude_outputs.py` Layer 2 (weekly Wilson accuracy); inject into `_get_system_wr_context()` Layer 3; 14-day first scan ~Mar 10
 
-**Performance (Jan 7 – Feb 20, 2026):**
-- Settled Bets: 14,423+ | Win Rate: ~54.8% overall
-- BLOCKS UNDER: 63.2% WR (870 bets) — strongest signal in system
+**Performance (Jan 7 – Feb 23, 2026):**
+- Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)
+- BLOCKS UNDER: 70.7% WR — strongest signal in system
 - UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)
 - CLV: Positive across all edge buckets
 
