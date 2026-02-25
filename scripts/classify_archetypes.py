@@ -322,7 +322,34 @@ def build_archetype_system_prompt(conn) -> str:
         sea = get_player_season_advanced(conn, name)
         examples.append(_format_example(name, pos, team, syn, l10, sea, 'CONNECTOR'))
 
+    # ── Negative examples: recent archetype/synergy mismatches ───────────────────
+    # BERT Pattern 9 partial activation: inject mismatch rows as "do not repeat" signal.
+    # ORDER BY updated_at DESC (not random) — deterministic = Anthropic cache fires.
+    # Excludes GENERALIST (valid fallback) and ENERGY_BIG (low mismatch signal).
+    neg_rows = conn.execute("""
+        SELECT player_name, archetype, synergy_type_1, synergy_tag_1, archetype_primary_tag
+        FROM player_type_profiles
+        WHERE archetype_in_top3 = 0
+          AND archetype NOT IN ('GENERALIST', 'ENERGY_BIG')
+          AND synergy_tag_1 IS NOT NULL
+          AND season = '2025-26'
+        ORDER BY updated_at DESC
+        LIMIT 3
+    """).fetchall()
+
+    neg_block = ""
+    if neg_rows:
+        neg_lines = ["\nCALIBRATION — recent label mismatches (do NOT repeat these):\n"]
+        for pname, arch, syn1, stag1, expected in neg_rows:
+            neg_lines.append(
+                f"  {pname}: labeled {arch} but top synergy={syn1}/{stag1 or '?'} "
+                f"(expected primary tag: {expected or 'none'})"
+            )
+        neg_block = "\n".join(neg_lines)
+
     examples_block = "\n\n".join(examples) if examples else "(no canonical examples available this run)"
+    if neg_block:
+        examples_block += neg_block
     return ARCHETYPE_SYSTEM_PROMPT.format(examples_block=examples_block)
 
 
@@ -490,10 +517,16 @@ def validate_archetype(result, synergy_data, shot_data, l10_data=None, position=
                                    f"POST_UP={post_freq:.0f}% ISO={iso_freq:.0f}% all low")
 
     elif result_upper == 'SNIPER_ELITE':
-        # Catch-and-shoot specialist: SPOT_UP ≥ 25%
+        # Catch-and-shoot specialist: SPOT_UP ≥ 25% AND ISO < 15%
+        # ISO ≥ 15% = dual-threat scorer → should be TWO_LEVEL_SCORER, not C&S-only
+        # (Bogdanovic: SPOT_UP~28%, ISO~22% → TWO_LEVEL_SCORER, not SNIPER)
         spot_up_freq = synergy_dict.get('SPOT_UP', 0) or 0
+        iso_freq = synergy_dict.get('ISO', 0) or 0
         if has_synergy and spot_up_freq < 25.0:
             return False, f"GATE2: SNIPER_ELITE but SPOT_UP freq={spot_up_freq:.1f}% < 25%"
+        if has_synergy and iso_freq >= 15.0:
+            return False, (f"GATE2: SNIPER_ELITE but ISO={iso_freq:.1f}% ≥ 15% "
+                           f"(dual-threat scorer → TWO_LEVEL_SCORER)")
 
     elif result_upper == 'TWO_LEVEL_SCORER':
         # Multi-zone scorer: scores at rim AND from perimeter
@@ -508,6 +541,11 @@ def validate_archetype(result, synergy_data, shot_data, l10_data=None, position=
 
     elif result_upper == 'WARRIOR_BIG':
         # Physical bruiser: transition+putback synergy OR fouls drawn + offensive boards
+        # Position gate: guard/wing labeled WARRIOR_BIG is always wrong
+        pos_norm = (position or '').upper()
+        if pos_norm in ('G', 'PG', 'SG', 'SF'):
+            return False, (f"GATE2: WARRIOR_BIG but position={pos_norm} "
+                           f"(guard/wing — WARRIOR_BIG is a big-man role)")
         if has_synergy:
             putback = synergy_dict.get('PUTBACK', 0) or 0
             trans   = synergy_dict.get('TRANSITION', 0) or 0
@@ -523,18 +561,35 @@ def validate_archetype(result, synergy_data, shot_data, l10_data=None, position=
         # corner_3_freq stored as fraction (0.0-1.0); threshold 0.20 = 20%
         spot_up = synergy_dict.get('SPOT_UP', 0) or 0
         corner3 = (shot_data['corner_3_freq'] if shot_data else 0) or 0
+        pos_norm = (position or '').upper()
+        # Position gate: guard/wing C&S shooter = SNIPER_ELITE, not STRETCH_BIG.
+        # STRETCH_BIG = big man extending range to the arc.
+        # Same SPOT_UP behavior, different positional context.
+        if has_synergy and pos_norm in ('G', 'PG', 'SG', 'SF') and spot_up >= 20:
+            return False, (f"GATE2: STRETCH_BIG but position={pos_norm} "
+                           f"(guard/wing with SPOT_UP={spot_up:.0f}% → SNIPER_ELITE)")
         if has_synergy and spot_up < 20 and corner3 < 0.20 and fg3a < 2.5:
             return False, (f"GATE2: STRETCH_BIG but SPOT_UP={spot_up:.0f}%, "
                            f"corner3={corner3*100:.0f}%, fg3a={fg3a:.1f} all low")
 
     elif result_upper == 'ROLL_MAN':
         # P&R roll specialist: PR_ROLL_MAN ≥ 20%
+        # Position gate: roll man is a big-man role; guard as roll man is semantically wrong
+        pos_norm = (position or '').upper()
+        if pos_norm in ('G', 'PG', 'SG', 'SF'):
+            return False, (f"GATE2: ROLL_MAN but position={pos_norm} "
+                           f"(guard/wing — roll man is a big-man role)")
         roll_freq = synergy_dict.get('PR_ROLL_MAN', 0) or 0
         if has_synergy and roll_freq < 20.0:
             return False, f"GATE2: ROLL_MAN but PR_ROLL_MAN freq={roll_freq:.1f}% < 20%"
 
     elif result_upper == 'HUB_BIG':
         # Passing-first big: moderate AST (Draymond 3.5-5), low shot volume
+        # Position gate: guard/wing with low FGA + moderate AST → CONNECTOR or FACILITATOR
+        pos_norm = (position or '').upper()
+        if pos_norm in ('G', 'PG', 'SG', 'SF'):
+            return False, (f"GATE2: HUB_BIG but position={pos_norm} "
+                           f"(guard/wing playmaker → CONNECTOR or FACILITATOR)")
         if l10_data and ast < 3.5:
             return False, f"GATE2: HUB_BIG but AST={ast:.1f} < 3.5"
         if l10_data and fga > 9.0:
@@ -542,6 +597,11 @@ def validate_archetype(result, synergy_data, shot_data, l10_data=None, position=
 
     elif result_upper == 'ENERGY_BIG':
         # Hustle role: offensive board presence + limited shot creation
+        # Position gate: guard/wing as "energy big" is semantically wrong → GENERALIST
+        pos_norm = (position or '').upper()
+        if pos_norm in ('G', 'PG', 'SG', 'SF'):
+            return False, (f"GATE2: ENERGY_BIG but position={pos_norm} "
+                           f"(guard/wing hustle player → GENERALIST)")
         if l10_data and fga > 9.0:
             return False, f"GATE2: ENERGY_BIG but FGA={fga:.1f} > 9 (too much shot volume)"
         if l10_data and mins < 12.0:
