@@ -135,6 +135,8 @@ from module_e import LudiEvaluator           # ImportError
 | `team_lineups` | 10,669 | WOWY lineup data |
 | `player_canonical_ids` | 559+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `team`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); CREATE TABLE restored in `database.py` |
 | `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
+| `player_news_staging` | Dynamic | RSS-discovered players not yet in `player_canonical_ids` (rookies, two-ways, call-ups). `UNIQUE(player_name, source)`. Auto-promotes after 3+ appearances. Added Feb 25. |
+| `player_type_profiles` | 382 | Unified classification layer: archetype + defensive_tag + top-3 Synergy playtypes + freqs + PPPs + `archetype_in_top3` flag + `position_synergy_match`. `PRIMARY KEY (player_name, season)`. Feeds BERT negative few-shot injection. Added Feb 25. |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 

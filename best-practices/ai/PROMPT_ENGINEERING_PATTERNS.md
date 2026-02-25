@@ -305,7 +305,7 @@ Over time, parse failure logs reveal which prompts are producing malformed outpu
 | 6 | Pre-truncate injected blocks | 30 min | Low-Med | `morning_brief.py` | ✅ Done (8.19) |
 | 7 | Haiku NSP news relevance gate | 2 hrs | Medium | `morning_brief.py` | ✅ Done (8.19) |
 | 8 | Parse failure logging | 15 min | Low | `curate_plays.py` | ✅ Done (8.19) |
-| 9 | Sonnet→Haiku feedback loop | Future | High | Phase 8.23 | 📋 Phase 8.23 — `claude_analysis_log` + `calibrate_claude_outputs.py`. 14-day scan ~Mar 10, offseason fine-tune Jun–Sep 2026. |
+| 9 | Sonnet→Haiku feedback loop | Partial | High | Phase 8.23 | 🟡 Partial: `player_type_profiles` mismatch rows injected as negative few-shot into `classify_archetypes.py` `build_archetype_system_prompt()` (Feb 25). Full Phase 8.23 (`claude_analysis_log` + `calibrate_claude_outputs.py`) still Future. 14-day scan ~Mar 10. |
 
 ---
 
