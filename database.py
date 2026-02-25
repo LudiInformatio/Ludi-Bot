@@ -1356,6 +1356,31 @@ class LudiHistorian:
             _team_seed
         )
 
+        # -- Player news staging: discovered players from RSS feeds not in canonical_ids --
+        # Enables tracking of rookies, two-ways, and call-ups found via news blurbs.
+        # Auto-promotes to player_canonical_ids after 3+ consistent appearances.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_news_staging (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name         TEXT NOT NULL,
+                team_abbreviation   TEXT,
+                source              TEXT NOT NULL,
+                headline            TEXT,
+                description        TEXT,
+                status_extracted   TEXT,
+                confidence         REAL,
+                first_seen_at      TEXT NOT NULL,
+                last_seen_at       TEXT NOT NULL,
+                seen_count         INTEGER DEFAULT 1,
+                is_reviewed        INTEGER DEFAULT 0,
+                UNIQUE(player_name, source)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_news_staging_player
+                ON player_news_staging(player_name, last_seen_at)
+        ''')
+
         # -- Player type profiles: unified per-player type layer (Feb 25, 2026) --
         # Consolidates archetype + defensive_tag + top-3 NBA Synergy playtypes
         # + position-synergy match validation into one queryable row per player.
