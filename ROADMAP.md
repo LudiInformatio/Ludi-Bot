@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 25, 2026 — 1:10 PM EST
+**Last Updated:** February 25, 2026 — 2:10 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Social Intelligence System (architecture complete, ready to build)
-**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅** + **Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅** + **Injury Pipeline Hardening + ESPN Injury Source + Referee Timing Fix ✅** + **RSS Feed Parsing Hardening ✅** + **Canonical Table Hardening + ESPN Integration Foundation ✅** + **Claude Name Resolution Pipeline ✅** + **Settlement Pipeline Hardening + Report Upgrade ✅** + **Classification Gate 2 Hardening + BERT Pattern 9 Negative Few-Shot ✅**
+**Completed:** Phases 5–7 ✅ + Phase 8.0-A/B/C/D ✅ + Phase 8.2/8.3/8.4/8.5/8.6/8.7/8.9/8.10/8.12/8.14/8.15/8.16/8.18/8.19 ✅ + Slack/Notification Split ✅ + Model Calibration Fixes ✅ + Feb 20 Post-ASB Audit ✅ + Tank01 Data Expansion ✅ + Injury Intelligence Hardening ✅ + Claude Auth Fix ✅ + Ask Ludi Architecture Research ✅ + Morning Brief Pipeline Hardening ✅ + BetIQ/TeamRankings Research ✅ + BERT/NLP Prompt Architecture Research ✅ + Phase 8.20 Stat Confidence & Edge Calibration ✅ + Production Pipeline/WOWY/Settlement Fix ✅ + Phase 8.18 Game Lines Integration ✅ + Phase 8.19 Prompt Engineering Upgrade ✅ + **Full Project Audit (Sprints 0-10) ✅** + Post-Audit Bug Fixes & Documentation Integration ✅ + **Evening Lock Bug Fixes & Injury Intelligence Tightening ✅** + **Phase 8.16 Suspension Intelligence (ESPN) ✅** + **BDL V2 Full Integration + SportsDataIO Enrichment ✅** + **Hybrid Off/Def Role Tagging ✅** + **Scheme Cache d14 Fix + Quality Tiers ✅** + **Morning Brief Slate Trends Header ✅** + **Data Sync Pipeline Fix + PBP Stats Split + Module H BDL Fallback ✅** + **Injury Pipeline Hardening + ESPN Injury Source + Referee Timing Fix ✅** + **RSS Feed Parsing Hardening ✅** + **Canonical Table Hardening + ESPN Integration Foundation ✅** + **Claude Name Resolution Pipeline ✅** + **Settlement Pipeline Hardening + Report Upgrade ✅** + **Classification Gate 2 Hardening + BERT Pattern 9 Negative Few-Shot ✅** + **UNK Position Cleanup + Archetype Naming Audit ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -189,6 +189,15 @@ Production automation fully live and validated. See `docs/archive/phase_reports/
 - [ ] Strength of Schedule (SOS) adjustment
 - [ ] Shooting Luck Deviation signals
 - [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
+
+### Live Betting Pipeline (post model-math verification)
+**Blocked until:** model hit rate + CLV verified over 90-day window (est. May 2026)
+**Architecture note:** ESPN RSS (`https://www.espn.com/espn/rss/nba/news`) is the fastest source
+for mid-game player exits (15–30 min ahead of official injury APIs). Slot into:
+- `module_d._nuance_check()` as 3rd corroboration source (same pattern as RotoWire + RealGM) → `[3-source confirmed]` confidence boost
+- Ask Ludi Telegram bot: "Is Tatum still in the game?" queries ESPN RSS first, then `player_injuries` DB
+- Ludi Lens web app: live player status banner for active games using ESPN RSS as feed
+- Future live prop recommendations require real-time line feed + ESPN RSS as injury trigger
 
 ### Developer Workflow Improvements (identified Feb 20, 2026)
 - [ ] **Session start checklist**: `scripts/session_check.py` — quick health check (DB rows, API quota, last sync time) in <5s. Run at start of each dev session.
