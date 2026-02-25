@@ -580,6 +580,191 @@ def build_player_archetype_roster(conn: sqlite3.Connection, window_days: int = 6
                       f"vs BLITZ: {r['vs_blitz']:>+5} | WR: {r['wr_pct']:>5}% ({r['bet_count']}b)")
 
 
+# ── Table 4: defensive_tag_vs_offense ────────────────────────────────────────
+
+def build_defensive_tag_vs_offense(conn: sqlite3.Connection, window_days: int = 60, verbose: bool = False) -> None:
+    """
+    Per (defensive_tag, opponent_offense_type): how do tagged defenders perform
+    on DEFENSIVE stats (BLK, STL, DREB) vs different opponent offense styles?
+
+    Insight examples:
+      RIM_GUARDIAN vs ISO_HEAVY offense → more BLK (ISO players attack the rim)
+      PERIMETER_HAWK vs MOTION offense → more STL (high ball movement = turnovers)
+      SWITCHABLE_ANCHOR vs PACE_PUSH → more DREB (transition misses, long rebounds)
+
+    Feeds game notes: "Jarrett Allen (RIM_GUARDIAN) vs MEM (FUNNEL, MOTION offense):
+    RIM_GUARDIAN players avg 1.8 BLK vs MOTION teams (+0.4 above baseline)."
+    """
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS defensive_tag_vs_offense (
+            defensive_tag       TEXT NOT NULL,
+            offense_type        TEXT NOT NULL,  -- MOTION/ISO_HEAVY/PACE_PUSH/HALF_COURT
+            season              TEXT NOT NULL DEFAULT '2025-26',
+            -- Game defensive stats in this matchup
+            games               INTEGER DEFAULT 0,
+            avg_blk             REAL DEFAULT 0.0,
+            avg_stl             REAL DEFAULT 0.0,
+            avg_dreb            REAL DEFAULT 0.0,
+            avg_pf              REAL DEFAULT 0.0,
+            -- Delta vs season baseline for this defensive tag
+            blk_vs_baseline     REAL DEFAULT 0.0,
+            stl_vs_baseline     REAL DEFAULT 0.0,
+            dreb_vs_baseline    REAL DEFAULT 0.0,
+            -- Bet performance on BLK/STL props for tagged players
+            blk_bets            INTEGER DEFAULT 0,
+            blk_win_rate        REAL DEFAULT 0.0,
+            stl_bets            INTEGER DEFAULT 0,
+            stl_win_rate        REAL DEFAULT 0.0,
+            updated_at          TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (defensive_tag, offense_type, season)
+        )
+    """)
+
+    VALID_DEF_TAGS = {'RIM_GUARDIAN', 'PERIMETER_HAWK', 'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR', 'WEAK_LINK'}
+    VALID_OFF_TYPES = {'MOTION', 'ISO_HEAVY', 'PACE_PUSH', 'HALF_COURT', 'BALANCED'}
+
+    window_start = (datetime.now() - timedelta(days=window_days)).strftime('%Y-%m-%d')
+
+    # Season baseline per defensive tag (avg defensive stats regardless of opponent)
+    cur.execute("""
+        SELECT p.defensive_tag,
+            ROUND(AVG(gl.blk), 3) as avg_blk,
+            ROUND(AVG(gl.stl), 3) as avg_stl,
+            ROUND(AVG(COALESCE(gl.dreb, gl.reb * 0.75)), 2) as avg_dreb
+        FROM players p
+        JOIN player_game_logs gl ON gl.player_name = p.name
+        WHERE gl.game_date >= ?
+          AND p.defensive_tag IN ({})
+          AND gl.minutes >= 10
+        GROUP BY p.defensive_tag
+    """.format(','.join(['?' for _ in VALID_DEF_TAGS])),
+    [window_start] + list(VALID_DEF_TAGS))
+    def_baselines = {r['defensive_tag']: dict(r) for r in cur.fetchall()}
+
+    # Avg defensive stats by (defensive_tag, opponent_offense_type)
+    # Opponent offense type from team_scheme_cache for the player's OPPONENT team
+    _arch_ph = ','.join(['?' for _ in VALID_DEF_TAGS])
+    _off_ph  = ','.join(['?' for _ in VALID_OFF_TYPES])
+    cur.execute(f"""
+        SELECT p.defensive_tag, sc.active_style as off_type,
+            COUNT(*) as games,
+            ROUND(AVG(gl.blk), 3) as avg_blk,
+            ROUND(AVG(gl.stl), 3) as avg_stl,
+            ROUND(AVG(COALESCE(gl.dreb, gl.reb * 0.75)), 2) as avg_dreb,
+            ROUND(AVG(gl.pf), 2) as avg_pf
+        FROM players p
+        JOIN player_game_logs gl ON gl.player_name = p.name
+        JOIN games g ON g.date = gl.game_date
+          AND (g.home_team = gl.team_abbreviation OR g.away_team = gl.team_abbreviation)
+        JOIN team_scheme_cache sc
+          ON CASE WHEN g.home_team = gl.team_abbreviation THEN g.away_team
+                  ELSE g.home_team END = sc.team_abbr
+          AND sc.scheme_type = 'OFFENSE'
+        WHERE gl.game_date >= ?
+          AND p.defensive_tag IN ({_arch_ph})
+          AND sc.active_style IN ({_off_ph})
+          AND gl.minutes >= 10
+        GROUP BY p.defensive_tag, sc.active_style
+        HAVING COUNT(*) >= 5
+    """, [window_start] + list(VALID_DEF_TAGS) + list(VALID_OFF_TYPES))
+    matchup_stats = {(r['defensive_tag'], r['off_type']): dict(r) for r in cur.fetchall()}
+
+    # BLK/STL bet performance per (defensive_tag, opponent_offense_type)
+    cur.execute(f"""
+        SELECT p.defensive_tag, sc.active_style as off_type,
+            b.stat_category,
+            COUNT(*) as bets,
+            ROUND(100.0*SUM(CASE WHEN b.outcome='WIN' THEN 1 ELSE 0 END)/
+                  NULLIF(SUM(CASE WHEN b.outcome IN('WIN','LOSS') THEN 1 ELSE 0 END),0), 3) as wr
+        FROM bet_recommendations b
+        JOIN players p ON b.player_name = p.name
+        JOIN team_scheme_cache sc ON b.opponent = sc.team_abbr AND sc.scheme_type = 'OFFENSE'
+        WHERE b.game_date >= ?
+          AND b.outcome IN ('WIN','LOSS','PUSH','VOID')
+          AND b.stat_category IN ('BLK','STL')
+          AND p.defensive_tag IN ({_arch_ph})
+          AND sc.active_style IN ({_off_ph})
+        GROUP BY p.defensive_tag, sc.active_style, b.stat_category
+        HAVING COUNT(*) >= 5
+    """, [window_start] + list(VALID_DEF_TAGS) + list(VALID_OFF_TYPES))
+    bet_stats = {}
+    for r in cur.fetchall():
+        key = (r['defensive_tag'], r['off_type'])
+        bet_stats.setdefault(key, {})[r['stat_category']] = (r['bets'], r['wr'] or 0.0)
+
+    rows_written = 0
+    for def_tag in VALID_DEF_TAGS:
+        baseline = def_baselines.get(def_tag, {})
+        for off_type in VALID_OFF_TYPES:
+            ms = matchup_stats.get((def_tag, off_type), {})
+            bs = bet_stats.get((def_tag, off_type), {})
+            if not ms:
+                continue
+
+            bl = baseline.get('avg_blk', 0) or 0.0
+            bs_stl = baseline.get('avg_stl', 0) or 0.0
+            bd = baseline.get('avg_dreb', 0) or 0.0
+
+            blk_bets, blk_wr = bs.get('BLK', (0, 0.0))
+            stl_bets, stl_wr = bs.get('STL', (0, 0.0))
+
+            cur.execute("""
+                INSERT INTO defensive_tag_vs_offense
+                    (defensive_tag, offense_type, season, games,
+                     avg_blk, avg_stl, avg_dreb, avg_pf,
+                     blk_vs_baseline, stl_vs_baseline, dreb_vs_baseline,
+                     blk_bets, blk_win_rate, stl_bets, stl_win_rate, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now'))
+                ON CONFLICT(defensive_tag, offense_type, season) DO UPDATE SET
+                    games=excluded.games, avg_blk=excluded.avg_blk,
+                    avg_stl=excluded.avg_stl, avg_dreb=excluded.avg_dreb,
+                    avg_pf=excluded.avg_pf,
+                    blk_vs_baseline=excluded.blk_vs_baseline,
+                    stl_vs_baseline=excluded.stl_vs_baseline,
+                    dreb_vs_baseline=excluded.dreb_vs_baseline,
+                    blk_bets=excluded.blk_bets, blk_win_rate=excluded.blk_win_rate,
+                    stl_bets=excluded.stl_bets, stl_win_rate=excluded.stl_win_rate,
+                    updated_at=datetime('now')
+            """, (
+                def_tag, off_type, SEASON,
+                ms.get('games', 0),
+                ms.get('avg_blk', 0) or 0.0,
+                ms.get('avg_stl', 0) or 0.0,
+                ms.get('avg_dreb', 0) or 0.0,
+                ms.get('avg_pf', 0) or 0.0,
+                round((ms.get('avg_blk', 0) or 0.0) - bl, 3),
+                round((ms.get('avg_stl', 0) or 0.0) - bs_stl, 3),
+                round((ms.get('avg_dreb', 0) or 0.0) - bd, 2),
+                blk_bets, blk_wr / 100.0,
+                stl_bets, stl_wr / 100.0,
+            ))
+            rows_written += 1
+
+    conn.commit()
+    print(f"  defensive_tag_vs_offense: {rows_written} rows upserted")
+
+    if verbose and rows_written > 0:
+        cur.execute("""
+            SELECT defensive_tag, offense_type, games,
+                   ROUND(avg_blk,3) as blk, ROUND(blk_vs_baseline,3) as blk_d,
+                   ROUND(avg_stl,3) as stl, ROUND(stl_vs_baseline,3) as stl_d,
+                   blk_bets, ROUND(blk_win_rate*100,1) as blk_wr
+            FROM defensive_tag_vs_offense
+            WHERE season=? AND games >= 10
+            ORDER BY blk_vs_baseline DESC LIMIT 15
+        """, (SEASON,))
+        rows = cur.fetchall()
+        if rows:
+            print(f"\n  Defensive tag × offense type (BLK signal, ≥10 games):")
+            print(f"  {'Def Tag':<20} {'vs':<12} {'G':>4} {'BLK':>6} {'Δ':>6} {'STL':>6} {'Δ':>6} {'BLK WR'}")
+            for r in rows:
+                print(f"  {r['defensive_tag']:<20} {r['offense_type']:<12} {r['games']:>4} "
+                      f"{r['blk']:>6} {r['blk_d']:>+6} {r['stl']:>6} {r['stl_d']:>+6} "
+                      f"{r['blk_wr'] if r['blk_bets'] >= 5 else 'n/a':>6}")
+
+
 # ── Token-efficient context helper ────────────────────────────────────────────
 
 def get_matchup_context_row(conn: sqlite3.Connection, archetype: str, defense_type: str,
@@ -645,11 +830,13 @@ def main():
     build_player_archetype_vs_defense(conn, window_days=args.window_days, verbose=args.verbose)
     build_team_playtype_allowed(conn, window_days=args.window_days, verbose=args.verbose)
     build_player_archetype_roster(conn, window_days=args.window_days, verbose=args.verbose)
+    build_defensive_tag_vs_offense(conn, window_days=args.window_days, verbose=args.verbose)
 
     # Quick validation
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    for tbl in ['player_archetype_vs_defense', 'team_playtype_allowed', 'player_archetype_roster']:
+    for tbl in ['player_archetype_vs_defense', 'team_playtype_allowed',
+                'player_archetype_roster', 'defensive_tag_vs_offense']:
         cur.execute(f"SELECT COUNT(*) as n FROM {tbl}")
         r = cur.fetchone()
         print(f"  [{tbl}] {r['n']} rows total")

@@ -153,6 +153,20 @@ jobs:
           python scripts/build_classification_profiles.py || echo "WARNING: Profile build failed -- continuing"
         continue-on-error: true
 
+      - name: Sync Matchup Intelligence Tables
+        run: |
+          source .venv/bin/activate
+          echo "Building archetype vs defense, team playtype allowed, player roster tables..."
+          python scripts/sync_matchup_intelligence.py --window-days 60 || echo "WARNING: Matchup intelligence build failed -- continuing"
+        continue-on-error: true
+
+      - name: Run Archetype Correction Pass
+        run: |
+          source .venv/bin/activate
+          echo "Checking for archetype classification drift (synergy-based rules)..."
+          python scripts/correct_archetype_classifications.py --apply --rebuild || echo "WARNING: Archetype correction failed -- continuing"
+        continue-on-error: true
+
       - name: Generate League Rankings (Phase 8.10)
         run: |
           source .venv/bin/activate
