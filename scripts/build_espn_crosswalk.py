@@ -8,7 +8,7 @@ player_canonical_ids.espn_id for all matched players.
 ESPN athlete IDs are permanent person-level identifiers — they don't change
 when a player switches teams or across seasons.
 
-API: sports.core.api.espn.com/v2/sports/basketball/leagues/nba/teams/{id}/athletes
+API: sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/teams/{id}/athletes
 Auth: None required (public API)
 Rate: 0.4s between team calls, 0.1s between athlete ref fetches
 Cost: $0 — ESPN public API, no quota
@@ -98,7 +98,7 @@ def fetch_team_athletes(espn_team_id: int, team_abbr: str) -> list:
     ESPN returns fine-grained positions: PG, SG, SF, PF, C (unlike Tank01 which returns G/F/C only).
     """
     url = (f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
-           f"/teams/{espn_team_id}/athletes?limit=100")
+           f"/seasons/2026/teams/{espn_team_id}/athletes?limit=100")
     data = _get(url)
     athletes = []
 

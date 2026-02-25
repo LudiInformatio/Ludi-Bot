@@ -190,6 +190,81 @@ def _enrich_date(conn: sqlite3.Connection, date_iso: str, dry_run: bool) -> dict
 
 
 # ---------------------------------------------------------------------------
+# Position sync from SportsDataIO
+# ---------------------------------------------------------------------------
+
+def sync_positions_from_sportsdata(conn: sqlite3.Connection, dry_run: bool = False) -> dict:
+    """
+    Pull fine-grained player positions (PG/SG/SF/PF/C) from SportsDataIO /Players
+    and write them into player_canonical_ids.position.
+
+    Only upgrades positions — never overwrites a fine-grained position with a coarser one.
+    Upgrade hierarchy: UNK/'' < G/F/C < PG/SG/SF/PF
+
+    Returns: dict with fetched/updated/skipped/no_match counts
+    Cost: 1 API call (uses 1h cache — no extra cost if already called today)
+    """
+    from utils.sportsdata_client import get_client
+
+    client = get_client()
+    players = client.get_players()
+
+    if not players:
+        print("  ⚠️  SportsDataIO /Players returned empty — skipping position sync")
+        return {'fetched': 0, 'updated': 0, 'skipped': 0, 'no_match': 0}
+
+    # Load canonical lookup: normalized_name → current_position
+    canonical_pos = {
+        row[0]: (row[1] or '')
+        for row in conn.execute(
+            "SELECT normalized_name, position FROM player_canonical_ids WHERE is_active = 1"
+        ).fetchall()
+    }
+
+    # Position upgrade ranks — higher = more specific. Never overwrite with lower/equal rank.
+    _RANK = {
+        '': 0, 'UNK': 0,
+        'G': 1, 'F': 1, 'C': 2, 'G-F': 1, 'F-G': 1, 'C-F': 2,
+        'PG': 3, 'SG': 3, 'SF': 3, 'PF': 3,
+    }
+
+    updated = 0
+    skipped = 0
+    no_match = 0
+
+    for player in players:
+        first = player.get('FirstName', '') or ''
+        last = player.get('LastName', '') or ''
+        full_name = f"{first} {last}".strip()
+        sd_pos = (player.get('Position') or '').strip()
+
+        if not full_name or not sd_pos:
+            continue
+
+        norm = _normalize_name(full_name)
+        if norm not in canonical_pos:
+            no_match += 1
+            continue
+
+        current = canonical_pos[norm]
+        if _RANK.get(sd_pos, 0) <= _RANK.get(current, 0):
+            skipped += 1
+            continue  # already fine-grained or equal — don't touch
+
+        if not dry_run:
+            conn.execute(
+                "UPDATE player_canonical_ids SET position = ? WHERE normalized_name = ?",
+                (sd_pos, norm)
+            )
+        updated += 1
+
+    if not dry_run:
+        conn.commit()
+
+    return {'fetched': len(players), 'updated': updated, 'skipped': skipped, 'no_match': no_match}
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -218,6 +293,12 @@ def main():
         action="store_true",
         help="Preview what would be updated without writing to DB"
     )
+    parser.add_argument(
+        "--sync-positions",
+        action="store_true",
+        help="Sync fine-grained player positions (PG/SG/SF/PF/C) from SportsDataIO into "
+             "player_canonical_ids.position. Uses cached /Players call — no extra API cost."
+    )
     args = parser.parse_args()
 
     # Feature flag check
@@ -232,6 +313,22 @@ def main():
         print("  ⚠️  DRY RUN MODE — no DB writes will be made")
 
     conn = sqlite3.connect(config.DB_PATH)
+
+    # Position sync mode — runs independently of box score enrichment
+    if args.sync_positions:
+        print("\n" + "=" * 60)
+        print("  POSITION SYNC — SportsDataIO → player_canonical_ids")
+        print("=" * 60)
+        if args.dry_run:
+            print("  ⚠️  DRY RUN — no writes")
+        stats = sync_positions_from_sportsdata(conn, dry_run=args.dry_run)
+        print(f"  Fetched: {stats['fetched']} players")
+        verb = "Would update" if args.dry_run else "Updated"
+        print(f"  {verb}: {stats['updated']} positions (G→PG/SG, F→SF/PF, UNK→any)")
+        print(f"  Skipped: {stats['skipped']} (already fine-grained)")
+        print(f"  No match: {stats['no_match']} (not in canonical_ids)")
+        conn.close()
+        return
 
     # Determine which dates to process
     if args.date:
