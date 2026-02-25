@@ -514,13 +514,46 @@ class LudiHistorian:
         all_new_records = []
         dates_processed = 0
 
-        for i, date_str in enumerate(dates_to_sync):
-            print(f"   📅 Processing {date_str} ({i+1}/{len(dates_to_sync)})...", end=" ")
+        # Guard: never process today/future dates (games incomplete).
+        today_date = datetime.now().date()
+        process_dates = []
+        deferred_dates = []
+        for date_str in dates_to_sync:
+            try:
+                parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                # If format is unexpected, keep it in the processing list
+                process_dates.append(date_str)
+                continue
+
+            if parsed_date >= today_date:
+                deferred_dates.append(date_str)
+            else:
+                process_dates.append(date_str)
+
+        if deferred_dates:
+            sample = ", ".join(deferred_dates[:3])
+            suffix = "..." if len(deferred_dates) > 3 else ""
+            print(f"   ⏭️ Deferring {len(deferred_dates)} date(s) on/after today: {sample}{suffix}")
+
+        if not process_dates:
+            # Nothing safe to process; persist deferred dates for next run.
+            if deferred_dates:
+                self._save_sync_state(
+                    completed=completed_dates,
+                    remaining=deferred_dates,
+                    status="paused",
+                    reason="future_dates"
+                )
+            return 0
+
+        for i, date_str in enumerate(process_dates):
+            print(f"   📅 Processing {date_str} ({i+1}/{len(process_dates)})...", end=" ")
 
             # Check budget before processing
             if not self._check_budget():
                 # Budget exhausted - save state and pause
-                remaining = dates_to_sync[i:]  # Rest of the list
+                remaining = process_dates[i:] + deferred_dates  # Rest of the list + deferred
                 self._save_sync_state(
                     completed=completed_dates,
                     remaining=remaining,
@@ -564,7 +597,7 @@ class LudiHistorian:
             dates_processed += 1
 
             # Update state after each successful date
-            remaining = dates_to_sync[i+1:]
+            remaining = process_dates[i+1:] + deferred_dates
             self._save_sync_state(
                 completed=completed_dates,
                 remaining=remaining,
@@ -579,7 +612,7 @@ class LudiHistorian:
             print(f"   📈 New Total: {new_total} rows.")
 
         # Check if fully complete
-        if dates_processed == len(dates_to_sync):
+        if dates_processed == len(process_dates) and not deferred_dates:
             # All dates processed - mark as complete
             self._finalize_sync(completed_dates, len(all_new_records))
 
@@ -683,7 +716,10 @@ class LudiHistorian:
         clean_stats = []
         
         try:
-            r = requests.get(url_games, headers=headers, params=params_games)
+            r = requests.get(url_games, headers=headers, params=params_games, timeout=(10, 30))
+            # Log request headers (rate limit, quota)
+            self.monitor.log_request('tank01', 'games_for_date', r.headers)
+            r.raise_for_status()
             data = r.json()
             games = data.get('body', [])
             
@@ -805,10 +841,11 @@ class LudiHistorian:
         params_box = {"gameID": game_id, "fantasyPoints": "true"}
         
         try:
-            r = requests.get(url_box, headers=headers, params=params_box)
+            r = requests.get(url_box, headers=headers, params=params_box, timeout=(10, 30))
 
             # [PAID TIER] Log API usage
             self.monitor.log_request('tank01', 'box_score', r.headers)
+            r.raise_for_status()
 
             body = r.json().get('body', {})
             player_stats = body.get('playerStats', {})
