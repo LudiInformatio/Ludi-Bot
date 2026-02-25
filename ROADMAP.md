@@ -40,7 +40,7 @@ This is the single source of truth for project tasks and priorities.
 **Status:** 🟡 ACTIVE — Core pipeline complete, remaining sub-phases are LOW/MEDIUM priority
 **Estimated Daily Cost:** ~$0.40/day (~$12/month)
 
-**Completed sub-phases (Pre, 8.0-A/B/C/D, 8.2–8.7, 8.9–8.10, 8.12, 8.14–8.16, 8.18–8.20, Infra):** All DONE. Full details: `docs/STATUS_HISTORY.md`
+**Completed sub-phases (Pre, 8.0-A/B/C/D, 8.2–8.7, 8.9–8.10, 8.12, 8.14–8.16, 8.18–8.21, Infra):** All DONE. Full details: `docs/STATUS_HISTORY.md`
 
 **Active & Remaining Sub-Phases:**
 
@@ -50,7 +50,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → Telegram reply. Architecture complete: python-telegram-bot v21+, Haiku intent → Sonnet, read-only SQLite. See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
 | 8.17 | Foul Intelligence | MEDIUM | Parse foul events from PlayByPlayV3 → `player_foul_splits` table → Module C minutes dampener + ref-player bias rebuild. $0 extra API cost. | $0 |
-| 8.21 | ESPN Full Integration | MEDIUM | ESPN client + nightly `longComment` pull to `player_injuries` + Tier 3 game lines fallback in `module_a.py`. See `best-practices/api/API_BEST_PRACTICES.md`. | $0 |
+| 8.21 | ESPN Full Integration | DONE ✅ | `utils/espn_client.py` + `fetch_game_lines_espn()` in `module_a.py`. Tier 3 fallback: Odds-API → BDL → ESPN DK (spread/total/ML). Live API corrections applied (provider name spacing, spread as float, ML nested path). `longComment` corpus deferred to BERT fine-tune sprint. | $0 |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
 | 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | 3-layer OpenClaw: `claude_analysis_log` collection → weekly Wilson calibration (`calibrate_claude_outputs.py`) → inject into `_get_system_wr_context()`. **Start Layer 1 NOW — 14-day scan ~Mar 10.** | $0 |
 | 8.24 | Edge Type Labeling ⭐ | MEDIUM | Tag each bet: `Projection`/`Matchup`/`Injury-Vacuum`/`Hot-Streak`. 1 Haiku call in `module_f.py` bet card. Product differentiator vs competitors. See `docs/FUTURE_DATA_SOURCES.md` §5.2-B. | ~$0.01/day |
@@ -113,7 +113,7 @@ This is the single source of truth for project tasks and priorities.
 
 ### Data Pipeline Improvements
 - [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
-- [ ] DVP rankings sync — `defender_matchups` table exists but 0 rows. Create `scripts/sync_dvp_rankings.py` (PBP Stats `get_shot_query_summary` or Tank01 endpoint). Feeds phase 8.25 Key Advantage callout + player spotlight DVP rank badge.
+- [x] DVP rankings sync — `scripts/sync_team_dvp_by_archetype.py` LIVE ✅ (250 rows in `team_dvp_by_archetype`, 10 archetypes × 30 teams, per-100-possession normalized, runs weekly via `weekly_validation.yml`). Feeds phase 8.25. Note: `defender_matchups` (0 rows) is separate and not needed for this use case.
 - [ ] PBP Stats: wire `get_possessions` endpoint → clutch detection + blowout tax validation (Section 4.4 in `docs/FUTURE_DATA_SOURCES.md`)
 - [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved per already-synced date in weekly backfills)
 - [ ] Multi-book arbitrage detection

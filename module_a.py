@@ -42,6 +42,9 @@ class Gatekeeper:
         # [BDL FALLBACK] Flag for when The-Odds-API quota is exhausted
         self._using_bdl_fallback = False
 
+        # [ESPN FALLBACK] Flag for when both Odds-API and BDL are unavailable
+        self._using_espn_fallback = False
+
         # [BDL PLAYER CACHE] Lazy-loaded map of bdl_id → full_name
         # Built on first call to _resolve_bdl_player so we don't pay the cost unless needed
         self._bdl_player_cache = {}  # {bdl_player_id: "First Last"}
@@ -176,8 +179,8 @@ class Gatekeeper:
                     'date': est_time.strftime('%Y-%m-%d'),
                     'time_str': est_time.strftime('%I:%M %p ET'),
                     'matchup': f"{away} @ {home}",
-                    'spread': self.games[game_id]['vegas']['spread'],
-                    'total': self.games[game_id]['vegas']['total'],
+                    'spread': self.games[game_id]['vegas'].get('spread', 0),
+                    'total': self.games[game_id]['vegas'].get('total', 0),
                     'ref_data': ref_data,  # V3.0: Full dict
                     'sort_key': est_time
                 })
@@ -217,7 +220,13 @@ class Gatekeeper:
             print(f"   ⚠️  The-Odds-API Failed: {e}")
             print(f"   📡 Falling back to BallDontLie for game lines...")
             self._using_bdl_fallback = True
-            self.fetch_game_lines_balldontlie()
+            try:
+                self.fetch_game_lines_balldontlie()
+            except Exception as bdl_err:
+                print(f"   ⚠️   BDL fallback failed: {bdl_err}")
+                print(f"   📡 Tier 3 fallback: ESPN DraftKings lines...")
+                self._using_espn_fallback = True
+                self.fetch_game_lines_espn()
 
     def fetch_game_lines_balldontlie(self, date_str: str = None):
         """ [1b] BALLDONTLIE FALLBACK: Fetch game schedule + lines when The-Odds-API fails """
@@ -364,6 +373,62 @@ class Gatekeeper:
         
         print("   ----------------------------------------")
         print(f"   ✅ [BDL] Loaded {len(self.games)} games with lines")
+
+    def fetch_game_lines_espn(self):
+        """[1c] ESPN TIER 3 FALLBACK: Fetch game lines via ESPN DraftKings pickcenter.
+
+        Only called when both The-Odds-API and BDL have failed.
+        Provides: spread, O/U, moneylines (DraftKings game-level only).
+        No player props available from ESPN — props must be skipped in this mode.
+        """
+        from utils.espn_client import ESPNClient
+        import sqlite3
+
+        print(f"   📡 [ESPN] Fetching DraftKings game lines from ESPN pickcenter...")
+
+        conn = sqlite3.connect('ludi.db')
+        client = ESPNClient()
+        scoreboard = client.get_scoreboard()  # handles own DB connection for team mapping
+        conn.close()
+
+        if not scoreboard:
+            print(f"   ⚠️  [ESPN] No scoreboard data returned")
+            return
+
+        loaded = 0
+        for game_key, lines in scoreboard.items():
+            if game_key not in self.games:
+                # Initialize game entry — ESPN gives us team abbrs but not full names
+                home_abbr = lines.get('home_abbr', '')
+                away_abbr = lines.get('away_abbr', '')
+                ref_data = self.zebras.get_game_impact(home_abbr)
+                self.games[game_key] = {
+                    'matchup': f"{away_abbr} @ {home_abbr}",
+                    'home': home_abbr,
+                    'away': away_abbr,
+                    'start_time': None,
+                    'vegas': {},
+                    'props': {},
+                    'archetypes': {
+                        'ref_data': ref_data,
+                        'home_pace': 0,
+                        'home_def_rtg': 0,
+                    },
+                    'player_stats': {},
+                }
+
+            self.games[game_key]['vegas'].update({
+                'spread': lines.get('spread', 0),
+                'total': lines.get('total', 0),
+                'team_total_home': None,   # ESPN doesn't provide team totals
+                'team_total_away': None,
+                'moneyline_home': lines.get('ml_home'),
+                'moneyline_away': lines.get('ml_away'),
+                'source': 'ESPN_DK',
+            })
+            loaded += 1
+
+        print(f"   ✅ [ESPN] Loaded {loaded} games from DraftKings pickcenter")
 
     def fetch_team_archetypes(self):
         """ [2] GET TEAM ARCHETYPES (Same as before) """
@@ -1016,7 +1081,7 @@ class Gatekeeper:
             print(f"🏀 {info['matchup']}")
             ref_d = info['archetypes'].get('ref_data', {})
             pace_x = ref_d.get('pace_impact', 1.0) if isinstance(ref_d, dict) else 1.0
-            print(f"   1. [GAME] Spread: {info['vegas']['spread']} | Pace: {pace_x}x")
+            print(f"   1. [GAME] Spread: {info['vegas'].get('spread', 'N/A')} | Pace: {pace_x}x")
             
             # Show Book Coverage Count
             print(f"   2. [DATA] Props Loaded.")

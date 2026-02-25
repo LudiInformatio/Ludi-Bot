@@ -160,6 +160,13 @@ jobs:
           python scripts/sync_matchup_intelligence.py --window-days 60 || echo "WARNING: Matchup intelligence build failed -- continuing"
         continue-on-error: true
 
+      - name: Sync DVP Rankings by Archetype (Phase 8.25 foundation)
+        run: |
+          source .venv/bin/activate
+          echo "Computing team DVP rankings by offensive archetype from season game logs..."
+          python scripts/sync_team_dvp_by_archetype.py --min-games 10 || echo "WARNING: DVP rankings sync failed -- continuing"
+        continue-on-error: true
+
       - name: Run Archetype Correction Pass
         run: |
           source .venv/bin/activate
