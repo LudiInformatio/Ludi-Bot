@@ -167,6 +167,13 @@ jobs:
           python scripts/correct_archetype_classifications.py --apply --rebuild || echo "WARNING: Archetype correction failed -- continuing"
         continue-on-error: true
 
+      - name: Verify Team Classifications (Sprint 3A)
+        run: |
+          source .venv/bin/activate
+          echo "Cross-checking team scheme labels vs def_rating + tracking data + offense stats..."
+          python scripts/verify_team_classifications.py --window-days 30 || echo "WARNING: Classification mismatches found — review logs"
+        continue-on-error: true
+
       - name: Generate League Rankings (Phase 8.10)
         run: |
           source .venv/bin/activate
