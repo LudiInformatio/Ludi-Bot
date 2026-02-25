@@ -844,11 +844,97 @@ def main():
             print("   No additional injuries from RSS feeds")
     print()
 
+    print("Step 5: Auto-promoting RSS-discovered players to canonical IDs...")
+    promoted = auto_promote_staging_to_canonical(syncer)
+    if promoted:
+        print(f"   ✅ Promoted {promoted} players from staging to canonical IDs")
+    else:
+        print("   No players eligible for auto-promotion (need 3+ consistent appearances)")
+    print()
+
     if args.dry_run:
         print("\n⚠️  DRY RUN - No changes saved to database")
 
     print()
     print("✅ Sync complete!")
+
+
+def auto_promote_staging_to_canonical(syncer) -> int:
+    """
+    Auto-promote players from player_news_staging to player_canonical_ids.
+    
+    Criteria:
+    - seen_count >= 3 (3+ consistent appearances)
+    - team_abbreviation is not NULL
+    - Not already in player_canonical_ids
+    
+    Returns: count of promoted players
+    """
+    try:
+        conn = syncer._get_conn()
+        cursor = conn.cursor()
+        
+        # Find players eligible for promotion
+        cursor.execute('''
+            SELECT player_name, team_abbreviation, status_extracted
+            FROM player_news_staging
+            WHERE seen_count >= 3
+              AND team_abbreviation IS NOT NULL
+              AND team_abbreviation != ''
+              AND is_reviewed = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM player_canonical_ids 
+                  WHERE LOWER(full_name) = LOWER(player_news_staging.player_name)
+              )
+            GROUP BY player_name, team_abbreviation
+            HAVING COUNT(DISTINCT source) >= 1
+        ''')
+        
+        eligible = cursor.fetchall()
+        
+        if not eligible:
+            return 0
+        
+        promoted = 0
+        now = datetime.now().isoformat()
+        
+        for row in eligible:
+            player_name, team_abbr, status = row
+            
+            # Generate a staging canonical_id
+            import time
+            staging_id = f"staging_{int(time.time())}_{player_name.replace(' ', '_').lower()}"
+            
+            # Insert into canonical_ids
+            cursor.execute('''
+                INSERT INTO player_canonical_ids (
+                    canonical_id, full_name, normalized_name, team, position, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+            ''', (
+                staging_id,
+                player_name,
+                player_name.lower(),
+                team_abbr,
+                '',  # position unknown
+                now,
+                now
+            ))
+            
+            # Mark as reviewed in staging
+            cursor.execute('''
+                UPDATE player_news_staging
+                SET is_reviewed = 1, last_seen_at = ?
+                WHERE player_name = ? AND is_reviewed = 0
+            ''', (now, player_name))
+            
+            promoted += 1
+        
+        conn.commit()
+        return promoted
+        
+    except Exception as e:
+        print(f"   ⚠️ Auto-promotion error: {e}")
+        return 0
 
 
 if __name__ == "__main__":

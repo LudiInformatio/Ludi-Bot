@@ -3,12 +3,16 @@ import json
 import os
 import sqlite3
 import time
+import re
 from datetime import datetime, timedelta
 from duckduckgo_search import DDGS
 import unidecode
 import config
 import feedparser
 import pytz
+
+# [NEW] Team mapping for RSS team extraction
+from utils.mappings import TEAM_MAP, normalize_bdl_abbr
 
 
 # [PAID TIER] Import monitoring and retry utilities
@@ -88,6 +92,97 @@ class LudiYak:
                 print(f"   [YAK] ⚠️ Kw Config Error: {e}")
         return {} # Fallback if missing
 
+    def _extract_team_from_blurb(self, headline: str, description: str = '') -> str:
+        """
+        Extract team abbreviation from RSS blurbs for players not in canonical IDs.
+        Uses pattern matching to find team names in headlines like:
+        - "Lakers vs. Celtics: Tyler Herro questionable"
+        - "@ Warriors: Player OUT"
+        - "for the Heat"
+        """
+        full_text = f"{headline} {description}".lower()
+        
+        # Team name patterns to search for
+        team_patterns = [
+            r'vs\.?\s+([a-z][a-z\s]+)',      # vs. lakers, vs. celtics
+            r'@\s+([a-z][a-z\s]+)',           # @ warriors
+            r'against\s+the\s+([a-z][a-z\s]+)',  # against the heat
+            r'for\s+the\s+([a-z][a-z\s]+)',   # for the heat
+            r'([a-z]+)\s+vs',                 # lakers vs
+            r'([a-z]+)\s+@',                 # lakers @
+        ]
+        
+        for pattern in team_patterns:
+            match = re.search(pattern, full_text)
+            if match:
+                team_name = match.group(1).strip()
+                # Try to resolve via TEAM_MAP
+                for full_name, abbr in TEAM_MAP.items():
+                    if team_name in full_name.lower() or full_name.lower() in team_name:
+                        return abbr
+        
+        # Direct team abbreviation patterns (common short forms)
+        team_abbrs = ['LAL', 'LAC', 'GSW', 'BOS', 'NYK', 'NOP', 'PHX', 'SAS', 'CHI', 'CLE', 
+                      'DAL', 'DEN', 'DET', 'HOU', 'IND', 'MEM', 'MIA', 'MIL', 'MIN', 'OKC', 
+                      'ORL', 'PHI', 'POR', 'SAC', 'TOR', 'UTA', 'WAS', 'ATL', 'CHA', 'BKN']
+        for abbr in team_abbrs:
+            if abbr.lower() in full_text:
+                return abbr
+        
+        return ''
+
+    def _upsert_news_staging(self, player_name: str, team_abbreviation: str, source: str,
+                            headline: str, description: str, status_extracted: str, 
+                            confidence: float) -> None:
+        """
+        Insert or update player_news_staging table for players discovered via RSS.
+        Tracks rookies, two-ways, and call-ups not yet in canonical IDs.
+        """
+        try:
+            db_path = getattr(config, 'DB_PATH', 'ludi.db')
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            now = datetime.now().isoformat()
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            # Check for existing entry today
+            cursor.execute('''
+                SELECT id, seen_count, last_seen_at 
+                FROM player_news_staging 
+                WHERE player_name = ? AND source = ?
+            ''', (player_name, source))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing record - increment seen_count
+                cursor.execute('''
+                    UPDATE player_news_staging
+                    SET last_seen_at = ?,
+                        seen_count = seen_count + 1,
+                        headline = ?,
+                        description = ?,
+                        status_extracted = ?,
+                        confidence = ?
+                    WHERE player_name = ? AND source = ?
+                ''', (now, headline, description, status_extracted, confidence, player_name, source))
+            else:
+                # Insert new record
+                cursor.execute('''
+                    INSERT INTO player_news_staging 
+                    (player_name, team_abbreviation, source, headline, description, 
+                     status_extracted, confidence, first_seen_at, last_seen_at, seen_count)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ''', (player_name, team_abbreviation, source, headline, description,
+                      status_extracted, confidence, now, now))
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            # Silent fail - don't break pipeline for staging issues
+            pass
+
     def refresh_official_injuries(self):
         """Syncs with the NBA's 15-minute reporting cycle."""
         if self.last_official_refresh:
@@ -111,13 +206,19 @@ class LudiYak:
                 self._injury_blurbs = {}
                 for item in data['body']:
                     pid = item.get('playerID', '')
+                    team_abv = item.get('teamAbv', '')  # Extract team from API
                     if not pid:
                         continue
 
+                    # Try canonical ID resolution first
+                    p_name = ''
+                    resolved_team = ''
                     try:
                         info = self._id_resolver.get_player_info(pid)
                         p_name = info.get('full_name', '')
+                        resolved_team = info.get('team', '')  # Get team from canonical
                     except (ValueError, KeyError):
+                        # Fallback: try to extract name from description
                         desc = item.get('description', '')
                         import re
                         match = re.search(r':\s*(\w[\w\s\'-]+?)\s*\(', desc)
@@ -125,6 +226,9 @@ class LudiYak:
 
                     if not p_name:
                         continue
+
+                    # Use resolved team from canonical, or fall back to API teamAbv
+                    final_team = resolved_team if resolved_team else team_abv
 
                     clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
                     designation = item.get('designation', 'Available')
@@ -137,6 +241,7 @@ class LudiYak:
                     self._injury_blurbs[clean_name] = {
                         'description': description,
                         'inj_return_date': inj_return_date,
+                        'team': final_team,  # Store team for schedule context
                     }
                 
                 tank_success = True
@@ -177,6 +282,7 @@ class LudiYak:
             }
 
             self.official_injuries = {}
+            self._injury_blurbs = {}
             count = 0
             for item in injuries:
                 player = item.get('player', {})
@@ -186,7 +292,24 @@ class LudiYak:
 
                 clean_name = unidecode.unidecode(p_name).replace('.', '').replace(' ', '').lower()
                 bdl_status = item.get('status', 'Out')
+                description = item.get('description', '')
+                
+                # Extract injury_type from description
+                injury_type = ''
+                if description:
+                    type_match = re.search(r'\(([^)]+)\)', description)
+                    if type_match:
+                        injury_type = type_match.group(1).strip()
+                
+                # Extract return_date if available
+                return_date = item.get('return_date', '')
+
                 self.official_injuries[clean_name] = status_map.get(bdl_status, 'Out')
+                self._injury_blurbs[clean_name] = {
+                    'description': description,
+                    'inj_return_date': return_date,
+                    'injury_type': injury_type,
+                }
                 count += 1
 
             self.last_official_refresh = datetime.now()
@@ -303,6 +426,28 @@ class LudiYak:
                 classification = self.classify_headline(full_text)
                 
                 if classification:
+                    # Check if player is in canonical IDs - if not, upsert to staging
+                    canonical = self._load_canonical_names()
+                    if canonical:
+                        import unicodedata
+                        nfd = unicodedata.normalize('NFD', player_name)
+                        normalized = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+                        
+                        if normalized.lower() not in canonical:
+                            # Player not in canonical IDs - extract team and stage
+                            extracted_team = self._extract_team_from_blurb(
+                                item['headline'], item['description']
+                            )
+                            self._upsert_news_staging(
+                                player_name=player_name,
+                                team_abbreviation=extracted_team,
+                                source='RotoWire',
+                                headline=item['headline'],
+                                description=item.get('description', ''),
+                                status_extracted=classification['status'],
+                                confidence=classification['confidence']
+                            )
+                    
                     return {
                         'status': classification['status'],
                         'note': f"[ROTO] {item['headline']}",
@@ -431,6 +576,28 @@ class LudiYak:
                     classification = self.classify_headline(full_text)
                     
                     if classification:
+                        # Check if player is in canonical IDs - if not, upsert to staging
+                        canonical = self._load_canonical_names()
+                        if canonical:
+                            import unicodedata
+                            nfd = unicodedata.normalize('NFD', player_name)
+                            normalized = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+                            
+                            if normalized.lower() not in canonical:
+                                # Player not in canonical IDs - extract team and stage
+                                extracted_team = self._extract_team_from_blurb(
+                                    item['headline'], item.get('description', '')
+                                )
+                                self._upsert_news_staging(
+                                    player_name=player_name,
+                                    team_abbreviation=extracted_team,
+                                    source='RealGM',
+                                    headline=item['headline'],
+                                    description=item.get('description', ''),
+                                    status_extracted=classification['status'],
+                                    confidence=classification['confidence']
+                                )
+                        
                         return {
                             'status': classification['status'],
                             'note': f"[REALGM] {item['headline']}",
@@ -544,8 +711,8 @@ class LudiYak:
         if not target_date:
             target_date = datetime.now().strftime('%Y-%m-%d')
         
-        # Use simple separate connection to avoid threading issues if shared
-        db_path = self.cache_file.replace('yak_cache.json', 'ludi.db')
+        # Use config.DB_PATH for proper database location
+        db_path = getattr(config, 'DB_PATH', 'ludi.db')
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
@@ -695,25 +862,7 @@ class LudiYak:
             if roto_intel['status'] == 'ACTIVE':
                  return roto_intel
         
-        # --- LAYER 1 CONTINUED: OFFICIAL GTD/PROBABLE ---
-        if status_tag:
-            tag_lower = status_tag.lower()
-            
-            if "doubtful" in tag_lower:
-                return {"status": "DOUBTFUL", "note": f"[OFFICIAL] {status_tag}", "confidence": 0.9}
-            if "probable" in tag_lower:
-                # Still check news for 'minutes limit' even if probable
-                return self._nuance_check(player_name, team_name, "PROBABLE", status_tag)
-            if any(x in tag_lower for x in ["questionable", "gtd"]):
-                return self._nuance_check(player_name, team_name, "GTD", status_tag)
-        
-        # --- [WEEK 3] ADD SCHEDULE CONTEXT FOR B2B LOGIC ---
-        # Get schedule context if team_name is provided
-        schedule_context = {}
-        if team_name and team_name != "NBA":
-            schedule_context = self.get_team_schedule_context(team_name)
-        
-        # Merge schedule context into base status
+        # --- LAYER 2: OFFICIAL GTD/PROBABLE with schedule context ---
         base_status = {"status": "ACTIVE", "note": "Clear", "confidence": 1.0}
         
         if status_tag:
@@ -721,9 +870,22 @@ class LudiYak:
             if "doubtful" in tag_lower:
                 base_status = {"status": "DOUBTFUL", "note": f"[OFFICIAL] {status_tag}", "confidence": 0.9}
             elif "probable" in tag_lower:
+                # Still check news for 'minutes limit' even if probable
                 base_status = self._nuance_check(player_name, team_name, "PROBABLE", status_tag)
             elif any(x in tag_lower for x in ["questionable", "gtd"]):
                 base_status = self._nuance_check(player_name, team_name, "GTD", status_tag)
+        
+        # --- LAYER 3: SCHEDULE CONTEXT (B2B) ---
+        # Use team from _injury_blurbs if available, otherwise fall back to team_name param
+        schedule_team = team_name
+        if not schedule_team or schedule_team == "NBA":
+            blurb_data = getattr(self, '_injury_blurbs', {}).get(clean_name, {})
+            if isinstance(blurb_data, dict):
+                schedule_team = blurb_data.get('team', '')
+        
+        schedule_context = {}
+        if schedule_team and schedule_team != "NBA":
+            schedule_context = self.get_team_schedule_context(schedule_team)
         
         # Combine status with schedule context
         final_status = {**base_status, **schedule_context}
