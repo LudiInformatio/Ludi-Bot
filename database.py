@@ -1423,6 +1423,31 @@ class LudiHistorian:
         c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_team ON player_type_profiles(team)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_def_tag ON player_type_profiles(defensive_tag)")
 
+        # Phase 8.23 Layer 1 — Claude/Perplexity feedback loop data collection.
+        # Every get_claude_analysis() call writes one row here.
+        # Layer 2 (weekly): calibrate_claude_outputs.py computes Wilson accuracy per call_type.
+        # Layer 3: calibration injected into _get_system_wr_context().
+        # actual_outcome is NULL during Layer 1; settlement pipeline fills it retroactively.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS claude_analysis_log (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                call_type        TEXT,          -- 'sanity_gate','curation','game_notes','spotlight','scheme','archetype','weekly'
+                model            TEXT,          -- 'claude-haiku-...' or 'claude-sonnet-...'
+                input_tokens     INTEGER,
+                output_tokens    INTEGER,
+                game_date        TEXT,          -- nullable — context of which game date
+                player_name      TEXT,          -- nullable — context of which player
+                response_text    TEXT,          -- first 2000 chars of Claude response
+                estimated_cost_usd REAL,        -- computed from tokens + pricing at log time
+                actual_outcome   TEXT,          -- NULL during Layer 1; 'WIN'/'LOSS'/'PUSH' after settlement
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cal_call_type ON claude_analysis_log(call_type)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cal_game_date ON claude_analysis_log(game_date)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cal_model ON claude_analysis_log(model)")
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
@@ -1464,6 +1489,7 @@ class LudiHistorian:
     # Restored to init_db() above (Feb 2026):
     #   player_canonical_ids      — ID mapping table (559+ rows); CREATE TABLE restored Feb 24 2026
     #   canonical_teams           — 30-team BDL/Tank01/ESPN ID crosswalk; added Feb 24 2026
+    #   claude_analysis_log       — Phase 8.23 Layer 1 feedback loop; added Feb 25 2026
     #
     # Unresolved (referenced in production but CREATE TABLE source not found):
     #   players_archived          — Referenced in migration_enable.sql; presumed manual creation

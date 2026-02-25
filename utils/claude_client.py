@@ -59,7 +59,10 @@ def get_claude_analysis(
     system_prompt: str,
     model: str = SONNET_MODEL,
     temperature: float = 0.2,
-    max_tokens: int = DEFAULT_MAX_TOKENS
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    call_type: str = None,
+    game_date: str = None,
+    player_name: str = None,
 ) -> str | None:
     """
     Get analysis from Claude API.
@@ -70,6 +73,10 @@ def get_claude_analysis(
         model: Claude model to use (default: SONNET_MODEL)
         temperature: Controls randomness (default: 0.2)
         max_tokens: Max response tokens (default: 1500)
+        call_type: Semantic label for Phase 8.23 logging (e.g. 'sanity_gate', 'curation',
+                   'game_notes', 'spotlight', 'scheme', 'archetype', 'weekly')
+        game_date: Optional ISO date for context in Phase 8.23 log
+        player_name: Optional player name for context in Phase 8.23 log
 
     Returns:
         Response text or None on error/no auth
@@ -102,6 +109,21 @@ def get_claude_analysis(
             from utils.api_monitor import get_monitor
             monitor = get_monitor()
             monitor.log_claude_usage(model, input_tokens, output_tokens, task="get_claude_analysis")
+        except Exception:
+            pass
+
+        # Phase 8.23 Layer 1 — log every Claude call for calibration feedback loop
+        try:
+            from utils.claude_logger import log_claude_call
+            log_claude_call(
+                call_type=call_type or 'unknown',
+                model=model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                response_text=response.content[0].text,
+                game_date=game_date,
+                player_name=player_name,
+            )
         except Exception:
             pass
 

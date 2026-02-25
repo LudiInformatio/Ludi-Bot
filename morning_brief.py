@@ -620,6 +620,7 @@ Return JSON only."""
                                 model=HAIKU_MODEL,
                                 temperature=0.1,
                                 max_tokens=100,
+                                call_type='news_sanity',
                             )
 
                             if nsp_response:
@@ -948,7 +949,8 @@ Return JSON only."""
                             system_prompt=GAME_NOTES_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
                             model=SONNET_MODEL,
                             temperature=0.2,
-                            max_tokens=1500
+                            max_tokens=1500,
+                            call_type='game_notes',
                         )
 
                         if response:
@@ -1095,7 +1097,9 @@ Return JSON only."""
                                 system_prompt=SPOTLIGHT_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
                                 model=SONNET_MODEL,
                                 temperature=0.2,
-                                max_tokens=600
+                                max_tokens=600,
+                                call_type='spotlight',
+                                player_name=player_name,
                             )
                             
                             if response:

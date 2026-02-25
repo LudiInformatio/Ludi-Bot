@@ -1,7 +1,7 @@
 # Future Data Sources Roadmap
 
 **Discovered:** January 20, 2026
-**Last Audited:** February 20, 2026 — End of Day
+**Last Audited:** February 25, 2026
 **Context:** Found during Module D (Yak) research in NBA Sense documentation (stats-prod.nba.com)
 
 **Status:** ~80% implemented (as of Feb 19, 2026 7:39 PM EST). Section 4.2 dormant data fully activated. Section 4.4 endpoints wired. Section 5.2 trend/beneficiary/matchup patterns implemented in Phase 8.15 + calibration fixes. Phase 8.10 League Rankings DONE. Remaining: pipeline consolidation (4.3), DVP rankings, PlayerRebounding (1), Phase 8.11.
@@ -60,18 +60,9 @@ Defensive impact metrics.
 **Discovered:** February 3, 2026
 **Context:** ULTRATHINK analysis of data_sync.yml workflow hangs and PBP Stats API documentation audit
 
-### 4.1 Critical Infrastructure Fixes (Priority: URGENT)
+### 4.1 Infrastructure Fixes ✅ ALL RESOLVED (Feb 23, 2026)
 
-**Problem:** Workflow hanging indefinitely on WOWY sync step (40% failure rate)
-
-**Fixes Required:**
-| Fix | File | Change |
-|-----|------|--------|
-| Job timeout | `data_sync.yml` | Add `timeout-minutes: 60` |
-| Step timeouts | `data_sync.yml` | Add 5-30 min per step |
-| API timeout | `pbp_stats_client.py` | Increase 60s → 120s |
-| Rate limit handling | `pbp_stats_client.py` | Add 429 to retry list |
-| Retry optimization | `pbp_stats_client.py` | `total=3, backoff_factor=2` |
+Workflow timeouts, PBP Stats split to own workflow (`pbp_stats_sync.yml`), HTTP timeout tuning — all shipped. See `docs/STATUS_HISTORY.md`.
 
 ### 4.2 Data Synced But NEVER Used (Quick Wins) ✅ RESOLVED
 
@@ -118,18 +109,7 @@ Defensive impact metrics.
 - Resume from last successful team after timeout
 - Prevents losing progress on partial failures
 
-### 4.6 Expected Results (When Implemented)
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Workflow failure rate | 40% | <5% |
-| API calls/day | ~50 | ~15 |
-| Sync time | 8-12 min | 3-5 min |
-| Data utilization | ~40% | ~90% |
-| BENEFICIARY NULL rate | 99.9% | <10% |
-| Mean error (PTS) | +0.56 pts | +0.25 pts (est) |
-
-### 4.7 Helper File Created
+### 4.6 Helper File
 
 **File:** `utils/pbp_stats_api_reference.py` (500+ lines)
 
@@ -190,17 +170,15 @@ Contains all 40+ PBP Stats endpoints documented with:
 | DVP + Hit Rate filters | BucketsToBucks | Surface plays where DVP rank <= 5 AND L10 hit rate >= 70% |
 | Funneling targets | StraightBettin | Auto-identify players who exploit specific defensive weakness zones |
 
-### 5.2-B Additional Claude Use Cases (Feb 20, 2026 — Not Yet Captured)
+### 5.2-B Additional Claude Use Cases
 
-Lower-priority ideas from session research + competitive landscape audit. Top 3 flagged as high-value near-term additions.
+**⭐ High-value, low-effort additions** — now tracked as Phase 8.24/8.25/8.26 in ROADMAP:
 
-**⭐ High-value, low-effort additions:**
-
-| Use Case | Model | Integration Point | Value |
-|----------|-------|-------------------|-------|
-| **Edge type labeling** ⭐ | Haiku | `module_f.py` bet card | Label each bet: `Projection` / `Matchup` / `Injury-Vacuum` / `Hot-Streak` — product differentiator, $0 extra |
-| **Key Advantage callout** ⭐ | Haiku | `morning_brief._score_game()` | Per-game: auto-surface #1 exploitable angle ("IND allows 38% rim FG% — strong Embiid OVER angle") — 1 Haiku call/game |
-| **Correlated props flagging** ⭐ | Python+Haiku | `morning_brief` curation | Scan Top 5 for 2+ same-game bets → flag SGP correlation risk for users |
+| Use Case | Phase | Model | Integration Point | Value |
+|----------|-------|-------|-------------------|-------|
+| **Edge type labeling** | 8.24 | Haiku | `module_f.py` bet card | Label each bet: `Projection` / `Matchup` / `Injury-Vacuum` / `Hot-Streak` — product differentiator, $0 extra |
+| **Key Advantage callout** | 8.25 | Haiku | `morning_brief._score_game()` | Per-game: auto-surface #1 exploitable angle ("IND allows 38% rim FG% — strong Embiid OVER angle") — 1 Haiku call/game |
+| **Correlated props flagging** | 8.26 | Python+Haiku | `curate_plays.py` | Scan Top 5 for 2+ same-game bets → flag SGP correlation risk for users |
 
 **Medium-value, moderate-effort:**
 
@@ -260,25 +238,7 @@ Lower-priority ideas from session research + competitive landscape audit. Top 3 
 
 ## Phase 8.10: League Rankings Module ✅ DONE (Feb 19, 2026)
 
-**Status:** Complete. `scripts/generate_rankings.py` ships weekly via `weekly_validation.yml`.
-**Commit:** `dbe3a98` + min-games patch.
-
-### Data Sources
-| Table | Records | Used For |
-|-------|---------|----------|
-| `player_synergy_playtypes` | ~500 | PPP rankings by playtype |
-| `team_scheme_cache` | 60 (30 teams × 2) | Defensive scheme rankings |
-| `player_game_tracking` | ~12K | Drives, catch-shoot, pull-up rankings |
-
-### Ranking Types
-- **Player rankings:** Top P&R ball-handlers by PPP, top spot-up shooters by PPP, top ISO scorers by PPP
-- **Team defensive rankings:** FUNNEL teams by drive FG% allowed, PAINT_PACK by 3PA allowed
-- **Team offensive rankings:** MOTION teams by AST/FGM ratio, ISO_HEAVY by isolation frequency
-
-### Implementation
-- Weekly SQL queries via `scripts/generate_rankings.py` (new)
-- Output: Markdown table via Telegram Tuesdays
-- Cost: $0 (pure SQL, no API calls)
+`scripts/generate_rankings.py` — weekly via `weekly_validation.yml`. Uses `player_synergy_playtypes`, `team_scheme_cache`, `player_game_tracking`. Commit `dbe3a98`.
 
 ---
 

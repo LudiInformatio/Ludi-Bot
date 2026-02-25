@@ -202,7 +202,8 @@ def main():
             system_prompt=system_prompt,
             model=SONNET_MODEL,
             temperature=0.2,
-            max_tokens=1000
+            max_tokens=1000,
+            call_type='weekly',
         )
 
         if response:

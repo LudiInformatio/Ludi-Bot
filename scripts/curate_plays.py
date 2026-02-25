@@ -231,6 +231,9 @@ Otherwise PASS. When in doubt, PASS."""
         model=HAIKU_MODEL,
         temperature=0.1,
         max_tokens=100,
+        call_type='sanity_gate',
+        player_name=bet.get('player_name'),
+        game_date=bet.get('game_date'),
     )
 
     if not response:
@@ -406,6 +409,7 @@ Select the best 5 (or all available if fewer than 5 passed the gate). Return JSO
         model=SONNET_MODEL,
         temperature=0.1,
         max_tokens=800,
+        call_type='curation',
     )
 
     if not response:

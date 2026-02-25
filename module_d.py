@@ -925,7 +925,9 @@ class LudiYak:
                 system_prompt=INJURY_BLURB_SYSTEM,
                 model=HAIKU_MODEL,
                 temperature=0.0,   # deterministic — classification, not generation
-                max_tokens=150
+                max_tokens=150,
+                call_type='injury_nuance',
+                player_name=player_name,
             )
 
             if not result_text:

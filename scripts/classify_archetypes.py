@@ -991,7 +991,9 @@ def main():
             system_prompt,     # built once from DB — DB-verified examples, not training memory
             HAIKU_MODEL,
             temperature=0.0,   # deterministic — classification must be consistent across weekly batch
-            max_tokens=20
+            max_tokens=20,
+            call_type='archetype',
+            player_name=name,
         )
 
         claude_unavailable = not result
@@ -1189,7 +1191,8 @@ def main():
             SYSTEM_PROMPT_SCHEME,
             HAIKU_MODEL,
             temperature=0.1,
-            max_tokens=20
+            max_tokens=20,
+            call_type='scheme_verify',
         )
         
         if not result:

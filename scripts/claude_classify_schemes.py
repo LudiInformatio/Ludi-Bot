@@ -301,6 +301,7 @@ def main():
         model=HAIKU_MODEL,
         temperature=0.1,
         max_tokens=2000,  # Increased: 30 teams × ~2-3 JSON entries = needs room
+        call_type='scheme',
     )
 
     if not response:
