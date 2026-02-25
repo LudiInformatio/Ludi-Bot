@@ -250,21 +250,15 @@ This gives Claude our actual empirical knowledge, not just instructions. The mod
 
 **BERT pattern:** Smaller BERT models are most effective via knowledge distillation — the small model learns labels produced by the large model teacher.
 
-**Current state:** Sonnet picks Top 5 bets. Haiku runs the sanity gate. No feedback between them.
+**Current state (Feb 25, 2026 — Layer 1 LIVE):** `claude_analysis_log` table collecting every `get_claude_analysis()` call — `call_type` (sanity_gate/curation/game_notes/spotlight/injury_nuance/scheme/archetype/weekly), model, tokens, cost, player_name, game_date, response_text. `utils/claude_logger.py` fires from `claude_client.py` hot-path.
 
-**Proposed feedback loop:**
-When Sonnet selects a bet that Haiku initially wanted to FLAG (but passed deterministic), that's a label: "Haiku was wrong here." When Sonnet avoids a bet despite it passing Haiku, that's another label.
+**Layer 2 (Phase 8.23 next):** `scripts/calibrate_claude_outputs.py` — weekly Wilson accuracy per `call_type` → `cache/claude_calibration.json`. 14-day first scan ~Mar 10.
 
-**Simple version (no code required):** Weekly review of which bets Haiku passed but Sonnet skipped → update Haiku's `FLAG` criteria based on patterns.
+**Layer 3 (future):** Inject calibration into `_get_system_wr_context()`. BERT fine-tune: n > 500/class needed (~90-day window, May 2026).
 
-**Automated version (future):** After `curate_plays.py` runs, log:
-```sql
--- Create table: haiku_sonnet_disagreements
--- player_name, stat, bet_side, haiku_result, sonnet_selected, outcome
--- Weekly batch: Claude Haiku re-reads disagreements → update criteria
-```
+**Why `haiku_sonnet_disagreements` via `call_type` routing:** When `sanity_gate` result was FLAG but `curation` still selected → label: Haiku was wrong. When `curation` skipped a bet that passed `sanity_gate` → opposite label. `claude_analysis_log` captures both sides automatically.
 
-This is Phase 8.19 territory. Document for future implementation.
+**Implementation reference:** Phase 8.23 — `database.py` `init_db()`, `utils/claude_logger.py`, `utils/claude_client.py`. Full spec: `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`.
 
 ---
 

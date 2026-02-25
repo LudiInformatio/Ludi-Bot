@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** February 25, 2026 — 3:00 PM EST
+**Last Updated:** Wednesday, February 25, 2026 — 3:07 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Phase 8.23 Layer 1 collection (start now — Mar 10 window) + 2024-25 Historical Backfill (kick off this session)
+**Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Phase 8.23 Layer 1 collecting (live since Feb 25, 14-day scan ~Mar 10) + 2024-25 Backfill running (174 dates, ~Mar 3 completion)
 **Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.20 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Classification Gate 2 Hardening + BERT Pattern 9 ✅** + **UNK Position Cleanup + Archetype Naming Audit ✅**
 
 This is the single source of truth for project tasks and priorities.
