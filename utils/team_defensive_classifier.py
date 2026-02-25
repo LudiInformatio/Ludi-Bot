@@ -78,10 +78,13 @@ class TeamDefensiveClassifier:
             'def_dist_low': self._percentile(def_dist_vals, 0.25),
             'def_dist_high': self._percentile(def_dist_vals, 0.75),
             'drive_vol_low': self._percentile(drive_vol_vals, 0.25),
-            'drive_vol_high': self._percentile(drive_vol_vals, 0.75),
+            # Q60 (down from Q75): PERIMETER_FUNNEL needs high-ish drives, not extreme —
+            # the Q75+Q25 combo never co-occurs because high-drive teams also allow high C&S 3PA.
+            'drive_vol_high': self._percentile(drive_vol_vals, 0.60),
             'drive_pct_low': self._percentile(drive_pct_vals, 0.25),
             'drive_pct_med': self._percentile(drive_pct_vals, 0.50),
-            'cs_3pa_low': self._percentile(cs_3pa_vals, 0.25),
+            # Q40 (down from Q25): captures teams that suppress C&S below-average, not extreme.
+            'cs_3pa_low': self._percentile(cs_3pa_vals, 0.40),
             'cs_3pa_high': self._percentile(cs_3pa_vals, 0.75),
             'speed_high': self._percentile(speed_vals, 0.75),
         }

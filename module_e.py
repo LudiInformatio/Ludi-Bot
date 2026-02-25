@@ -113,9 +113,10 @@ class LudiCalibrator:
         if not cache_loaded:
             self._load_dynamic_defensive_styles()
 
-        # OFFENSIVE_STYLES dict removed (Feb 15, 2026)
-        # Now using utils/team_offensive_classifier.py via classify_team_offense() method
-        # Fixed name mismatch: classifier now returns MOTION/ISO_HEAVY/PACE_PUSH/HALF_COURT (not MOTION_OFFENSE/ISOLATION_HEAVY)
+        # OFFENSIVE_STYLES: loaded from team_scheme_cache (Feb 25, 2026)
+        # Falls back to team_offensive_classifier.py (in-memory) if cache is empty
+        self.OFFENSIVE_STYLES = {}
+        self._load_cached_offensive_styles()
 
         # MANUAL OVERRIDES (The "Scout's Eye")
         self.MANUAL_OVERRIDES = {
@@ -543,6 +544,32 @@ class LudiCalibrator:
             return True
         except Exception as e:
             print(f"[Module E] Defensive scheme cache unavailable: {e}")
+            return False
+
+    def _load_cached_offensive_styles(self) -> bool:
+        """Load active offensive schemes from team_scheme_cache if available."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT team_abbr, active_style
+                FROM team_scheme_cache
+                WHERE scheme_type = 'OFFENSE'
+                """
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            if not rows:
+                return False
+            for team, style in rows:
+                if not style or style == "INSUFFICIENT" or style == "BALANCED":
+                    continue  # Leave BALANCED/empty out so classify_team_offense() falls back to classifier
+                self.OFFENSIVE_STYLES[team] = style
+            print(f"[Module E] Offensive styles loaded from cache: {len(self.OFFENSIVE_STYLES)} teams")
+            return len(self.OFFENSIVE_STYLES) > 0
+        except Exception as e:
+            print(f"[Module E] Offensive scheme cache unavailable: {e}")
             return False
 
     def _load_dynamic_defensive_styles(self) -> None:
@@ -1711,10 +1738,12 @@ class LudiCalibrator:
 
     def classify_team_offense(self, team_abbr: str) -> str:
         """
-        Dynamically classify team offensive style using new automated system.
-        Phase 1: Uses utils/team_offensive_classifier.py
+        Classify team offensive style. Priority order:
+        1. team_scheme_cache (DB, updated daily via data_sync)
+        2. team_offensive_classifier.py (in-memory, computed from player_game_logs at import)
+        3. BALANCED fallback
         """
-        return TEAM_OFFENSIVE_TYPES.get(team_abbr, "BALANCED")
+        return self.OFFENSIVE_STYLES.get(team_abbr) or TEAM_OFFENSIVE_TYPES.get(team_abbr, "BALANCED")
 
     def _apply_offensive_style_boost(self, calibrated: dict, team_offense: str, 
                                       opponent_defense: str) -> None:
@@ -2325,18 +2354,27 @@ class LudiCalibrator:
 
         player_name = calibrated.get('name', '')
 
-        # Map archetypes to their primary synergy playtype
+        # Map archetypes to their primary synergy playtype for PPP efficiency weighting.
+        # Stat routing (in the apply block below):
+        #   P&R_HANDLER    → proj_ast  (facilitators, including HUB_BIG/CONNECTOR bigs)
+        #   ISO_SCORER/POST_UP/TRANSITION → proj_pts
+        #   SPOT_UP        → proj_3pm
+        #   P&R_ROLL_MAN/OFF_BALL_CUTTER → proj_pts + proj_fg_pct
         archetype_synergy_map = {
-            'HELIOCENTRIC_MAESTRO': 'P&R_HANDLER',
-            'SLASHING_CREATOR': 'TRANSITION',
-            'JUMBO_FACILITATOR': 'P&R_HANDLER',
-            'SNIPER_ELITE': 'SPOT_UP',
-            'TWO_LEVEL_SCORER': 'ISO_SCORER',
-            'WARRIOR_BIG': 'P&R_ROLL_MAN',
-            'STRETCH_BIG': 'SPOT_UP',
-            'ROLL_MAN': 'P&R_ROLL_MAN',
-            'CUTTER_SPECIALIST': 'OFF_BALL_CUTTER',
-            'FACILITATOR': 'P&R_HANDLER',
+            'HELIOCENTRIC_MAESTRO': 'P&R_HANDLER',   # Guard engine, P&R handler → AST
+            'SLASHING_CREATOR': 'TRANSITION',          # Drive-and-score, transition → PTS
+            'ISO_ASSASSIN': 'ISO_SCORER',              # Pure ISO scorer → PTS
+            'JUMBO_FACILITATOR': 'P&R_HANDLER',        # Big PG-type → AST
+            'SNIPER_ELITE': 'SPOT_UP',                 # Catch-and-shoot → 3PM
+            'TWO_LEVEL_SCORER': 'ISO_SCORER',          # Mid-range + 3 → PTS
+            'WARRIOR_BIG': 'P&R_ROLL_MAN',             # Roll man → PTS + FG%
+            'STRETCH_BIG': 'SPOT_UP',                  # Pop-and-shoot big → 3PM
+            'ROLL_MAN': 'P&R_ROLL_MAN',                # Pure roll man → PTS + FG%
+            'HUB_BIG': 'P&R_HANDLER',                  # Facilitating big (Jokić) → AST
+            'CUTTER_SPECIALIST': 'OFF_BALL_CUTTER',    # Off-ball cutter → PTS + FG%
+            'ENERGY_BIG': 'P&R_ROLL_MAN',              # Roll/putback energy → PTS + FG%
+            'CONNECTOR': 'P&R_HANDLER',                # Ball-movement connector → AST
+            'FACILITATOR': 'P&R_HANDLER',              # Secondary facilitator → AST
         }
 
         primary_playtype = archetype_synergy_map.get(archetype)

@@ -1356,6 +1356,48 @@ class LudiHistorian:
             _team_seed
         )
 
+        # -- Player type profiles: unified per-player type layer (Feb 25, 2026) --
+        # Consolidates archetype + defensive_tag + top-3 NBA Synergy playtypes
+        # + position-synergy match validation into one queryable row per player.
+        # Built by scripts/build_classification_profiles.py::build_player_type_profiles()
+        # Refreshed weekly (weekly_validation.yml) after classify_archetypes runs.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_type_profiles (
+                player_name          TEXT NOT NULL,
+                team                 TEXT,
+                position             TEXT,
+                -- Our classification system
+                archetype            TEXT,        -- primary offensive identity (15 types)
+                defensive_tag        TEXT,        -- defensive role (5 types)
+                -- NBA Synergy types (raw names, top 3 by freq, ≥75 total possessions)
+                synergy_type_1       TEXT,        -- e.g. POST_UP (highest freq)
+                synergy_freq_1       REAL,        -- freq% e.g. 20.1
+                synergy_ppp_1        REAL,        -- Points Per Possession
+                synergy_type_2       TEXT,
+                synergy_freq_2       REAL,
+                synergy_ppp_2        REAL,
+                synergy_type_3       TEXT,
+                synergy_freq_3       REAL,
+                synergy_ppp_3        REAL,
+                -- Our internal translated names (ISO_SCORER, P&R_HANDLER, etc.)
+                synergy_tag_1        TEXT,
+                synergy_tag_2        TEXT,
+                synergy_tag_3        TEXT,
+                -- Position-playtype validation: 1=match, 0=mismatch
+                -- e.g. Jokić (C) with PR_BALL_HANDLER #1 → position_synergy_match=0
+                position_synergy_match INTEGER DEFAULT 1,
+                -- Archetype-synergy alignment check
+                archetype_primary_tag   TEXT,    -- what archetype_synergy_map expects
+                archetype_in_top3       INTEGER, -- 1 if archetype's tag appears in top 3 synergy
+                season               TEXT DEFAULT '2025-26',
+                updated_at           TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (player_name, season)
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_archetype ON player_type_profiles(archetype)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_team ON player_type_profiles(team)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_def_tag ON player_type_profiles(defensive_tag)")
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
