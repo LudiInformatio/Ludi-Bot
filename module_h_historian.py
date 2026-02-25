@@ -434,6 +434,16 @@ class LudiHistorian:
             print(f"   ⚠️ Error loading state: {e}. Ignoring.")
             return None
 
+    def _clear_sync_state(self):
+        """Clear any existing backfill state files."""
+        state_file = "cache/historian_sync_state.json"
+        audit_file = "cache/pending_sync_dates.json"
+        
+        for f in [state_file, audit_file]:
+            if os.path.exists(f):
+                os.remove(f)
+                print(f"   🗑️ Cleared: {f}")
+
     def _load_audit_file(self):
         """
         Load audit file containing dates to sync.
@@ -1044,8 +1054,19 @@ if __name__ == "__main__":
         default="backfill",
         help="daily = incremental only; daily+backfill = incremental then resume; backfill = state/audit priority",
     )
+    parser.add_argument(
+        "--force-daily",
+        action="store_true",
+        help="Ignore any backfill state, run daily sync only (clears stale state)",
+    )
     args = parser.parse_args()
 
     config.validate_config()
     h = LudiHistorian(budget=args.budget)
+    
+    if args.force_daily:
+        h._clear_sync_state()
+        args.mode = "daily"
+        print("   ⚡ Force-daily mode: cleared backfill state, running daily sync only")
+    
     h.update_database(mode=args.mode)

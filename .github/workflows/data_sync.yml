@@ -156,7 +156,7 @@ jobs:
           HISTORIAN_MAX_RUNTIME_SEC: 540
           PYTHONUNBUFFERED: "1"
         run: |
-          python3 module_h_historian.py --mode daily+backfill
+          python3 module_h_historian.py --mode daily --force-daily
 
       # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
 
