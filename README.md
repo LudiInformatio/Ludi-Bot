@@ -16,7 +16,7 @@ A production-grade betting analytics engine that generates player prop recommend
 | **Product** | Ludi Lens v2.0 (The Front Office War Room) |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 23, 2026 7:55 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 25, 2026 9:17 PM EST) |
 
 ### Key Features
 
@@ -36,6 +36,7 @@ A production-grade betting analytics engine that generates player prop recommend
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
 - **Slate Trends Header** — `_build_slate_trends_header()` sends injury-filtered HOT/COOLING signals once per briefing before per-game notes
 - **Advanced Stats Pipeline** — BDL V2 advanced/hustle/tracking stats + SportsDataIO enrichment (`started`, fantasy pts, doubles); Ghost Protocol reserved for on-court only
+- **Foul Intelligence** — Rolling 21-day foul splits (`player_foul_splits`, 459 players); Module C pre-loads at init for zero-overhead per-simulation lookups; `min_dampener` dampens minutes for foul-trouble players
 
 ---
 
@@ -109,7 +110,7 @@ bash scripts/restore_database.sh archives/data/ludi.db.backup_*.gz # Restore
 ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backups
 ```
 
-**Key tables:** `player_game_logs`, `players`, `games`, `bet_recommendations`, `rotation_profiles`, `beneficiary_minutes`, `player_injuries`, `player_trends`, `player_synergy_playtypes`, `team_leverage_profiles`, `referee_profiles`
+**Key tables:** `player_game_logs`, `players`, `games`, `bet_recommendations`, `rotation_profiles`, `beneficiary_minutes`, `player_injuries`, `player_trends`, `player_synergy_playtypes`, `team_leverage_profiles`, `referee_profiles`, `player_foul_splits`, `team_dvp_by_archetype`, `player_canonical_ids`, `canonical_teams`
 
 ---
 
@@ -136,7 +137,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 24, 2026 — 9:58 PM EST
+**Last Updated:** February 25, 2026 — 9:17 PM EST
 
 **Phase 8 Completions:**
 
@@ -145,7 +146,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.0 A/B/C/D | Injury schema, three-tier active roster, smart vacuum, workflow wiring |
 | 8.2 | S.A.V.A.G.E. game notes — top 4 games by tier-weight score; B2B fatigue + leverage context |
 | 8.3 | Player spotlight cards — archetype-vs-scheme `analysis_block`, L7/L10/L15 trends, hit rate, streaks |
-| 8.4 | Archetype classifier — weekly Haiku batch, 19 types, Synergy validation |
+| 8.4 | Archetype classifier — weekly Haiku batch, 15 offensive archetypes + deterministic defensive_tag |
 | 8.5 | Play Curation Engine — Haiku sanity gate + Sonnet Top 5 |
 | 8.6 | CLV expanded to 11 markets + weekly retrospective |
 | 8.7 | Perplexity Sonar integration (replaces DuckDuckGo in Module D) |
@@ -154,32 +155,32 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.12 | Roster Intelligence — trade detection, stale profile cleanup, NEW_TO_TEAM dampener |
 | 8.14 | Scoring Environment Intelligence — dynamic OVER bias correction + 4 data-proven OVER filters |
 | 8.15 | Trend Engine — `player_trends` (4,500+ rows), hybrid pre-computed + live hit rates, enriched briefings |
-| 8.16 | Suspension Intelligence — `scripts/sync_suspensions_espn.py` (ESPN, free, 30-team scan); auto-resolves; found 5 active suspensions on first run including Paul George 25-game ban and same-day Gobert flagrant foul |
-| 8.18 | Game Lines Integration — `team_totals` Odds API market, Module E 3-tier team scoring modifier, fixed UnboundLocalError in module_e.py |
-| 8.19 | Prompt Engineering Upgrade — few-shot examples, Haiku NSP news gate, pre-truncation, parse failure logging |
-| 8.20 | Stat Confidence & Edge Calibration — per-stat multipliers, RMSE sizing, Wilson 95% WR grades in curation |
+| 8.16 | Suspension Intelligence — ESPN 30-team scan; 5 active suspensions found on first run |
+| 8.17 | Foul Intelligence — `player_foul_splits` (459 players); Module C `_load_foul_splits_data()` pre-load at init; LEAGUE_AVG_FOULS fixed 21.5→12.5; daily sync in `data_sync.yml` |
+| 8.18 | Game Lines Integration — `team_totals` Odds API market, Module E 3-tier scoring modifier |
+| 8.19 | Prompt Engineering Upgrade — few-shot examples, Haiku NSP news gate, pre-truncation |
+| 8.20 | Stat Confidence & Edge Calibration — per-stat multipliers, RMSE sizing, Wilson 95% WR grades |
+| 8.21 | ESPN Integration — `utils/espn_client.py` + Tier 3 game lines fallback + injury source + `espn_id` crosswalk |
+| 8.23 | Claude/Perplexity Feedback Loop — `claude_analysis_log` Layer 1 LIVE; 14-day scan ~Mar 10 |
+| 8.24 | Edge Type Labeling — deterministic Projection/Matchup/Injury-Vacuum/Hot-Streak label on every bet card |
+| 8.25 | Key Advantage Callout — DVP archetype matchup angle prepended to morning brief Telegram cards |
+| 8.26 | Correlated Props Flagging — SGP risk (HIGH/MODERATE/LOW) detected + flagged in curation output |
+| 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
+| 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
-| Infra | Evening Lock Quality Sprint (Feb 21) — 9 fixes: game notes fallback, Tier 2 race condition, staleness guards, in-progress game skip, Perplexity hours_to_game, time-aware confidence mode |
-| Infra | Slack/Notification Split, Model Calibration, Morning/Evening Brief Hardening, Injury Intelligence Hardening |
-| Infra | Hybrid Off/Def Role Tagging (Feb 22) — `players.archetype` = 15 offensive archetypes; `players.defensive_tag` deterministic; `module_x` skips WOWY vacuum for pure defenders |
-| Infra | Scheme Cache d14 Fix + Quality Tiers (Feb 22) — self-referential subquery fix for tracking stats; BDL z-score `off_quality_14d`/`def_quality_14d` columns |
-| Infra | Morning Brief Slate Trends Header (Feb 22) — injury-filtered HOT/COOLING leader signals; single Telegram send before per-game notes loop |
-| Infra | BDL V2 + SportsDataIO Enrichment (Feb 22) — 4 new sync scripts; 100K+ rows backfilled (advanced/hustle/tracking/plus_minus/season avgs/started/fantasy pts); Ghost Protocol `--skip-advanced` |
-| Infra | Data Sync Pipeline Fix (Feb 23) — PBP Stats split to own Mon/Wed/Fri workflow; Module H BDL fallback; Ops Hub `cancelled` trigger; wall-clock guards + HTTP timeout hardening |
-| Infra | Injury Pipeline Hardening (Feb 23 PM) — ESPN fast source (`sync_injuries_espn.py`); `player_canonical_ids.normalized_name` accent-safe resolution; source-scoped resolve; ESPN status protection; morning brief UNION query + 75-day filter; module_g DB-first (no Playwright during briefings); Module D DB-first (skips Perplexity for OUT/DOUBTFUL); yak_cache _save_cache fix; `daily_briefing.yml` 9 AM → 11 AM |
-| Infra | RSS Feed Parsing Hardening (Feb 23-24) — RotoWire 100% parse rate verified; RealGM verb list expanded (22 ACTION_WORDS); `_classify_rss_headline()` OUT/DOUBTFUL keywords expanded; canonical validation gate; `getattr` safety on feedparser fields; `module_d.py` `_extract_realgm_player_name()` proper extraction |
-| Infra | Canonical Table Hardening + ESPN Foundation (Feb 24) — `player_canonical_ids` CREATE TABLE restored in `database.py` (was orphaned); `canonical_teams` table added (30 teams, BDL/Tank01/ESPN IDs); `espn_id` column added to `player_canonical_ids`; `normalize_bdl_abbr()` centralized in `utils/mappings.py` eliminating 6 copy-pasted dicts; `build_espn_crosswalk.py` (new); ESPN scripts load team IDs from DB; opportunistic `espn_id` write-back during injury scans |
-| Infra | Claude Name Resolution Pipeline (Feb 24) — `resolve_canonical_name(conn, name)` added to `player_id_resolver.py`; wired into `curate_plays.py` (Haiku sanity gate), `morning_brief.py` (hit rate + spotlight), `trend_engine.py` (matchup analysis entry point + `_resolve_player_id()` tier 4), `classify_archetypes.py` (synergy + season lookups with dual accent/ASCII fallback); fixes silent GENERALIST downgrades + Haiku receiving "No injury on record" for accented OUT players |
-| Infra | Settlement Pipeline Hardening + Report Upgrade (Feb 24) — date-ceiling guard (`game_date <= get_est_yesterday()`) prevents future game settlement; canonical name fallback for accented players (Jokić/Nurkić) in `_lookup_game_log`; three-section settlement report (daily / L10 / since-launch); all-void guard skips Telegram when `wins + losses == 0`; ROI formula excludes PUSH + zero-unit legacy bets from denominator |
+| Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
+| Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
+| Infra | Canonical Table Hardening — `player_canonical_ids` CREATE TABLE restored; `canonical_teams` (30 rows); `normalize_bdl_abbr()` centralized; `resolve_canonical_name()` wired into 4 injection points |
+| Infra | Settlement Pipeline Hardening — date-ceiling guard; canonical name fallback; three-section report (daily/L10/launch); all-void guard |
+| Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive only; `players.defensive_tag` deterministic |
+| Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 
 **Planned Next:**
-- Phase 8.13: Ask Ludi Telegram Bot — architecture complete, 3-file implementation ready
-- Phase 8.17: Foul Intelligence — PlayByPlayV3 foul events → `player_foul_splits`, early foul trouble minutes dampener
-- Phase 8.21: ESPN Full Integration — injuries wired ✅ (Feb 23); `espn_id` crosswalk wired ✅ (Feb 24); remaining: `utils/espn_client.py`, longComment beneficiary corpus, Tier 3 game lines fallback
-- Phase 8.22: Social Intelligence System — architecture complete (Feb 24); Phase 1 = `social_signals` + `odds_snapshots` + `prop_intelligence` DB tables, Reddit Scout (PRAW), Action Network scraper, Market Intelligence Agent; Prop Pulse Score 0–100 injects into `curate_plays.py`
-- Phase 8.23: Claude/Perplexity Analysis Feedback Loop — `claude_analysis_log` Layer 1 (raw call + decision); `calibrate_claude_outputs.py` Layer 2 (weekly Wilson accuracy); inject into `_get_system_wr_context()` Layer 3; 14-day first scan ~Mar 10
+- Phase 8.13: Ask Ludi Telegram Bot — 3-file implementation ready (`bots/ask_ludi.py` + db + handlers)
+- Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
+- Phase 8.23: Wilson calibration at Layer 1 14-day mark (~Mar 10)
 
-**Performance (Jan 7 – Feb 23, 2026):**
+**Performance (Jan 7 – Feb 25, 2026):**
 - Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)
 - BLOCKS UNDER: 70.7% WR — strongest signal in system
 - UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)

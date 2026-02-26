@@ -18,7 +18,7 @@ else:
 # ====================================================
 # 0. DATABASE CONFIGURATION
 # ====================================================
-DB_PATH = "ludi.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ludi.db")
 
 # ====================================================
 # 1. ODDS & LINES PROVIDERS

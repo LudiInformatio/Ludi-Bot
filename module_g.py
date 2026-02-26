@@ -26,8 +26,9 @@ class LudiRefEngine:
         self.db_path = db_path
         self.daily_assignments = {}
         
-        # League average baseline (per team)
-        self.LEAGUE_AVG_FOULS = 21.5
+        # League average baseline (per referee: 37.5 game total / 3 crew = 12.5)
+        # Verified from 806 team-game samples: 18.74 per team × 2 = 37.48 total / 3 = 12.49
+        self.LEAGUE_AVG_FOULS = 12.5
         
         # Ensure today's games exist before any referee operations
         self._ensure_todays_games()

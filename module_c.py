@@ -37,7 +37,7 @@ class LudiOracle:
         print(f"   >>> Sim Count: {self.sim_count}")
         print(f"{'='*40}")
 
-        self.db_path = 'ludi.db'
+        self.db_path = config.DB_PATH
         self.STAT_MAP = {
             'points': 'PTS', 'rebounds': 'REB', 'assists': 'AST',
             'threes': 'FG3M', 'blocks': 'BLK', 'steals': 'STL',
@@ -49,11 +49,13 @@ class LudiOracle:
         self.rolling_ts_data = {}
         self.drives_data = {}
         self.team_defense = {}
+        self.foul_splits_data = {}
 
         self._load_shot_quality_data()
         self._load_rolling_ts_data()
         self._load_drives_data()
         self._load_team_defense_data()
+        self._load_foul_splits_data()
 
     def _load_shot_quality_data(self):
         """Load shot quality averages from PBP Stats (player_shot_quality table)."""
@@ -136,6 +138,31 @@ class LudiOracle:
         except Exception as e:
             print(f"   >>> Team defense data unavailable: {e}")
             self.team_defense = {}
+
+    def _load_foul_splits_data(self):
+        """Pre-load player foul splits for fast per-player dampener lookup.
+        Follows the same pattern as _load_shot_quality_data().
+        Keyed by player_id (int) → {min_dampener, data_confidence}.
+        """
+        self.foul_splits_data = {}
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT player_id, min_dampener, data_confidence
+                FROM player_foul_splits
+                WHERE season = '2025-26'
+            """).fetchall()
+            conn.close()
+            for row in rows:
+                self.foul_splits_data[int(row['player_id'])] = {
+                    'min_dampener': row['min_dampener'],
+                    'data_confidence': row['data_confidence']
+                }
+            print(f"   >>> Foul splits loaded: {len(self.foul_splits_data)} players")
+        except Exception as e:
+            print(f"   ⚠️ Foul splits load failed (dampener inactive): {e}")
+            self.foul_splits_data = {}
 
     def _calculate_efficiency_modifier(self, player):
         """Blend shot quality and rolling TS% into a capped FG efficiency modifier."""
@@ -347,6 +374,15 @@ class LudiOracle:
         # Phase 8.12: apply 5% dampener for players new to their current team
         if newly_traded:
             proj = float(proj) * 0.95
+
+        # Phase 8.17 — Foul Intelligence dampener
+        # Pre-loaded at init — zero DB connections during simulation
+        foul_dampener = 1.0
+        foul_row = self.foul_splits_data.get(int(player_id))
+        if foul_row and foul_row['data_confidence'] in ('HIGH', 'MEDIUM'):
+            foul_dampener = foul_row['min_dampener']
+
+        proj = float(proj) * foul_dampener
 
         return (float(proj), confidence)
 

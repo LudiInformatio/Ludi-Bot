@@ -90,23 +90,35 @@ class ProjectManagerBot:
         current_phase = ""
 
         lines = content.split('\n')
-        current_section = None
+
+        # Track which sections we're in
+        in_sprint_section = False       # ### Current Sprint block
+        in_tasks_section = False        # ## High/Medium Priority (fallback)
+        sprint_pending = []             # - [ ] items from Current Sprint (primary)
+        sprint_in_progress = []         # - [-] items from Current Sprint
+        all_pending = []                # - [ ] items from all High/Medium (fallback)
 
         for line in lines:
-            # ── PRIMARY: Parse 6-line header block ─────────────────────────────
-            # These are always maintained and reflect the true current state.
+            # ── PRIMARY: Parse header block ────────────────────────────────────
+            # **Active Work:**, **Completed:**, **Current Phase:** are maintained
+            # as the single source of truth and always read first.
 
             if line.startswith('**Current Phase:**'):
                 current_phase = line.replace('**Current Phase:**', '').strip()
 
             elif line.startswith('**Active Work:**'):
-                # Active Work = what's in progress right now
-                active = line.replace('**Active Work:**', '').strip()
-                if active:
-                    in_progress.append(active)
+                # Split multi-item active work (separated by ' + ') into
+                # distinct in_progress items so PM bot shows the first one cleanly.
+                active_str = line.replace('**Active Work:**', '').strip()
+                if active_str:
+                    parts = active_str.split(' + ')
+                    for part in parts:
+                        clean = part.strip().replace('**', '').strip()
+                        if clean:
+                            in_progress.append(clean)
 
             elif line.startswith('**Completed:**'):
-                # Extract last 3 sprint names — most recent are at the end
+                # Last 3 ` + ` segments = most recently completed items
                 completed_str = line.replace('**Completed:**', '').strip()
                 parts = completed_str.split(' + ')
                 for part in parts[-3:]:
@@ -115,28 +127,49 @@ class ProjectManagerBot:
                     if clean:
                         completed.append(clean)
 
-            # ── SECONDARY: Section-based scanning for - [ ] / - [-] items ─────
-            # These exist in Medium/Low Priority for non-Phase-8 tasks.
+            # ── SECTION TRACKING ───────────────────────────────────────────────
+
+            if '### Current Sprint' in line:
+                in_sprint_section = True
+            elif line.startswith('### ') and in_sprint_section:
+                in_sprint_section = False  # Moved past Current Sprint
 
             if '## High Priority' in line or '## Medium Priority' in line:
-                current_section = 'tasks'
+                in_tasks_section = True
             elif '## Low Priority' in line or '## Archive' in line:
-                current_section = 'low'
-            elif line.startswith('## ') and current_section:
-                current_section = None
+                in_tasks_section = False
 
-            if current_section == 'tasks':
+            # ── TASK COLLECTION ────────────────────────────────────────────────
+            # Primary: ### Current Sprint **Next Actions:** block
+            # Fallback: all - [ ] in High/Medium Priority (only if sprint empty)
+
+            if in_sprint_section:
                 if '- [ ]' in line:
                     task = line.replace('- [ ]', '').strip().replace('`', '')
                     if task:
-                        pending.append(task)
+                        sprint_pending.append(task)
                 elif '- [-]' in line:
-                    # Fallback: explicit in-progress checkbox (if used)
-                    task = line.replace('- [-]', '').strip()
+                    task = line.replace('- [-]', '').strip().replace('`', '')
                     task = task.split('🏗️')[0].strip() if '🏗️' in task else task
-                    task = task.replace('`', '')
+                    if task and task not in in_progress:
+                        sprint_in_progress.append(task)
+            elif in_tasks_section:
+                if '- [ ]' in line:
+                    task = line.replace('- [ ]', '').strip().replace('`', '')
+                    if task:
+                        all_pending.append(task)
+                elif '- [-]' in line:
+                    task = line.replace('- [-]', '').strip().replace('`', '')
                     if task and task not in in_progress:
                         in_progress.append(task)
+
+        # Sprint items take priority — fall back to general pending only if none found
+        pending = sprint_pending if sprint_pending else all_pending
+
+        # Sprint in_progress supplements header-sourced in_progress
+        for t in sprint_in_progress:
+            if t not in in_progress:
+                in_progress.append(t)
 
         return {
             'current_phase': current_phase,

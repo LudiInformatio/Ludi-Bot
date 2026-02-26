@@ -1,11 +1,17 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, February 25, 2026 — 7:34 PM EST
+**Last Updated:** Wednesday, February 25, 2026 — 9:17 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Phase 8.23 Layer 1 collecting (live since Feb 25, 14-day scan ~Mar 10) + 2024-25 Backfill running (174 dates, ~Mar 3 completion)
-**Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.26 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Phase 8.24 Edge Type Labeling ✅ + Phase 8.25 Key Advantage Callout ✅ + Phase 8.26 SGP Correlation Flagging ✅ + Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅**
+**Active Work:** Phase 8.13 Ask Ludi (build ready) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
+**Completed:** Phases 1–7 + Phase 8.0–8.23 ✅ (full history: `docs/STATUS_HISTORY.md`) + Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅ + Phase 8.17 Foul Intelligence ✅
 
 This is the single source of truth for project tasks and priorities.
+
+> **Agent Template Contract** — When updating this file, preserve the header format exactly:
+> - `**Active Work:**` — short phrase(s) separated by ` + `. First item = current sprint focus.
+> - `**Completed:**` — last 3 completions as separate ` + ` segments (PM bot reads `parts[-3:]`).
+> - `### Current Sprint` → `**Next Actions:**` block — use `- [ ]` bullets for PM bot pending tasks.
+> - Never put actionable next-steps ONLY in the Phase 8 table; the table is for status tracking only.
 
 **Active Project Docs:**
 - `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` — BERT-derived prompt patterns
@@ -29,47 +35,39 @@ This is the single source of truth for project tasks and priorities.
 ### Current Sprint
 
 - [-] Phase 8.13 — Ask Ludi Telegram Bot (`bots/ask_ludi.py`) — architecture complete, 3-file implementation ready
-- [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 `claude_analysis_log` collection (14-day scan window: ~Mar 10)
+- [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
+
+**Next Actions:**
+- [ ] Phase 8.13: Build `bots/ask_ludi.py` — entry point, long-polling loop, `/start` + free-text handler
+- [ ] Phase 8.13: Build `bots/ask_ludi_db.py` — 8 intent handlers (injuries/edges/trends/schedule/recap)
+- [ ] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
+- [ ] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
 
 ---
 
-### Phase 8: AI-Enhanced Pipeline (Claude Integration)
+### Phase 8: AI-Enhanced Pipeline (Remaining Sub-Phases)
 
-**Goal:** Add Claude as an analytical reasoning layer on top of the deterministic pipeline
 **Principle:** LLMs orchestrate and reason — never calculate. Math stays deterministic.
-**Status:** 🟡 ACTIVE — Core pipeline complete, remaining sub-phases are LOW/MEDIUM priority
-**Estimated Daily Cost:** ~$0.40/day (~$12/month)
-
-**Completed sub-phases (Pre, 8.0-A/B/C/D, 8.2–8.7, 8.9–8.10, 8.12, 8.14–8.16, 8.18–8.21, Infra):** All DONE. Full details: `docs/STATUS_HISTORY.md`
-
-**Active & Remaining Sub-Phases:**
+**Completed:** 8.0-A/B/C/D + 8.2–8.17 + 8.21 + 8.24–8.28 ✅ — Full details: `docs/STATUS_HISTORY.md`
 
 | # | Sub-Phase | Status | Description | Cost |
 |---|-----------|--------|-------------|------|
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data.** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → Telegram reply. Architecture complete: python-telegram-bot v21+, Haiku intent → Sonnet, read-only SQLite. See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
-| 8.17 | Foul Intelligence | MEDIUM | Parse foul events from PlayByPlayV3 → `player_foul_splits` table → Module C minutes dampener + ref-player bias rebuild. $0 extra API cost. | $0 |
-| 8.21 | ESPN Full Integration | DONE ✅ | `utils/espn_client.py` + `fetch_game_lines_espn()` in `module_a.py`. Tier 3 fallback: Odds-API → BDL → ESPN DK (spread/total/ML). Live API corrections applied (provider name spacing, spread as float, ML nested path). `longComment` corpus deferred to BERT fine-tune sprint. | $0 |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
-| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | 3-layer OpenClaw: `claude_analysis_log` collection → weekly Wilson calibration (`calibrate_claude_outputs.py`) → inject into `_get_system_wr_context()`. **Start Layer 1 NOW — 14-day scan ~Mar 10.** | $0 |
-| 8.24 | Edge Type Labeling ⭐ | DONE ✅ | `_classify_edge_type()` in `module_f.py` — deterministic Projection/Matchup/Injury-Vacuum/Hot-Streak label on every bet card. `edge_type` column in `bet_recommendations`. $0 cost. | $0 |
-| 8.25 | Key Advantage Callout ⭐ | DONE ✅ | `_get_key_advantage_callout()` in `morning_brief.py` — deterministic callout prepended to Telegram card. Queries `team_dvp_by_archetype` for best archetype matchup angle per game. `docs/FUTURE_DATA_SOURCES.md` §8.25-B added. $0 cost. | $0 |
-| 8.26 | Correlated Props Flagging ⭐ | DONE ✅ | `_detect_same_game_pairs()` in `curate_plays.py` — scans Top 5 for same-game pairs, flags HIGH/MODERATE/LOW SGP risk in Telegram card. `sgp_correlation_risk` column in `bet_recommendations`. $0 cost. | $0 |
-| 8.27 | Pre-Game Lineup Sync ⭐ | DONE ✅ | `scripts/sync_lineup_starters.py` + `lineup_sync.yml` workflow at 9:45 AM — Tank01 depth charts synced to `players.is_starter`. Evening refresh at 6:35 PM. Late-game conditional sync in CLV workflow. $0 cost. | $0 |
-| 8.28 | Game Intelligence Cache ⭐ | DONE ✅ | `utils/game_notes_cache.py` + morning_brief.py integration — caches Claude game notes, validates cache before evening Claude calls. Auto-cleanup of yesterday's cache in data_sync. $0 cost. | $0 |
+| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting. Wilson calibration at 14-day mark (~Mar 10). Inject into `_get_system_wr_context()`. | $0 |
 
 ---
 
 ### Database Architecture Strategy
 
-**Current State:** Single SQLite database (`ludi.db`) — ~30 MB, 38+ tables
+**Current State:** Single SQLite database (`ludi.db`) — ~30 MB, 40+ tables
 
 **Phase 1: Consolidation** ✅ COMPLETE — Single source of truth, direct SQLite writes, no JSON staging
 
-**Phase 1.5: 2024-25 Historical Backfill** ← NEXT (plan ready)
-- [ ] Create `cache/pending_sync_dates.json` with Oct 22, 2024 → Apr 13, 2025 date range
-- [ ] Module H auto-backfill (~6 nights at 200 Tank01 req/day, fully automated)
+**Phase 1.5: 2024-25 Historical Backfill** ← IN PROGRESS (~Mar 3 completion)
+- [-] Module H auto-backfill running — 174 dates, ~6 nights at 200 Tank01 req/day
 - [ ] BDL advanced stats + SportsDataIO enrichment fill new rows automatically
 - **Full plan:** `docs/projects/HISTORICAL_BACKFILL_2024_25.md`
 
@@ -97,38 +95,36 @@ This is the single source of truth for project tasks and priorities.
 ### Infographic & Data Visualization System (Post-Phase 8 — Frontend Sprint)
 **Blocked until:** Phase 8 backend cleanup complete
 **Full plan:** `docs/projects/INFOGRAPHIC_VISUALIZATION_SYSTEM.md`
-**Inspired by:** PaperBanana (arXiv:2601.23265) — AI-assisted illustration framework, code releasing ~March 2026
-- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 2 MVP charts (stat confidence matrix, daily P&L waterfall) wired into morning brief
-- [ ] Phase V2: Edge vs WR scatter, player trend sparklines, tier performance → weekly validation + debrief
+- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 2 MVP charts (stat confidence matrix, daily P&L waterfall)
+- [ ] Phase V2: Edge vs WR scatter, player trend sparklines, tier performance
 - [ ] Phase V3: Full 12-chart catalog + `scripts/generate_all_charts.py`
-- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted chart generation for Ask Ludi
+- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted chart generation
 
 ### CLV Tracking Enhancement
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
 
 ### Historical Odds Backfill (March 2026)
-~5,593 bets lost Jan 8–Feb 1 due to `clean: true` bug (fixed Feb 2). Recoverable via The-Odds-API `/v4/historical/`.
+~5,593 bets lost Jan 8–Feb 1 due to `clean: true` bug. Recoverable via The-Odds-API `/v4/historical/`.
 - [ ] Backfill historical odds (~10 credits/query)
 - [ ] Re-run pipeline for 15 missing dates and settle bets
 - **Blocked until:** March 2026 (Feb Odds API quota exhausted)
 
 ### Data Pipeline Improvements
 - [ ] Consolidate WOWY scripts (`sync_wowy_hybrid.py` + `sync_pbp_wowy.py` — duplicate work)
-- [x] DVP rankings sync — `scripts/sync_team_dvp_by_archetype.py` LIVE ✅ (250 rows in `team_dvp_by_archetype`, 10 archetypes × 30 teams, per-100-possession normalized, runs weekly via `weekly_validation.yml`). Feeds phase 8.25. Note: `defender_matchups` (0 rows) is separate and not needed for this use case.
 - [ ] PBP Stats: wire `get_possessions` endpoint → clutch detection + blowout tax validation (Section 4.4 in `docs/FUTURE_DATA_SOURCES.md`)
-- [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved per already-synced date in weekly backfills)
+- [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved)
 - [ ] Multi-book arbitrage detection
 - [ ] Steam move detection (rapid line movement alerts)
 
-### GH Actions / Claude Ops Improvements (identified Feb 20, 2026)
+### GH Actions / Claude Ops Improvements
 - [ ] **PR review action**: Add `anthropics/claude-code-action@v1` to PR events for automated code review on push to main
-- [ ] **`pip-audit` step**: Add to `data_sync.yml` or a separate security workflow — fails build on known CVEs in `requirements.txt`
-- [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log` table, sends weekly $/1k-token summary to Slack
-- [ ] **Token budget guard**: `max_tokens` cap in `claude_client.py` per task type (Haiku=200, Sonnet=800) + log when approaching daily budget
-- [ ] **Ask Ludi bot management workflow**: `bot_management.yml` — start/stop/status commands for the long-polling bot process via launchd
-- [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist in key tables; run at pipeline start. Prevents silent failures like the `confidence_tier` vs `tier` bug.
-- [ ] **OAuth token refresh reminder**: Add to `claude-ops-hub.yml` — warn in Slack when `CLAUDE_CODE_OAUTH_TOKEN` is >25 days old (expires ~30 days)
+- [ ] **`pip-audit` step**: Add to `data_sync.yml` — fails build on known CVEs in `requirements.txt`
+- [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log`, sends weekly $/1k-token summary
+- [ ] **Token budget guard**: `max_tokens` cap in `claude_client.py` per task type (Haiku=200, Sonnet=800)
+- [ ] **Ask Ludi bot management workflow**: `bot_management.yml` — start/stop/status commands via launchd
+- [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist at pipeline start
+- [ ] **OAuth token refresh reminder**: Warn in `claude-ops-hub.yml` when `CLAUDE_CODE_OAUTH_TOKEN` is >25 days old
 
 ---
 
@@ -141,14 +137,14 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Sync PlayerRebounding tracking data (contested vs uncontested %)
 
 ### Live Betting Pipeline (post model-math verification)
-**Blocked until:** Model hit rate + CLV verified over 90-day window (est. May 2026). ESPN RSS is planned corroboration source (15–30 min faster than injury APIs).
+**Blocked until:** Model hit rate + CLV verified over 90-day window (est. May 2026). ESPN RSS is planned corroboration source.
 
-### Developer Workflow Improvements (identified Feb 20, 2026)
-- [ ] **Session start checklist**: `scripts/session_check.py` — quick health check (DB rows, API quota, last sync time) in <5s. Run at start of each dev session.
-- [ ] **`AGENTS.md`**: Create agent operating guide (primary rules for Codex-style agents) so CLAUDE.md can stay as supplemental context only
-- [ ] **GH workflow shortcuts**: `scripts/run_workflow.sh <name>` wrapper for `gh workflow run` — avoids memorizing exact workflow names
+### Developer Workflow Improvements
+- [ ] **Session start checklist**: `scripts/session_check.py` — quick health check (DB rows, API quota, last sync time) in <5s
+- [ ] **`AGENTS.md`**: Create agent operating guide (primary rules for Codex-style agents)
+- [ ] **GH workflow shortcuts**: `scripts/run_workflow.sh <name>` wrapper for `gh workflow run`
 - [ ] **`/compact` habit**: Use before context fills — prevents losing work mid-session
-- [ ] **End-of-session memory update**: Always update `memory/MEMORY.md` at session end with key decisions/bugs fixed before compacting
+- [ ] **End-of-session memory update**: Always update `memory/MEMORY.md` at session end
 
 ---
 

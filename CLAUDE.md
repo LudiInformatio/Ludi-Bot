@@ -225,6 +225,11 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 - Always use correct class names (see Module Reference above)
 - Player name resolution: Odds API returns non-accented names (e.g. "Nikola Jokic") but `player_injuries` + `players` tables store canonical names with accents (e.g. "Nikola Jokić"). Always call `resolve_canonical_name(conn, player_name)` from `utils/player_id_resolver.py` before any name-based DB query in Claude prompt pipelines
 - `canonical_teams` table (30 rows) is the single source of truth for BDL/Tank01/ESPN team ID mappings — do NOT hardcode `ESPN_TEAM_IDS` dicts in new scripts
+- **ROADMAP.md Template Contract** — When any agent updates `ROADMAP.md`, preserve these patterns so `utils/pm_bot.py` parses correctly:
+  - `**Active Work:**` — short phrase(s) separated by ` + `. First segment = current sprint focus (shown in break messages).
+  - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).
+  - `### Current Sprint` section — must include a `**Next Actions:**` block with `- [ ]` bullets for actionable tasks. The PM bot's pending task list comes ONLY from here; the Phase 8 table is status-tracking only and NOT parsed for tasks.
+  - Never collapse all completions into one segment or remove the ` + ` delimiters — it breaks the parser.
 
 ---
 

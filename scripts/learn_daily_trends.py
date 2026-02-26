@@ -32,7 +32,10 @@ from database import DB_PATH
 # ═══════════════════════════════════════════════════════════════════════════
 
 # League average fouls per game (both teams combined) - 2025-26 season
-LEAGUE_AVG_FOULS = 42.0
+# Verified from 806 samples: 18.74 per team × 2 = 37.48 total
+# Per-ref average: 37.5 / 3 = 12.5
+LEAGUE_AVG_FOULS = 37.5
+PER_REF_AVG_FOULS = 12.5  # Verified per-ref average
 
 # Minimum games before a ref "graduates" from unknown to tracked
 MIN_GAMES_FOR_GRADUATION = 5
@@ -174,16 +177,19 @@ def update_referee_stats(conn: sqlite3.Connection, ref_name: str,
     old_avg = profile['avg_fouls_per_game']
     new_avg = (1 - LEARNING_RATE) * old_avg + LEARNING_RATE * game_fouls
     
-    # Determine style based on new average
-    if new_avg >= 23.0:
+    # Determine style based on per-ref average
+    # Per-ref averages: 37.5 game total / 3 refs = 12.5 per ref
+    # STRICT: > 14.0 per ref (high foul games)
+    # LENIENT: < 11.0 per ref (low foul games)
+    if new_avg >= 14.0:
         new_style = 'STRICT'
-    elif new_avg <= 20.0:
+    elif new_avg <= 11.0:
         new_style = 'LENIENT'
     else:
         new_style = 'NEUTRAL'
     
-    # Calculate pace impact
-    new_pace_impact = round(new_avg / LEAGUE_AVG_FOULS, 3)
+    # Calculate pace impact (per-ref average is 12.5)
+    new_pace_impact = round(new_avg / PER_REF_AVG_FOULS, 3)
     
     if dry_run:
         print(f"      📊 {ref_name}: {old_avg:.1f} → {new_avg:.1f} ({new_style})")
@@ -225,12 +231,12 @@ def _add_new_referee(conn: sqlite3.Connection, ref_name: str, first_game_fouls: 
         first_game_fouls: Fouls from their first tracked game
     """
     # Use league average as baseline, weighted with first observation
-    estimated_fouls = (LEAGUE_AVG_FOULS + first_game_fouls) / 2
-    pace_impact = round(estimated_fouls / LEAGUE_AVG_FOULS, 3)
+    estimated_fouls = (PER_REF_AVG_FOULS + first_game_fouls) / 2
+    pace_impact = round(estimated_fouls / PER_REF_AVG_FOULS, 3)
     
-    if estimated_fouls >= 23.0:
+    if estimated_fouls >= 14.0:
         style = 'STRICT'
-    elif estimated_fouls <= 20.0:
+    elif estimated_fouls <= 11.0:
         style = 'LENIENT'
     else:
         style = 'NEUTRAL'

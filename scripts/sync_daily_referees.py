@@ -14,6 +14,7 @@ import argparse
 import sqlite3
 import pandas as pd
 import requests
+import re
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Tuple
 from io import StringIO
@@ -25,6 +26,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.mappings import resolve_team_abbr
 from utils.browser_utils import close_popups, simulate_human_interaction
+
+
+def _parse_ref_name(raw: str) -> tuple:
+    """
+    Split 'Josh Tiven (#58)' → ('Josh Tiven', 58).
+    Returns (clean_name, badge_number). badge_number is None if no # present.
+    """
+    m = re.search(r'\(#(\d+)\)\s*$', raw.strip())
+    if m:
+        badge = int(m.group(1))
+        name = raw[:m.start()].strip()
+        return name, badge
+    return raw.strip(), None
 
 class DailyRefereeSync:
     """Daily capture system for referee intelligence."""
@@ -249,7 +263,8 @@ class DailyRefereeSync:
                         for col in df.columns:
                             if 'CHIEF' in col or 'REFEREE' in col or 'UMPIRE' in col:
                                 if pd.notna(row[col]):
-                                    raw_ref = str(row[col]).split('(')[0].strip()
+                                    raw_ref = str(row[col]).strip()
+                                    # Keep raw ref with badge for now, will parse in run()
                                     if raw_ref:
                                         crew.append(raw_ref)
                         
@@ -321,20 +336,34 @@ class DailyRefereeSync:
         
         print(f"✅ Updated game {game_id}: {crew_string}")
     
-    def register_new_referee(self, ref_name: str, dry_run=False):
+    def register_new_referee(self, ref_name: str, badge_number: int = None, dry_run=False):
         """
         Auto-register new referee if not in database.
         
-        Uses neutral baseline:
-        - avg_fouls_per_game: 21.5 (league average)
+        Uses neutral baseline (per-ref average: 12.5):
+        - avg_fouls_per_game: 12.5 (verified per-ref average: 37.5 game total / 3)
         - avg_pace_impact: 1.0 (neutral)
         - style: 'NEUTRAL'
         - data_source: 'daily_capture'
+        
+        Args:
+            ref_name: Clean referee name (without badge number)
+            badge_number: NBA badge number if available
+            dry_run: If True, print but don't execute
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # Check if ref exists
+        # Check if ref exists by badge_number first, then by name
+        if badge_number:
+            cursor.execute("""
+                SELECT referee_id FROM referee_profiles 
+                WHERE badge_number = ?
+            """, (badge_number,))
+            if cursor.fetchone():
+                conn.close()
+                return  # Already exists by badge
+        
         cursor.execute("""
             SELECT referee_id FROM referee_profiles 
             WHERE referee_name = ?
@@ -342,29 +371,30 @@ class DailyRefereeSync:
         
         if cursor.fetchone():
             conn.close()
-            return  # Already exists
+            return  # Already exists by name
         
         if dry_run:
-            print(f"   [DRY RUN] Would register new ref: {ref_name}")
+            print(f"   [DRY RUN] Would register new ref: {ref_name} (badge: {badge_number})")
             conn.close()
             return
         
-        # Insert with neutral baseline
+        # Insert with neutral baseline (per-ref average: 12.5)
         cursor.execute("""
             INSERT INTO referee_profiles (
                 referee_name, 
+                badge_number,
                 avg_fouls_per_game, 
                 avg_pace_impact, 
                 style, 
                 data_source,
                 last_updated
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (ref_name, 21.5, 1.0, 'NEUTRAL', 'daily_capture', datetime.now()))
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (ref_name, badge_number, 12.5, 1.0, 'NEUTRAL', 'daily_capture', datetime.now()))
         
         conn.commit()
         conn.close()
         
-        print(f"🆕 Registered new referee: {ref_name}")
+        print(f"🆕 Registered new referee: {ref_name} (badge: {badge_number})")
     
     def run(self, dry_run=False):
         """
@@ -395,9 +425,10 @@ class DailyRefereeSync:
             if crew:
                 self.update_game_crew(game_id, crew, dry_run)
                 
-                # Auto-register new refs
-                for ref in crew:
-                    self.register_new_referee(ref, dry_run)
+                # Auto-register new refs (parse badge numbers from names)
+                for raw_ref in crew:
+                    clean_name, badge_number = _parse_ref_name(raw_ref)
+                    self.register_new_referee(clean_name, badge_number, dry_run)
                 
                 matched += 1
             else:

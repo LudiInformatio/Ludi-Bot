@@ -173,6 +173,14 @@ jobs:
           python3 scripts/sync_sportsdata_enrichment.py || echo "SportsDataIO enrichment skipped (key not set or quota exceeded)"
           python3 scripts/sync_sportsdata_enrichment.py --sync-positions || echo "SportsDataIO position sync skipped"
 
+      - name: Sync Player Foul Splits (Phase 8.17)
+        # Phase 8.17: Rolling 21-day foul stats from player_game_logs.pf
+        # Builds player_foul_splits table for foul-trouble minutes dampener
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          python3 scripts/sync_player_foul_splits.py
+
       - name: BDL V2 Advanced Stats per game (off/def rating, usage, hustle, tracking)
         # Sprint B: Replaces Ghost Protocol daily advanced scraping
         # Writes to: player_game_advanced (UPSERT), player_game_hustle (COALESCE), player_game_tracking speed/distance (COALESCE)

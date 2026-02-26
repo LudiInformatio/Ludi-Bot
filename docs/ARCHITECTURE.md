@@ -137,6 +137,7 @@ from module_e import LudiEvaluator           # ImportError
 | `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
 | `player_news_staging` | Dynamic | RSS-discovered players not yet in `player_canonical_ids` (rookies, two-ways, call-ups). `UNIQUE(player_name, source)`. Auto-promotes after 3+ appearances. Added Feb 25. |
 | `player_type_profiles` | 382 | Unified classification layer: archetype + defensive_tag + top-3 Synergy playtypes + freqs + PPPs + `archetype_in_top3` flag + `position_synergy_match`. `PRIMARY KEY (player_name, season)`. Feeds BERT negative few-shot injection. Added Feb 25. |
+| `player_foul_splits` | 459 | Rolling 21-day foul stats per player: `foul_rate`, `min_dampener` (0.70–1.0 scale), `data_confidence` (HIGH ≥ 10g / MEDIUM ≥ 5g). Synced daily via `scripts/sync_player_foul_splits.py`. Module C pre-loads at init via `_load_foul_splits_data()` — zero per-simulation DB connections. Added Feb 25 (Phase 8.17). |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 

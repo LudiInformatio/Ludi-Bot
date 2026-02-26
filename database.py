@@ -504,6 +504,7 @@ class LudiHistorian:
             CREATE TABLE IF NOT EXISTS referee_profiles (
                 referee_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 referee_name TEXT UNIQUE NOT NULL,
+                badge_number INT,
                 seasons_active INTEGER DEFAULT 1,
                 -- Weekly baseline stats (from Basketball-Reference)
                 avg_fouls_per_game REAL DEFAULT 0.0,
@@ -523,6 +524,13 @@ class LudiHistorian:
             )
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_referee_name ON referee_profiles(referee_name)')
+        
+        # Migration: Add badge_number column if not exists
+        try:
+            c.execute("ALTER TABLE referee_profiles ADD COLUMN badge_number INT")
+            c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_ref_badge ON referee_profiles(badge_number)")
+        except Exception:
+            pass  # Column already exists
 
         # 10. Referee Daily Stats Table (Module G v2.0 - Jan 15, 2026)
         c.execute('''
@@ -858,6 +866,43 @@ class LudiHistorian:
         c.execute('''
             CREATE INDEX IF NOT EXISTS idx_rotation_profiles_player
                 ON rotation_profiles(player_id, window_days)
+        ''')
+
+        # player_foul_splits: rolling 21-day foul stats for Phase 8.17 Foul Intelligence
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_foul_splits (
+                player_id INTEGER,
+                player_name TEXT NOT NULL,
+                season TEXT NOT NULL DEFAULT '2025-26',
+
+                -- Rolling 21-day window stats (sourced from player_game_logs.pf)
+                games_in_window INT DEFAULT 0,
+                avg_pf_per_game REAL DEFAULT 0.0,
+                pf_per_36_min REAL DEFAULT 0.0,
+                games_4plus_fouls INT DEFAULT 0,
+                pct_games_4plus_fouls REAL DEFAULT 0.0,  -- 0.0 to 1.0
+
+                -- Archetype context
+                archetype TEXT,
+
+                -- Minutes impact (cross-referenced from player_game_logs.minutes + pf)
+                avg_min_normal REAL,           -- avg MIN when pf < 4
+                avg_min_foul_trouble REAL,     -- avg MIN when pf >= 4
+                min_dampener REAL DEFAULT 1.0, -- recommended multiplier (0.70–1.0)
+
+                -- Referee sensitivity (cross-referenced with games.referee_crew + referee_profiles.style)
+                avg_pf_vs_strict REAL,         -- avg PF when ref style = 'STRICT'
+                avg_pf_vs_lenient REAL,        -- avg PF when ref style = 'LENIENT'
+
+                data_confidence TEXT DEFAULT 'LOW',  -- HIGH (>=15g) / MEDIUM (>=8g) / LOW
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                PRIMARY KEY (player_id, season)
+            )
+        ''')
+        c.execute('''
+            CREATE INDEX IF NOT EXISTS idx_foul_splits_name
+            ON player_foul_splits(player_name)
         ''')
 
         # beneficiary_minutes: when player X is out, who gets extra minutes? (Phase 8.9)
