@@ -50,6 +50,8 @@ logs/bets/*.json
 logs/health/
 archives/data/
 *.png
+*.jpeg
+*.jpg
 
 # Database files (local only, use backups for recovery)
 ludi.db

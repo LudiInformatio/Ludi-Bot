@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ludi.askludi</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/.venv/bin/python</string>
+        <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/bots/ask_ludi.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/logs/ask_ludi.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/logs/ask_ludi_error.log</string>
+</dict>
+</plist>

@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-02-26 — Ask Ludi Bot: Python 3.14 asyncio.get_event_loop() RuntimeError
+
+- **Script**: `bots/ask_ludi.py`
+- **Symptom**: `RuntimeError: There is no current event loop in thread 'MainThread'` on startup. Bot crashes immediately.
+- **Root Cause**: Python 3.14 removed implicit event loop creation in `asyncio.get_event_loop()` (deprecated since 3.10, warning since 3.12, error since 3.14). `python-telegram-bot` v21.x calls `get_event_loop()` internally in `run_polling()`.
+- **Fix Applied**: Create event loop explicitly before `run_polling()`:
+  ```python
+  loop = asyncio.new_event_loop()
+  asyncio.set_event_loop(loop)
+  app.run_polling()
+  ```
+- **Pattern**: Any library using `asyncio.get_event_loop()` will break on Python 3.14. Fix: create loop explicitly before calling the library. Or upgrade to library version that uses `asyncio.run()` pattern.
+- **Commit**: Phase 8.13 session (Feb 26, 2026)
+
+---
+
 ## 2026-02-24 — Settlement All-Void: Game Logs Not Ingested Before Settlement Ran
 
 - **Symptom**: Settlement Telegram showed "no bets" / 0-0 record. DB showed 348 bets settled as PUSH with `actual_result = -998.0` (VOID-DNP code).

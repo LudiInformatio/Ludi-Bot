@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Thursday, February 26, 2026 — 7:30 PM EST
+**Last Updated:** Thursday, February 26, 2026 — 2:38 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 Ask Ludi (build ready) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅ + Competitive Research Sprint (all 6 platforms) ✅
+**Active Work:** Phase 8.13 Ask Ludi (testing) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
+**Completed:** Competitive Research Sprint (all 6 platforms) ✅ + Phase 8.13 Ask Ludi Bot v1 ✅ + Phase 8.28 Game Intelligence Cache ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -34,14 +34,16 @@ This is the single source of truth for project tasks and priorities.
 
 ### Current Sprint
 
-- [-] Phase 8.13 — Ask Ludi Telegram Bot (`bots/ask_ludi.py`) — architecture complete, 3-file implementation ready
+- [-] Phase 8.13 — Ask Ludi Telegram Bot (`bots/ask_ludi.py`) — v1 live, testing through week, data freshness layer planned
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
-- [ ] Phase 8.13: Build `bots/ask_ludi.py` — entry point, long-polling loop, `/start` + free-text handler
-- [ ] Phase 8.13: Build `bots/ask_ludi_db.py` — 8 intent handlers (injuries/edges/trends/schedule/recap)
-- [ ] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
-- [ ] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
+- [x] Phase 8.13: Build `bots/ask_ludi.py` — entry point, long-polling loop, `/start` + free-text handler
+- [x] Phase 8.13: Build `bots/ask_ludi_db.py` — 8 intent handlers (injuries/edges/trends/schedule/recap)
+- [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
+- [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
+- [ ] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
+- [ ] Module-by-module audit sprint — A through H + X: logic review, edge cases, refinement brainstorm
 - [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
 - [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
 - [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)
@@ -59,7 +61,7 @@ This is the single source of truth for project tasks and priorities.
 |---|-----------|--------|-------------|------|
 | 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data.** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
-| 8.13 | Ask Ludi — Telegram Bot | MEDIUM | Natural language → ludi.db + Claude → Telegram reply. Architecture complete: python-telegram-bot v21+, Haiku intent → Sonnet, read-only SQLite. See `docs/FUTURE_DATA_SOURCES.md` §6. | ~$0.05/day |
+| 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents (injuries/edges/trends/schedule/recap/standings/free_text). Python 3.14 compat fix applied. Data freshness layer planned. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
 | 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting. Wilson calibration at 14-day mark (~Mar 10). Inject into `_get_system_wr_context()`. | $0 |
 

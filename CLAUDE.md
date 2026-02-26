@@ -94,6 +94,9 @@ python -c "from module_d import LudiYak; print(LudiYak().get_injuries())"
 
 # Send Telegram test
 python -c "from utils.telegram_notifier import send_message; send_message('Test')"
+
+# Start Ask Ludi bot (Phase 8.13)
+.venv/bin/python bots/ask_ludi.py
 ```
 
 ---
