@@ -519,6 +519,70 @@ def _write_curation_results(
     conn.commit()
 
 
+# ─── Phase 8.26: Same-Game Pair Correlation Detection ────────────────────────
+# Stats that are component/subset relationships — betting both is high risk in SGP
+CORRELATED_STAT_PAIRS = {
+    frozenset(['PTS', 'PRA']), frozenset(['REB', 'PRA']), frozenset(['AST', 'PRA']),
+    frozenset(['PTS', 'PA']),  frozenset(['REB', 'PR']),  frozenset(['AST', 'PA']),
+    frozenset(['PTS', 'PR']),
+}
+
+
+def _detect_same_game_pairs(top5_picks: list[dict], bet_map: dict) -> list[dict]:
+    """
+    Phase 8.26 — Scan Top 5 for same-game pairs and assess SGP correlation risk.
+    Returns list of flagged pair dicts: {players, matchup, risk, reason}
+    """
+    from collections import defaultdict
+    game_groups: dict[str, list] = defaultdict(list)
+    for pick in top5_picks:
+        bet = bet_map.get(pick['bet_id'])
+        if not bet:
+            continue
+        game_id = bet.get('game_id', '')
+        if game_id:
+            game_groups[game_id].append(bet)
+
+    flags = []
+    for game_id, bets in game_groups.items():
+        if len(bets) < 2:
+            continue
+        for i in range(len(bets)):
+            for j in range(i + 1, len(bets)):
+                b1, b2 = bets[i], bets[j]
+                stat1 = (b1.get('stat_category') or '').upper()
+                stat2 = (b2.get('stat_category') or '').upper()
+                same_player = b1.get('player_name') == b2.get('player_name')
+                same_side = b1.get('bet_side', '').upper() == b2.get('bet_side', '').upper()
+                stat_pair = frozenset([stat1, stat2])
+
+                if same_player:
+                    risk = 'HIGH'
+                    reason = 'Same player — performances are correlated'
+                elif stat_pair in CORRELATED_STAT_PAIRS:
+                    risk = 'HIGH'
+                    reason = (
+                        f'{stat1} is a component of {stat2}'
+                        if 'PRA' in [stat1, stat2]
+                        else f'{stat1}+{stat2} highly correlated'
+                    )
+                elif same_side and b1.get('team') == b2.get('team'):
+                    risk = 'MODERATE'
+                    reason = 'Same team, same direction — blowout/pace affects both'
+                else:
+                    risk = 'LOW'
+                    reason = 'Different players, different teams in same game'
+
+                matchup = b1.get('matchup', game_id)
+                flags.append({
+                    'players': f"{b1['player_name']} {stat1} + {b2['player_name']} {stat2}",
+                    'matchup': matchup,
+                    'risk': risk,
+                    'reason': reason,
+                })
+    return flags
+
+
 # ─── Telegram Card ────────────────────────────────────────────────────────────
 def _escape_markdown_v2(text: str) -> str:
     """Escape special chars for Telegram MarkdownV2."""
@@ -535,6 +599,7 @@ def _send_telegram_card(
     run_date: str,
     flagged_count: int,
     claude_available: bool,
+    sgp_flags: list[dict] | None = None,
 ) -> None:
     """Send formatted Top 5 card to Telegram via send_message()."""
     date_str = datetime.strptime(run_date, '%Y-%m-%d').strftime('%b %d, %Y')
@@ -590,6 +655,19 @@ def _send_telegram_card(
         if pick.get('reasoning'):
             reasoning_escaped = _escape_markdown_v2(pick['reasoning'])
             lines.append(f"💬 _{reasoning_escaped}_")
+        lines.append("")
+
+    # Phase 8.26 — Same-game pair correlation flags
+    if sgp_flags:
+        risk_emoji = {'HIGH': '🔴', 'MODERATE': '🟡', 'LOW': '🟢'}
+        lines.append("🔗 *SGP RISK:*")
+        for flag in sgp_flags:
+            emoji = risk_emoji.get(flag['risk'], '⚠️')
+            players_esc = _escape_markdown_v2(flag['players'])
+            matchup_esc = _escape_markdown_v2(flag['matchup'])
+            reason_esc = _escape_markdown_v2(flag['reason'])
+            lines.append(f"{emoji} {players_esc} \\({matchup_esc}\\)")
+            lines.append(f"   _{reason_esc}_")
         lines.append("")
 
     if flagged_count > 0:
@@ -741,12 +819,17 @@ def main() -> None:
             _write_curation_results(conn, top5_picks, flagged_bets, verbose=verbose)
 
             print("[INFO] Sending Top 5 card to Telegram...")
+            # Phase 8.26 — Detect same-game correlation pairs
+            sgp_flags = _detect_same_game_pairs(top5_picks, bet_map)
+            if sgp_flags:
+                print(f"[PHASE 8.26] {len(sgp_flags)} same-game pair(s) detected for SGP warning")
             _send_telegram_card(
                 top5_picks=top5_picks,
                 bet_map=bet_map,
                 run_date=run_date,
                 flagged_count=len(flagged_bets),
                 claude_available=claude_available,
+                sgp_flags=sgp_flags,
             )
 
         # ── Print token cost estimate

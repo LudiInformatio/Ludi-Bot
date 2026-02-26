@@ -126,6 +126,12 @@ class BetLogger:
 
                 settled_at TIMESTAMP,
 
+                -- Phase 8.24: Edge type label (Projection/Matchup/Injury-Vacuum/Hot-Streak)
+                edge_type TEXT DEFAULT 'Projection',
+
+                -- Phase 8.26: SGP correlation risk flag (NULL = no risk detected)
+                sgp_correlation_risk TEXT DEFAULT NULL,
+
                 -- Metadata
                 run_type TEXT DEFAULT 'production',
                 bookmaker TEXT DEFAULT 'consensus',

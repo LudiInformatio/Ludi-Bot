@@ -124,6 +124,29 @@ def _sanitize_archetype(raw: str) -> str:
     return _LEGACY_ARCHETYPE_MAP.get(arch, 'GENERALIST')
 
 
+def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str) -> str:
+    """Phase 8.24 — Classify primary edge driver for bet labeling."""
+    scenario_str = (scenario or '').upper()
+    note_str = ' | '.join(note_elements).lower() if note_elements else ''
+    tags_str = (tags_formatted or '').lower()
+
+    # Injury-Vacuum: beneficiary scenario or usage vacuum
+    if 'WITHOUT' in scenario_str or 'beneficiary' in note_str or 'usage_vacuum' in tags_str:
+        return 'Injury-Vacuum'
+
+    # Hot-Streak: explicit streak signal in tags or note
+    if 'hot_streak' in tags_str or 'streak' in note_str:
+        return 'Hot-Streak'
+
+    # Matchup: archetype vs defense scheme signal
+    matchup_signals = ['paint_pack', 'blitz', 'perimeter', 'funnel', 'hackers',
+                       'matchup', 'scheme', 'archetype', '+%']
+    if any(signal in note_str for signal in matchup_signals):
+        return 'Matchup'
+
+    return 'Projection'
+
+
 # CHANGELOG V5.1 (Feb 2, 2026):
 # - Added REB OVER filter (skip until calibration - was -198u leak)
 # - Added 3PM OVER filter for low-volume shooters (<5 3PA)
@@ -513,6 +536,11 @@ class LudiReporter:
                                         'confidence_tier': confidence_tier,
                                         'note': " | ".join(note_elements),
                                         'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
+                                        'edge_type': _classify_edge_type(  # Phase 8.24: Edge driver label
+                                            p.get('scenario', 'BASE'),
+                                            note_elements,
+                                            tags_formatted
+                                        ),
                                         'referee_impact': ref_pace,
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
@@ -1010,6 +1038,15 @@ class LudiReporter:
         scenario_tag = self._scenario_tag(tags_list, bet.get('scenario', ''))
         if scenario_tag:
             card += f"   ⚡ SCENARIO: {scenario_tag}\n"
+
+        edge_type = bet.get('edge_type', 'Projection')
+        edge_type_emoji = {
+            'Projection': '📊',
+            'Matchup': '🎯',
+            'Injury-Vacuum': '🚀',
+            'Hot-Streak': '🔥',
+        }.get(edge_type, '📊')
+        card += f"   {edge_type_emoji} EDGE: {edge_type}\n"
 
         return card
 

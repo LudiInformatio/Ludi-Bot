@@ -1448,6 +1448,18 @@ class LudiHistorian:
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_game_date ON claude_analysis_log(game_date)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_model ON claude_analysis_log(model)")
 
+        # Phase 8.24 — Edge type label migration guard (bet_recommendations is an orphan table
+        # owned by utils/bet_logger.py; guards here ensure live DBs pick up new columns too).
+        try:
+            c.execute("ALTER TABLE bet_recommendations ADD COLUMN edge_type TEXT DEFAULT 'Projection'")
+        except Exception:
+            pass  # Column already exists
+        # Phase 8.26 — SGP correlation risk flag migration guard
+        try:
+            c.execute("ALTER TABLE bet_recommendations ADD COLUMN sgp_correlation_risk TEXT DEFAULT NULL")
+        except Exception:
+            pass  # Column already exists
+
         conn.commit()
         conn.close()
         # print("✅ Ludi Memory (Database) initialized successfully.")
