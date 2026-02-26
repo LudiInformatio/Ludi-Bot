@@ -3,7 +3,7 @@
 **Last Updated:** Wednesday, February 25, 2026 — 7:34 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Phase 8.23 Layer 1 collecting (live since Feb 25, 14-day scan ~Mar 10) + 2024-25 Backfill running (174 dates, ~Mar 3 completion)
-**Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.26 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Phase 8.24 Edge Type Labeling ✅ + Phase 8.25 Key Advantage Callout ✅ + Phase 8.26 SGP Correlation Flagging ✅**
+**Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.26 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Phase 8.24 Edge Type Labeling ✅ + Phase 8.25 Key Advantage Callout ✅ + Phase 8.26 SGP Correlation Flagging ✅ + Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -56,6 +56,8 @@ This is the single source of truth for project tasks and priorities.
 | 8.24 | Edge Type Labeling ⭐ | DONE ✅ | `_classify_edge_type()` in `module_f.py` — deterministic Projection/Matchup/Injury-Vacuum/Hot-Streak label on every bet card. `edge_type` column in `bet_recommendations`. $0 cost. | $0 |
 | 8.25 | Key Advantage Callout ⭐ | DONE ✅ | `_get_key_advantage_callout()` in `morning_brief.py` — deterministic callout prepended to Telegram card. Queries `team_dvp_by_archetype` for best archetype matchup angle per game. `docs/FUTURE_DATA_SOURCES.md` §8.25-B added. $0 cost. | $0 |
 | 8.26 | Correlated Props Flagging ⭐ | DONE ✅ | `_detect_same_game_pairs()` in `curate_plays.py` — scans Top 5 for same-game pairs, flags HIGH/MODERATE/LOW SGP risk in Telegram card. `sgp_correlation_risk` column in `bet_recommendations`. $0 cost. | $0 |
+| 8.27 | Pre-Game Lineup Sync ⭐ | DONE ✅ | `scripts/sync_lineup_starters.py` + `lineup_sync.yml` workflow at 9:45 AM — Tank01 depth charts synced to `players.is_starter`. Evening refresh at 6:35 PM. Late-game conditional sync in CLV workflow. $0 cost. | $0 |
+| 8.28 | Game Intelligence Cache ⭐ | DONE ✅ | `utils/game_notes_cache.py` + morning_brief.py integration — caches Claude game notes, validates cache before evening Claude calls. Auto-cleanup of yesterday's cache in data_sync. $0 cost. | $0 |
 
 ---
 

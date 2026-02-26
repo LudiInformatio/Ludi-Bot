@@ -26,6 +26,13 @@ from utils.perplexity_client import PerplexityClient
 from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line, get_matchup_analysis
 from utils.time_utils import get_time_context, format_time_context_note
 from utils.player_id_resolver import resolve_canonical_name
+from utils.game_notes_cache import (
+    load_game_cache, 
+    write_game_cache, 
+    check_cache_valid, 
+    mark_lineup_confirmed,
+    get_cache_path
+)
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="[MORNING-BRIEF] %(message)s")
@@ -970,15 +977,36 @@ Return JSON only."""
                             **preservation_keys
                         )
                         
-                        # 7. Call Claude
-                        response = get_claude_analysis(
-                            prompt=prompt,
-                            system_prompt=GAME_NOTES_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
-                            model=SONNET_MODEL,
-                            temperature=0.2,
-                            max_tokens=1500,
-                            call_type='game_notes',
-                        )
+                        # Phase 8.28: Check cache validity in evening mode
+                        game_key = f"{home_team}@{away_team}"
+                        cached_notes = None
+                        use_cache = False
+                        
+                        if self.mode == "evening":
+                            cache_entry = load_game_cache(game_key)
+                            if cache_entry:
+                                is_valid, changed_players = check_cache_valid(game_key, conn)
+                                if is_valid and cache_entry.get('lineup_confirmed'):
+                                    cached_notes = cache_entry.get('notes_text', '')
+                                    if cached_notes:
+                                        use_cache = True
+                                        print(f"      📋 Using cached notes for {matchup} (valid + lineup confirmed)")
+                                else:
+                                    reason = f"Invalid: injury changes for {changed_players}" if changed_players else "Not lineup confirmed"
+                                    print(f"      ℹ️ Cache invalid for {matchup}: {reason} — generating fresh notes")
+
+                        # 7. Call Claude (or use cache)
+                        if use_cache and cached_notes:
+                            response = cached_notes
+                        else:
+                            response = get_claude_analysis(
+                                prompt=prompt,
+                                system_prompt=GAME_NOTES_EXAMPLE + "\n\n" + ROSTER_RULES + "\n\n" + ANALYSIS_PROTOCOL,
+                                model=SONNET_MODEL,
+                                temperature=0.2,
+                                max_tokens=1500,
+                                call_type='game_notes',
+                            )
 
                         if response:
                             print(f"      ✅ Notes generated for {matchup}")
@@ -993,6 +1021,36 @@ Return JSON only."""
                                 print(f"      💾 Game notes saved to DB for {matchup}")
                             except Exception as e_db:
                                 print(f"      ⚠️ Failed to save game notes to DB: {e_db}")
+                            
+                            # Phase 8.28: Write to game intelligence cache
+                            if not use_cache and response:
+                                try:
+                                    player_snapshots = {}
+                                    for pname, (status, days_out, inj_type) in best_injury.items():
+                                        player_snapshots[pname] = status
+                                    
+                                    game_date_str = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
+                                    start_time_val = first.get('start_time')
+                                    tip_time_str = start_time_val.strftime('%H:%M') if start_time_val and hasattr(start_time_val, 'strftime') else '19:00'
+                                    
+                                    cache_data = {
+                                        'game_date': game_date_str,
+                                        'tip_time_et': tip_time_str,
+                                        'lineup_confirmed': False,
+                                        'starters': {},
+                                        'key_angle': "",
+                                        'injuries': {pname: {'status': s, 'days_out': d, 'type': t} for pname, (s, d, t) in best_injury.items()},
+                                        'player_snapshots': player_snapshots,
+                                        'notes_text': response,
+                                        'projections_summary': {},
+                                        'generated_at': datetime.datetime.now().isoformat(),
+                                        'refreshed_at': None
+                                    }
+                                    write_game_cache(game_key, cache_data)
+                                    print(f"      💾 Game notes cached for {matchup}")
+                                except Exception as e_cache:
+                                    print(f"      ⚠️ Failed to cache game notes: {e_cache}")
+                            
                             if not self.dry_run:
                                 # Truncate + fallback to plain text if Markdown parse fails (400)
                                 truncated = response[:4000]

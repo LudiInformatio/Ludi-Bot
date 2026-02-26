@@ -87,6 +87,16 @@ jobs:
           fi
           python3 scripts/capture_closing_lines.py --verbose --game-date "$GAME_DATE"
 
+      - name: Sync Late Game Lineups (if needed)
+        continue-on-error: true
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
+        run: |
+          # Only sync for games where lineup_confirmed=False and tip_time > now + 90 min
+          export PYTHONPATH=$PWD
+          python3 scripts/sync_lineup_starters.py --mode late_games || echo "ℹ️ No late games need lineup sync"
+
       - name: Report results
         if: success()
         run: |

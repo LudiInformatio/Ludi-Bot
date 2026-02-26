@@ -190,10 +190,11 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
 | 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
-| 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
 | 9:30 AM | `referee_sync.yml` | Daily referee assignments |
+| 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
-| 6:00 PM | `evening_slate_lock.yml` | Evening Telegram cards |
+| 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
+| 6:35 PM | `evening_slate_lock.yml` | Evening Telegram cards (with lineup refresh) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
 | 7:30-11:30 PM | `capture_closing_lines.yml` | CLV capture (5 runs/night) |
 | Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data (6hr sync) |

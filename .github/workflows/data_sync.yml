@@ -502,6 +502,27 @@ jobs:
         run: |
           python3 scripts/cleanup_old_logs.py --verbose
 
+      - name: Cleanup old game intelligence caches
+        run: |
+          python3 -c "
+          from datetime import date, timedelta
+          from pathlib import Path
+          
+          cache_dir = Path('cache')
+          if not cache_dir.exists():
+              print('No cache directory, skipping')
+              exit(0)
+          
+          yesterday = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+          cache_file = cache_dir / f'game_intelligence_{yesterday}.json'
+          
+          if cache_file.exists():
+              cache_file.unlink()
+              print(f'Deleted old cache: {cache_file.name}')
+          else:
+              print(f'No old cache to delete')
+          "
+
       - name: Notify on failure
         if: failure()
         env:
