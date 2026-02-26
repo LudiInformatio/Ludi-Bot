@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, February 25, 2026 — 10:15 PM EST
+**Last Updated:** Thursday, February 26, 2026 — 7:30 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (build ready) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Phases 1–7 + Phase 8.0–8.23 ✅ (full history: `docs/STATUS_HISTORY.md`) + Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅ + Phase 8.17 Foul Intelligence ✅
+**Completed:** Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅ + Competitive Research Sprint (all 6 platforms) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -42,6 +42,11 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Phase 8.13: Build `bots/ask_ludi_db.py` — 8 intent handlers (injuries/edges/trends/schedule/recap)
 - [ ] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
 - [ ] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
+- [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
+- [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
+- [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)
+- [ ] Research follow-up: Add `edges` intent to `bots/ask_ludi_db.py` — "Check [Player] [Line]" returns 11-row PropsMadness-style scorecard (L15 avg/hit, H2H, DVP rank, expected minutes, similar players) from existing tables — zero new data
+- [ ] Research follow-up: Add `injuries` sub-intent "who benefits if X is out?" → `wowy_calculator.find_beneficiaries()` → delta table (name + PTS delta) in Ask Ludi reply (StraightBettin WOWY pattern)
 
 ---
 
