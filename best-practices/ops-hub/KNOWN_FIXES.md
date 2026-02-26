@@ -166,6 +166,17 @@
 
 ---
 
+## 2026-02-26 — Module G: LEAGUE_AVG_FOULS Calibration Error (21.5 → 12.5)
+
+- **Script**: `module_g.py`, `scripts/learn_daily_trends.py`, `scripts/sync_daily_referees.py`
+- **Symptom**: `referee_profiles.whistle_impact` scores ~1.7x for most refs instead of ~1.1x (near-neutral). Almost no refs classified LENIENT. `player_foul_splits.pf_vs_strict`/`pf_vs_lenient` columns always NULL.
+- **Root Cause**: `LEAGUE_AVG_FOULS = 21.5` (per-game total, both teams) used as per-ref baseline. Correct value is 12.5 per ref per game (18.74 team fouls × 2 teams ÷ 3 crew = 12.49). `whistle_impact = ref_avg / LEAGUE_AVG_FOULS` → 14.0 / 21.5 = 0.65 (looked lenient) vs 14.0 / 12.5 = 1.12 (correctly strict). Same error in `learn_daily_trends.py`: used 42.0 (full game total instead of 37.5), and 21.5 per-ref avg instead of 12.5.
+- **Fix Applied**: `module_g.py` LEAGUE_AVG_FOULS 21.5 → 12.5. `learn_daily_trends.py` LEAGUE_AVG_FOULS 42.0 → 37.5, PER_REF_AVG_FOULS 21.5 → 12.5. Seed default in `sync_daily_referees.py` 21.5 → 12.5. DB migration WHERE avg_fouls_per_game > 18.0 → 0 rows needed reset (EMA had already converged to realistic values).
+- **STRICT/LENIENT thresholds**: ≥14.0 / ≤11.0 fouls per ref per game. With 21.5 as the divisor, nearly every ref appeared LENIENT — inverted signal.
+- **Commit**: Phase 8.17 session (Feb 26, 2026)
+
+---
+
 ## 2026-02-25 — UNK Position Coverage (155 players bypassing Gate 2)
 
 - **Context**: `players.position='UNK'` for 155 active players — bypasses all Gate 2 position gates.

@@ -90,7 +90,7 @@ Three distinct tiers, rarely overlapping:
 
 2. **Brand contradiction.** "Professional, tactical, asset management" voice + "pour, toast, frosty, IYKYK" iconography target two completely different audiences and fully resonate with neither.
 
-3. **"Front Office War Room" breaks down on inspection.** NBA front offices don't bet against the house. Cool aesthetic, broken metaphor.
+3. **Old "Front Office War Room" tagline was a broken metaphor** — NBA front offices don't bet against the house. ✅ Resolved: replaced with *"The Edge, Magnified — NBA Player Props Analytics | AI-Driven | Always On"*. Line 1 on premium surfaces; Line 2 on GitHub/README/social bios.
 
 4. **Automation before trust is backwards.** Right sequence: track record public → methodology content → persona → platform → audience → then automation infrastructure.
 
@@ -98,13 +98,14 @@ Three distinct tiers, rarely overlapping:
 
 ### The Correct Positioning Frame (Discovered via DK Research)
 
-> "We are the independent war room that the house doesn't want you to have access to."
+> "The Edge, Magnified — the level of analysis the house doesn't want you to have access to."
 
 This frame:
 - Creates a natural enemy (the sportsbook producing their own biased content)
 - Defines value clearly (independence + no conflict of interest)
 - DraftKings structurally cannot co-opt it — they ARE the house
-- Solves the brand clarity problem in one sentence
+- "The Edge" maps directly to the core math concept (devigging, true edge %)
+- "Magnified" connects to the Ludi Lens product name
 
 ### The Right Sequence Before Building Content Infrastructure
 
@@ -137,7 +138,7 @@ Their analysts may be betting against the picks they publish. This is a retentio
 - DraftKings' content is structurally biased — they profit from your losses
 - Their analysis is popularity-driven ("most bet"), not edge-driven
 - 165-word analysis vs. full Monte Carlo pipeline = enormous quality gap they cannot close
-- The "independent war room" positioning is directly defensible against this
+- The "Edge, Magnified" positioning is directly defensible against this — DK quantifies nothing
 
 **DraftKings Social as a distribution channel:** 100K+ members in a single NBA props group with direct bet-slip integration. No equivalent engagement density exists on Twitter or YouTube for NBA props. Worth studying whether Ludi content is postable in similar groups as a member.
 

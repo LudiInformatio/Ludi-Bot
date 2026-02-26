@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, February 25, 2026 — 9:17 PM EST
+**Last Updated:** Wednesday, February 25, 2026 — 10:15 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (build ready) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
 **Completed:** Phases 1–7 + Phase 8.0–8.23 ✅ (full history: `docs/STATUS_HISTORY.md`) + Phase 8.27 Pre-Game Lineup Sync ✅ + Phase 8.28 Game Intelligence Cache ✅ + Phase 8.17 Foul Intelligence ✅

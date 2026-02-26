@@ -1,6 +1,6 @@
 # Coding Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-21)
+**Status:** ✅ Complete (updated 2026-02-26)
 
 This guide covers Python and bash coding patterns for the Ludi-Bot codebase. Every pattern is backed by a real incident or confirmed working pattern from the production system.
 
@@ -282,6 +282,7 @@ def get_matchup_analysis(stat_category):
 | Module-level Claude/Anthropic import | Fails at import time if not configured | Lazy import inside function |
 | Unpacking tuple without `_` for extras | Crashes when return count grows | Always use `_` for unused values |
 | Not grepping callers before return change | Silent crashes at call sites | `grep -rn "function_name(" --include="*.py" .` first |
+| Hardcoded `DB_PATH = "ludi.db"` (relative) | Fails when bot/web app runs from `bots/` or another directory | Use `os.path.join(os.path.dirname(os.path.abspath(__file__)), "ludi.db")` in `config.py` — anchors to file location, not CWD |
 
 ---
 

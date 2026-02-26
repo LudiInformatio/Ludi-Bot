@@ -134,6 +134,28 @@ normalize_bdl_abbr('SA')   # → 'SAS'
 
 ---
 
+## SQL-Side Canonical JOIN (for sync scripts querying game_logs)
+
+When a sync script iterates over `player_game_logs` rows and needs to resolve accent-unsafe names (BDL writes "Nikola Jokic" without accent), use a SQL JOIN directly instead of a Python per-row lookup. This avoids an extra Python function call per player and keeps the logic in one query.
+
+```sql
+-- ✅ SQL-side canonical join — resolves BDL/Tank01 non-accented names at the DB layer
+SELECT g.pf, g.minutes, g.game_date
+FROM player_game_logs g
+JOIN player_canonical_ids pci ON LOWER(g.player_name) = pci.normalized_name
+WHERE pci.canonical_id = ?
+  AND g.game_date >= ?
+  AND g.minutes > 0
+```
+
+**Why it works:** `player_game_logs.player_name` stores non-accented names (BDL/Tank01 source). `player_canonical_ids.normalized_name` is pre-lowercased and accent-stripped. `LOWER(g.player_name) = pci.normalized_name` bridges both without any Python intermediate.
+
+**Use this when:** You're building a sync script that queries `player_game_logs` by player and already have a `canonical_id`. The Python `resolve_canonical_name()` is for when you have a name and need to find the canonical form — the opposite direction.
+
+**Example:** `scripts/sync_player_foul_splits.py` uses this pattern to calculate rolling foul stats per player.
+
+---
+
 ## The `sync_injuries.py` Name Resolution Pattern
 
 The injury sync pipeline demonstrates the correct pattern for resolving names from multiple sources:
