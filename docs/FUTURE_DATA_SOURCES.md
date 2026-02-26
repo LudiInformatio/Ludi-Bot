@@ -380,3 +380,21 @@ ask_ludi_core.py          # Channel-agnostic: intent → DB → analysis
 | 3 | `CLAUDE_CODE_OAUTH_TOKEN` | Only for `anthropics/claude-code-action@v1` in workflows — NOT for SDK |
 
 **Why this matters:** Self-hosted runner on local Mac has `~/.claude/config.json` with an OAuth token that expires every ~30 days. Priority 2 skip in CI prevents expired token from causing 401s. `CLAUDE_CODE_OAUTH_TOKEN` is a different OAuth flow meant for the GitHub Action tool, not the Python SDK.
+
+---
+
+## §8.25-B — Full Game Notes Overhaul (Future Sprint)
+
+Phase 8.25 MVP delivers 1 deterministic callout/game. When doing a full game notes redesign:
+
+**DVP tables available (all live):**
+- `team_dvp_by_archetype` (250 rows) — rank by archetype + pts_vs_baseline
+- `player_archetype_vs_defense` (71 rows) — bet outcomes by archetype × def_scheme
+- `team_playtype_allowed` (30 rows) — allowed shot types + scheme (already in game notes prompt)
+
+**Upgrade ideas:**
+- Name 1-2 matching players: `JOIN players WHERE archetype = ? AND team IN (home, away)`
+- Surface top 2-3 angles per game (multi-line callout block)
+- Replace deterministic format with 1 Haiku call/game for natural language output
+  (`call_type='key_advantage'`, `get_claude_analysis()` with `HAIKU_MODEL`, ~$0.01/day)
+- Add `{key_advantage_callout}` placeholder to `GAME_NOTES_TEMPLATE` in `claude_prompts.py`

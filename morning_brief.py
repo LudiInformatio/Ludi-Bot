@@ -234,6 +234,33 @@ def _build_teammates_context(player_name: str, team_abbr: str, out_names: list, 
         return "Teammate data unavailable."
 
 
+def _get_key_advantage_callout(conn, home_team: str, away_team: str) -> str:
+    """Phase 8.25 — Surface the #1 exploitable archetype matchup angle for this game."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT opponent_team, archetype, pts_vs_baseline, rank_pts,
+                   data_confidence, games
+            FROM team_dvp_by_archetype
+            WHERE opponent_team IN (?, ?)
+              AND season = '2025-26'
+              AND data_confidence IN ('HIGH', 'MEDIUM')
+              AND pts_vs_baseline > 0
+            ORDER BY pts_vs_baseline DESC
+            LIMIT 1
+        """, (home_team, away_team))
+        row = cursor.fetchone()
+        if not row:
+            return ""
+        team, archetype, delta, rank, confidence, games = row
+        return (
+            f"⚡ KEY ANGLE: {archetype} vs {team} — "
+            f"+{delta:.1f} pts above avg (rank {rank}/30 · {confidence} · {games}g)"
+        )
+    except Exception:
+        return ""
+
+
 def _get_team_situation_note(team_abbr, cursor):
     """
     Build a live situational note for a team from team_leverage_profiles + games.
@@ -969,10 +996,16 @@ Return JSON only."""
                             if not self.dry_run:
                                 # Truncate + fallback to plain text if Markdown parse fails (400)
                                 truncated = response[:4000]
-                                if not send_message(truncated, parse_mode="Markdown"):
-                                    send_message(truncated, parse_mode=None)
+                                # Phase 8.25 — Key Advantage Callout
+                                key_angle = _get_key_advantage_callout(conn, home_team, away_team)
+                                full_message = f"{key_angle}\n\n{truncated}" if key_angle else truncated
+                                if not send_message(full_message, parse_mode="Markdown"):
+                                    send_message(full_message, parse_mode=None)
                             else:
-                                print(f"      [DRY RUN] Would send:\n{response[:100]}...")
+                                truncated = response[:4000]
+                                key_angle = _get_key_advantage_callout(conn, home_team, away_team)
+                                full_message = f"{key_angle}\n\n{truncated}" if key_angle else truncated
+                                print(f"      [DRY RUN] Would send:\n{full_message[:100]}...")
                         else:
                             print(f"      ⚠️ No response from Claude for {matchup}")
                             
