@@ -8,7 +8,7 @@ This document describes the system architecture, module pipeline, and database s
 
 **Ludi Informatio v2.0** is an NBA analytics platform that generates betting recommendations for player props using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
 
-- **Product Name**: Ludi Lens v2.0 (The Front Office War Room)
+- **Product Name**: Ludi Lens v2.0 — The Edge, Magnified
 - **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | 10k Runs | Usage Vacuum)
 - **Tech Stack**: Python + Streamlit + SQLite + GitHub Actions
 

@@ -1,8 +1,8 @@
 # Ludi Informatio v2.0
 
-**NBA Player Props Analytics Platform**
+**NBA Player Props Analytics | AI-Driven | Always On**
 
-A production-grade betting analytics engine that generates player prop recommendations using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
+A production-grade autonomous analytics engine that generates player prop recommendations using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
 
 [![Daily Data Sync](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/data_sync.yml/badge.svg)](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/data_sync.yml)
 [![Daily Production Pipeline](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/daily_simulation_pipeline.yml/badge.svg)](https://github.com/LudiInformatio/Ludi-Bot/actions/workflows/daily_simulation_pipeline.yml)
@@ -13,7 +13,7 @@ A production-grade betting analytics engine that generates player prop recommend
 
 | Component | Description |
 |-----------|-------------|
-| **Product** | Ludi Lens v2.0 (The Front Office War Room) |
+| **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
 | **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 25, 2026 9:17 PM EST) |

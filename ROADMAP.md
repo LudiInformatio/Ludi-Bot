@@ -86,19 +86,26 @@ This is the single source of truth for project tasks and priorities.
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
-**Design identity:** Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981 | "War Room" theme
+**Design identity:** Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981 | "The Edge, Magnified" theme
 - [ ] Streamlit app scaffold (`app.py`)
-- [ ] "War Room" visual design implementation
+- [ ] "The Edge, Magnified" visual design implementation
 - [ ] Real-time prop display integration
 - [ ] Historical performance charts
 
 ### Infographic & Data Visualization System (Post-Phase 8 — Frontend Sprint)
 **Blocked until:** Phase 8 backend cleanup complete
 **Full plan:** `docs/projects/INFOGRAPHIC_VISUALIZATION_SYSTEM.md`
-- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 2 MVP charts (stat confidence matrix, daily P&L waterfall)
+**PaperBanana pattern adopted:** LLM writes matplotlib code → `exec()` in subprocess → base64 JPEG (see research Feb 25)
+- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 6 MVP charts:
+  - Hit Streak Tracker (Player Cards)
+  - Archetype Leaderboard Top 10 / Bottom 10 (Game Notes + Weekly Update)
+  - Matchup Edge Heatmap compact/full (Game Notes + Weekly Update)
+  - Hot / Cool Players — L7 delta vs season avg (Weekly Update + Morning Brief)
+  - Stat Confidence Grade Matrix (Morning Brief)
+  - Daily P&L Waterfall (Nightly Debrief)
 - [ ] Phase V2: Edge vs WR scatter, player trend sparklines, tier performance
-- [ ] Phase V3: Full 12-chart catalog + `scripts/generate_all_charts.py`
-- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted chart generation
+- [ ] Phase V3: Full catalog + `scripts/generate_all_charts.py`
+- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted ad-hoc chart generation
 
 ### CLV Tracking Enhancement
 - [ ] CLV reporting in PM Bot daily summary
