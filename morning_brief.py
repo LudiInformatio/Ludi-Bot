@@ -732,7 +732,7 @@ Return JSON only."""
                     # outs (Steven Adams 220d) don't consume Claude's 600-char injury budget.
                     cursor = conn.cursor()
                     cursor.execute("""
-                        SELECT player_name, status, days_out, injury_type
+                        SELECT player_name, status, days_out, injury_type, team_abbreviation
                         FROM player_injuries
                         WHERE (team_abbreviation = ? OR team_abbreviation = ?)
                           AND resolved_at IS NULL
@@ -740,7 +740,8 @@ Return JSON only."""
                           AND snapshot_time >= datetime('now', '-14 days')
                           AND (days_out IS NULL OR days_out < 75)
                         UNION
-                        SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type
+                        SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type,
+                               ci.team as team_abbreviation
                         FROM player_injuries pi
                         JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
                         WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
@@ -751,20 +752,23 @@ Return JSON only."""
                           AND (pi.days_out IS NULL OR pi.days_out < 75)
                     """, (home_team, away_team, home_team, away_team))
                     injuries = cursor.fetchall()
-                    
+
                     # Deduplicate by player: when ESPN and BDL/Tank01 conflict, keep most severe status.
                     # Status severity: OUT(4) > DOUBTFUL(3) > GTD(2) > PROBABLE(1)
                     STATUS_SEVERITY = {'OUT': 4, 'DOUBTFUL': 3, 'GTD': 2, 'PROBABLE': 1}
                     best_injury = {}
                     for row in injuries:
                         pname, status, days_out, inj_type = row[0], row[1], row[2], row[3]
+                        team_abbr = row[4] if len(row) > 4 else ""
                         severity = STATUS_SEVERITY.get(status, 0)
                         if pname not in best_injury or severity > STATUS_SEVERITY.get(best_injury[pname][0], 0):
-                            best_injury[pname] = (status, days_out, inj_type)
+                            best_injury[pname] = (status, days_out, inj_type, team_abbr)
 
                     injury_lines = []
-                    for pname, (status, days_out, inj_type) in best_injury.items():
-                        injury_lines.append(f"{status}: {pname} ({inj_type})")
+                    for pname, (status, days_out, inj_type, team_abbr) in best_injury.items():
+                        # Include team label so Claude associates traded players with correct team
+                        team_label = f" [{team_abbr}]" if team_abbr else ""
+                        injury_lines.append(f"{status}: {pname}{team_label} ({inj_type})")
                     injury_intel_block = "\n".join(injury_lines) if injury_lines else "No major injuries reported."
 
                     # 3b. Beneficiary context (Phase 8.15)
@@ -829,8 +833,9 @@ Return JSON only."""
                         pt_row = cursor.fetchone()
                         if pt_row:
                             playtype_ctx[tm] = (
-                                f"allows {pt_row[0]} drives/g (#{pt_row[1]}), "
-                                f"{pt_row[2]} C&S 3PA/g (#{pt_row[3]}) [{pt_row[4] or 'AVERAGE'} D]"
+                                f"allows {pt_row[0]} drives per game (ranked #{pt_row[1]}), "
+                                f"{pt_row[2]} catch-and-shoot 3PA per game (ranked #{pt_row[3]}) "
+                                f"[{pt_row[4] or 'AVERAGE'} defense]"
                             )
 
                     # 5. Edges Block (Top 3 bets)

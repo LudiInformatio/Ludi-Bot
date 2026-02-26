@@ -246,7 +246,7 @@ class Gatekeeper:
         
         if not bdl_games:
             print(f"   ⚠️  [BDL] No games found for {date_str}")
-            return
+            raise ValueError(f"BDL returned no games for {date_str}")
         
         print(f"   ✅ [BDL] Found {len(bdl_games)} games")
         
@@ -373,6 +373,18 @@ class Gatekeeper:
         
         print("   ----------------------------------------")
         print(f"   ✅ [BDL] Loaded {len(self.games)} games with lines")
+
+        # Validate that at least one game has real odds (non-zero spread OR total).
+        # BDL can return games without odds data — silent success with zero lines.
+        # If no real odds, raise so ESPN Tier 3 fallback can fire.
+        games_with_real_odds = sum(
+            1 for g in self.games.values()
+            if g.get('vegas', {}).get('spread', 0) != 0
+            or g.get('vegas', {}).get('total', 0) != 0
+        )
+        if games_with_real_odds == 0 and len(self.games) > 0:
+            print(f"   ⚠️  [BDL] Found {len(self.games)} games but 0 have real odds data")
+            raise ValueError(f"BDL returned {len(self.games)} games but no actual odds data")
 
     def fetch_game_lines_espn(self):
         """[1c] ESPN TIER 3 FALLBACK: Fetch game lines via ESPN DraftKings pickcenter.

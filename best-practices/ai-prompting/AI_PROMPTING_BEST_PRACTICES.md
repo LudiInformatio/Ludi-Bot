@@ -169,7 +169,7 @@ prompt = INJURY_BLURB_PARSE_PROMPT.format(description=blurb, player_name=name)
 Prompts currently in `utils/claude_prompts.py`:
 - `ROSTER_RULES` — global guardrail (never mention injured players)
 - `ANALYSIS_PROTOCOL` — data citation rules for analysis prompts
-- `GAME_NOTES_TEMPLATE` — S.A.V.A.G.E. game card template
+- `GAME_NOTES_TEMPLATE` — game notes card template
 - `SPOTLIGHT_TEMPLATE` — player spotlight card template
 - `INJURY_BLURB_SYSTEM` + `INJURY_BLURB_PARSE_PROMPT` — Module D blurb classifier
 

@@ -23,18 +23,21 @@ ROSTER_RULES = """
 
 ANALYSIS_PROTOCOL = """
 ANALYSIS PROTOCOL (follow in order):
-1. VERIFY: Cross-check injury list
-2. GROUND: Cite source ("per BDL", "per Tank01", "per Odds-API")
+1. VERIFY: Cross-check injury list — use the [TEAM] label next to each player name
+2. GROUND: Reference data sources generically ("per injury reports", "per official sources")
 3. REASON: Apply factors step-by-step
 4. CONCLUDE: Only claims supported by steps 1-3
 5. CONCISE: Keep analysis extremely brief (max 2-3 sentences per point). Total output MUST be under 1500 characters.
 6. FLAG: Note uncertainty with "Unverified"
+7. CLEAN OUTPUT: Do NOT reference internal data source names, pipeline names, or analysis
+   protocols in your output. Use generic phrasing: "per injury reports", "season data shows",
+   "per official sources". Never mention specific system or database names.
 
-DATA CITATION RULES:
-- Stats = "Season avg (BDL): X" or "L10 avg (ludi.db): X"
-- Injuries = "Per BDL injury report: OUT" or "Per Tank01 roster: OUT"
-- Odds = "Line (Odds-API): -4.5"
-- News = "Per Perplexity: [source]"
+DATA CITATION RULES (for your internal reasoning — clean up for final output):
+- Stats → "Season avg: X" or "L10 avg: X"
+- Injuries → "Per injury report: OUT"
+- Odds → "Line: -4.5"
+- News → "Per reports: [source]"
 - IF NO DATA: Say "Data not available" — DO NOT INVENT
 
 BEFORE SUBMITTING, verify:
@@ -42,15 +45,17 @@ BEFORE SUBMITTING, verify:
 - No stats cited without a data source
 - No references to prior seasons rosters
 - All numbers match the injected data above
+- No internal system names or pipeline names in output text
 
 ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Do NOT fill
 in team composition from training memory — the 2025-26 season has trades and role
 changes your training data does not reflect. If a player is not in CURRENT ROSTERS,
-do not mention them by name.
+do not mention them by name. Use the [TEAM] label in injury lines to determine which
+team each player belongs to — do NOT guess from memory.
 """
 
 GAME_NOTES_TEMPLATE = """📅 {game_label}
-## {away_team} @ {home_team} | S.A.V.A.G.E.
+## {away_team} @ {home_team}
 
 === TONIGHT'S GAME DATA ===
 **Game Context:**
@@ -62,7 +67,7 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 | Away Total | {away_team_total} | Team scoring context |
 | Pace | {matchup_pace_note} | Context |
 | Schedule | {schedule_notes} | {fatigue_flag} |
-| Data Confidence | {time_context_note} | Adjust certainty accordingly |
+| Information Freshness | {time_context_note} | Adjust certainty accordingly |
 
 **Situational Intel:**
 {situational_context}
@@ -71,10 +76,10 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 **Injury Impact:**
 {injury_intel_block}
 {beneficiary_block}
-[Format: "OUT: {player} ({days_out}d {injury_type}) → {beneficiary} +{boost} {stat} proj"]
-[Or: "GTD: {player} ({injury_type}) — {update_time} update critical"]
+[Use format: "OUT: name [TEAM] (Xd injury) → beneficiary +boost stat projection"]
+[Or: "GTD: name [TEAM] (injury) — pregame update critical"]
 
-=== CURRENT ROSTERS (ludi.db · last 14d — use ONLY these players) ===
+=== CURRENT ROSTERS (last 14 days — use ONLY these players) ===
 {away_team}: {away_rotation}
 {home_team}: {home_rotation}
 
@@ -88,7 +93,7 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 [Format: "{player} {stat} — {edge_reason} ({edge_pct}% above line)"]
 
 ---
-*S.A.V.A.G.E. analysis - research only*
+*Analysis for research purposes only*
 """
 
 SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
@@ -119,7 +124,7 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 """
 
 GAME_NOTES_EXAMPLE = """📅 Feb 22, 2026
-## LAL @ BOS | S.A.V.A.G.E.
+## LAL @ BOS
 
 === TONIGHT'S GAME DATA ===
 **Game Context:**
@@ -137,8 +142,8 @@ Luka (ankle) is GTD tonight. Lakers 3-2 in last 5. Celtics 8-2 in last 10 home g
 
 === INJURY & PERSONNEL ===
 **Injury Impact:**
-OUT: Sam Hauser (knee, 3d) → Baylor Scheierman +4 PTS proj
-GTD: Luka Doncic (ankle) — 6:00 PM update critical
+OUT: Sam Hauser [BOS] (knee, 3d) → Baylor Scheierman +4 PTS proj
+GTD: Luka Doncic [LAL] (ankle) — 6:00 PM update critical
 
 === MATCHUP ANALYSIS ===
 **Scheme Edge:**
@@ -150,7 +155,7 @@ Luka Doncic PTS OVER 24.5 — Luka vs drop coverage (64% hit rate L10) (+8.2% ed
 Jaylen Brown PTS OVER 26.5 — Brown drives vs LAL wing defense (+5.1% edge)
 
 ---
-*S.A.V.A.G.E. analysis - research only*
+*Analysis for research purposes only*
 """
 
 SPOTLIGHT_EXAMPLE = """## LeBron James | LAL @ BOS
