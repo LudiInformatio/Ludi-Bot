@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-02-26 — Ghost Injuries (Players Shown as OUT Who Are Playing)
+
+- **Symptom**: Ask Ludi bot shows players as OUT/DOUBTFUL who have active game logs (e.g., Naji Marshall 131+ duplicate rows, Tyler Herro 45 rows — both playing full minutes).
+- **Root Cause**: Tank01 keeps returning stale injured players in every API response. The resolve step in `sync_injuries.py` (lines 660-694) only resolves players NOT present in `active_player_names` from current API response — so if Tank01 keeps sending them, they're never resolved. The dedup guard checks `(player_name, status, DATE(snapshot_time))` but misses same-player entries with different `injury_type` strings.
+- **Bot-Level Fix (applied Feb 26)**: Added `_GHOST_INJURY_GUARD` SQL fragment to all injury queries in `bots/ask_ludi_db.py`:
+  ```sql
+  AND NOT EXISTS (
+      SELECT 1 FROM player_game_logs pgl
+      WHERE LOWER(pgl.player_name) = LOWER(pi.player_name)
+        AND pgl.game_date >= date('now', '-3 days')
+        AND pgl.minutes > 10
+  )
+  ```
+  Also added `GROUP BY player_name, team_abbreviation` dedup guard.
+- **Root Fix (deferred to module audit)**: Fix `sync_injuries.py` resolve logic to cross-reference `player_game_logs` — if a player logged 10+ min last 3 days → auto-resolve regardless of API response. Change dedup to `(player_name, DATE(snapshot_time))` only.
+
+---
+
+## 2026-02-26 — AI Training Data in Prompt Examples
+
+- **Symptom**: `ASK_LUDI_NARRATIVE_SYSTEM` example used Trae Young, Anthony Davis, D'Angelo Russell as WAS players (OUT). Those players were traded to WAS but had not yet played a game — "OUT" meant nothing since they had no usage baseline.
+- **Root Cause**: Using AI training data to recall current roster assignments in hardcoded prompt examples. AI knowledge cutoff predates current season trades.
+- **Fix**: Query `ludi.db` directly before writing any prompt example. Use `SELECT name, team FROM players WHERE team = 'WAS'` to find real current roster + game logs to verify they've actually played.
+- **Rule**: Every hardcoded player example in `utils/claude_prompts.py` must be verified against `ludi.db` OR use clearly generic placeholders like `[PLAYER_A]`, `[TEAM]`. Never use AI training memory for current-season roster facts.
+
+
+---
+
 ## 2026-02-26 — Ask Ludi Bot: Python 3.14 asyncio.get_event_loop() RuntimeError
 
 - **Script**: `bots/ask_ludi.py`

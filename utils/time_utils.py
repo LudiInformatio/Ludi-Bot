@@ -83,3 +83,22 @@ def format_time_context_note(ctx: dict = None) -> str:
     if ctx is None:
         ctx = get_time_context()
     return f"{ctx['mode']} ({ctx['confidence']}) | {ctx['note']}"
+
+
+def get_est_tomorrow() -> str:
+    """Get tomorrow's date string in EST (YYYY-MM-DD)."""
+    return (get_est_now() + timedelta(days=1)).strftime('%Y-%m-%d')
+
+
+def get_smart_target_date() -> str:
+    """Return the most useful date for forward-looking queries.
+
+    Before 9 PM EST: today's date (current slate)
+    At/after 9 PM EST: tomorrow's date (early research window)
+
+    Mirrors module_a.py Gatekeeper 9 PM cutoff pattern (module_a.py:99-106).
+    """
+    now = get_est_now()
+    if now.hour >= 21:
+        return (now + timedelta(days=1)).strftime('%Y-%m-%d')
+    return now.strftime('%Y-%m-%d')

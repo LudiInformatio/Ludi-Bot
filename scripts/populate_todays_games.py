@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Populate Today's Games — 3-Source Fallback Chain
+Populate Today's Games — 4-Source Fallback Chain
 =================================================
 Fetches today's NBA schedule and inserts into the games table.
 
@@ -8,6 +8,7 @@ Source priority:
   1. The Odds API  (current — real-time lines exist = games are on)
   2. Tank01        (getNBAGamesForDate — gameID already in YYYYMMDD_AWAY@HOME format)
   3. BDL           (get_games with date filter — home_team/visitor_team nested objects)
+  4. ESPN          (free, no auth, no quota — DraftKings scoreboard via ESPNClient)
 
 If all sources return 0 games, sends a Slack alert and exits with code 1
 so downstream steps (Module H, simulation) don't run on an empty slate.
@@ -205,6 +206,46 @@ def fetch_from_bdl(today_str: str, date_compact: str):
 
 
 # ---------------------------------------------------------------------------
+# Source 4: ESPN Scoreboard
+# ---------------------------------------------------------------------------
+
+def fetch_from_espn(today_str: str, date_compact: str):
+    """
+    Fetch today's NBA games from ESPN Scoreboard (free, no auth, no quota).
+
+    Uses ESPNClient.get_scoreboard() which returns DraftKings game lines
+    and already handles team ID → standard abbreviation mapping via canonical_teams.
+
+    Returns list of (game_id, game_date, home_team, away_team) tuples,
+    or [] on failure.
+    """
+    print("[populate_games] Source 4: ESPN...")
+    try:
+        from utils.espn_client import ESPNClient
+        client = ESPNClient()
+        scoreboard = client.get_scoreboard(date_str=date_compact)
+
+        if not scoreboard:
+            print("   [ESPN] No games returned.")
+            return []
+
+        games_to_insert = []
+        for _game_key, game_data in scoreboard.items():
+            home = game_data.get('home_abbr', '')
+            away = game_data.get('away_abbr', '')
+            if home and away:
+                ludi_game_id = f"{date_compact}_{away}@{home}"
+                games_to_insert.append((ludi_game_id, today_str, home, away))
+
+        print(f"   [ESPN] {len(games_to_insert)} games found.")
+        return games_to_insert
+
+    except Exception as e:
+        print(f"   [ESPN] Failed: {e}")
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Database upsert
 # ---------------------------------------------------------------------------
 
@@ -262,6 +303,7 @@ def main() -> int:
         ("The Odds API", fetch_from_odds_api),
         ("Tank01",       fetch_from_tank01),
         ("BDL",          fetch_from_bdl),
+        ("ESPN",         fetch_from_espn),   # Source 4: free, no quota
     ]
 
     games = []
@@ -281,8 +323,8 @@ def main() -> int:
     if not games:
         msg = (
             f"*populate_todays_games.py FAILED*\n"
-            f"All 3 sources returned 0 games for {today_str}.\n"
-            f"Sources tried: The Odds API, Tank01, BDL.\n"
+            f"All 4 sources returned 0 games for {today_str}.\n"
+            f"Sources tried: The Odds API, Tank01, BDL, ESPN.\n"
             f"Downstream simulation pipeline may fail."
         )
         print(f"\n[populate_games] ERROR: {msg}")

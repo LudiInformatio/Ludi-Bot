@@ -1,4 +1,3 @@
-import os
 import re
 import time
 from collections import defaultdict
@@ -10,6 +9,7 @@ from utils.claude_prompts import (
     ASK_LUDI_INTENT_PROMPT,
     ASK_LUDI_NARRATIVE_SYSTEM,
 )
+from utils.time_utils import get_est_now, format_time_context_note, get_smart_target_date
 from bots import ask_ludi_db
 
 
@@ -50,53 +50,115 @@ def classify_intent(user_message: str) -> str:
     return "free_text"
 
 
-def get_data_for_intent(intent: str, user_message: str = "") -> str:
-    """Fetch data from database based on classified intent."""
+def _format_timestamp_est(ts_str: str | None) -> str | None:
+    """Convert ISO timestamp string to readable EST time like '5:18 PM'."""
+    if not ts_str:
+        return None
+    try:
+        import pytz
+        from datetime import datetime
+        EST = pytz.timezone('US/Eastern')
+        # Handle both 'YYYY-MM-DD HH:MM:SS' and ISO format
+        for fmt in ('%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
+            try:
+                dt = datetime.strptime(ts_str, fmt)
+                dt_est = dt.replace(tzinfo=pytz.utc).astimezone(EST)
+                return dt_est.strftime('%-I:%M %p EST')
+            except ValueError:
+                continue
+        return None
+    except Exception:
+        return None
+
+
+def get_data_for_intent(intent: str, user_message: str = "") -> tuple[str, dict]:
+    """Fetch data from database based on classified intent.
+
+    Returns (formatted_data_str, freshness_meta_dict) tuple.
+    Meta is used by generate_narrative() for time-aware framing.
+    """
+    meta = ask_ludi_db.get_freshness_meta()
+
     if intent == "injuries":
         injuries = ask_ludi_db.get_injuries()
-        return format_injuries(injuries)
+        return format_injuries(injuries, meta), meta
     elif intent == "edges":
         edges = ask_ludi_db.get_edges()
-        return format_edges(edges)
+        return format_edges(edges, meta), meta
     elif intent == "trends":
         player_match = re.search(r"(?:about|for|on)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)", user_message, re.IGNORECASE)
         player_name = player_match.group(1) if player_match else None
         trends = ask_ludi_db.get_trends(player_name)
-        return format_trends(trends, player_name)
+        return format_trends(trends, player_name), meta
     elif intent == "schedule":
         schedule = ask_ludi_db.get_schedule()
-        return format_schedule(schedule)
+        return format_schedule(schedule, meta), meta
     elif intent == "recap":
         recap = ask_ludi_db.get_recap()
-        return format_recap(recap)
+        return format_recap(recap), meta
     elif intent == "standings":
         standings = ask_ludi_db.get_standings()
-        return format_standings(standings)
+        return format_standings(standings, meta), meta
     else:
-        return ask_ludi_db.free_text_query(user_message)
+        return ask_ludi_db.free_text_query(user_message), meta
 
 
-def format_injuries(injuries: list[dict[str, Any]]) -> str:
-    """Format injuries data for display."""
+def format_injuries(injuries: list[dict[str, Any]], meta: dict | None = None) -> str:
+    """Format injuries data for display with freshness footer."""
     if not injuries:
         return "No active injuries on record."
     lines = []
     for inj in injuries[:15]:
         days = f"{inj['days_out']}d" if inj.get('days_out') else "?"
         lines.append(f"• {inj['player_name']} ({inj['team_abbreviation']}) — {inj['status']} ({days})")
-    return "**Current Injuries:**\n" + "\n".join(lines)
+    result = "**Current Injuries:**\n" + "\n".join(lines)
+    # Freshness footer
+    if meta:
+        ts = _format_timestamp_est(meta.get('injuries'))
+        if ts:
+            result += f"\n_Injury data as of {ts}_"
+    return result
 
 
-def format_edges(edges: list[dict[str, Any]]) -> str:
-    """Format betting edges for display."""
+def format_edges(edges: list[dict[str, Any]], meta: dict | None = None) -> str:
+    """Format betting edges for display. Time-aware: 3 states based on hour."""
+    now = get_est_now()
+
+    # State 1: Before pipeline runs (before 11 AM)
+    if not edges and now.hour < 11:
+        return "Today's edges will be available after the **10 AM pipeline run**. Check back after 11 AM."
+
+    # State 2: Normal daytime or evening with no edges
     if not edges:
-        return "No positive EV plays found for today."
+        return "No positive EV plays found for today's slate."
+
     lines = []
-    for edge in edges[:10]:
-        pct = f"{edge['true_edge']:.1f}%"
-        line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {edge['projection']}"
-        lines.append(line)
-    return "**Today's Top Edges:**\n" + "\n".join(lines)
+
+    # State 3: After 9 PM — show today's final edges + tomorrow note
+    if now.hour >= 21:
+        lines.append("**Today's Edges (final):**")
+        for edge in edges[:10]:
+            pct = f"{edge['true_edge']:.1f}%"
+            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {edge['projection']}"
+            lines.append(line)
+        # Tomorrow note — slate context will have tomorrow's games if available
+        target = get_smart_target_date()
+        lines.append(f"\n_Tomorrow's slate ({target}) loading. Ask 'What games are on tomorrow?' for early matchup preview._")
+    else:
+        # Normal daytime view
+        for edge in edges[:10]:
+            pct = f"{edge['true_edge']:.1f}%"
+            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {edge['projection']}"
+            lines.append(line)
+
+    result = "**Today's Top Edges:**\n" + "\n".join(lines) if lines[0] != "**Today's Edges (final):**" else "\n".join(lines)
+
+    # Freshness footer
+    if meta:
+        ts = _format_timestamp_est(meta.get('edges'))
+        if ts:
+            result += f"\n_Pipeline run: {ts}_"
+    return result
 
 
 def format_trends(trends: list[dict[str, Any]], player_name: str | None = None) -> str:
@@ -119,11 +181,19 @@ def format_trends(trends: list[dict[str, Any]], player_name: str | None = None) 
     return "\n".join(lines)
 
 
-def format_schedule(schedule: list[dict[str, Any]]) -> str:
-    """Format schedule data for display."""
+def format_schedule(schedule: list[dict[str, Any]], meta: dict | None = None) -> str:
+    """Format schedule data for display with smart date context."""
+    target_date = meta.get('target_date') if meta else get_smart_target_date()
+
     if not schedule:
-        return "No games scheduled for today."
-    lines = ["**Today's Schedule:**"]
+        # Check nba_calendar for expected count before saying "no games"
+        expected = ask_ludi_db.get_expected_game_count(target_date)
+        if expected > 0:
+            return f"**{target_date}:** {expected} games expected — matchups available after 3 AM sync."
+        return f"No games scheduled for {target_date}."
+
+    label = "Today" if target_date == ask_ludi_db.get_est_today() else target_date
+    lines = [f"**{label}'s Schedule:**"]
     for game in schedule:
         lines.append(f"• {game['away_team']} @ {game['home_team']}")
     return "\n".join(lines)
@@ -143,15 +213,21 @@ def format_recap(recap: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def format_standings(standings: list[dict[str, Any]]) -> str:
-    """Format standings data for display."""
+def format_standings(standings: list[dict[str, Any]], meta: dict | None = None) -> str:
+    """Format standings data for display with freshness footer."""
     if not standings:
         return "No standings data available."
     lines = ["**Current Standings:**"]
     for s in standings[:10]:
         record = f"{s['wins']}-{s['losses']}"
         lines.append(f"• {s['team_abbrev']}: {record} ({s['win_pct']:.1%})")
-    return "\n".join(lines)
+    result = "\n".join(lines)
+    # Freshness footer (standings update daily)
+    if meta:
+        ts = _format_timestamp_est(meta.get('standings'))
+        if ts:
+            result += f"\n_Standings as of {ts}_"
+    return result
 
 
 def format_fallback_data(intent: str) -> str:
@@ -168,19 +244,36 @@ def format_fallback_data(intent: str) -> str:
     return fallback_messages.get(intent, "Something went wrong. Please try again.")
 
 
-async def generate_narrative(user_message: str, data: str) -> str:
-    """Generate natural language narrative using Sonnet model."""
-    prompt = f"""User question: {user_message}
+async def generate_narrative(
+    user_message: str,
+    data: str,
+    slate_context: str = "",
+    meta: dict | None = None,
+) -> str:
+    """Generate natural language narrative using Sonnet model.
 
-Data from database:
+    Injects slate context (BERT Pattern 2: text_a=reference, text_b=answer data)
+    and time context so Sonnet can frame confidence appropriately.
+    """
+    time_ctx = format_time_context_note()
+
+    prompt = f"""=== TONIGHT'S SLATE (reference context) ===
+{slate_context}
+
+=== QUERY DATA (answer from this) ===
 {data}
 
-Provide a helpful, concise answer based on the data above."""
+=== TIME CONTEXT ===
+{time_ctx}
+
+=== USER QUESTION ===
+{user_message}"""
+
     result = get_claude_analysis(
         prompt=prompt,
         system_prompt=ASK_LUDI_NARRATIVE_SYSTEM,
         model=SONNET_MODEL,
-        temperature=0.2,
+        temperature=0.3,
         max_tokens=600,
         call_type="ask_ludi_narrative",
     )
@@ -193,25 +286,28 @@ async def handle_message(update, context) -> None:
     """Handle incoming messages from users."""
     if not update.message or not update.message.text:
         return
-    
+
     user_id = update.effective_user.id
     user_message = update.message.text.strip()
-    
+
     if not check_rate_limit(user_id):
         await update.message.reply_text(
             "Rate limit exceeded. Please wait 60 seconds before sending another message."
         )
         return
-    
+
     intent = classify_intent(user_message)
-    
+
     try:
-        data = get_data_for_intent(intent, user_message)
+        data, meta = get_data_for_intent(intent, user_message)
+        # Fetch slate context once per message (cached — negligible overhead)
+        slate_context = ask_ludi_db.build_slate_context()
+
         if intent == "free_text" and "?" not in user_message:
             response = data
         else:
-            response = await generate_narrative(user_message, data)
-    except Exception as e:
+            response = await generate_narrative(user_message, data, slate_context, meta)
+    except Exception:
         response = format_fallback_data(intent)
-    
+
     await update.message.reply_text(response)
