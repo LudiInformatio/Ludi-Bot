@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, February 25, 2026 — evening EST
+**Last Updated:** Wednesday, February 25, 2026 — 7:34 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.13 Ask Ludi (implementation ready) + Phase 8.23 Layer 1 collecting (live since Feb 25, 14-day scan ~Mar 10) + 2024-25 Backfill running (174 dates, ~Mar 3 completion)
-**Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.21, 8.23–8.26 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Phase 8.24 Edge Type Labeling + Phase 8.26 Correlated Props Flagging ✅**
+**Completed:** Phases 1–7 + Phase 8.0-A/B/C/D + sub-phases 8.2–8.26 ✅ (full history: `docs/STATUS_HISTORY.md`) + **Phase 8.24 Edge Type Labeling ✅ + Phase 8.25 Key Advantage Callout ✅ + Phase 8.26 SGP Correlation Flagging ✅**
 
 This is the single source of truth for project tasks and priorities.
 
@@ -54,7 +54,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
 | 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | 3-layer OpenClaw: `claude_analysis_log` collection → weekly Wilson calibration (`calibrate_claude_outputs.py`) → inject into `_get_system_wr_context()`. **Start Layer 1 NOW — 14-day scan ~Mar 10.** | $0 |
 | 8.24 | Edge Type Labeling ⭐ | DONE ✅ | `_classify_edge_type()` in `module_f.py` — deterministic Projection/Matchup/Injury-Vacuum/Hot-Streak label on every bet card. `edge_type` column in `bet_recommendations`. $0 cost. | $0 |
-| 8.25 | Key Advantage Callout ⭐ | MEDIUM | Auto-surface #1 exploitable angle per game in `morning_brief._score_game()`. 1 Haiku call/game — e.g. "IND allows 38% rim FG% — ROLL_MAN OVER angle". See `docs/FUTURE_DATA_SOURCES.md` §5.2-B. | ~$0.01/day |
+| 8.25 | Key Advantage Callout ⭐ | DONE ✅ | `_get_key_advantage_callout()` in `morning_brief.py` — deterministic callout prepended to Telegram card. Queries `team_dvp_by_archetype` for best archetype matchup angle per game. `docs/FUTURE_DATA_SOURCES.md` §8.25-B added. $0 cost. | $0 |
 | 8.26 | Correlated Props Flagging ⭐ | DONE ✅ | `_detect_same_game_pairs()` in `curate_plays.py` — scans Top 5 for same-game pairs, flags HIGH/MODERATE/LOW SGP risk in Telegram card. `sgp_correlation_risk` column in `bet_recommendations`. $0 cost. | $0 |
 
 ---

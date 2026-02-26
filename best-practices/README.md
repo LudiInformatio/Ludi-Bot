@@ -65,9 +65,13 @@ best-practices/
 ---
 
 ### 📊 Data — Stat Confidence & Edge Calibration (`data/`)
-**Status:** ✅ Complete (Feb 20, 2026)
+**Status:** ✅ Complete (Feb 25, 2026)
 - `STAT_CONFIDENCE_FRAMEWORK.md` — A+ to F grades across all stat markets; 14k+ bets analyzed
 - Key finding: BLOCKS UNDER 70.7% WR; PTS OVER systematically overconfident at high edges
+- `DVP_AND_SCHEME_METHODOLOGY.md` — DVP rankings methodology, scheme fingerprints, BERT training rules
+- `CANONICAL_NAME_RESOLUTION.md` — Accent handling across APIs, two-direction transforms
+- `SGP_AND_PROP_CURATION.md` — SGP correlation theory, prop value identification, portfolio rules
+- `GAME_LINE_CURATION.md` — Game selection signals: rest differential, RLM, pace, spread zones, referee impact
 
 ---
 
