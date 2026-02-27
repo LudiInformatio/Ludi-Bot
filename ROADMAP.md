@@ -1,9 +1,11 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Thursday, February 26, 2026 — 4:50 PM EST
+**Last Updated:** Friday, February 27, 2026 — 4:09 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.13 Ask Ludi (live + freshness layer) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Phase 8.13 Ask Ludi Bot v1 ✅ + Phase 8.28 Game Intelligence Cache ✅ + Phase 8.13 Data Freshness Layer ✅
+**Active Work:** Module Audit Sprint (A+B complete → Module C next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
+**Completed:** Module A Audit (Tiers A-F) ✅ + Module B Engine Rewrite (Tiers A-D) ✅ + CLV Capture Overhaul (E1-E6) ✅
+
+> **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled (6 Injury Refresh, Evening Slate Lock, 2 Closing Lines, 3 QA). Nightly Debrief ran successfully (yesterday's bets settled). Data Sync + PBP Stats completed. Queue is clear for today's schedule.
 
 This is the single source of truth for project tasks and priorities.
 
@@ -43,7 +45,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
 - [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
 - [x] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
-- [ ] Module-by-module audit sprint — A through H + X: logic review, edge cases, refinement brainstorm
+- [-] Module-by-module audit sprint — A through H + X: Modules A+B complete. Module C (`module_c.py`, `LudiOracle`) is next.
 - [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
 - [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
 - [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)

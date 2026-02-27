@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-02-27 — Silent No-Op in module_a.py `fetch_team_archetypes()` (Agent Dict Key Bug)
+
+- **Symptom**: `archetypes['home_pace']`, `archetypes['home_def_rtg']`, `archetypes['home_ortg']` always 0 — team pace/DRtg data never populated despite successful DB queries.
+- **Root Cause**: Agent used wrong dict key names when accessing the `games[game_id]` dict. Wrote `game.get('home_team', '')` but the key is `'home'`. Wrote `game.get('team_info', {})` but the key is `'archetypes'`. The whole method ran without error but populated nothing.
+- **Fix Applied**: `module_a.py fetch_team_archetypes()` — `'home_team'`→`'home'`, `'away_team'`→`'away'`, `'team_info'`→`'archetypes'`. All downstream references updated (`team_info['home_pace']`→`archetypes['home_pace']` etc).
+- **Prevention**: Before writing any method that reads from `self.games[game_id]`, check the game dict contract at `module_a.py` init sections (lines ~176, ~388, ~486) to confirm key names. The data contract docstring in the `Gatekeeper` class also documents the exact keys.
+- **Commit**: 771439e — fix(audit): Module A Tier F
+
+---
+
 ## 2026-02-26 — Ghost Injuries (Players Shown as OUT Who Are Playing)
 
 - **Symptom**: Ask Ludi bot shows players as OUT/DOUBTFUL who have active game logs (e.g., Naji Marshall 131+ duplicate rows, Tyler Herro 45 rows — both playing full minutes).
