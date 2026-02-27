@@ -164,8 +164,8 @@ python main.py
 # Target specific teams (for testing)
 python main.py --teams CLE SAC PHX
 
-# Test full pipeline (validates end-to-end)
-python test_pipeline.py
+# Test full pipeline — 1 game, verbose (validates end-to-end)
+python main.py --limit-games 1 --verbose
 
 # Test single module
 python -c "from module_a import Gatekeeper; gk = Gatekeeper(); gk.fetch_live_slate()"
@@ -245,7 +245,7 @@ send_daily_briefing(briefing)
 
 ## Testing Conventions
 
-**Test files naming**: `test_*.py` (e.g., `test_pipeline.py`, `test_integration.py`)
+**Test files naming**: `test_*.py` (e.g., `test_module_a.py`, `test_integration.py`)
 
 **Testing pattern**:
 ```python

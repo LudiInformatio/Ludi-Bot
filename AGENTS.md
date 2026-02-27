@@ -87,7 +87,7 @@ Minimum expectation per code change:
 
 Preferred commands:
 - `source .venv/bin/activate`
-- `.venv/bin/python test_pipeline.py`
+- `.venv/bin/python main.py --limit-games 1 --verbose` (integration test — 1 game, verbose)
 - `.venv/bin/python -m pytest tests/...` (targeted)
 - `.venv/bin/python main.py` (only when appropriate and safe)
 
@@ -117,7 +117,7 @@ Preferred commands:
   - `bash scripts/restore_database.sh`
 - Pipeline:
   - `.venv/bin/python main.py`
-  - `.venv/bin/python test_pipeline.py`
+  - `.venv/bin/python main.py --limit-games 1 --verbose` (integration test)
 
 ---
 

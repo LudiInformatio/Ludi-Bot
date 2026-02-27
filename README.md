@@ -94,8 +94,8 @@ python database.py   # Initialize schema
 ```bash
 source .venv/bin/activate
 
-python main.py              # Full pipeline
-python test_pipeline.py     # Integration test
+python main.py                              # Full pipeline
+python main.py --limit-games 1 --verbose    # Integration test (1 game)
 ```
 
 ---
@@ -202,7 +202,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | [CLAUDE.md](CLAUDE.md) | AI assistant project instructions |
 | [docs/TOOLS_GUIDE.md](docs/TOOLS_GUIDE.md) | Task automation scripts and helpers |
 | [docs/STATUS_HISTORY.md](docs/STATUS_HISTORY.md) | Archived project status updates (Phases 1-4) |
-| [docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
+| [docs/research/competitive/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/competitive/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
 | [best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md](best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md) | BERT-derived prompt engineering patterns — 8 structural improvements for Claude prompts, implementation priority |
 
 ---

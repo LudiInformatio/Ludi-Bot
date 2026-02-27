@@ -82,8 +82,8 @@ source .venv/bin/activate
 # Run main pipeline
 .venv/bin/python main.py
 
-# Run integration test
-.venv/bin/python test_pipeline.py
+# Run integration test (1 game, verbose)
+.venv/bin/python main.py --limit-games 1 --verbose
 
 # Initialize database
 .venv/bin/python database.py
