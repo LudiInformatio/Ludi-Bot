@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import config
 from utils.bdl_client import _get_client  # private singleton -- do NOT use get_client()
+from utils.mappings import normalize_bdl_abbr  # F3: normalize GS→GSW, NO→NOP, etc. at write time
 
 
 # ---------------------------------------------------------------------------
@@ -391,7 +392,8 @@ def sync_date(
         bdl_first    = (player_info.get("first_name") or "").strip()
         bdl_last     = (player_info.get("last_name") or "").strip()
         full_name    = f"{bdl_first} {bdl_last}".strip()
-        team_abbrev  = (team_info.get("abbreviation") or "").strip()
+        # F3: normalize BDL abbreviations (GS→GSW, NO→NOP, NY→NYK, PHO→PHX, SA→SAS)
+        team_abbrev  = normalize_bdl_abbr((team_info.get("abbreviation") or "").strip())
         # record["date"] is the game date from BDL; fall back to the requested date
         rec_date     = record.get("date") or game_date
 

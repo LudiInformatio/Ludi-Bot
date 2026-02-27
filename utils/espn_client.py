@@ -24,6 +24,8 @@ import time
 import os
 from datetime import datetime
 
+import config  # F5: use config.DB_PATH instead of hardcoded ludi.db path
+
 
 # Fallback team ID map if canonical_teams isn't populated yet.
 # {espn_id: standard_abbr} — reverse of the existing _ESPN_TEAM_IDS_FALLBACK in sync scripts.
@@ -51,8 +53,8 @@ class ESPNClient:
         Falls back to hardcoded map if DB unavailable.
         """
         try:
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'ludi.db')
-            conn = sqlite3.connect(db_path)
+            # F5: use config.DB_PATH — consistent with all other modules
+            conn = sqlite3.connect(config.DB_PATH)
             rows = conn.execute(
                 "SELECT espn_id, standard_abbr FROM canonical_teams WHERE espn_id IS NOT NULL"
             ).fetchall()

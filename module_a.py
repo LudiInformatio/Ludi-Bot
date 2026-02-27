@@ -16,7 +16,7 @@ from utils.api_helpers import retry_with_backoff
 from utils.bdl_client import BDLClient
 
 # [NEW] Import centralized mappings
-from utils.mappings import resolve_team_abbr
+from utils.mappings import resolve_team_abbr, normalize_bdl_abbr
 
 class Gatekeeper:
     """
@@ -354,7 +354,8 @@ class Gatekeeper:
             
             home_full = home_team.get('full_name', '')
             away_full = visitor_team.get('full_name', '')
-            home_abbr = home_team.get('abbreviation', self._get_abbr(home_full) or '')
+            # F2: normalize BDL abbreviation (GS→GSW, NO→NOP, NY→NYK, PHO→PHX, SA→SAS)
+            home_abbr = normalize_bdl_abbr(home_team.get('abbreviation', self._get_abbr(home_full) or ''))
             
             # Parse game time from BDL datetime
             bdl_datetime = bdl_game.get('datetime')
@@ -513,17 +514,15 @@ class Gatekeeper:
         [2] GET TEAM ARCHETYPES — Pace + ORtg from team_leverage_profiles,
         minutes-weighted DRtg from player_game_advanced (14d window).
 
-        Populates self.games[game_id]['team_info']['home_pace'] and 'home_def_rtg'
+        Populates self.games[game_id]['archetypes']['home_pace'] and 'home_def_rtg'
         with real values instead of the default 0s from the init blocks.
         """
         print(f"[2] 📡 Fetching Team Archetypes (Pace/DefRtg)...")
 
-        import os
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ludi.db')
-
         try:
             import sqlite3
-            conn = sqlite3.connect(db_path)
+            # F5: use config.DB_PATH instead of hardcoded relative path
+            conn = sqlite3.connect(config.DB_PATH)
 
             # --- Pace + ORtg from team_leverage_profiles (season-level) ---
             pace_map = {}  # {team_abbr: (overall_pace, overall_ortg)}
@@ -554,7 +553,8 @@ class Gatekeeper:
                 ).fetchall()
                 for team_abbr, wt_drtg in rows:
                     if wt_drtg is not None:
-                        drtg_map[team_abbr] = round(wt_drtg, 1)
+                        # F2: normalize BDL abbreviations so lookup in self.games matches
+                        drtg_map[normalize_bdl_abbr(team_abbr)] = round(wt_drtg, 1)
             except Exception as e:
                 print(f"   [D3] player_game_advanced DRtg query failed: {e}")
 
@@ -562,17 +562,18 @@ class Gatekeeper:
 
             # --- Wire into self.games ---
             for game_id, game in self.games.items():
-                home_team = game.get('home_team', '')
-                away_team = game.get('away_team', '')
-                team_info = game.get('team_info', {})
+                # F1: Use correct game dict keys ('home'/'away'/'archetypes' not 'home_team'/'away_team'/'team_info')
+                home_team = game.get('home', '')
+                away_team = game.get('away', '')
+                archetypes = game.get('archetypes', {})
 
                 home_pace, _ = pace_map.get(home_team, (0, 0))
                 home_drtg = drtg_map.get(home_team, 0)
                 away_drtg = drtg_map.get(away_team, 0)
 
-                team_info['home_pace'] = home_pace or 0
-                team_info['home_def_rtg'] = home_drtg or 0
-                team_info['away_def_rtg'] = away_drtg or 0  # extra signal, harmless
+                archetypes['home_pace'] = home_pace or 0
+                archetypes['home_def_rtg'] = home_drtg or 0
+                archetypes['away_def_rtg'] = away_drtg or 0  # extra signal, harmless
 
             print(f"   ✅ Team Archetypes Mapped — {len(pace_map)} pace, {len(drtg_map)} DRtg records.")
 

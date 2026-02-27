@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.team_offensive_classifier import TeamOffensiveClassifier
 from utils.team_defensive_classifier import TeamDefensiveClassifier
+from utils.mappings import normalize_bdl_abbr  # F4: normalize BDL team abbreviations from player_game_advanced
 
 TEAMS = [
     "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DAL", "DEN", "DET",
@@ -99,7 +100,8 @@ def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) 
             tier = "WEAK"
         else:
             tier = "AVERAGE"
-        result[team_abbrev] = (tier, round(avg_dr, 2))  # D3: store both tier + numeric
+        # F4: normalize BDL abbreviations so main() .get(team, ...) matches canonical TEAMS list
+        result[normalize_bdl_abbr(team_abbrev)] = (tier, round(avg_dr, 2))  # D3: store both tier + numeric
 
     return result
 
@@ -146,12 +148,14 @@ def compute_team_off_quality_14d(db_path: str, d14_start: str, window_end: str) 
 
     result = {}
     for team_abbrev, avg_or, _ in rows:
+        # F4: normalize BDL abbreviations so main() .get(team, ...) matches canonical TEAMS list
+        canonical = normalize_bdl_abbr(team_abbrev)
         if avg_or > league_avg + std:     # Higher = better offense
-            result[team_abbrev] = "STRONG"
+            result[canonical] = "STRONG"
         elif avg_or < league_avg - std:
-            result[team_abbrev] = "WEAK"
+            result[canonical] = "WEAK"
         else:
-            result[team_abbrev] = "AVERAGE"
+            result[canonical] = "AVERAGE"
 
     return result
 
