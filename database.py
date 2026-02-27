@@ -1329,6 +1329,11 @@ class LudiHistorian:
             c.execute("ALTER TABLE player_canonical_ids ADD COLUMN espn_id TEXT")
         except Exception:
             pass  # Column already exists — safe to ignore
+        # Migration guard: add tank01_player_id for Tank01 crosswalk (A6)
+        try:
+            c.execute("ALTER TABLE player_canonical_ids ADD COLUMN tank01_player_id TEXT")
+        except Exception:
+            pass  # Column already exists — safe to ignore
 
         # -- Canonical ID staging table (auto-ingest missing IDs for review) --
         c.execute('''

@@ -56,6 +56,11 @@ class Gatekeeper:
         self._tank01_props_cache = {}  # {player_id_str: {"pts": 22.5, "reb": 6.5, ...}}
         self._tank01_props_loaded = False
 
+        # [A6] Tank01 player name → ID cross-walk (built alongside _tank01_props_cache).
+        # Keyed by normalized player name (lowercase, accent-stripped) → tank01 player_id_str.
+        # Enables _validate_line_with_tank01() to actually validate single-vendor BDL lines.
+        self._tank01_name_to_id = {}  # {normalized_name_str: tank01_player_id_str}
+
 
     def _get_abbr(self, team_name):
         """Helper to map API names to Ref Engine Abbreviations"""
@@ -78,7 +83,7 @@ class Gatekeeper:
         }
         
         try:
-            response = self.session.get(url, params=params)
+            response = self.session.get(url, params=params, timeout=30)  # A3: prevent indefinite hang
 
             # [PAID TIER] Log API usage
             self.monitor.log_request('odds_api', 'fetch_slate', response.headers)
@@ -149,7 +154,10 @@ class Gatekeeper:
                 
                 # 4. Extract Vegas Lines
                 for book in game['bookmakers']:
-                    if book['key'] in ['draftkings', 'fanduel', 'mgm', 'bovada', 'pinnacle', 'caesars']:
+                    # A4: Expanded to all NC Legal + sharp books. Note: uses API 'key' format (not title).
+                    # mgm=BetMGM, espnbet=TheScore Bet (rebranded Dec 2025). Verify exact keys on Mar 1 (E7).
+                    if book['key'] in ['draftkings', 'fanduel', 'mgm', 'bovada', 'pinnacle', 'caesars',
+                                       'bet365', 'hardrockbet', 'fanatics', 'espnbet']:
                         for market in book['markets']:
                             if market['key'] == 'spreads':
                                 for outcome in market['outcomes']:
@@ -158,7 +166,7 @@ class Gatekeeper:
                                         break
                             if market['key'] == 'totals':
                                 for outcome in market['outcomes']:
-                                    if outcome['name'] == home:
+                                    if outcome['name'] == 'Over':  # A1: Odds-API uses "Over"/"Under" for totals (not team names)
                                         self.games[game_id]['vegas']['total'] = outcome.get('point')
                                         break
                             if market['key'] == 'team_totals':
@@ -480,7 +488,7 @@ class Gatekeeper:
             }
             try:
                 time.sleep(0.5)
-                response = self.session.get(url, params=params)
+                response = self.session.get(url, params=params, timeout=30)  # A3: prevent indefinite hang
 
                 # [PAID TIER] Log API usage
                 self.monitor.log_request('odds_api', 'fetch_props', response.headers)
@@ -696,8 +704,9 @@ class Gatekeeper:
                 return
 
             # 2. Fetch Props
-            # FIX 3: Vendor quality filter - only high-quality vendors
-            high_quality_vendors = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm']
+            # A5: Expanded vendor filter to match BDL_VENDOR_MAP capabilities (8 vendors)
+            high_quality_vendors = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm',
+                                    'bet365', 'fanatics', 'espnbet']
             props = self.bdl.get_player_props(bdl_game_id, vendors=high_quality_vendors)
             
             if props:
@@ -723,10 +732,21 @@ class Gatekeeper:
         Only writes props that Odds-API hasn't already populated (BDL fills gaps).
         """
         from collections import Counter
+        import unicodedata as _ud
+        import re as _re2
+
+        def _norm_name(name: str) -> str:
+            """Normalize player name for Tank01 cross-walk lookup (accent-strip + lowercase)."""
+            nfd = _ud.normalize('NFD', name)
+            stripped = ''.join(c for c in nfd if _ud.category(c) != 'Mn')
+            clean = stripped.lower().strip()
+            clean = _re2.sub(r'\s+(jr|sr|ii|iii|iv)\.?\s*$', '', clean).strip()
+            return clean
 
         BDL_VENDOR_MAP = {
             'draftkings': 'DraftKings', 'fanduel': 'FanDuel',
             'betmgm': 'BetMGM', 'caesars': 'Caesars',
+            'betrivers': 'BetRivers',      # A5: Added — was in high_quality_vendors but missing from map
             'bet365': 'bet365',
             'fanatics': 'Fanatics',        # NC Legal — confirmed returning props via BDL
             'rebet': 'Rebet',              # P2P near-zero vig — confirmed returning props via BDL
@@ -791,10 +811,12 @@ class Gatekeeper:
                 # resolved tank01_player_id here instead of None.
                 # TODO (Phase 8 follow-up): build player_canonical_ids bdl_id→tank01_id
                 # cross-walk so that single-vendor BDL lines can be validated against Tank01.
+                # A6: Resolve Tank01 player ID via in-session name cross-walk
+                t01_id = self._tank01_name_to_id.get(_norm_name(player_name))
                 tank01_validates = self._validate_line_with_tank01(
                     internal_stat_key=internal_key,
                     book_line=modal_line,
-                    tank01_player_id=None,  # cross-walk not yet available; see TODO above
+                    tank01_player_id=t01_id,  # A6: now resolved via _tank01_name_to_id cross-walk
                     tolerance=0.5,
                 )
                 if not tank01_validates:
@@ -1004,10 +1026,22 @@ class Gatekeeper:
                 player_props=True,
             )
 
+            import unicodedata
+            import re as _re
+
+            def _normalize_t01_name(name: str) -> str:
+                """Strip accents + lowercase to match player_canonical_ids.normalized_name."""
+                nfd = unicodedata.normalize('NFD', name)
+                stripped = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+                clean = stripped.lower().strip()
+                clean = _re.sub(r'\s+(jr|sr|ii|iii|iv)\.?\s*$', '', clean).strip()
+                return clean
+
             loaded_players = 0
             for game in games_with_props:
                 for player_prop in game.get('playerProps', []):
                     player_id = str(player_prop.get('playerID', ''))
+                    player_name = player_prop.get('playerName', '') or player_prop.get('longName', '')
                     prop_bets = player_prop.get('propBets', {})
                     if player_id and prop_bets:
                         # Convert all line values to float for safe comparison
@@ -1020,9 +1054,13 @@ class Gatekeeper:
                         if cleaned:
                             self._tank01_props_cache[player_id] = cleaned
                             loaded_players += 1
+                            # A6: Build name→ID cross-walk for _validate_line_with_tank01()
+                            if player_name:
+                                norm_name = _normalize_t01_name(player_name)
+                                self._tank01_name_to_id[norm_name] = player_id
 
             print(f"[Module A] Tank01 props loaded: {loaded_players} players "
-                  f"({len(games_with_props)} games)")
+                  f"({len(games_with_props)} games), {len(self._tank01_name_to_id)} name cross-walk entries")
 
         except Exception as e:
             print(f"[Module A] Tank01 props load failed (non-fatal): {e}")

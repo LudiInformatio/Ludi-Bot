@@ -106,7 +106,7 @@ class BDLClient:
             if 'abbreviation' in data:
                 data['abbreviation'] = normalize_bdl_abbr(data['abbreviation'])
             if 'team_abbreviation' in data:
-                data['team_abbreviation'] = self._normalize_team_abbreviation(data['team_abbreviation'])
+                data['team_abbreviation'] = normalize_bdl_abbr(data['team_abbreviation'])  # A2: was calling nonexistent self._normalize_team_abbreviation()
             # Recursively process nested dicts
             for key, value in data.items():
                 data[key] = self._normalize_team_data(value)
