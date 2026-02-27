@@ -42,6 +42,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from utils.bdl_client import BDLClient
+from utils.mappings import normalize_bdl_abbr
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -314,6 +315,23 @@ def upsert_standings(
     if not records:
         return 0
 
+    # E2: Build canonical_teams lookup for abbreviation fallback
+    # BDL uses short abbreviations (GS, NO, SA, NY, PHO) — normalize to standard
+    # Also used when BDL omits abbreviation entirely
+    abbrev_by_name = {}   # {normalized_full_name: standard_abbr}
+    abbrev_by_bdl  = {}   # {bdl_abbr: standard_abbr}
+    try:
+        rows = conn.execute(
+            "SELECT standard_abbr, full_name, bdl_abbr FROM canonical_teams"
+        ).fetchall()
+        for std, full, bdl in rows:
+            if full:
+                abbrev_by_name[full.lower()] = std
+            if bdl:
+                abbrev_by_bdl[bdl] = std
+    except Exception:
+        pass  # canonical_teams may not exist yet on first run
+
     sql = """
         INSERT OR REPLACE INTO team_standings_bdl
             (team_id, team_name, team_abbrev,
@@ -342,7 +360,17 @@ def upsert_standings(
         try:
             team_id     = record.get("id")
             team_name   = record.get("full_name") or record.get("name", "Unknown")
-            team_abbrev = record.get("abbreviation", "")
+            raw_abbrev  = record.get("abbreviation", "") or ""
+            # E2: normalize BDL short abbreviations (GS→GSW, NO→NOP, etc.)
+            if raw_abbrev:
+                team_abbrev = (
+                    abbrev_by_bdl.get(raw_abbrev)
+                    or normalize_bdl_abbr(raw_abbrev)
+                    or raw_abbrev
+                )
+            else:
+                # Fallback: look up by full team name from canonical_teams
+                team_abbrev = abbrev_by_name.get((team_name or "").lower(), "")
 
             # --- Wins / losses (top-level first, nested fallback) ---
             wins   = _safe_int(record.get("wins"))
@@ -507,6 +535,68 @@ def _resolve_canonical_ids(conn: sqlite3.Connection) -> int:
     return updated
 
 
+def sync_team_season_averages(
+    conn: sqlite3.Connection,
+    client: BDLClient,
+    season: int,
+    dry_run: bool = False,
+    verbose: bool = False,
+) -> int:
+    """
+    E1: Fetch team-level advanced stats (ORtg, DRtg, pace) from BDL and store
+    in team_standings_bdl.
+
+    Calls get_team_season_averages(category='general') — the 'general' BDL endpoint
+    includes off_rating, def_rating, pace, net_rating. Returns upserted row count.
+    """
+    records = client.get_team_season_averages(season=season, category='general')
+    if not records:
+        print("  [E1] team_season_averages/general: no data returned")
+        return 0
+
+    if verbose:
+        print(f"  [E1] team_season_averages/general: {len(records)} records")
+
+    updated = 0
+    for record in records:
+        try:
+            team_node = record.get("team") or {}
+            team_id   = team_node.get("id") or record.get("team_id")
+            if not team_id:
+                continue
+
+            ortg = record.get("off_rating") or record.get("offensive_rating")
+            drtg = record.get("def_rating") or record.get("defensive_rating")
+            pace = record.get("pace")
+
+            if ortg is None and drtg is None and pace is None:
+                continue  # BDL 'general' base stats don't have ratings; skip
+
+            if not dry_run:
+                conn.execute(
+                    """
+                    UPDATE team_standings_bdl
+                    SET ortg = COALESCE(?, ortg),
+                        drtg = COALESCE(?, drtg),
+                        pace = COALESCE(?, pace),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE team_id = ?
+                    """,
+                    (ortg, drtg, pace, team_id)
+                )
+            updated += 1
+
+        except Exception as exc:
+            print(f"  [E1] Warning: skipping team row: {exc}")
+            continue
+
+    if not dry_run:
+        conn.commit()
+
+    print(f"  [E1] Team advanced averages: {updated} rows updated in team_standings_bdl")
+    return updated
+
+
 def run_sync(
     season: int,
     category_filter: Optional[str],
@@ -580,7 +670,7 @@ def run_sync(
 
     print()
 
-    # Standings
+    # Standings (E2: with fixed abbreviation normalization)
     standings_written  = 0
     standings_records  = fetch_standings(client, season, verbose=verbose)
     if standings_records:
@@ -591,6 +681,12 @@ def run_sync(
         print(f"  Standings: {standings_written} teams written to team_standings_bdl")
     else:
         print("  Standings: no data returned (skipped)")
+
+    # E1: Team-level advanced stats (ORtg, DRtg, pace) — enriches team_standings_bdl
+    if conn and not dry_run:
+        sync_team_season_averages(conn, client, season, dry_run=False, verbose=verbose)
+    elif dry_run:
+        print("  [E1] Team advanced averages: (dry-run skipped)")
 
     # Resolve canonical_ids after all upserts
     canonical_updated = 0

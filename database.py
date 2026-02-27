@@ -1352,6 +1352,17 @@ class LudiHistorian:
             except Exception:
                 pass  # Column already exists — safe to ignore
 
+        # Migration guards: team_standings_bdl advanced stats columns (E1)
+        for col_def in [
+            "ortg REAL",   # offensive rating
+            "drtg REAL",   # defensive rating
+            "pace REAL",   # pace (possessions per game)
+        ]:
+            try:
+                c.execute(f"ALTER TABLE team_standings_bdl ADD COLUMN {col_def}")
+            except Exception:
+                pass  # Column already exists — safe to ignore
+
         # -- Canonical ID staging table (auto-ingest missing IDs for review) --
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_canonical_ids_staging (
