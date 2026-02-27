@@ -526,22 +526,74 @@ def normalize_bdl_game(bdl_props: List[Dict], home_team: str, away_team: str,
     }
 
 
-def fetch_closing_lines_tank01(game_date_str: str, pending_bets: List[Dict] = None) -> Dict:
+def fetch_closing_lines_tank01(game_date_str: str, pending_bets: List[Dict] = None) -> Dict[str, Dict[str, float]]:
     """
-    Tank01 Tier 3 fallback: fetch closing lines when Odds API and BDL fail.
+    Tank01 Tier 3 fallback: fetch closing lines for uncaptured bets.
 
     Tank01 returns LINE VALUES ONLY — no American odds.
-    This is a last-resort source to capture closing_line even without odds.
+    Callers should write closing_line but leave closing_odds NULL, clv_cents NULL.
 
-    Note: Tank01 returns player IDs, not names. Full implementation requires
-    a tank01_id column in the players table for ID resolution.
-    Currently returns empty dict - enhancement for future.
+    Args:
+        game_date_str: Date in YYYY-MM-DD or YYYYMMDD format.
+        pending_bets:  Unused — present for API symmetry only.
 
-    Returns: {game_key: {home_team, away_team, source, players: {name: {stat: {line}}}}}
+    Returns:
+        {accent_stripped_lowercase_name: {internal_stat_key: line_value_float}}
+        e.g. {'nikola jokic': {'pts': 27.5, 'reb': 11.5, 'ast': 8.5}}
     """
-    print("    Tank01 Tier 3: requires tank01_id column in players table for player ID resolution")
-    print("    (Enhancement - not fully implemented yet)")
-    return {}
+    try:
+        from utils.tank01_client import get_client as get_tank01_client
+        tank01 = get_tank01_client()
+
+        # Tank01 requires YYYYMMDD (no dashes)
+        date_str = game_date_str.replace('-', '')
+
+        games_with_props = tank01.get_betting_odds(game_date=date_str, player_props=True)
+        if not games_with_props:
+            print("  Tank01 Tier 3: no games returned")
+            return {}
+
+        player_lines: Dict[str, Dict[str, float]] = {}
+        total_players = 0
+
+        for game in games_with_props:
+            for player_prop in game.get('playerProps', []):
+                # Tank01 uses 'playerName' (preferred) or 'longName' as fallback
+                player_name = (
+                    player_prop.get('playerName', '')
+                    or player_prop.get('longName', '')
+                ).strip()
+                if not player_name:
+                    continue
+
+                prop_bets = player_prop.get('propBets', {})
+                if not prop_bets:
+                    continue
+
+                # Accent-strip + lowercase for cross-API matching (handles Jokić vs Jokic)
+                player_key = _strip_accents(player_name).lower()
+
+                if player_key not in player_lines:
+                    player_lines[player_key] = {}
+
+                for tank01_key, line_val in prop_bets.items():
+                    stat_key = TANK01_STAT_MAP.get(tank01_key)
+                    if not stat_key:
+                        continue  # combo markets (PRA, PR, PA, RA) not in Tank01
+                    try:
+                        player_lines[player_key][stat_key] = float(line_val)
+                    except (ValueError, TypeError):
+                        pass
+
+                total_players += 1
+
+        print(f"  Tank01 Tier 3: {total_players} players loaded "
+              f"from {len(games_with_props)} game(s)")
+        return player_lines
+
+    except Exception as e:
+        print(f"  Tank01 Tier 3 fetch failed: {e}")
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -679,6 +731,7 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
     """Process closing lines for all bets in one game."""
     updated      = 0
     skipped      = 0
+    updated_ids: List[int] = []
     closing_time = datetime.now(EST).isoformat()
     source       = normalized_game.get('source', 'unknown')
 
@@ -705,7 +758,10 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
         elif bet['bet_side'] == 'UNDER' and closing_under is not None:
             clv = calculate_clv(bet_decimal, american_to_decimal(closing_under))
         else:
-            clv = 0.0
+            # No closing odds available for this side — CLV cannot be computed.
+            # Use None (NULL) rather than 0.0 — 0.0 means "broke even vs closing
+            # line" which is a real signal; NULL means "unknown/no odds source".
+            clv = None
 
         if not dry_run:
             update_bet_with_closing_lines(
@@ -714,11 +770,13 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
             )
 
         updated += 1
+        updated_ids.append(bet['id'])
         if verbose:
+            clv_str = f"{clv:+.2f}c" if clv is not None else "N/A (no odds)"
             print(f"  ✅    {bet['player_name']} {bet['stat_category']} "
-                  f"{bet['bet_side']} {bet['line']} | CLV: {clv:+.2f}c [{source}]")
+                  f"{bet['bet_side']} {bet['line']} | CLV: {clv_str} [{source}]")
 
-    return {'updated': updated, 'skipped': skipped}
+    return {'updated': updated, 'skipped': skipped, 'updated_ids': updated_ids}
 
 
 # ---------------------------------------------------------------------------
@@ -793,16 +851,10 @@ def main():
                                       f"— {len(normalized['players'])} players")
 
             # Step 10: Tank01 Tier 3 fallback — line values only (no odds)
-            if not normalized_games:
-                print("Tank01 Tier 3 fallback: fetching line data...")
-                tank01_data = fetch_closing_lines_tank01(game_date.replace('-', ''))
-                for game_key, game_data in tank01_data.items():
-                    normalized_games.append(game_data)
-                    if args.verbose:
-                        print(f"    Tank01: {game_data.get('away_team')} @ {game_data.get('home_team')} "
-                              f"— {len(game_data.get('players', {}))} players")
+            # (Tank01 Tier 3 now runs as a second pass after Tiers 1+2 below)
 
-        # Step 8: Exit non-zero if we have bets but couldn't get any source data
+        # Step 3+8: Match games to bets (Tiers 1+2); fall through to Tank01 if no matches.
+        # Do NOT exit early here — Tank01 Tier 3 below handles the uncaptured remainder.
         if not normalized_games:
             if _read_cached_quota() == "0":
                 # Odds API quota exhausted is a known monthly event (documented in ROADMAP.md).
@@ -811,33 +863,35 @@ def main():
                 print("Odds API quota exhausted (expected monthly event) — "
                       "no BDL props available for completed games. Exiting cleanly.")
                 sys.exit(0)
-            print("ERROR: Could not fetch closing data from Odds API or BDL")
-            sys.exit(1)
+            print("WARNING: Could not fetch closing data from Odds API or BDL — "
+                  "Tank01 Tier 3 will attempt line-only capture below")
+            game_bet_map = {}  # Skip game loop; uncaptured_bets = all pending bets
+        else:
+            # Step 3: Match normalized games to pending bets by team name
+            game_bet_map = match_games_to_bets(normalized_games, pending_bets)
 
-        # Step 3: Match normalized games to pending bets by team name
-        game_bet_map = match_games_to_bets(normalized_games, pending_bets)
-
-        if not game_bet_map:
-            if _read_cached_quota() == "0":
-                print("Odds API quota exhausted — BDL game(s) found but none matched "
-                      "pending bets (games likely already completed). Exiting cleanly.")
-                sys.exit(0)
-            print(f"WARNING: No API games matched to pending bets "
-                  f"(checked {len(normalized_games)} games)")
-            if args.verbose:
-                print("  First 3 pending bet game_ids:")
-                for b in pending_bets[:3]:
-                    print(f"    {b['game_id']}")
-                print("  First 3 API games:")
-                for ng in normalized_games[:3]:
-                    print(f"    {ng['away_team']} @ {ng['home_team']}")
-            sys.exit(1)
-
-        print(f"Matched {len(game_bet_map)} game(s)")
+            if not game_bet_map:
+                if _read_cached_quota() == "0":
+                    print("Odds API quota exhausted — BDL game(s) found but none matched "
+                          "pending bets (games likely already completed). Exiting cleanly.")
+                    sys.exit(0)
+                print(f"WARNING: No API games matched to pending bets "
+                      f"(checked {len(normalized_games)} games) — "
+                      f"Tank01 Tier 3 will attempt line-only capture below")
+                if args.verbose:
+                    print("  First 3 pending bet game_ids:")
+                    for b in pending_bets[:3]:
+                        print(f"    {b['game_id']}")
+                    print("  First 3 API games:")
+                    for ng in normalized_games[:3]:
+                        print(f"    {ng['away_team']} @ {ng['home_team']}")
+            else:
+                print(f"Matched {len(game_bet_map)} game(s)")
 
         # Process each matched game — Step 7: try/except per game
         total_updated = 0
         total_skipped = 0
+        captured_ids: set = set()  # Track bet IDs captured in Tiers 1+2
 
         for game_idx, bets in game_bet_map.items():
             game = normalized_games[game_idx]
@@ -849,10 +903,64 @@ def main():
                 )
                 total_updated += result['updated']
                 total_skipped += result['skipped']
+                captured_ids.update(result.get('updated_ids', []))
                 print(f"  → {result['updated']} updated, {result['skipped']} skipped")
             except Exception as e:
                 print(f"  ERROR processing game: {e}")
                 total_skipped += len(bets)
+
+        # -----------------------------------------------------------------------
+        # Tank01 Tier 3 second pass: capture line-only data for uncaptured bets.
+        # Runs AFTER Tiers 1+2 regardless of whether they succeeded — covers bets
+        # that slipped through (game mismatch, player name gap, missing market).
+        # Writes closing_line only; closing_odds = NULL, clv_cents = NULL.
+        # -----------------------------------------------------------------------
+        uncaptured_bets = [b for b in pending_bets if b['id'] not in captured_ids]
+        if uncaptured_bets:
+            print(f"\nTank01 Tier 3: {len(uncaptured_bets)} bet(s) still uncaptured "
+                  f"— fetching line data...")
+            tank01_lines = fetch_closing_lines_tank01(game_date.replace('-', ''))
+            if tank01_lines:
+                tank01_updated = 0
+                t3_closing_time = datetime.now(EST).isoformat()
+                for bet in uncaptured_bets:
+                    player_key = _strip_accents(bet['player_name']).lower()
+                    player_t01 = tank01_lines.get(player_key)
+                    if not player_t01:
+                        continue
+                    stat_line = player_t01.get(bet['stat_category'].lower())
+                    if stat_line is None:
+                        continue
+                    if not args.dry_run:
+                        update_bet_with_closing_lines(
+                            conn, bet['id'],
+                            None, None,          # no closing odds (line only)
+                            None, t3_closing_time,  # clv_cents NULL
+                            closing_line=stat_line, bet_line=bet.get('line')
+                        )
+                        # Also update prop_line_snapshots closing_line if table exists
+                        try:
+                            conn.execute(
+                                '''UPDATE prop_line_snapshots
+                                   SET closing_line = ?, closing_captured_at = ?
+                                   WHERE game_date = ? AND player_name = ?
+                                     AND stat_category = ? AND closing_line IS NULL''',
+                                (stat_line, t3_closing_time,
+                                 bet['game_date'], bet['player_name'],
+                                 bet['stat_category'])
+                            )
+                            conn.commit()
+                        except Exception:
+                            pass  # Table doesn't exist or no matching row — skip
+                    tank01_updated += 1
+                    if args.verbose:
+                        print(f"  Tank01 ✓  {bet['player_name']} "
+                              f"{bet['stat_category']} line={stat_line} (no odds)")
+                print(f"  Tank01 Tier 3: captured closing line for "
+                      f"{tank01_updated} additional bet(s) (line only, no odds)")
+                total_updated += tank01_updated
+            else:
+                print("  Tank01 Tier 3: no data returned — all sources exhausted")
 
         print("\n" + "=" * 60)
         print(f"SUMMARY | Updated: {total_updated} | Skipped: {total_skipped}")

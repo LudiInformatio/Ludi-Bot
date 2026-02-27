@@ -1538,6 +1538,11 @@ class LudiHistorian:
             c.execute("ALTER TABLE bet_recommendations ADD COLUMN sgp_correlation_risk TEXT DEFAULT NULL")
         except Exception:
             pass  # Column already exists
+        # Phase CLV — line_movement migration guard (how far the line moved from bet to close)
+        try:
+            c.execute("ALTER TABLE bet_recommendations ADD COLUMN line_movement REAL")
+        except Exception:
+            pass  # Column already exists
 
         conn.commit()
         conn.close()
