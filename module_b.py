@@ -9,6 +9,7 @@ Follows Module C's _load_foul_splits_data() pre-load pattern.
 """
 
 import sqlite3
+import unicodedata
 from collections import defaultdict
 import config
 from utils.tag_classifier import calculate_streak_score
@@ -152,19 +153,15 @@ class LudiEngine:
             self.name_to_id = {}
 
     def _normalize_name(self, name):
-        """Strip accents and normalize for matching."""
+        """Strip accents using NFKD decomposition — handles all scripts (ć, č, š, ž, etc).
+        Consistent with _strip_accents() in capture_closing_lines.py.
+        """
         if not name:
             return ''
-        # Strip accents
-        normalized = name.replace('á', 'a').replace('é', 'e').replace('í', 'i')
-        normalized = normalized.replace('ó', 'o').replace('ú', 'u').replace('ý', 'y')
-        normalized = normalized.replace('à', 'a').replace('è', 'e').replace('ì', 'i')
-        normalized = normalized.replace('ò', 'o').replace('ù', 'u').replace('ñ', 'n')
-        normalized = normalized.replace('Á', 'A').replace('É', 'E').replace('Í', 'I')
-        normalized = normalized.replace('Ó', 'O').replace('Ú', 'U').replace('Ý', 'Y')
-        normalized = normalized.replace('À', 'A').replace('È', 'E').replace('Ì', 'I')
-        normalized = normalized.replace('Ò', 'O').replace('Ù', 'U').replace('Ñ', 'N')
-        return normalized.strip()
+        return ''.join(
+            c for c in unicodedata.normalize('NFKD', name)
+            if unicodedata.category(c) != 'Mn'
+        ).strip()
 
     def enrich_player(self, p_dict, props_fmt=None):
         """

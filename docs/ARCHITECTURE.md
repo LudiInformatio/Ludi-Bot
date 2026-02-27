@@ -97,7 +97,7 @@ Supporting Modules:
 | Module | File | Correct Class Name | API Integration |
 |--------|------|-------------------|-----------------|
 | A: Gatekeeper | `module_a.py` | `Gatekeeper` | The-Odds-API (PAID) |
-| B: Engine | `module_b.py` | `print_sharp_box_score` (function) | None (display layer) |
+| B: Engine | `module_b.py` | `LudiEngine` | None (pre-loads trends/game values, enriches player dicts) |
 | C: Oracle | `module_c.py` | `LudiOracle` | None (pure math) |
 | D: Yak | `module_d.py` | `LudiYak` | Tank01 + BDL fallback + RotoWire RSS + RealGM RSS + Perplexity nuance |
 | E: Calibrator | `module_e.py` | `LudiCalibrator` | None (matchup logic) |
