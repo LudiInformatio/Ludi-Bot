@@ -16,7 +16,7 @@ A production-grade autonomous analytics engine that generates player prop recomm
 | **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 25, 2026 9:17 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 27, 2026 4:09 PM EST) |
 
 ### Key Features
 
@@ -54,7 +54,7 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 | Module | Purpose |
 |--------|---------|
 | **A: Gatekeeper** | Odds ingestion (The-Odds-API primary, BDL fallback) |
-| **B: Engine** | Historical analysis (L5, L10, season trends, hot streaks) |
+| **B: Engine** | Trend/streak consolidation (`LudiEngine`) — pre-loads player_trends + game values at init; enriches player dicts with L5/L10/L15 averages, hit rates vs lines, streak scores |
 | **C: Oracle** | Monte Carlo simulation engine (10K iterations) + rotation projection |
 | **D: Yak** | Injury intelligence (Tank01 + BDL + RotoWire/RealGM RSS + Perplexity Sonar + ESPN suspension scan) |
 | **E: Calibrator** | Matchup adjustments (archetype vs scheme) + scoring environment dampener |
@@ -137,7 +137,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 25, 2026 — 9:17 PM EST
+**Last Updated:** February 27, 2026 — 4:09 PM EST
 
 **Phase 8 Completions:**
 
@@ -167,6 +167,8 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.26 | Correlated Props Flagging — SGP risk (HIGH/MODERATE/LOW) detected + flagged in curation output |
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
+| 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
+| Infra | Module Audit Sprint (A+B) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul (Tank01 Tier 3, always-capture, quota TTL), `LudiEngine` class (HOT_STREAK fix, hit rates, line history) |
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
 | Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
 | Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
@@ -175,8 +177,8 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive only; `players.defensive_tag` deterministic |
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 
-**Planned Next:**
-- Phase 8.13: Ask Ludi Telegram Bot — 3-file implementation ready (`bots/ask_ludi.py` + db + handlers)
+**Active / Planned Next:**
+- Module Audit Sprint — A+B complete; Module C (`LudiOracle`) next
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
 - Phase 8.23: Wilson calibration at Layer 1 14-day mark (~Mar 10)
 
