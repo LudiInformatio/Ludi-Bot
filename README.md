@@ -16,7 +16,7 @@ A production-grade autonomous analytics engine that generates player prop recomm
 | **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 27, 2026 4:09 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 27, 2026 5:56 PM EST) |
 
 ### Key Features
 
@@ -95,7 +95,7 @@ python database.py   # Initialize schema
 source .venv/bin/activate
 
 python main.py                              # Full pipeline
-python main.py --limit-games 1 --verbose    # Integration test (1 game)
+python main.py --games CLE                  # Integration test (single team)
 ```
 
 ---
@@ -137,7 +137,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 27, 2026 — 4:09 PM EST
+**Last Updated:** February 27, 2026 — 5:56 PM EST
 
 **Phase 8 Completions:**
 
@@ -178,7 +178,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 
 **Active / Planned Next:**
-- Module Audit Sprint — A+B complete; Module C (`LudiOracle`) next
+- Module Audit Sprint — A+B+C complete; Module D (`LudiYak`) next
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
 - Phase 8.23: Wilson calibration at Layer 1 14-day mark (~Mar 10)
 
