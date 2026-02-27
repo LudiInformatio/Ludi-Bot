@@ -164,6 +164,19 @@ class ESPNClient:
                 except (TypeError, ValueError):
                     ml_away = None
 
+                # B3: Parse game start time from ESPN competition.date (ISO UTC format)
+                start_time = None
+                try:
+                    from datetime import timezone
+                    import pytz as _pytz
+                    _est_tz = _pytz.timezone('US/Eastern')
+                    raw_dt = competition.get('date', '')
+                    if raw_dt:
+                        utc_dt = datetime.fromisoformat(raw_dt.replace('Z', '+00:00'))
+                        start_time = utc_dt.astimezone(_est_tz)
+                except Exception:
+                    start_time = None
+
                 game_key = f"{away_abbr}_{home_abbr}"
                 results[game_key] = {
                     'spread': spread,
@@ -172,6 +185,7 @@ class ESPNClient:
                     'ml_away': ml_away,
                     'home_abbr': home_abbr,
                     'away_abbr': away_abbr,
+                    'start_time': start_time,  # B3: EST-aware datetime (None if parsing fails)
                 }
 
                 # Rate limit guard for multiple calls in a loop

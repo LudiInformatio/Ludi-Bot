@@ -242,43 +242,52 @@ class Gatekeeper:
         
         print(f"   📡 [BDL] Fetching game lines from BallDontLie...")
         
+        # B1: 9 PM EST cutover — fetch tomorrow too so early research is possible after games end
         if date_str is None:
             today = datetime.now(self.est_tz)
-            date_str = today.strftime('%Y-%m-%d')
+            dates_to_fetch = [today.strftime('%Y-%m-%d')]
+            if today.hour >= 21:
+                tomorrow_str = (today + timedelta(days=1)).strftime('%Y-%m-%d')
+                dates_to_fetch.append(tomorrow_str)
+                print(f"   📅 [BDL] After 9 PM — also fetching tomorrow: {tomorrow_str}")
         else:
             today = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=self.est_tz)
-        
-        # 1. Fetch games from BDL
-        games_resp = self.bdl.get_games(date=date_str)
-        bdl_games = games_resp.get('data', [])
-        
-        if not bdl_games:
-            print(f"   ⚠️  [BDL] No games found for {date_str}")
-            raise ValueError(f"BDL returned no games for {date_str}")
-        
-        print(f"   ✅ [BDL] Found {len(bdl_games)} games")
-        
-        # 2. Fetch odds from BDL
-        odds_resp = self.bdl.get_odds(date=date_str)
-        
-        # Group odds by game_id, prefer FanDuel > DraftKings > BetMGM > Caesars > others
-        vendor_priority = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'bovada', 'pinnacle', 'polymarket', 'kalshi']
-        
-        game_odds = {}
-        for odd in odds_resp:
-            game_id = odd.get('game_id')
-            if not game_id:
-                continue
-            vendor = odd.get('vendor', '').lower()
-            if game_id not in game_odds:
-                game_odds[game_id] = odd  # First vendor
-            else:
-                # Check if current vendor has higher priority
-                current_vendor = game_odds[game_id].get('vendor', '').lower()
-                current_idx = vendor_priority.index(current_vendor) if current_vendor in vendor_priority else 999
-                new_idx = vendor_priority.index(vendor) if vendor in vendor_priority else 999
-                if new_idx < current_idx:
+            dates_to_fetch = [date_str]
+
+        # B4: Game line vendor priority — prediction markets (polymarket, kalshi) removed.
+        # They have no NBA game lines; reserved for Ludi Lens web app when implemented.
+        vendor_priority = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'bovada', 'pinnacle']
+
+        # Fetch games + odds across all dates in the window
+        bdl_games = []
+        game_odds = {}  # {game_id: best_odds_entry via vendor_priority}
+
+        for fetch_date in dates_to_fetch:
+            # 1. Fetch games
+            g_resp = self.bdl.get_games(date=fetch_date)
+            bdl_games.extend(g_resp.get('data', []))
+
+            # 2. Fetch odds, select best vendor per game
+            o_resp = self.bdl.get_odds(date=fetch_date)
+            for odd in o_resp:
+                game_id = odd.get('game_id')
+                if not game_id:
+                    continue
+                vendor = odd.get('vendor', '').lower()
+                if game_id not in game_odds:
                     game_odds[game_id] = odd
+                else:
+                    current_vendor = game_odds[game_id].get('vendor', '').lower()
+                    current_idx = vendor_priority.index(current_vendor) if current_vendor in vendor_priority else 999
+                    new_idx = vendor_priority.index(vendor) if vendor in vendor_priority else 999
+                    if new_idx < current_idx:
+                        game_odds[game_id] = odd
+
+        if not bdl_games:
+            print(f"   ⚠️  [BDL] No games found for {', '.join(dates_to_fetch)}")
+            raise ValueError(f"BDL returned no games for {', '.join(dates_to_fetch)}")
+
+        print(f"   ✅ [BDL] Found {len(bdl_games)} games across {len(dates_to_fetch)} date(s)")
         
         # 3. Process each game
         display_list = []
@@ -402,14 +411,22 @@ class Gatekeeper:
         No player props available from ESPN — props must be skipped in this mode.
         """
         from utils.espn_client import ESPNClient
-        import sqlite3
 
         print(f"   📡 [ESPN] Fetching DraftKings game lines from ESPN pickcenter...")
 
-        conn = sqlite3.connect('ludi.db')
+        # B2: 9 PM EST cutover — also fetch tomorrow's slate for early research
+        _est_now = datetime.now(self.est_tz)
+        dates_to_fetch_espn = [_est_now.strftime('%Y%m%d')]  # ESPN uses YYYYMMDD format
+        if _est_now.hour >= 21:
+            tomorrow_espn = (_est_now + timedelta(days=1)).strftime('%Y%m%d')
+            dates_to_fetch_espn.append(tomorrow_espn)
+            print(f"   📅 [ESPN] After 9 PM — also fetching tomorrow: {tomorrow_espn}")
+
         client = ESPNClient()
-        scoreboard = client.get_scoreboard()  # handles own DB connection for team mapping
-        conn.close()
+        scoreboard = {}
+        for espn_date in dates_to_fetch_espn:
+            day_board = client.get_scoreboard(date_str=espn_date)
+            scoreboard.update(day_board)  # merge; later date's games don't overwrite today's
 
         if not scoreboard:
             print(f"   ⚠️  [ESPN] No scoreboard data returned")
@@ -422,11 +439,13 @@ class Gatekeeper:
                 home_abbr = lines.get('home_abbr', '')
                 away_abbr = lines.get('away_abbr', '')
                 ref_data = self.zebras.get_game_impact(home_abbr)
+                # B3: Use parsed start_time from ESPN competition.date (may be None if unavailable)
+                espn_start_time = lines.get('start_time')
                 self.games[game_key] = {
                     'matchup': f"{away_abbr} @ {home_abbr}",
                     'home': home_abbr,
                     'away': away_abbr,
-                    'start_time': None,
+                    'start_time': espn_start_time,  # B3: was always None; now uses ESPN competition.date
                     'vegas': {},
                     'props': {},
                     'archetypes': {
