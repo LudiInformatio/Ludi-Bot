@@ -68,7 +68,19 @@ class PerplexityClient:
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json={
                     "model": "sonar",
-                    "messages": [{"role": "user", "content": query}],
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are an NBA sports news analyst. Focus on official team injury reports, "
+                                "head coach statements, and credentialed beat reporters. "
+                                "When summarizing injury news, include: player name, injury type, "
+                                "game availability tonight, and expected timeline if mentioned. "
+                                "Be concise and factual — no speculation."
+                            )
+                        },
+                        {"role": "user", "content": query}
+                    ],
                     "search_recency_filter": recency_filter,
                     "max_tokens": 200
                 },

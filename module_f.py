@@ -124,7 +124,7 @@ def _sanitize_archetype(raw: str) -> str:
     return _LEGACY_ARCHETYPE_MAP.get(arch, 'GENERALIST')
 
 
-def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str) -> str:
+def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str, games_since_return: int = None) -> str:
     """Phase 8.24 — Classify primary edge driver for bet labeling."""
     scenario_str = (scenario or '').upper()
     note_str = ' | '.join(note_elements).lower() if note_elements else ''
@@ -133,6 +133,14 @@ def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str)
     # Injury-Vacuum: beneficiary scenario or usage vacuum
     if 'WITHOUT' in scenario_str or 'beneficiary' in note_str or 'usage_vacuum' in tags_str:
         return 'Injury-Vacuum'
+
+    # Injury return ramp-up (Module C G3) — players returning from 7+ day absence
+    # Check both parameter and dict-style lookup for flexibility
+    gsr = games_since_return
+    if gsr is None:
+        gsr = note_elements[0].get('games_since_return') if note_elements and isinstance(note_elements[0], dict) else None
+    if gsr and int(gsr) <= 4:
+        return 'Injury-Return'
 
     # Hot-Streak: explicit streak signal in tags or note
     if 'hot_streak' in tags_str or 'streak' in note_str:
@@ -549,7 +557,8 @@ class LudiReporter:
                                         'edge_type': _classify_edge_type(  # Phase 8.24: Edge driver label
                                             p.get('scenario', 'BASE'),
                                             note_elements,
-                                            tags_formatted
+                                            tags_formatted,
+                                            p.get('games_since_return')
                                         ),
                                         'referee_impact': ref_pace,
                                         'blowout_modifier': round(blowout_mult, 3),

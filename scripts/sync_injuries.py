@@ -597,16 +597,17 @@ class InjurySync:
                     onset_date = datetime.now().strftime('%Y-%m-%d')
 
                 if should_insert and not self.dry_run:
-                    # Dedup guard: skip if identical (player, status, date) already exists today
+                    # Dedup guard: skip if same player already recorded today (any status)
                     # Prevents the Naji Marshall 7-row problem from recurring
+                    # Note: removed status= from WHERE to catch same-player/different-injury-type duplicates
                     _existing = cursor.execute('''
                         SELECT id FROM player_injuries
-                        WHERE player_name = ? AND status = ? AND DATE(snapshot_time) = DATE('now')
+                        WHERE player_name = ? AND DATE(snapshot_time) = DATE('now')
                           AND resolved_at IS NULL
                         LIMIT 1
-                    ''', (player_name, new_status)).fetchone()
+                    ''', (player_name,)).fetchone()
                     if _existing:
-                        self._log(f"  ⏭️  Dedup skip: {player_name} ({new_status}) already recorded today")
+                        self._log(f"  ⏭️  Dedup skip: {player_name} already recorded today")
                         should_insert = False
 
                 if should_insert and not self.dry_run:
@@ -856,6 +857,11 @@ def main():
         print("\n⚠️  DRY RUN - No changes saved to database")
 
     print()
+    print("Step 6: Auto-resolving ghost injuries (players active in last 3 days)...")
+    syncer = InjurySync(verbose=args.verbose, dry_run=args.dry_run)
+    _auto_resolve_active_players(syncer._get_conn())
+
+    print()
     print("✅ Sync complete!")
 
 
@@ -935,6 +941,31 @@ def auto_promote_staging_to_canonical(syncer) -> int:
     except Exception as e:
         print(f"   ⚠️ Auto-promotion error: {e}")
         return 0
+
+
+def _auto_resolve_active_players(conn):
+    """Auto-resolve injuries where player logged 10+ min in last 3 game days.
+    Called at end of sync_injuries() to fix ghost injuries from stale Tank01 data."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE player_injuries
+            SET resolved_at = datetime('now')
+            WHERE resolved_at IS NULL
+              AND status NOT IN ('ACTIVE', 'PROBABLE')
+              AND LOWER(player_name) IN (
+                  SELECT LOWER(player_name)
+                  FROM player_game_logs
+                  WHERE game_date >= date('now', '-3 days')
+                    AND minutes >= 10
+              )
+        """)
+        count = cursor.rowcount
+        if count > 0:
+            print(f"   [INJURIES] Auto-resolved {count} ghost injuries (active in last 3 days)")
+        conn.commit()
+    except Exception as e:
+        print(f"   ⚠️ Auto-resolve error: {e}")
 
 
 if __name__ == "__main__":

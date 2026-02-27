@@ -193,7 +193,16 @@ LeBron returns from a 3-game calf injury absence with fresh legs. Against Boston
 INJURY_BLURB_SYSTEM = """You are an NBA injury analyst for a sports betting model.
 Your job: extract structured data from raw injury news blurbs.
 Focus on TONIGHT's game availability — not long-term prognosis.
-Return ONLY a valid JSON object. No explanation, no markdown."""
+Return ONLY a valid JSON object. No explanation, no markdown.
+
+Severity guide (critical for bet edge calculation):
+- "minor": player expected to play tonight with no restriction (status = PROBABLE/ACTIVE)
+- "moderate": player is game-time decision or on minutes limit (status = GTD/DOUBTFUL)
+- "severe": player CANNOT play tonight (status = OUT)
+- "non_injury": trade adjustment, rest/load management, or no injury present
+
+If the blurb is vague, contains no injury info, or is ambiguous — set tonight_available to "uncertain" and severity to "minor".
+If blurb date is >3 days before today (blurb_is_stale=true), do not infer tonight's availability from it."""
 
 INJURY_BLURB_PARSE_PROMPT = """Parse this NBA injury report into structured JSON.
 
@@ -219,6 +228,14 @@ Blurb: "Feb 13: Marshall has been ruled out for the rest of Thursday's game due 
 Player: Naji Marshall
 Output: {{"body_part": "foot", "severity": "moderate", "games_out_estimate": "1-2 games", "context": "mid_game_exit", "minutes_risk": false, "tonight_available": false}}
 
+Blurb: "Curry (rest) will sit out Sunday's game as part of his planned load management schedule"
+Player: Stephen Curry
+Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1 game", "context": "rest", "minutes_risk": false, "tonight_available": false, "blurb_is_stale": false}}
+
+Blurb: "Mitchell is dealing with some soreness and his status will be updated closer to game time"
+Player: Donovan Mitchell
+Output: {{"body_part": null, "severity": "minor", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": false, "tonight_available": "uncertain", "blurb_is_stale": false}}
+
 === YOUR TASK ===
 
 Today's date: {today_date}
@@ -239,6 +256,47 @@ Fields:
 - minutes_risk: true if likely on minutes restriction even if active, false otherwise
 - tonight_available: true | false | "uncertain"
 - blurb_is_stale: true if blurb date is more than 3 days before today, false otherwise
+
+Return JSON only."""
+
+# ------------------------------------------------------------------
+# Module D — News Catalyst Detection (Non-Injury News)
+# Detects relevant non-injury news: rotation changes, minutes limits,
+# motivation/revenge signals that affect prop edges.
+# ------------------------------------------------------------------
+
+NEWS_CATALYST_SYSTEM = """You are an NBA sports betting news analyst.
+Your job: classify whether a news snippet contains RELEVANT information for TONIGHT's player props.
+Relevant = direct impact on minutes, usage, or stat production tonight.
+Irrelevant = trades, contracts, team chemistry, off-court news.
+Return ONLY valid JSON. No explanation."""
+
+NEWS_CATALYST_PROMPT = """Player: {player_name} | Team: {team} | Opponent: {opponent}
+News snippet: {news_text}
+
+Classify this news snippet's betting relevance for tonight's game.
+
+Output JSON:
+{{
+  "is_relevant": true | false,
+  "catalyst_type": "rotation" | "minutes_limit" | "motivation" | "lineup_change" | "return_absence" | "none",
+  "signal": "one-sentence summary of the betting implication",
+  "bet_direction": "OVER" | "UNDER" | "neutral",
+  "confidence": 0.0-1.0
+}}
+
+Examples:
+News: "Coach says {player_name} will move to the starting lineup tonight against {opponent}"
+Output: {{"is_relevant": true, "catalyst_type": "lineup_change", "signal": "Moving to starter = +5-8 min bump", "bet_direction": "OVER", "confidence": 0.85}}
+
+News: "Coach plans to keep {player_name} around 25 minutes tonight as part of load management"
+Output: {{"is_relevant": true, "catalyst_type": "minutes_limit", "signal": "25-min cap reduces all volume props", "bet_direction": "UNDER", "confidence": 0.90}}
+
+News: "{player_name} says he's excited to play against his former team tonight"
+Output: {{"is_relevant": true, "catalyst_type": "motivation", "signal": "Revenge game — slight OVER lean", "bet_direction": "OVER", "confidence": 0.55}}
+
+News: "{player_name} signs extension with team"
+Output: {{"is_relevant": false, "catalyst_type": "none", "signal": "", "bet_direction": "neutral", "confidence": 0.0}}
 
 Return JSON only."""
 

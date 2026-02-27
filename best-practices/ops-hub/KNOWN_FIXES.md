@@ -5,6 +5,64 @@
 
 ---
 
+## 2026-02-27 — Module D Audit Sprint (LudiYak)
+
+### D1/G2: Haiku Empty-Response Guard (Correctness)
+
+- **Symptom**: `json.loads("")` ValueError — James Harden "Expecting value: line 1 column 1" errors in logs.
+- **Root Cause**: Haiku returns empty string when `description` field is empty or <10 chars. `json.loads("")` raises JSONDecodeError. Also `json.loads(None)` raises TypeError.
+- **Fix Applied**: `module_d.py _ai_parse_blurb()` (lines ~907-950):
+  - Added pre-call guard: `if not description or len(description.strip()) < 10: return {}`
+  - Added None/empty guard after API call: `if not result_text or not result_text.strip(): return {}`
+  - Added markdown code-fence strip: `if text.startswith('...'): text = '\n'.join(lines_list[1:-1])`
+- **Prevention**: Always guard before `json.loads()` with `if not result_text or not result_text.strip()`.
+
+---
+
+### B1: RSS DB Connection Batching (Performance)
+
+- **Symptom**: Up to 150 DB connections per RSS refresh cycle (per-item open/close).
+- **Root Cause**: `_upsert_news_staging()` opens sqlite3.connect() per RSS item inside loops.
+- **Fix Applied**: `module_d.py _upsert_news_staging()` — added optional `conn` parameter. Callers can pass pre-opened connection. Backward compatible: if conn=None, opens/closes internally.
+- **Prevention**: When function is called in loop, pass shared connection.
+
+---
+
+### G1: Ghost Injury Auto-Resolve (Data Quality)
+
+- **Symptom**: Players shown as OUT/DOUBTFUL who have active game logs (Naji Marshall, Tyler Herro with 130+ duplicate rows).
+- **Root Cause**: Tank01 keeps returning stale injured players. Resolve step only fires when player disappears from API list. Also dedup used 3-column key `(player_name, status, DATE)` allowing duplicates when injury_type changes.
+- **Fix Applied**: `scripts/sync_injuries.py`:
+  - Added `_auto_resolve_active_players()` function — UPDATE player_injuries SET resolved_at=now() WHERE player logged 10+ min in last 3 game_days
+  - Changed dedup from `(player_name, status, DATE)` to `(player_name, DATE)` only
+  - Added call to `_auto_resolve_active_players()` at end of main()
+- **Note**: Fix runs when sync_injuries.py executes (next scheduled run). Existing ghost rows will be cleaned up.
+
+---
+
+### G3: INJURY_RETURN Edge Type (Bet Analytics)
+
+- **Symptom**: Ramp-up players (returning from 7+ day absence) generate UNDER edges labeled "EDGE: Projection" — identical to normal projection bets, hiding ramp-up signal from post-hoc analysis.
+- **Root Cause**: Module C G3 ramp-up dampening existed but no edge type classification for it.
+- **Fix Applied**:
+  - `module_c.py run_simulation_batch()` — added `player['_games_since_return'] = games_back` when ramp-up fires (line ~427), added `GAMES_SINCE_RETURN` to sim_profile
+  - `main.py build_reporter_input()` — added pass-through: `'games_since_return': sim.get('GAMES_SINCE_RETURN')` (line ~467)
+  - `module_f.py _classify_edge_type()` — added new branch after Injury-Vacuum: `if games_since_return and int(games_since_return) <= 4: return 'Injury-Return'`
+- **Prevention**: When adding stat dampeners, always propagate signal metadata to edge classification.
+
+---
+
+### G4: Injury Timestamp Surfacing (Competitive Parity)
+
+- **Symptom**: Telegram cards show bare "OUT" with no freshness context. Competitors (Outlier, StraightBettin) surface timestamps.
+- **Root Cause**: `player_injuries.snapshot_time` exists in DB but not surfaced in output.
+- **Fix Applied**: `morning_brief.py`:
+  - Added `snapshot_time` to SELECT queries (lines ~689, ~697)
+  - Added `_format_injury_stamp()` helper function — formats as "OUT (updated 5:18 PM)" if <6h, "OUT (reported 5:18 PM)" if <36h, "OUT (as of Feb 25)" otherwise
+  - Updated injury line formatting to use helper (line ~725)
+
+---
+
 ## 2026-02-27 — Silent No-Op in module_a.py `fetch_team_archetypes()` (Agent Dict Key Bug)
 
 - **Symptom**: `archetypes['home_pace']`, `archetypes['home_def_rtg']`, `archetypes['home_ortg']` always 0 — team pace/DRtg data never populated despite successful DB queries.

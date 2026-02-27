@@ -17,7 +17,6 @@ from utils.mappings import TEAM_MAP, normalize_bdl_abbr
 
 # [PAID TIER] Import monitoring and retry utilities
 from utils.api_monitor import get_monitor
-from utils.api_helpers import retry_with_backoff
 
 # [NEW] BallDontLie Client
 from utils.bdl_client import BDLClient
@@ -29,6 +28,8 @@ from utils.player_id_resolver import PlayerIDResolver
 # LUDI INFORMATIO | MODULE D: THE YAK
 # V3.5 - FULL STATUS SPECTRUM (2025-26)
 # ==========================================
+
+INJURY_STALENESS_DAYS = 14  # Injuries older than this assumed resolved or season-ending
 
 class LudiYak:
     def __init__(self):
@@ -133,14 +134,21 @@ class LudiYak:
 
     def _upsert_news_staging(self, player_name: str, team_abbreviation: str, source: str,
                             headline: str, description: str, status_extracted: str, 
-                            confidence: float) -> None:
+                            confidence: float, conn=None) -> None:
         """
         Insert or update player_news_staging table for players discovered via RSS.
         Tracks rookies, two-ways, and call-ups not yet in canonical IDs.
+        
+        Args:
+            conn: Optional sqlite3 connection. If provided, uses it instead of opening
+                  a new connection. Caller is responsible for closing it.
         """
+        _close = False
         try:
-            db_path = getattr(config, 'DB_PATH', 'ludi.db')
-            conn = sqlite3.connect(db_path)
+            if conn is None:
+                db_path = getattr(config, 'DB_PATH', 'ludi.db')
+                conn = sqlite3.connect(db_path)
+                _close = True
             cursor = conn.cursor()
             
             now = datetime.now().isoformat()
@@ -178,10 +186,12 @@ class LudiYak:
                       status_extracted, confidence, now, now))
             
             conn.commit()
-            conn.close()
         except Exception as e:
             # Silent fail - don't break pipeline for staging issues
             pass
+        finally:
+            if _close and conn:
+                conn.close()
 
     def refresh_official_injuries(self):
         """Syncs with the NBA's 15-minute reporting cycle."""
@@ -641,6 +651,8 @@ class LudiYak:
                 print(f"   [YAK] Perplexity failed, falling back to DuckDuckGo: {e}")
 
         if not result["items"]:
+            # NOTE: DuckDuckGo is rate-limited and IP-blocked in CI. Perplexity (Phase 8.7) is primary.
+            # DDGS remains as emergency fallback only when PERPLEXITY_API_KEY is not configured.
             try:
                 results = DDGS().text(query, max_results=3, timelimit="w")
                 result = {"items": [{"snippet": r['body'], "link": r['href']} for r in results]}
@@ -695,6 +707,38 @@ class LudiYak:
                 aggregated_items.extend(res["items"])
         
         return {"items": aggregated_items}
+
+    def _check_news_catalyst(self, player_name, team, opponent, game_date=None):
+        """Fetch relevant non-injury news for a player and classify betting impact."""
+        query = f"{player_name} {team} vs {opponent} tonight lineup minutes rotation"
+        news_text = self.targeted_search(player_name, query)
+        if not news_text or not news_text.get('items'):
+            return None
+        
+        items = news_text.get('items', [])
+        if not items or len(items[0].get('snippet', '')) < 20:
+            return None
+        
+        news_snippet = items[0].get('snippet', '')[:500]
+        from utils.claude_prompts import NEWS_CATALYST_SYSTEM, NEWS_CATALYST_PROMPT
+        from utils.claude_client import get_claude_analysis, HAIKU_MODEL
+        prompt = NEWS_CATALYST_PROMPT.format(
+            player_name=player_name, team=team, opponent=opponent, news_text=news_snippet
+        )
+        result_text = get_claude_analysis(
+            prompt=prompt, system_prompt=NEWS_CATALYST_SYSTEM,
+            model=HAIKU_MODEL, temperature=0.0, max_tokens=120,
+            call_type='news_catalyst', player_name=player_name
+        )
+        if not result_text or not result_text.strip():
+            return None
+        try:
+            result = json.loads(result_text.strip())
+            if result.get('is_relevant') and result.get('confidence', 0) >= 0.6:
+                return result
+        except Exception:
+            pass
+        return None
     
     def get_team_schedule_context(self, team_name, target_date=None):
         """
@@ -800,6 +844,13 @@ class LudiYak:
         finally:
             conn.close()
     
+    # Source priority order (matches ORDER BY in DB query below):
+    #   1. ESPN — 15-30 min lag (sync_injuries_espn.py — fastest source)
+    #   2. Tank01 — 2-6 hr lag (primary official API)
+    #   3. BDL — 2-6 hr lag (fallback)
+    #   4. Other (RotoWire/RealGM RSS — corroboration only)
+    # Staleness: injuries > INJURY_STALENESS_DAYS days excluded (season-ender guard).
+    
     def get_player_status(self, player_name, team_name="NBA"):
         # DB-FIRST: Check player_injuries table before hitting any API.
         # player_injuries now has ESPN (15-30min lag) + BDL/Tank01 + RSS — more current than
@@ -809,13 +860,13 @@ class LudiYak:
         try:
             _db_path = getattr(config, 'DB_PATH', 'ludi.db')
             _conn = sqlite3.connect(_db_path, timeout=5)
-            _row = _conn.execute('''
+            _row = _conn.execute(f'''
                 SELECT status, injury_type, days_out, source
                 FROM player_injuries
                 WHERE LOWER(player_name) = LOWER(?)
                   AND resolved_at IS NULL
                   AND status NOT IN ('ACTIVE', 'PROBABLE')
-                  AND snapshot_time >= datetime('now', '-14 days')
+                  AND snapshot_time >= datetime('now', '-{INJURY_STALENESS_DAYS} days')
                 ORDER BY
                   CASE source WHEN 'ESPN' THEN 0 WHEN 'Tank01' THEN 1 WHEN 'BDL' THEN 2 ELSE 3 END,
                   snapshot_time DESC
@@ -904,7 +955,7 @@ class LudiYak:
 
         Returns dict with parsed fields, or {} on failure (caller falls through to keyword logic).
         """
-        if not description:
+        if not description or len(description.strip()) < 10:
             return {}
 
         try:
@@ -930,10 +981,18 @@ class LudiYak:
                 player_name=player_name,
             )
 
-            if not result_text:
+            # Guard 1: None or empty response (auth failure, API error, empty blurb)
+            if not result_text or not result_text.strip():
+                print(f"   [YAK] AI blurb no response for {player_name} — keyword fallback")
                 return {}
 
-            result = json.loads(result_text)
+            # Guard 2: strip markdown code fences if Haiku wrapped output
+            text = result_text.strip()
+            if text.startswith('```'):
+                lines_list = text.split('\n')
+                text = '\n'.join(lines_list[1:-1]).strip()
+
+            result = json.loads(text)
             return result
         except Exception as e:
             print(f"   [YAK] AI blurb parse failed for {player_name}: {e}")
@@ -1053,8 +1112,10 @@ class LudiYak:
 
     def get_injuries(self):
         """
-        Wrapper to return the full list of official injuries.
-        Fixes compatibility with documented usage in CLAUDE.md.
+        Returns dict of official injury statuses.
+        Key format: unidecode(player_name).replace('.','').replace(' ','').lower()
+        Example: 'Nikola Jokic' → 'nikolajokic', 'Joel Embiid' → 'joelembiid'
+        Callers must normalize lookup keys to this format.
         """
         self.refresh_official_injuries()
         return self.official_injuries

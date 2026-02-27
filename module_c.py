@@ -423,6 +423,8 @@ class LudiOracle:
                         player[stat] = round(player.get(stat, 0) * ramp, 1)
                     print(f"   >>> [Ramp-Up] {player.get('PLAYER_NAME')}: Game {games_back} back "
                           f"— all stats dampened to {ramp*100:.0f}%")
+                    # Track games_since_return for edge classification in Module F
+                    player['_games_since_return'] = games_back
 
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
@@ -480,7 +482,8 @@ class LudiOracle:
                     "PACE_MOD": round(player_mods['pace'], 3),
                     "REST": f"{player_days_rest}D",
                     "MIN": round(proj_min, 1),
-                    "MIN_CONF": min_conf
+                    "MIN_CONF": min_conf,
+                    "GAMES_SINCE_RETURN": player.get('_games_since_return')
                 })
 
                 simulated_results.append(sim_profile)

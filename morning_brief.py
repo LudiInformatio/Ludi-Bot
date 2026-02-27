@@ -27,6 +27,30 @@ from utils.trend_engine import get_player_trends, get_beneficiary_context, get_s
 from utils.time_utils import get_time_context, format_time_context_note
 from utils.player_id_resolver import resolve_canonical_name
 from utils.tag_classifier import calculate_streak_score  # C2: unified streak scorer
+
+
+def _format_injury_stamp(status, snapshot_time_str):
+    """Format injury status with timestamp: 'OUT (updated 5:18 PM)' or 'OUT (reported 5:18 PM)' or 'OUT (as of Feb 25)'"""
+    if not snapshot_time_str:
+        return status
+    try:
+        from zoneinfo import ZoneInfo
+        snap = datetime.datetime.fromisoformat(snapshot_time_str)
+        est_now = datetime.datetime.now(ZoneInfo('America/New_York'))
+        if snap.tzinfo is None:
+            snap = snap.replace(tzinfo=ZoneInfo('UTC'))
+        snap_est = snap.astimezone(ZoneInfo('America/New_York'))
+        hours_ago = (est_now - snap_est).total_seconds() / 3600
+        if hours_ago < 6:
+            return f"{status} (updated {snap_est.strftime('%-I:%M %p')})"
+        elif hours_ago < 36:
+            return f"{status} (reported {snap_est.strftime('%-I:%M %p')})"
+        else:
+            return f"{status} (as of {snap_est.strftime('%b %-d')})"
+    except Exception:
+        return status
+
+
 from utils.game_notes_cache import (
     load_game_cache, 
     write_game_cache, 
@@ -686,7 +710,7 @@ Return JSON only."""
                     # outs (Steven Adams 220d) don't consume Claude's 600-char injury budget.
                     cursor = conn.cursor()
                     cursor.execute("""
-                        SELECT player_name, status, days_out, injury_type, team_abbreviation
+                        SELECT player_name, status, days_out, injury_type, team_abbreviation, snapshot_time
                         FROM player_injuries
                         WHERE (team_abbreviation = ? OR team_abbreviation = ?)
                           AND resolved_at IS NULL
@@ -695,7 +719,7 @@ Return JSON only."""
                           AND (days_out IS NULL OR days_out < 75)
                         UNION
                         SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type,
-                               ci.team as team_abbreviation
+                               ci.team as team_abbreviation, pi.snapshot_time
                         FROM player_injuries pi
                         JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
                         WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
@@ -714,15 +738,17 @@ Return JSON only."""
                     for row in injuries:
                         pname, status, days_out, inj_type = row[0], row[1], row[2], row[3]
                         team_abbr = row[4] if len(row) > 4 else ""
+                        snapshot_time = row[5] if len(row) > 5 else None
                         severity = STATUS_SEVERITY.get(status, 0)
                         if pname not in best_injury or severity > STATUS_SEVERITY.get(best_injury[pname][0], 0):
-                            best_injury[pname] = (status, days_out, inj_type, team_abbr)
+                            best_injury[pname] = (status, days_out, inj_type, team_abbr, snapshot_time)
 
                     injury_lines = []
-                    for pname, (status, days_out, inj_type, team_abbr) in best_injury.items():
+                    for pname, (status, days_out, inj_type, team_abbr, snapshot_time) in best_injury.items():
                         # Include team label so Claude associates traded players with correct team
                         team_label = f" [{team_abbr}]" if team_abbr else ""
-                        injury_lines.append(f"{status}: {pname}{team_label} ({inj_type})")
+                        injury_label = _format_injury_stamp(status, snapshot_time)
+                        injury_lines.append(f"{injury_label}: {pname}{team_label} ({inj_type})")
                     injury_intel_block = "\n".join(injury_lines) if injury_lines else "No major injuries reported."
 
                     # 3b. Beneficiary context (Phase 8.15)

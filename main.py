@@ -463,7 +463,8 @@ class LudiOrchestrator:
                 # 'USG_PCT' (as %). Correct fix: sim.get('USG_PCT', 0) / 100.0 so Module E's
                 # is_star check + archetype calibration see vacuum-boosted usage in OUT scenarios.
                 'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0),
-                'opponent_stats': opponent_stats
+                'opponent_stats': opponent_stats,
+                'games_since_return': sim.get('GAMES_SINCE_RETURN')
             }
             
             # Map stats
