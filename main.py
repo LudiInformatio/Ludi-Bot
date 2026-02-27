@@ -459,6 +459,9 @@ class LudiOrchestrator:
                 },
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
                 'base_ast': sim.get('AST', 0), 'base_3pm': sim.get('FG3M', 0),
+                # TODO(main-audit): 'base_usg' key doesn't exist in sim_profile — Module C outputs
+                # 'USG_PCT' (as %). Correct fix: sim.get('USG_PCT', 0) / 100.0 so Module E's
+                # is_star check + archetype calibration see vacuum-boosted usage in OUT scenarios.
                 'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0),
                 'opponent_stats': opponent_stats
             }

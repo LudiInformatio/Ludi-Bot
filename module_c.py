@@ -8,8 +8,9 @@ import config
 
 # DB tables use 'YYYY-YY' format, NOT config.CURRENT_SEASON ('YYYY-YYYY')
 _DB_SEASON = '2025-26'
-# BDL player_season_averages_bdl uses integer year (season start year, e.g. 2025 = 2025-26)
-_BDL_SEASON_INT = 2025
+# BDL player_season_averages_bdl uses start-year integer (e.g. '2025-26' → 2025).
+# Derived from _DB_SEASON so only one constant needs updating at season rollover.
+_BDL_SEASON_INT = int(_DB_SEASON.split('-')[0])
 
 BASELINE_SHOT_QUALITY = 0.55   # League-average expected eFG% (PBP Stats)
 TEAM_TOTAL_MINUTES = 240       # 5 players x 48 minutes per game
@@ -42,12 +43,17 @@ Output sim_profile keys:
 
 
 class LudiOracle:
-    def __init__(self, sim_count=None):
+    def __init__(self, sim_count=None, season=None):
         self.sim_count = sim_count or config.SIM_COUNT
+        # Allow callers (backtest_model.py) to pass season='2024-25' for prior-year data.
+        # Defaults to the module-level constants so production code needs no changes.
+        self._db_season = season or _DB_SEASON
+        self._bdl_season_int = int(self._db_season.split('-')[0])
         print(f"\n{'='*40}")
         print("LUDI INFORMATIO: MODULE C (ORACLE V4.0) LIVE")
         print("   >>> Hybrid Engine: Normal (High-Vol) + Poisson (Rare)")
         print(f"   >>> Sim Count: {self.sim_count}")
+        print(f"   >>> Season: {self._db_season}")
         print(f"{'='*40}")
 
         self.db_path = config.DB_PATH
@@ -80,7 +86,7 @@ class LudiOracle:
             c = conn.cursor()
             c.execute(
                 "SELECT player_id, shot_quality_avg FROM player_shot_quality WHERE season = ?",
-                (_DB_SEASON,)
+                (self._db_season,)
             )
             rows = c.fetchall()
             conn.close()
@@ -196,7 +202,7 @@ class LudiOracle:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT player_id, min_dampener, data_confidence FROM player_foul_splits WHERE season = ?",
-                (_DB_SEASON,)
+                (self._db_season,)
             ).fetchall()
             conn.close()
             for row in rows:
@@ -241,7 +247,7 @@ class LudiOracle:
             c.execute("""
                 SELECT player_name, stats_json
                 FROM player_season_averages_bdl
-                WHERE category = 'general' AND stat_type = 'base' AND season = {_BDL_SEASON_INT}
+                WHERE category = 'general' AND stat_type = 'base' AND season = {self._bdl_season_int}
             """)
             for row in c.fetchall():
                 name = self._normalize_name(row[0])
