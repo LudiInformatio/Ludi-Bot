@@ -8,6 +8,8 @@ import config
 
 # DB tables use 'YYYY-YY' format, NOT config.CURRENT_SEASON ('YYYY-YYYY')
 _DB_SEASON = '2025-26'
+# BDL player_season_averages_bdl uses integer year (season start year, e.g. 2025 = 2025-26)
+_BDL_SEASON_INT = 2025
 
 BASELINE_SHOT_QUALITY = 0.55   # League-average expected eFG% (PBP Stats)
 TEAM_TOTAL_MINUTES = 240       # 5 players x 48 minutes per game
@@ -239,7 +241,7 @@ class LudiOracle:
             c.execute("""
                 SELECT player_name, stats_json
                 FROM player_season_averages_bdl
-                WHERE category = 'general' AND stat_type = 'base' AND season = 2025
+                WHERE category = 'general' AND stat_type = 'base' AND season = {_BDL_SEASON_INT}
             """)
             for row in c.fetchall():
                 name = self._normalize_name(row[0])
@@ -370,6 +372,10 @@ class LudiOracle:
             ref_whistle = ref_data.get('whistle_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_whistle', 1.0)
 
             base_pace = scenario.get('pace_factor', 1.0) * ref_pace
+            # NOTE: team_totals is computed from pre-blend stats. For thin-sample/returning
+            # players, G2/G3 adjustments (below) shift individual stats AFTER this sum.
+            # This means USG% (which divides individual FGA by team_totals) is slightly
+            # overstated for those players. Acceptable: USG% is not a primary bet market.
             team_totals = self._sum_team_projections(players, base_pace)
 
             for player in players:
