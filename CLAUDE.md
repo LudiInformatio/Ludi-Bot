@@ -146,7 +146,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 | Module | File | Class Name |
 |--------|------|------------|
 | A: Gatekeeper | `module_a.py` | `Gatekeeper` |
-| B: Engine | `module_b.py` | `print_sharp_box_score` |
+| B: Engine | `module_b.py` | `LudiEngine` |
 | C: Oracle | `module_c.py` | `LudiOracle` |
 | D: Yak | `module_d.py` | `LudiYak` |
 | E: Calibrator | `module_e.py` | `LudiCalibrator` |

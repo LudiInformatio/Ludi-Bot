@@ -29,10 +29,12 @@ The system uses a **sequential pipeline** where data flows through 9 specialized
                               |
                               v
 +-------------------------------------------------------------+
-|  MODULE B: Engine (Historical Analysis)                     |
-|  - Loads player game logs from ludi.db                      |
-|  - Calculates season avg, L5, L10 trends                    |
-|  - Identifies "hot streaks" for reporting                   |
+|  MODULE B: Engine (Trend/Streak Consolidation)              |
+|  - Pre-loads player_trends + recent game values at init     |
+|  - Enriches player dicts with L5/L10/L15 averages         |
+|  - Calculates streak_score for HOT_STREAK tags             |
+|  - Computes hit_rates_by_market for Module F confidence    |
+|  - Persists opening prop lines to prop_line_snapshots       |
 +-----------------------------+-------------------------------+
                               |
                               v

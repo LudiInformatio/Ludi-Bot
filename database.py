@@ -10,6 +10,7 @@ class LudiHistorian:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
         self._initialize_db()
+        self._ensure_prop_line_snapshots()
         self.resolver = PlayerIDResolver(db_path=db_path)
 
     def _get_conn(self):
@@ -1543,6 +1544,63 @@ class LudiHistorian:
         # print("✅ Ludi Memory (Database) initialized successfully.")
 
     # -------------------------------------------------------------------------
+    # Module B (LudiEngine) - Line History Table
+    # Added Feb 27, 2026 - Tracks opening/closing/actual lifecycle for all prop lines
+    def _ensure_prop_line_snapshots(self):
+        """Create prop_line_snapshots table if it doesn't exist."""
+        conn = self._get_conn()
+        c = conn.cursor()
+        
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS prop_line_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_date TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                player_id TEXT,
+                stat_category TEXT NOT NULL,
+                opening_line REAL NOT NULL,
+                opening_odds_over INTEGER,
+                opening_odds_under INTEGER,
+                opening_bookmaker TEXT,
+                vendor_count INTEGER DEFAULT 1,
+                source_quality TEXT,
+                closing_line REAL,
+                closing_odds_over INTEGER,
+                closing_odds_under INTEGER,
+                closing_bookmaker TEXT,
+                closing_captured_at TEXT,
+                actual_value REAL,
+                actual_hit_over INTEGER,
+                minutes_played REAL,
+                team TEXT,
+                opponent TEXT,
+                captured_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                settled_at TEXT,
+                UNIQUE(game_date, player_name, stat_category)
+            )
+        ''')
+        
+        # Create indexes if they don't exist
+        try:
+            c.execute('''
+                CREATE INDEX IF NOT EXISTS idx_prop_snapshots_player_stat
+                ON prop_line_snapshots(player_name, stat_category)
+            ''')
+        except Exception:
+            pass
+        
+        try:
+            c.execute('''
+                CREATE INDEX IF NOT EXISTS idx_prop_snapshots_date
+                ON prop_line_snapshots(game_date)
+            ''')
+        except Exception:
+            pass
+        
+        conn.commit()
+        conn.close()
+
+    # -------------------------------------------------------------------------
     # ORPHAN TABLES (created by migrations or scripts — NOT in CREATE TABLE above)
     # Sprint 8 DB Schema Audit (Feb 2026): 37 tables in database.py + 16 orphans = 53+ documented.
     # Each orphan is owned by the script/migration that creates it.
@@ -1580,6 +1638,9 @@ class LudiHistorian:
     #   player_canonical_ids      — ID mapping table (559+ rows); CREATE TABLE restored Feb 24 2026
     #   canonical_teams           — 30-team BDL/Tank01/ESPN ID crosswalk; added Feb 24 2026
     #   claude_analysis_log       — Phase 8.23 Layer 1 feedback loop; added Feb 25 2026
+    #
+    # Source: Module B (LudiEngine) - Line History
+    #   prop_line_snapshots      — Opening/closing/actual lifecycle for all prop lines; added Feb 27 2026
     #
     # Unresolved (referenced in production but CREATE TABLE source not found):
     #   players_archived          — Referenced in migration_enable.sql; presumed manual creation

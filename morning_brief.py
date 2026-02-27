@@ -363,59 +363,6 @@ class MorningBriefEngine:
         conn.execute("PRAGMA journal_mode=WAL;")
         return conn
 
-    def _get_l10_for_spotlight(self, conn, player_name: str, stat_col: str, line: float) -> dict:
-        """Returns {'avg': float, 'hit_rate': float} from player_game_logs last 10 games."""
-        stat_col_map = {
-            'PTS': 'pts', 'REB': 'reb', 'AST': 'ast',
-            '3PM': 'fg3m', 'BLK': 'blk', 'STL': 'stl', 'TOV': 'tov',
-        }
-        db_col = stat_col_map.get(stat_col.upper())
-        if not db_col:
-            return {'avg': 0, 'hit_rate': 0}
-            
-        try:
-            # Resolve to canonical name before lookup so accented names match
-            # (e.g. 'Nikola Jokic' from bet_recommendations → 'Nikola Jokić' in players table)
-            canonical_name = resolve_canonical_name(conn, player_name)
-            cursor = conn.cursor()
-            cursor.execute("SELECT player_id FROM players WHERE name = ? LIMIT 1", (canonical_name,))
-            pid_row = cursor.fetchone()
-
-            if not pid_row:
-                return {'avg': 0, 'hit_rate': 0}
-                
-            player_id = pid_row[0]
-            
-            # Query last 10 games from player_game_logs
-            # Note: Checking if player_game_logs exists and has date column. 
-            # Assuming standard schema: player_id, game_date, [stats]
-            query = f"""
-                SELECT {db_col} 
-                FROM player_game_logs 
-                WHERE player_id = ? 
-                ORDER BY game_date DESC 
-                LIMIT 10
-            """
-            cursor.execute(query, (player_id,))
-            rows = cursor.fetchall()
-            
-            if not rows:
-                return {'avg': 0, 'hit_rate': 0}
-                
-            values = [r[0] for r in rows if r[0] is not None]
-            if not values:
-                return {'avg': 0, 'hit_rate': 0}
-                
-            avg_val = sum(values) / len(values)
-            hits = sum(1 for v in values if v > line)
-            hit_rate = (hits / len(values)) * 100
-            
-            return {'avg': round(avg_val, 1), 'hit_rate': round(hit_rate, 1)}
-            
-        except Exception as e:
-            print(f"⚠️ Error getting L10 for {player_name}: {e}")
-            return {'avg': 0, 'hit_rate': 0}
-
     def run(self):
         """
         Main Execution Flow:

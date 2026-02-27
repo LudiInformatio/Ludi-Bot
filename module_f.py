@@ -405,6 +405,7 @@ class LudiReporter:
                                 model_prob=model_prob,
                                 player_name=p['name'],
                                 line=line,
+                                hit_rates_by_market=p.get('hit_rates_by_market'),  # From Module B
                             )
 
                             # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
@@ -754,13 +755,15 @@ class LudiReporter:
         return result
 
     def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction='',
-                                   model_prob=0.5, player_name='', line=0.0):
+                                   model_prob=0.5, player_name='', line=0.0,
+                                   hit_rates_by_market=None):
         """
         Composite confidence tier using edge + historical performance signals.
 
         Factors:
         1. True edge % (primary — determines base tier)
         2. Stat-direction performance (±1 tier for "gold combos")
+        3. Hit rate confirmation modifier (from Module B pre-computed data or DB fallback)
 
         Data source: Jan 7-29, 2026 backtest (6,344 bets, +292u, 55.7% WR)
         See: reports/CALIBRATION_RECOMMENDATIONS_FEB2.md
@@ -810,7 +813,18 @@ class LudiReporter:
         # -1 tier when score <= 0.35 (cold player fighting history despite model edge).
         confirmation_score = 0.5  # Neutral default if no player/line data provided
         if player_name and line > 0:
-            l5_hr, l10_hr = self._get_hit_rates_vs_line(player_name, stat_key, line, bet_direction)
+            # Prefer Module B pre-computed data (zero DB cost)
+            l5_hr, l10_hr = 0.5, 0.5  # Default fallback
+            stat_key_norm = stat_key.lower()
+            hr = (hit_rates_by_market or {}).get(stat_key_norm)
+            if hr:
+                # Use pre-computed hit rates from Module B
+                direction_key = f'{bet_direction}_l5'
+                l5_hr = hr.get(direction_key, 0.5)
+                l10_hr = hr.get(direction_key.replace('_l5', '_l10'), 0.5)
+            else:
+                # Fallback: inline DB query (fires only if Module B enrichment missed this player)
+                l5_hr, l10_hr = self._get_hit_rates_vs_line(player_name, stat_key, line, bet_direction)
             confirmation_score = round(0.40 * l5_hr + 0.35 * l10_hr + 0.25 * model_prob, 3)
             if confirmation_score >= 0.65:
                 tier_score += 1

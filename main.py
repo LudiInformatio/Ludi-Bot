@@ -17,7 +17,7 @@ from utils.daily_lock import get_target_config, filter_slate_by_config, apply_fi
 try:
     import config
     from module_a import Gatekeeper        # The Gatekeeper (Lines)
-    from module_b import print_sharp_box_score  # Display function (Stats/Trends)
+    from module_b import LudiEngine  # The Engine (Trends/Streaks/Hit Rates)
     from module_c import LudiOracle        # The Simulator (Math)
     from module_d import LudiYak           # The Yak (News)
     from module_e import LudiCalibrator    # The Calibrator (Adjustments)
@@ -60,6 +60,7 @@ class LudiOrchestrator:
             debug_mode = False
         self.gate = Gatekeeper()
         self.historian = LudiHistorian()
+        self.engine = LudiEngine()  # Pre-loads trends, game values, name map
         self.sim = LudiOracle()
         self.yak = LudiYak()
         self.calib = LudiCalibrator(debug_log=debug_mode)
@@ -509,6 +510,9 @@ class LudiOrchestrator:
                     hit_rates = self.sim.calculate_hit_rates(sim, lines_for_calc)
                     p_dict['sim_hit_rates'] = hit_rates  # e.g. {'pts': 0.62, 'reb': 0.55}
                 
+                # Module B: Enrich with trends, hit rates, streak scores
+                self.engine.enrich_player(p_dict, props_fmt)
+                
                 yak = {'status': sim.get('status', 'ACTIVE'), 'note': sim.get('injury_note', '')}
                 players.append(self.calib.calibrate_player(p_dict, yak))
 
@@ -595,6 +599,11 @@ class LudiOrchestrator:
         # STEP 2: FETCH PROPS
         self.gate.fetch_comprehensive_props(limit_games=len(self.gate.games))
         print("✅ Props loaded.")
+
+        # STEP 2.5: Snapshot opening lines for line history (Module B)
+        from datetime import datetime
+        game_date = datetime.now().strftime('%Y-%m-%d')
+        self.engine.snapshot_opening_lines(self.gate.games, game_date)
 
         all_scenarios = []
         
