@@ -112,6 +112,9 @@ class BetLogger:
                 referee_impact REAL,
                 blowout_modifier REAL,
 
+                -- Phase C1: Hit rate confirmation score (0.40*L5_hr + 0.35*L10_hr + 0.25*model_prob)
+                confirmation_score REAL,
+
                 -- Outcome tracking (NULL until settled)
                 outcome TEXT,
                 actual_result REAL,
@@ -251,7 +254,7 @@ class BetLogger:
             'spread', 'total', 'player_id', 'player_name', 'team', 'opponent',
             'archetype', 'status', 'scenario', 'stat_category', 'bet_side', 'line',
             'odds_over', 'odds_under', 'projection', 'fair_prob', 'model_prob',
-            'true_edge', 'ev', 'units', 'confidence_tier', 'note', 'tags',
+            'true_edge', 'ev', 'units', 'confidence_tier', 'confirmation_score', 'note', 'tags',
             'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker'
         ]
 

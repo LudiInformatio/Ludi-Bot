@@ -187,6 +187,10 @@ class LudiReporter:
         # When sample_n >= 200, live calibration_gap + RMSE override hardcoded constants.
         # Falls back to _STAT_EDGE_CALIBRATION / _STAT_RMSE when cache is missing or thin.
         self._stat_conf = self._load_stat_confidence_cache()
+
+        # C1: Hit rate cache — {(player_name, stat_key, line, direction): (l5_hr, l10_hr)}
+        # Populated lazily during generate_report(); avoids duplicate DB queries per player.
+        self._hit_rate_cache = {}
         live_count = sum(1 for v in self._stat_conf.values() if v.get('sample_n', 0) >= 200)
         print(f"✅ Stat confidence cache: {len(self._stat_conf)} entries ({live_count} with live calibration)")
 
@@ -392,11 +396,15 @@ class LudiReporter:
                                 ev_flag = "📊 EXCEPTIONAL"   # 15-25% → strong edge
 
                             # V5.2: Composite confidence tier (edge + gold combos)
-                            confidence_tier = self._calculate_confidence_tier(
+                            # C1: Returns (tier_name, confirmation_score) tuple
+                            confidence_tier, confirmation_score = self._calculate_confidence_tier(
                                 edge=edge,
                                 archetype=p.get('archetype', ''),
                                 stat_key=stat_key,
-                                bet_direction=bet_direction
+                                bet_direction=bet_direction,
+                                model_prob=model_prob,
+                                player_name=p['name'],
+                                line=line,
                             )
 
                             # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
@@ -534,6 +542,7 @@ class LudiReporter:
                                         'ev': ev_raw,   # Store raw EV in DB (not capped)
                                         'units': units,
                                         'confidence_tier': confidence_tier,
+                                        'confirmation_score': round(confirmation_score, 3),  # C1
                                         'note': " | ".join(note_elements),
                                         'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
                                         'edge_type': _classify_edge_type(  # Phase 8.24: Edge driver label
@@ -679,7 +688,73 @@ class LudiReporter:
         }
         return p.get(m.get(k, ''), 0)
 
-    def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction=''):
+    # C1: stat_key → SQL expression mapping for player_game_logs hit rate queries
+    _STAT_COL_MAP = {
+        'points': 'pts', 'rebounds': 'reb', 'assists': 'ast',
+        'steals': 'stl', 'blocks': 'blk', 'turnovers': 'tov',
+        'threes': 'fg3m',
+        'pra': 'pts + reb + ast', 'pa': 'pts + ast',
+        'pr': 'pts + reb', 'ra': 'reb + ast',
+        'fg': 'fgm', 'fga': 'fga', 'fta': 'fta', 'ftm': 'ftm',
+        'oreb': 'oreb', 'dreb': 'dreb', 'pf': 'pf',
+    }
+
+    def _get_hit_rates_vs_line(self, player_name: str, stat_key: str, line: float, direction: str):
+        """Calculate L5 and L10 historical hit rates vs a specific line.
+
+        C1: Used to build confirmation_score for tier promotion/demotion.
+        Opens its own DB connection — called at most ~80 times per pipeline run.
+        Results cached in self._hit_rate_cache to avoid duplicate queries.
+
+        Returns:
+            (l5_hit_rate, l10_hit_rate) — floats 0.0-1.0.
+            Returns (0.5, 0.5) on any error (neutral — no modifier applied).
+        """
+        cache_key = (player_name, stat_key, line, direction)
+        if cache_key in self._hit_rate_cache:
+            return self._hit_rate_cache[cache_key]
+
+        stat_expr = self._STAT_COL_MAP.get(stat_key.lower())
+        if not stat_expr:
+            self._hit_rate_cache[cache_key] = (0.5, 0.5)
+            return (0.5, 0.5)
+
+        try:
+            import sqlite3
+            conn = sqlite3.connect(config.DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute(f"""
+                SELECT {stat_expr} AS stat_val
+                FROM player_game_logs
+                WHERE player_name = ? AND minutes > 0
+                ORDER BY game_date DESC
+                LIMIT 10
+            """, (player_name,))
+            rows = [r[0] for r in cursor.fetchall() if r[0] is not None]
+            conn.close()
+        except Exception:
+            self._hit_rate_cache[cache_key] = (0.5, 0.5)
+            return (0.5, 0.5)
+
+        if not rows:
+            self._hit_rate_cache[cache_key] = (0.5, 0.5)
+            return (0.5, 0.5)
+
+        def _hit(val):
+            """True if this game beats the line in the bet direction."""
+            return (val > line) if direction == 'over' else (val <= line)
+
+        l10_hits = sum(1 for v in rows if _hit(v))
+        l10_hr = l10_hits / len(rows)
+        l5_rows = rows[:5]
+        l5_hr = sum(1 for v in l5_rows if _hit(v)) / len(l5_rows) if l5_rows else l10_hr
+
+        result = (round(l5_hr, 3), round(l10_hr, 3))
+        self._hit_rate_cache[cache_key] = result
+        return result
+
+    def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction='',
+                                   model_prob=0.5, player_name='', line=0.0):
         """
         Composite confidence tier using edge + historical performance signals.
 
@@ -728,6 +803,20 @@ class LudiReporter:
         if stat_dir in GOLD_COMBOS:
             tier_score += 1
 
+        # --- C1: Hit rate confirmation modifier ---
+        # confirmation_score blends recent form vs specific line with model probability.
+        # L5 (0.40) + L10 (0.35) + model_prob (0.25) — heavier weight on recent history.
+        # +1 tier when score >= 0.65 (hot player AND model sees structural edge).
+        # -1 tier when score <= 0.35 (cold player fighting history despite model edge).
+        confirmation_score = 0.5  # Neutral default if no player/line data provided
+        if player_name and line > 0:
+            l5_hr, l10_hr = self._get_hit_rates_vs_line(player_name, stat_key, line, bet_direction)
+            confirmation_score = round(0.40 * l5_hr + 0.35 * l10_hr + 0.25 * model_prob, 3)
+            if confirmation_score >= 0.65:
+                tier_score += 1
+            elif confirmation_score <= 0.35:
+                tier_score -= 1
+
         # Clamp to valid range [0, 3]
         tier_score = max(0, min(3, tier_score))
 
@@ -741,7 +830,7 @@ class LudiReporter:
             tier_score = 1
 
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
-        return TIER_NAMES[tier_score]
+        return TIER_NAMES[tier_score], confirmation_score  # C1: tuple (tier_name, confirmation_score)
 
     @staticmethod
     def _load_stat_confidence_cache() -> dict:

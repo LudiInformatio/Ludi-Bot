@@ -26,6 +26,7 @@ from utils.perplexity_client import PerplexityClient
 from utils.trend_engine import get_player_trends, get_beneficiary_context, get_stagger_context, format_trend_line, format_minutes_line, get_matchup_analysis
 from utils.time_utils import get_time_context, format_time_context_note
 from utils.player_id_resolver import resolve_canonical_name
+from utils.tag_classifier import calculate_streak_score  # C2: unified streak scorer
 from utils.game_notes_cache import (
     load_game_cache, 
     write_game_cache, 
@@ -75,7 +76,7 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
         return ""
 
     KEY_STATS = ('PTS', 'PRA', 'PA', 'PR', 'REB', 'AST', '3PM')
-    HOT_THRESH, COOL_THRESH = 2.5, -2.5
+    # C2: streak score ≥ 2 = HOT (label: ON FIRE=3, HOT=2), ≤ -2 = COOLING (COOLING=-2, ICE COLD=-3)
 
     try:
         cursor = conn.cursor()
@@ -109,13 +110,14 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
         """, tonight_teams)
         off_quality = {r[0]: r[1] for r in cursor.fetchall()}
 
-        # Player trends — all teams on tonight's slate, injury-filtered
+        # Player trends — C2: fetch multi-window averages for calculate_streak_score()
         cursor.execute(f"""
-            SELECT player_name, team_abbreviation, stat, trend_delta
+            SELECT player_name, team_abbreviation, stat,
+                   l7_avg, l10_avg, l15_avg, season_avg
             FROM player_trends
             WHERE team_abbreviation IN ({ph_t})
               AND stat IN ({ph_s})
-              AND trend_delta IS NOT NULL
+              AND season_avg IS NOT NULL AND season_avg > 0
               AND player_name NOT IN (
                   SELECT DISTINCT player_name FROM player_injuries
                   WHERE team_abbreviation IN ({ph_t})
@@ -123,7 +125,6 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
                     AND status IN ('OUT', 'DOUBTFUL')
                     AND snapshot_time >= datetime('now', '-14 days')
               )
-            ORDER BY ABS(trend_delta) DESC
         """, tonight_teams + list(KEY_STATS) + tonight_teams)
         rows = cursor.fetchall()
 
@@ -139,20 +140,26 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
         elif q == 'WEAK':
             cool_teams.append(team)
 
-    # Player hot/cool (one entry per player — strongest ABS(delta) stat wins)
-    hot_players, cool_players = [], []
-    seen = set()
-    for name, team, stat, delta in rows:
-        if name in seen:
+    # Player hot/cool — C2: use calculate_streak_score() with multi-window data
+    # One entry per player — best (highest abs score) stat wins
+    # Score labels: ON FIRE=+3, HOT=+2, COOLING=-2, ICE COLD=-3
+    _SCORE_LABELS = {3: "🔥 ON FIRE", 2: "🔥 HOT", -2: "❄️ COOLING", -3: "❄️ ICE COLD"}
+    _player_best: dict = {}  # name → (score, label_str)
+    for name, team, stat, l7_avg, l10_avg, l15_avg, season_avg in rows:
+        score = calculate_streak_score(l7_avg, l10_avg, l15_avg, season_avg)
+        if abs(score) < 2:
             continue
         short = name.split()[-1]
-        sign = "+" if delta > 0 else ""
-        if delta >= HOT_THRESH:
-            hot_players.append(f"{short} ({team}) {stat} {sign}{delta:.1f}")
-            seen.add(name)
-        elif delta <= COOL_THRESH:
-            cool_players.append(f"{short} ({team}) {stat} {delta:.1f}")
-            seen.add(name)
+        delta = (l7_avg or 0) - (season_avg or 0)
+        sign = "+" if delta >= 0 else ""
+        label_str = f"{short} ({team}) {stat} {sign}{delta:.1f}"
+        # Keep best absolute score per player across stats
+        prev_score, _ = _player_best.get(name, (0, ""))
+        if abs(score) > abs(prev_score):
+            _player_best[name] = (score, label_str)
+
+    hot_players = [lbl for sc, lbl in _player_best.values() if sc >= 2]
+    cool_players = [lbl for sc, lbl in _player_best.values() if sc <= -2]
 
     if not hot_teams and not cool_teams and not hot_players and not cool_players:
         return ""

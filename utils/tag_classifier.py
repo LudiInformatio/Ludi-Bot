@@ -10,6 +10,51 @@ import sqlite3
 from typing import Dict, List, Optional
 from utils.mappings import normalize_bdl_abbr
 
+
+def calculate_streak_score(
+    l5_avg: float,
+    l10_avg: float,
+    l15_avg: float,
+    season_avg: float,
+) -> int:
+    """
+    C2: Unified multi-window streak score. Returns -3 to +3.
+
+    Each window contributes +1 (hot) or -1 (cold) independently:
+      L5:  ±15% from season avg
+      L10: ±10% from season avg
+      L15: ±8%  from season avg
+
+    A score ≥ 2 = HOT_STREAK tag. Score ≤ -2 = cold label in morning brief.
+    Labels (morning brief): ON FIRE (+3), HOT (+2), COOLING (-2), ICE COLD (-3)
+    """
+    if not season_avg or season_avg <= 0:
+        return 0
+    score = 0
+    # L5 window
+    if l5_avg is not None:
+        pct = (l5_avg - season_avg) / season_avg
+        if pct >= 0.15:
+            score += 1
+        elif pct <= -0.15:
+            score -= 1
+    # L10 window
+    if l10_avg is not None:
+        pct = (l10_avg - season_avg) / season_avg
+        if pct >= 0.10:
+            score += 1
+        elif pct <= -0.10:
+            score -= 1
+    # L15 window
+    if l15_avg is not None:
+        pct = (l15_avg - season_avg) / season_avg
+        if pct >= 0.08:
+            score += 1
+        elif pct <= -0.08:
+            score -= 1
+    return score
+
+
 class TagClassifier:
     """
     Classifies betting recommendations into tags for filtering and analysis.
@@ -75,7 +120,7 @@ class TagClassifier:
         self.ARCHETYPE_RULES = {}
 
         # SCENARIO THRESHOLDS
-        self.HOT_STREAK_MULTIPLIER = 1.20  # L5 must be 20% above season avg
+        # C2: HOT_STREAK now uses calculate_streak_score() — score ≥ 2 triggers the tag
         self.BENEFICIARY_USAGE_THRESHOLD = 0.18  # Minimum usage to be considered key player
         self.HIGH_UNIT_THRESHOLD = 1.2  # For correlated SGP detection
 
@@ -211,29 +256,23 @@ class TagClassifier:
             if "MINUTES_LIMIT" not in tags:
                 tags.append("MINUTES_LIMIT")
 
-        # 4. HOT_STREAK TAG
-        # L5 performance significantly exceeds season baseline
-        # Requires L5 data for at least one major stat
+        # 4. HOT_STREAK TAG — C2: Unified multi-window scorer (score ≥ 2 = hot streak)
+        # Checks PTS, REB, AST independently; tags if any stat shows score ≥ 2
         try:
             hot_streak_detected = False
 
-            # Check PTS
-            l5_pts = player.get('L5_PTS', 0)
-            base_pts = player.get('base_pts', 0)
-            if base_pts > 0 and l5_pts >= base_pts * self.HOT_STREAK_MULTIPLIER:
-                hot_streak_detected = True
-
-            # Check REB
-            l5_reb = player.get('L5_REB', 0)
-            base_reb = player.get('base_reb', 0)
-            if base_reb > 0 and l5_reb >= base_reb * self.HOT_STREAK_MULTIPLIER:
-                hot_streak_detected = True
-
-            # Check AST
-            l5_ast = player.get('L5_AST', 0)
-            base_ast = player.get('base_ast', 0)
-            if base_ast > 0 and l5_ast >= base_ast * self.HOT_STREAK_MULTIPLIER:
-                hot_streak_detected = True
+            for (l5_key, l10_key, l15_key, base_key) in [
+                ('L5_PTS', 'L10_PTS', 'L15_PTS', 'base_pts'),
+                ('L5_REB', 'L10_REB', 'L15_REB', 'base_reb'),
+                ('L5_AST', 'L10_AST', 'L15_AST', 'base_ast'),
+            ]:
+                season_avg = player.get(base_key, 0) or 0
+                l5_avg = player.get(l5_key) or 0
+                l10_avg = player.get(l10_key) or 0
+                l15_avg = player.get(l15_key) or 0
+                if calculate_streak_score(l5_avg, l10_avg, l15_avg, season_avg) >= 2:
+                    hot_streak_detected = True
+                    break
 
             if hot_streak_detected:
                 tags.append("HOT_STREAK")

@@ -1335,6 +1335,12 @@ class LudiHistorian:
         except Exception:
             pass  # Column already exists — safe to ignore
 
+        # Migration guard: add confirmation_score for hit rate modifier (C1)
+        try:
+            c.execute("ALTER TABLE bet_recommendations ADD COLUMN confirmation_score REAL")
+        except Exception:
+            pass  # Column already exists — safe to ignore
+
         # -- Canonical ID staging table (auto-ingest missing IDs for review) --
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_canonical_ids_staging (
