@@ -14,6 +14,7 @@ from utils.player_id_resolver import PlayerIDResolver
 
 # BDL fallback for Module H
 from utils.bdl_client import _get_client
+from utils.mappings import normalize_bdl_abbr
 
 # =========================================================
 # LUDI INFORMATIO | MODULE H: THE HISTORIAN
@@ -843,7 +844,8 @@ class LudiHistorian:
                     if not isinstance(side, dict):
                         continue
                     
-                    team_abbr = side.get('team', {}).get('abbreviation', 'UNK')
+                    # F3: normalize BDL abbreviations (GS→GSW, NO→NOP, etc.) at write time
+                    team_abbr = normalize_bdl_abbr(side.get('team', {}).get('abbreviation', 'UNK'))
                     players = side.get("players", [])
                     
                     for player_entry in players:

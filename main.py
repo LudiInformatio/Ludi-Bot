@@ -75,22 +75,32 @@ class LudiOrchestrator:
         self.db_path = "ludi.db"
 
     def get_active_roster(self, team_abbr: str, limit: int = 8) -> List[Dict]:
-        """Query database for top N players by minutes, joined with PBP Shot Quality."""
+        """Query database for top N players by minutes, joined with PBP Shot Quality.
+        G1: Game-count window (last 25 played games) replaces calendar-day window.
+        Calendar windows shrink to 1-4 games during All-Star break/injuries — game-count is stable.
+        G2c: Returns GAMES_PLAYED count (row[21]) for Module C season-blend confidence weighting.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         query = '''
-            SELECT pgl.player_id, pgl.player_name, pgl.team_abbreviation, 
-                   AVG(pgl.pts), AVG(pgl.reb), AVG(pgl.ast), 
-                   AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta), 
-                   AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk), 
-                   AVG(pgl.tov), AVG(pgl.minutes), 
+            SELECT pgl.player_id, pgl.player_name, pgl.team_abbreviation,
+                   AVG(pgl.pts), AVG(pgl.reb), AVG(pgl.ast),
+                   AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta),
+                   AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk),
+                   AVG(pgl.tov), AVG(pgl.minutes),
                    MAX(psq.shot_quality_avg), MAX(psq.at_rim_frequency), MAX(psq.corner3_frequency),
                    CASE WHEN SUM(pgl.fga) > 0 THEN ROUND(1.0 * SUM(pgl.fgm) / SUM(pgl.fga), 4) ELSE 0.45 END,
                    CASE WHEN SUM(pgl.fg3a) > 0 THEN ROUND(1.0 * SUM(pgl.fg3m) / SUM(pgl.fg3a), 4) ELSE 0.35 END,
-                   CASE WHEN SUM(pgl.fta) > 0 THEN ROUND(1.0 * SUM(pgl.ftm) / SUM(pgl.fta), 4) ELSE 0.75 END
+                   CASE WHEN SUM(pgl.fta) > 0 THEN ROUND(1.0 * SUM(pgl.ftm) / SUM(pgl.fta), 4) ELSE 0.75 END,
+                   COUNT(pgl.player_id) as games_played
             FROM player_game_logs pgl
             LEFT JOIN player_season_quality psq ON pgl.player_id = psq.player_id AND psq.season = '2025-26'
-            WHERE pgl.team_abbreviation = ? AND pgl.game_date >= date('now', '-30 days')
+            WHERE pgl.team_abbreviation = ? AND pgl.minutes > 0
+              AND pgl.game_date IN (
+                  SELECT game_date FROM player_game_logs sub
+                  WHERE sub.player_id = pgl.player_id AND sub.minutes > 0
+                  ORDER BY game_date DESC LIMIT 25
+              )
             GROUP BY pgl.player_id, pgl.player_name, pgl.team_abbreviation
             HAVING COUNT(pgl.player_id) >= 3
             ORDER BY AVG(pgl.minutes) DESC LIMIT ?
@@ -103,7 +113,7 @@ class LudiOrchestrator:
         for row in rows:
             fga, fta, tov, mins = row[6] or 0, row[8] or 0, row[13] or 0, row[14] or 0
             base_usg = round(((fga + 0.44*fta + tov)/mins)/2.1, 3) if mins > 0 else 0
-            
+
             # Extract PBP Stats
             shot_quality = row[15] if row[15] is not None else 0.53  # League avg fallback
             at_rim_freq = row[16] if row[16] is not None else 0.0
@@ -120,6 +130,9 @@ class LudiOrchestrator:
                 'pbp_shot_quality': round(shot_quality, 3),
                 'pbp_rim_freq': round(at_rim_freq, 3),
                 'pbp_corner3_freq': round(corner3_freq, 3),
+                # G2c: game count for Module C season-baseline blend confidence
+                # <15 games → blend with season avg; ≥15 games → use recent data only
+                'GAMES_PLAYED': row[21] if row[21] is not None else 25,
                 # Sprint 3: starter context for Module C minutes projection
                 # Source: players.is_starter (1=starter, 0=bench, NULL=unknown)
                 'is_starter': None,  # populated below from players table

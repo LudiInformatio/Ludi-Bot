@@ -231,6 +231,55 @@
 
 ---
 
+## 2026-02-27 — Module C Audit: Projection Upgrades (G1-G3)
+
+- **Context**: Module C (`LudiOracle`) audit sprint. Calendar-day windows, thin-sample players, and returning injury players all produced undersampled projections.
+- **G1 — Calendar-day → game-count window** (`main.py:get_active_roster()`):
+  - **Problem**: `WHERE game_date >= date('now', '-30 days')` returns 1-4 games during All-Star breaks or injuries (77 players had ≤4 games in the 30d window pre-fix). Player averages become statistically noisy.
+  - **Fix**: Replaced with game-count subquery — last 25 played games per player. `WHERE game_date IN (SELECT game_date FROM player_game_logs sub WHERE sub.player_id = pgl.player_id AND sub.minutes > 0 ORDER BY game_date DESC LIMIT 25)`. Also added `GAMES_PLAYED` column (COUNT of rows) to the SELECT and player dict output for G2 confidence weighting.
+  - **Performance note**: Correlated subquery pattern with `player_game_logs` (10K+ rows) → acceptable at this scale. If table grows >100K rows, convert to CTE with `ROW_NUMBER()` (same pattern as module_c.py pre-load methods).
+- **G2 — Season baseline blend for thin-sample players** (`module_c.py:run_simulation_batch()`):
+  - **Problem**: Players with <15 recent games use a statistically unreliable average. SGA with 3 games showed PTS=28.0 vs true season avg 31.8 (3.8 delta).
+  - **Fix**: Added `_load_season_baselines()` pre-load from `player_season_averages_bdl`. In `run_simulation_batch()`, if `GAMES_PLAYED < 15`: blend recent avg with season baseline using `w = min(games_recent / 15.0, 1.0)`. At 3 games → SGA PTS becomes 31.0 (w=0.20). At 15+ games → w=1.0, pure recent data.
+  - **Data source**: `player_season_averages_bdl` table (`category='general'`, `stat_type='base'`, `season=2025`). Falls back gracefully if table empty.
+- **G3 — Injury return ramp-up detection** (`module_c.py`):
+  - **Problem**: Game 1 back from a 2-week absence treated identically to Game 50. Return-from-injury players show reduced volume for 2-4 games post-return.
+  - **Fix**: Added `_load_return_status()` pre-load — detects 7+ day gaps in `player_game_logs` via `LAG() OVER (PARTITION BY player_id ORDER BY game_date ASC)`. Stores `games_since_return` per player. In `run_simulation_batch()`, applies ramp factors to ALL stats: `{1: 0.70, 2: 0.80, 3: 0.90, 4: 0.95}`. 416 players detected as recently returned on audit date.
+- **Commits**: Module C audit sprint (Feb 27, 2026)
+
+---
+
+## 2026-02-27 — Module C Audit: Pre-load, Mutation, and Normalization Fixes (C1/C3/C4)
+
+- **C1 — `rotation_profiles` per-player DB query** (`module_c.py:_get_projected_minutes()`):
+  - **Symptom**: `_get_projected_minutes()` opened `sqlite3.connect()` for every player. 16 players × 5+ games = 80+ DB connections per pipeline run. Every other data source was pre-loaded at init; this one was missed.
+  - **Fix**: Added `_load_rotation_data()` pre-load at init — loads all `rotation_profiles WHERE window_days = 21` keyed by `str(player_id)`. `_get_projected_minutes()` now does `row = self.rotation_data.get(player_id)` dict lookup. Zero DB connections during simulation.
+  - **Rule**: Any data used inside `run_simulation_batch()` (which calls `_simulate_player()` 10K times) MUST be pre-loaded at init. Never open a DB connection inside a simulation loop.
+- **C3 — Player dict mutation after simulation** (`module_c.py:run_simulation_batch()`):
+  - **Symptom**: Lines mutated `player['FGA']`, `player['FG3A']`, `player['FTA']` with `min_scale` AFTER the simulation already completed. Distributions were already computed — mutation had zero effect but corrupted the caller's player dict silently.
+  - **Fix**: Removed the 3 mutation lines. Added `sim_profile['MIN_SCALE'] = round(min_scale, 3)` to store it as simulation metadata instead.
+  - **Verification**: `build_reporter_input()` in `main.py` reads from the `sim` dict only (`sim.get('PTS', 0)` etc). Confirmed at `main.py:447-454`. No downstream code reads `player['FGA']` after Module C returns.
+- **C4 — Accent normalization for name-keyed lookups** (`module_c.py`):
+  - **Symptom**: `rolling_ts_data` and `drives_data` dicts keyed by raw `player_name`. BDL-sourced rows store "Nikola Jokic" (no accent); canonical names use "Nikola Jokić". Lookups silently returned `None` → default 1.0 modifier for all accented-name players. Always use NFKD, never `str.replace()` chains — those miss ć/č/š/ž.
+  - **Fix**: Added `_normalize_name()` static method (NFKD decompose + strip Mn categories). Dicts now keyed by normalized name at load time. Lookups normalize the input name before `.get()`. Follows the same pattern as `module_b.py:155-164`.
+- **Commits**: Module C audit sprint (Feb 27, 2026)
+
+---
+
+## 2026-02-27 — BDL Team Abbreviation Contamination Cleaned (C16)
+
+- **Symptom**: `get_active_roster('GSW', 8)` returned fewer players than expected. ~33-40% of game logs for GS/NO/NY/PHO/SA teams were stored under BDL abbreviations, invisible to standard queries.
+- **Root Cause**: Module H BDL fallback (added Feb 23) wrote `team_abbr` directly from BDL API response without normalizing. The `normalize_bdl_abbr()` centralization in `utils/mappings.py` (Feb 24) was only applied to sync scripts written after that date — not to the BDL fallback path in `module_h_historian.py`.
+- **Contamination scope**: 1,857 `player_game_logs` rows (GS:113, NO:109, NY:145, PHO:149, SA:153 pre-2025-26 + current season mix) + 253 `games` rows (home_team + away_team). Full SQL cleanup applied.
+- **Fix Applied**:
+  1. SQL: `UPDATE player_game_logs SET team_abbreviation = 'GSW' WHERE team_abbreviation = 'GS'` (+ NO→NOP, NY→NYK, PHO→PHX, SA→SAS). Same for `games.home_team` and `games.away_team`. All 10 updates executed, 0 rows remaining.
+  2. `module_h_historian.py` BDL fallback: added `from utils.mappings import normalize_bdl_abbr` and `team_abbr = normalize_bdl_abbr(side.get('team', {}).get('abbreviation', 'UNK'))` at write time — prevents re-contamination on future BDL fallback runs.
+- **Prevention**: All BDL API consumers MUST call `normalize_bdl_abbr()` before any write to `player_game_logs.team_abbreviation` or `games.home_team/away_team`. The function is idempotent: `normalize_bdl_abbr('GSW') = 'GSW'`. Check new BDL sync scripts against `utils/mappings.py` pattern.
+- **Module C defense confirmed safe**: Module C's `_load_team_defense_data()` reads from `player_game_opponent.team_abbrev` — all standard abbreviations, no BDL contamination. Defense lookup keyed by scenario's `home_team` (Odds-API standard). No fix needed in Module C itself.
+- **Commits**: Module C audit sprint (Feb 27, 2026)
+
+---
+
 ## 2026-02-25 — UNK Position Coverage (155 players bypassing Gate 2)
 
 - **Context**: `players.position='UNK'` for 155 active players — bypasses all Gate 2 position gates.

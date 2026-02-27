@@ -2,8 +2,8 @@
 
 **Last Updated:** Friday, February 27, 2026 — 4:09 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Module Audit Sprint (A+B complete → Module C next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Module A Audit (Tiers A-F) ✅ + Module B Engine Rewrite (Tiers A-D) ✅ + CLV Capture Overhaul (E1-E6) ✅
+**Active Work:** Module Audit Sprint (A+B+C complete → Module D next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
+**Completed:** Module A Audit (Tiers A-F) ✅ + Module B Engine Rewrite (Tiers A-D) ✅ + Module C Oracle Audit (Tiers A-F + G1-G4) ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled (6 Injury Refresh, Evening Slate Lock, 2 Closing Lines, 3 QA). Nightly Debrief ran successfully (yesterday's bets settled). Data Sync + PBP Stats completed. Queue is clear for today's schedule.
 
@@ -45,7 +45,13 @@ This is the single source of truth for project tasks and priorities.
 - [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
 - [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
 - [x] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
-- [-] Module-by-module audit sprint — A through H + X: Modules A+B complete. Module C (`module_c.py`, `LudiOracle`) is next.
+- [-] Module-by-module audit sprint — A through H + X: Modules A+B+C complete. Module D (`module_d.py`, `LudiYak`) is next.
+  - **Module C cross-module notes (for future audits):**
+    - **Module D**: James Harden AI blurb parse failure (`Expecting value: line 1 column 1`) fires repeatedly in integration test — Haiku returning empty/non-JSON. Needs graceful fallback + logging in `module_d.py`. Dedup fix (MEMORY.md) still pending.
+    - **Module F**: G3 ramp-up players (Mobley, Duren) generate UNDER edges with `EDGE: Projection` label — should add `INJURY_RETURN` edge type to `module_f.py:_classify_edge_type()` (Phase 8.24 pattern) so these are identifiable in bet logs.
+    - **module_h_historian.py**: BDL fallback abbreviation normalization **fixed this sprint** — `normalize_bdl_abbr()` now applied at write time. Verify in future audits.
+    - **backtest_model.py**: `ConceptValidator` is mock-only (hardcoded PTS=20 stats). For real historical backtesting of G2/G3 effects, needs to pass actual historical game-log data + `player_id` for ramp detection. Deferred until 2024-25 backfill completes (~Mar 3).
+    - **morning_brief.py / send_single_game_notes.py**: Both route through `build_simulation_scenario()` → `get_active_roster()` — automatically receive `GAMES_PLAYED` and game-count window fixes. No changes needed. ✓
 - [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
 - [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
 - [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)
