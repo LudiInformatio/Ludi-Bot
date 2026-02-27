@@ -465,8 +465,8 @@ class LudiOrchestrator:
                         val_over = v.get('odds_over')
                         val_under = v.get('odds_under')
                         
-                        o_over = val_over if val_over is not None else -110
-                        o_under = val_under if val_under is not None else -110
+                        o_over = val_over if val_over not in (None, 0) else -110  # D1: guard 0 odds
+                        o_under = val_under if val_under not in (None, 0) else -110  # D1: guard 0 odds
                         
                         # NEW: Extract bookmaker sources (Line Shopping V2.0)
                         book_over = v.get('book_over', 'consensus')

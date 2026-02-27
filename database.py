@@ -1341,6 +1341,17 @@ class LudiHistorian:
         except Exception:
             pass  # Column already exists — safe to ignore
 
+        # Migration guards: team_scheme_cache quality columns (D3)
+        for col_def in [
+            "off_quality_14d TEXT",
+            "def_quality_14d TEXT",
+            "def_rating_14d REAL",  # D3: numeric def rating (not just tier label)
+        ]:
+            try:
+                c.execute(f"ALTER TABLE team_scheme_cache ADD COLUMN {col_def}")
+            except Exception:
+                pass  # Column already exists — safe to ignore
+
         # -- Canonical ID staging table (auto-ingest missing IDs for review) --
         c.execute('''
             CREATE TABLE IF NOT EXISTS player_canonical_ids_staging (

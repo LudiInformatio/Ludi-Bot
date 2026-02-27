@@ -304,7 +304,7 @@ class LudiOracle:
             return (historical_avg, 'LOW')
 
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(self.db_path)  # D2: use absolute db_path (not hardcoded)
             conn.row_factory = sqlite3.Row
             row = conn.execute(
                 "SELECT * FROM rotation_profiles WHERE player_id = ? AND window_days = 21 LIMIT 1",

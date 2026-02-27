@@ -19,6 +19,48 @@ from utils.bdl_client import BDLClient
 from utils.mappings import resolve_team_abbr
 
 class Gatekeeper:
+    """
+    Module A — Data Gatekeeper. Entry point for all market data.
+
+    self.games[game_id] data contract:
+    {
+        'game_id':   str  — Odds-API event ID (e.g. "abc123"), or "{AWAY}_{HOME}" for BDL/ESPN
+        'matchup':   str  — "{AWAY} @ {HOME}"
+        'home':      str  — canonical team abbreviation (e.g. "BOS")
+        'away':      str  — canonical team abbreviation
+        'home_team': str  — same as 'home' (alias for downstream compat)
+        'away_team': str  — same as 'away'
+        'start_time': datetime | None — EST-aware datetime (None = BDL line source)
+        'game_date': str  — "YYYY-MM-DD" (derived from start_time or today)
+        'vegas': {
+            'spread':           float  — home spread (negative = home favored)
+            'total':            float  — game total (O/U)
+            'moneyline_home':   int | None — American odds
+            'moneyline_away':   int | None — American odds
+            'team_total_home':  float | None — home team total
+            'team_total_away':  float | None — away team total
+        },
+        'props': {
+            stat_key (str): {         — e.g. 'points', 'rebounds', 'assists'
+                player_name (str): {
+                    'line':      float,
+                    'odds_over': int,    — best NC-legal over odds (American)
+                    'odds_under': int,   — best NC-legal under odds (American)
+                    'book_over': str,    — bookmaker name for over odds
+                    'book_under': str,   — bookmaker name for under odds
+                    'source_quality': str,  — 'HIGH'|'MEDIUM'|'LOW'|'SINGLE_VENDOR'|'UNKNOWN'
+                    'vendor_count': int,    — number of books offering this line
+                }
+            }
+        },
+        'archetypes': {
+            'ref_data':    dict  — LudiRefEngine payload (pace/whistle/crew/confidence)
+            'home_pace':   float — home team pace from team_leverage_profiles (0 if unavailable)
+            'home_def_rtg': float — home team DRtg 14d from player_game_advanced (0 if unavailable)
+        },
+    }
+    """
+
     def __init__(self):
         print("========================================")
         print(f"LUDI INFORMATIO: MODULE A (GATEKEEPER) ONLINE")
@@ -146,10 +188,9 @@ class Gatekeeper:
                     'props': {}, 
                     'archetypes': {
                         'ref_data': ref_data,  # V3.0: Now a dict with pace/whistle/crew/confidence
-                        'home_pace': 0, 
-                        'home_def_rtg': 0
+                        'home_pace': 0,  # D3: populated by fetch_team_archetypes()
+                        'home_def_rtg': 0  # D3: populated by fetch_team_archetypes()
                     },
-                    'player_stats': {} 
                 }
                 
                 # 4. Extract Vegas Lines
@@ -351,10 +392,9 @@ class Gatekeeper:
                 'props': {},
                 'archetypes': {
                     'ref_data': ref_data,
-                    'home_pace': 0,
-                    'home_def_rtg': 0
+                    'home_pace': 0,  # D3: populated by fetch_team_archetypes()
+                    'home_def_rtg': 0  # D3: populated by fetch_team_archetypes()
                 },
-                'player_stats': {}
             }
             
             # Add to display list
@@ -450,10 +490,9 @@ class Gatekeeper:
                     'props': {},
                     'archetypes': {
                         'ref_data': ref_data,
-                        'home_pace': 0,
-                        'home_def_rtg': 0,
+                        'home_pace': 0,  # D3: populated by fetch_team_archetypes()
+                        'home_def_rtg': 0,  # D3: populated by fetch_team_archetypes()
                     },
-                    'player_stats': {},
                 }
 
             self.games[game_key]['vegas'].update({
@@ -470,11 +509,75 @@ class Gatekeeper:
         print(f"   ✅ [ESPN] Loaded {loaded} games from DraftKings pickcenter")
 
     def fetch_team_archetypes(self):
-        """ [2] GET TEAM ARCHETYPES (Same as before) """
+        """
+        [2] GET TEAM ARCHETYPES — Pace + ORtg from team_leverage_profiles,
+        minutes-weighted DRtg from player_game_advanced (14d window).
+
+        Populates self.games[game_id]['team_info']['home_pace'] and 'home_def_rtg'
+        with real values instead of the default 0s from the init blocks.
+        """
         print(f"[2] 📡 Fetching Team Archetypes (Pace/DefRtg)...")
-        # Assuming existing logic works, simplified for brevity here.
-        # Ensure you keep the tank01 call here.
-        print(f"   ✅ Team Archetypes Mapped.")
+
+        import os
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ludi.db')
+
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db_path)
+
+            # --- Pace + ORtg from team_leverage_profiles (season-level) ---
+            pace_map = {}  # {team_abbr: (overall_pace, overall_ortg)}
+            try:
+                rows = conn.execute(
+                    "SELECT team_abbr, overall_pace, overall_ortg FROM team_leverage_profiles"
+                ).fetchall()
+                for team_abbr, pace, ortg in rows:
+                    pace_map[team_abbr] = (pace or 0, ortg or 0)
+            except Exception as e:
+                print(f"   [D3] team_leverage_profiles unavailable: {e}")
+
+            # --- Minutes-weighted DRtg from player_game_advanced (14d) ---
+            from datetime import date, timedelta
+            cutoff = (date.today() - timedelta(days=14)).isoformat()
+            drtg_map = {}  # {team_abbr: weighted_avg_drtg}
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT team_abbrev,
+                           SUM(def_rating * minutes) / NULLIF(SUM(minutes), 0) AS wt_drtg
+                    FROM player_game_advanced
+                    WHERE game_date >= ? AND def_rating IS NOT NULL AND minutes > 0
+                    GROUP BY team_abbrev
+                    HAVING COUNT(*) >= 5
+                    """,
+                    (cutoff,)
+                ).fetchall()
+                for team_abbr, wt_drtg in rows:
+                    if wt_drtg is not None:
+                        drtg_map[team_abbr] = round(wt_drtg, 1)
+            except Exception as e:
+                print(f"   [D3] player_game_advanced DRtg query failed: {e}")
+
+            conn.close()
+
+            # --- Wire into self.games ---
+            for game_id, game in self.games.items():
+                home_team = game.get('home_team', '')
+                away_team = game.get('away_team', '')
+                team_info = game.get('team_info', {})
+
+                home_pace, _ = pace_map.get(home_team, (0, 0))
+                home_drtg = drtg_map.get(home_team, 0)
+                away_drtg = drtg_map.get(away_team, 0)
+
+                team_info['home_pace'] = home_pace or 0
+                team_info['home_def_rtg'] = home_drtg or 0
+                team_info['away_def_rtg'] = away_drtg or 0  # extra signal, harmless
+
+            print(f"   ✅ Team Archetypes Mapped — {len(pace_map)} pace, {len(drtg_map)} DRtg records.")
+
+        except Exception as e:
+            print(f"   ⚠️ [D3] fetch_team_archetypes failed: {e}. Defaults intact.")
 
     def fetch_comprehensive_props(self, sport='basketball_nba', limit_games=2):
         """ [3] GET TARGETS (NC LEGAL + SHARPS + DFS) """

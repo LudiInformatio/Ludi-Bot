@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS team_scheme_cache (
     d14_style TEXT NOT NULL,
     active_style TEXT NOT NULL,
     window_end TEXT NOT NULL,
+    off_quality_14d TEXT,
+    def_quality_14d TEXT,
+    def_rating_14d REAL,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (team_abbr, scheme_type)
 )
@@ -55,7 +58,9 @@ def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) 
     weekly, so the 14d window rarely has enough game rows (min_games=5). BDL advanced stats
     sync daily and have 35k+ rows with full season coverage.
 
-    Returns dict: {team_abbr: 'STRONG' | 'AVERAGE' | 'WEAK'}
+    Returns dict: {team_abbr: (tier, avg_dr_numeric)}
+      tier: 'STRONG' | 'AVERAGE' | 'WEAK'
+      avg_dr_numeric: raw float for def_rating_14d column (D3)
     Tier cutoff: 1 standard deviation from league average (z-score threshold).
     Lower def_rating = better defense (points allowed per 100 possessions).
 
@@ -89,11 +94,12 @@ def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) 
     result = {}
     for team_abbrev, avg_dr, _ in rows:
         if avg_dr < league_avg - std:
-            result[team_abbrev] = "STRONG"
+            tier = "STRONG"
         elif avg_dr > league_avg + std:
-            result[team_abbrev] = "WEAK"
+            tier = "WEAK"
         else:
-            result[team_abbrev] = "AVERAGE"
+            tier = "AVERAGE"
+        result[team_abbrev] = (tier, round(avg_dr, 2))  # D3: store both tier + numeric
 
     return result
 
@@ -226,8 +232,8 @@ def main():
     def_quality_14d = compute_team_def_quality_14d(args.db_path, d7_start, window_end)
     if args.verbose and def_quality_14d:
         print(f"[DEF QUALITY 7d] computed for {len(def_quality_14d)} teams "
-              f"(STRONG={sum(1 for v in def_quality_14d.values() if v=='STRONG')}, "
-              f"WEAK={sum(1 for v in def_quality_14d.values() if v=='WEAK')})")
+              f"(STRONG={sum(1 for t, _ in def_quality_14d.values() if t=='STRONG')}, "
+              f"WEAK={sum(1 for t, _ in def_quality_14d.values() if t=='WEAK')})")
 
     # Offense: [60d, 21d, 7d] windows
     off_season = off_classifier.classify_all_teams(start_date=d60_start, end_date=window_end, min_games=20)
@@ -282,7 +288,11 @@ def main():
         # def_rating (daily, 35k+ rows) to classify defensive quality via z-score tiers.
         # WEAK (≥1 std dev above league avg) → NEUTRAL (scheme not executing)
         # STRONG / AVERAGE → inherit season_style (scheme is intact / status quo)
-        team_def_quality = def_quality_14d.get(team)  # STRONG | AVERAGE | WEAK | None
+        # D3: def_quality_14d now returns (tier, avg_dr) tuple
+        _def_qual_tuple = def_quality_14d.get(team, (None, None))
+        team_def_quality = _def_qual_tuple[0]   # 'STRONG' | 'AVERAGE' | 'WEAK' | None
+        team_def_rating_numeric = _def_qual_tuple[1]  # raw float for def_rating_14d column
+
         if d14_def == "INSUFFICIENT" and team_def_quality is not None:
             base = s_def if s_def not in ("INSUFFICIENT", None) else "NEUTRAL"
             d14_def = "NEUTRAL" if team_def_quality == "WEAK" else base
@@ -316,14 +326,14 @@ def main():
                 (team, s_off, d21_off, d14_off, a_off, window_end, team_off_quality)
             )
 
-            # Upsert defense (includes def_quality_14d for morning brief context)
+            # Upsert defense (includes def_quality_14d label + def_rating_14d numeric — D3)
             cur.execute(
                 """
                 INSERT INTO team_scheme_cache
                     (team_abbr, scheme_type, season_style, d21_style, d14_style,
-                     active_style, window_end, def_quality_14d)
+                     active_style, window_end, def_quality_14d, def_rating_14d)
                 VALUES
-                    (?, 'DEFENSE', ?, ?, ?, ?, ?, ?)
+                    (?, 'DEFENSE', ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(team_abbr, scheme_type) DO UPDATE SET
                     season_style=excluded.season_style,
                     d21_style=excluded.d21_style,
@@ -331,9 +341,10 @@ def main():
                     active_style=excluded.active_style,
                     window_end=excluded.window_end,
                     def_quality_14d=excluded.def_quality_14d,
+                    def_rating_14d=excluded.def_rating_14d,
                     updated_at=CURRENT_TIMESTAMP
                 """,
-                (team, s_def, d21_def, d14_def, a_def, window_end, team_def_quality)
+                (team, s_def, d21_def, d14_def, a_def, window_end, team_def_quality, team_def_rating_numeric)
             )
 
     if not args.dry_run:
