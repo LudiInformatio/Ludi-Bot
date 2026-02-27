@@ -21,6 +21,7 @@ import sqlite3
 import sys
 import os
 import time
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -86,6 +87,28 @@ def _read_cached_quota() -> Optional[str]:
     return None
 
 
+def _quota_is_stale(cache_path: str) -> bool:
+    """
+    Check if the quota cache is stale (from a prior billing cycle).
+    Returns True if cache is from a different month than current month.
+    """
+    try:
+        path = Path(cache_path)
+        if not path.exists():
+            return False
+        cache_data = json.loads(path.read_text())
+        at_str = cache_data.get("at")
+        if not at_str:
+            return False
+        cached_dt = datetime.fromisoformat(at_str)
+        now_dt = datetime.now()
+        if cached_dt.year != now_dt.year or cached_dt.month != now_dt.month:
+            return True
+        return False
+    except Exception:
+        return False
+
+
 # High-quality vendor filter — matches module_a.py BDL quality gate
 HIGH_QUALITY_VENDORS = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm']
 
@@ -119,6 +142,17 @@ BDL_PROP_TO_STAT = {
     'rebounds_assists':         'ra',
 }
 
+# Tank01 stat_key → internal stat code
+TANK01_STAT_MAP = {
+    'points':     'pts',
+    'rebounds':   'reb',
+    'assists':    'ast',
+    'blocks':     'blk',
+    'steals':     'stl',
+    'threes':     '3pm',
+    'turnovers':  'tov',
+}
+
 
 # ---------------------------------------------------------------------------
 # Math helpers
@@ -140,6 +174,14 @@ def calculate_clv(bet_decimal: Optional[float], closing_decimal: Optional[float]
     return (bet_decimal - closing_decimal) * 100
 
 
+def _strip_accents(s: str) -> str:
+    """Remove accents/diacritics from string for matching across APIs."""
+    if not s:
+        return s
+    return ''.join(c for c in unicodedata.normalize('NFKD', s)
+                   if unicodedata.category(c) != 'Mn')
+
+
 # ---------------------------------------------------------------------------
 # Step 1: One-time database migration — add CLV columns if missing
 # ---------------------------------------------------------------------------
@@ -157,6 +199,7 @@ def ensure_clv_columns(conn: sqlite3.Connection) -> None:
         ("closing_odds_under", "INTEGER"),
         ("clv_cents",          "REAL"),
         ("closing_time",       "TEXT"),
+        ("line_movement",      "REAL"),
     ]
     c = conn.cursor()
     for col_name, col_type in columns_to_add:
@@ -206,7 +249,7 @@ def _odds_api_get(url: str, params: dict) -> Optional[dict]:
         return None
 
 
-def fetch_all_closing_data(pending_bets: List[Dict], verbose: bool = False) -> List[Dict]:
+def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bool = False) -> List[Dict]:
     """
     Two-step Odds API fetch for player prop closing lines.
 
@@ -222,6 +265,13 @@ def fetch_all_closing_data(pending_bets: List[Dict], verbose: bool = False) -> L
     Returns: list of normalized game dicts.
     """
     # Pre-flight: skip Odds API entirely if last run reported quota = 0
+    # BUT first check if cache is stale (from prior billing cycle)
+    if _quota_is_stale(str(QUOTA_CACHE_PATH)):
+        print("  Odds API: quota cache is stale (prior month) — deleting and retrying API")
+        try:
+            QUOTA_CACHE_PATH.unlink()
+        except Exception:
+            pass
     cached_quota = _read_cached_quota()
     if cached_quota == "0":
         print("  Odds API: quota exhausted (cached) — skipping to BDL fallback")
@@ -476,6 +526,24 @@ def normalize_bdl_game(bdl_props: List[Dict], home_team: str, away_team: str,
     }
 
 
+def fetch_closing_lines_tank01(game_date_str: str, pending_bets: List[Dict] = None) -> Dict:
+    """
+    Tank01 Tier 3 fallback: fetch closing lines when Odds API and BDL fail.
+
+    Tank01 returns LINE VALUES ONLY — no American odds.
+    This is a last-resort source to capture closing_line even without odds.
+
+    Note: Tank01 returns player IDs, not names. Full implementation requires
+    a tank01_id column in the players table for ID resolution.
+    Currently returns empty dict - enhancement for future.
+
+    Returns: {game_key: {home_team, away_team, source, players: {name: {stat: {line}}}}}
+    """
+    print("    Tank01 Tier 3: requires tank01_id column in players table for player ID resolution")
+    print("    (Enhancement - not fully implemented yet)")
+    return {}
+
+
 # ---------------------------------------------------------------------------
 # Step 3: Match normalized games to pending bets by team name
 # ---------------------------------------------------------------------------
@@ -543,16 +611,22 @@ def get_pending_bets(conn: sqlite3.Connection, game_date: str = None) -> List[Di
 
 def update_bet_with_closing_lines(conn: sqlite3.Connection, bet_id: int,
                                    closing_over: Optional[int], closing_under: Optional[int],
-                                   clv_cents: float, closing_time: str) -> None:
+                                   clv_cents: float, closing_time: str,
+                                   closing_line: Optional[float] = None,
+                                   bet_line: Optional[float] = None) -> None:
+    line_movement = None
+    if closing_line is not None and bet_line is not None:
+        line_movement = closing_line - bet_line
     c = conn.cursor()
     c.execute('''
         UPDATE bet_recommendations
         SET closing_odds_over  = ?,
             closing_odds_under = ?,
             clv_cents          = ?,
-            closing_time       = ?
+            closing_time       = ?,
+            line_movement      = ?
         WHERE id = ?
-    ''', (closing_over, closing_under, clv_cents, closing_time, bet_id))
+    ''', (closing_over, closing_under, clv_cents, closing_time, line_movement, bet_id))
     conn.commit()
 
 
@@ -560,43 +634,44 @@ def update_bet_with_closing_lines(conn: sqlite3.Connection, bet_id: int,
 # Steps 4–6: Fixed match + CLV calculation
 # ---------------------------------------------------------------------------
 
-def match_closing_lines(bet: Dict, normalized_game: Dict) -> Tuple[Optional[int], Optional[int]]:
+def match_closing_lines(bet: Dict, normalized_game: Dict) -> Tuple[Optional[int], Optional[int], Optional[float]]:
     """
     Look up closing odds for this bet from normalized game data.
-    Returns (closing_over_odds, closing_under_odds).
+    Returns (closing_over_odds, closing_under_odds, closing_line).
 
     Improvement over original: O(1) dict lookup instead of O(n³) nested loop.
-    Includes case-insensitive fallback for name mismatches.
+    Includes accent-normalized matching (handles "Nikola Jokić" vs "Nikola Jokic").
+    Line matching is relaxed - captures whatever closing line exists.
     """
     player_name = bet['player_name'].strip()
     stat_cat    = bet['stat_category'].lower()
-    bet_line    = bet['line']
 
     players = normalized_game.get('players', {})
+
+    player_name_normalized = _strip_accents(player_name).lower()
 
     # Exact match first
     player_data = players.get(player_name)
 
-    # Case-insensitive fallback (handles e.g. "Nikola Jokić" vs "Nikola Jokic")
+    # Accent-normalized fallback (handles "Nikola Jokić" vs "Nikola Jokic")
     if not player_data:
-        player_name_lower = player_name.lower()
         for pname, pdata in players.items():
-            if pname.lower() == player_name_lower:
+            if _strip_accents(pname).lower() == player_name_normalized:
                 player_data = pdata
                 break
 
     if not player_data:
-        return None, None
+        return None, None, None
 
     stat_data = player_data.get(stat_cat)
     if not stat_data:
-        return None, None
+        return None, None, None
 
-    # Verify line matches (float tolerance for 27.5 == 27.5 comparisons)
-    if abs((stat_data.get('line') or -999) - bet_line) > 0.01:
-        return None, None
+    # Relaxed line matching: always capture whatever closing line exists
+    # Line movement is tracked separately via line_movement column
+    closing_line = stat_data.get('line')
 
-    return stat_data.get('over_odds'), stat_data.get('under_odds')
+    return stat_data.get('over_odds'), stat_data.get('under_odds'), closing_line
 
 
 def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dict],
@@ -608,9 +683,9 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
     source       = normalized_game.get('source', 'unknown')
 
     for bet in bets:
-        closing_over, closing_under = match_closing_lines(bet, normalized_game)
+        closing_over, closing_under, closing_line = match_closing_lines(bet, normalized_game)
 
-        if closing_over is None and closing_under is None:
+        if closing_over is None and closing_under is None and closing_line is None:
             skipped += 1
             if verbose:
                 print(f"  SKIP  {bet['player_name']} {bet['stat_category']} "
@@ -634,7 +709,8 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
 
         if not dry_run:
             update_bet_with_closing_lines(
-                conn, bet['id'], closing_over, closing_under, clv, closing_time
+                conn, bet['id'], closing_over, closing_under, clv, closing_time,
+                closing_line=closing_line, bet_line=bet.get('line')
             )
 
         updated += 1
@@ -688,7 +764,7 @@ def main():
 
         # Step 2: Fetch closing data — Odds API primary
         normalized_games: List[Dict] = []
-        api_games = fetch_all_closing_data(pending_bets, verbose=args.verbose)
+        api_games = fetch_all_closing_data(pending_bets, game_date, verbose=args.verbose)
 
         if api_games:
             normalized_games = api_games  # Already normalized inside fetch_all_closing_data()
@@ -715,6 +791,16 @@ def main():
                             if args.verbose:
                                 print(f"    BDL: {away_name} @ {home_name} "
                                       f"— {len(normalized['players'])} players")
+
+            # Step 10: Tank01 Tier 3 fallback — line values only (no odds)
+            if not normalized_games:
+                print("Tank01 Tier 3 fallback: fetching line data...")
+                tank01_data = fetch_closing_lines_tank01(game_date.replace('-', ''))
+                for game_key, game_data in tank01_data.items():
+                    normalized_games.append(game_data)
+                    if args.verbose:
+                        print(f"    Tank01: {game_data.get('away_team')} @ {game_data.get('home_team')} "
+                              f"— {len(game_data.get('players', {}))} players")
 
         # Step 8: Exit non-zero if we have bets but couldn't get any source data
         if not normalized_games:

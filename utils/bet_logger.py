@@ -126,6 +126,7 @@ class BetLogger:
                 closing_odds_under INTEGER,
                 clv_cents REAL,
                 closing_time TEXT,
+                line_movement REAL,
 
                 settled_at TIMESTAMP,
 
