@@ -88,3 +88,4 @@ ludi_history_db.json
 .playwright-mcp/
 .opencode/
 .gemini/
+yak_cache.json

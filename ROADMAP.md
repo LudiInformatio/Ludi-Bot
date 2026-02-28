@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, February 27, 2026 — 5:56 PM EST
+**Last Updated:** Friday, February 27, 2026 — 7:48 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Module Audit Sprint (A+B+C complete → Module D next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Module A Audit (Tiers A-F) ✅ + Module B Engine Rewrite (Tiers A-D) ✅ + Module C Oracle Audit (Tiers A-F + G1-G4) ✅
+**Active Work:** Module Audit Sprint (A+B+C+D+E complete → Module F next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
+**Completed:** Module C Oracle Audit (Tiers A-F + G1-G4) ✅ + Module D Yak Audit (news_agent, INJURY_RETURN, ghost resolve) ✅ + Module E Calibrator Audit (bulk pre-loads, DVP, B2B splits) ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled (6 Injury Refresh, Evening Slate Lock, 2 Closing Lines, 3 QA). Nightly Debrief ran successfully (yesterday's bets settled). Data Sync + PBP Stats completed. Queue is clear for today's schedule.
 
@@ -45,7 +45,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
 - [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
 - [x] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
-- [-] Module-by-module audit sprint — A through H + X: Modules A+B+C complete. Module D (`module_d.py`, `LudiYak`) is next.
+- [-] Module-by-module audit sprint — A through H + X: Modules A+B+C+D+E complete. Module F (`module_f.py`, `LudiReporter`) is next.
   - **Module C cross-module notes (for future audits):**
     - **Module D**: James Harden AI blurb parse failure (`Expecting value: line 1 column 1`) fires repeatedly in integration test — Haiku returning empty/non-JSON. Needs graceful fallback + logging in `module_d.py`. Dedup fix (MEMORY.md) still pending.
     - **Module F**: G3 ramp-up players (Mobley, Duren) generate UNDER edges with `EDGE: Projection` label — should add `INJURY_RETURN` edge type to `module_f.py:_classify_edge_type()` (Phase 8.24 pattern) so these are identifiable in bet logs.

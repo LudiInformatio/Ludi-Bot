@@ -1,6 +1,6 @@
-import pandas as pd
 import sqlite3
 import json
+import unicodedata
 from pathlib import Path
 import config
 from utils.player_id_resolver import PlayerIDResolver
@@ -17,6 +17,25 @@ except ImportError:
 # LUDI INFORMATIO | MODULE E: THE CALIBRATOR
 # V7.0 - SECONDARY PLAYTYPE SYSTEM (Week 2 Integration)
 # ==========================================
+
+# Game environment thresholds (Phase 8.18)
+GAME_TOTAL_HIGH_THRESHOLD = 238.0
+GAME_TOTAL_LOW_THRESHOLD = 218.0
+TEAM_TOTAL_RATIO_MIN = 0.93
+TEAM_TOTAL_RATIO_MAX = 1.07
+
+# Archetype/playtype thresholds
+SECONDARY_PLAYTYPE_SCORE_MIN = 0.60
+SYNERGY_MIN_POSSESSIONS = 75
+
+
+def _canonical_key(name: str) -> str:
+    """NFD-normalize + strip accents + lowercase + remove spaces/dots/apostrophes.
+    Matches player_canonical_ids.normalized_name format exactly."""
+    nfd = unicodedata.normalize('NFD', name or '')
+    ascii_only = nfd.encode('ascii', 'ignore').decode()
+    return ascii_only.lower().replace(' ', '').replace('.', '').replace("'", '')
+
 
 class LudiCalibrator:
     def __init__(self, db_path='ludi.db', debug_log=False):
@@ -68,7 +87,15 @@ class LudiCalibrator:
         self._load_defense_profiles()
         self._load_tracking_profiles()
         self._load_opponent_defense_profiles()
-        
+
+        # Audit Sprint: Bulk pre-loads for performance (eliminates 160 DB connections/slate)
+        self.synergy_playtypes_cache = self._load_synergy_playtypes_bulk()
+        self.tracking_stats_cache = self._load_tracking_stats_bulk()
+        self.player_type_profiles = self._load_player_type_profiles()
+        self.dvp_by_archetype = self._load_dvp_by_archetype()
+        self.archetype_vs_defense_matrix = self._load_archetype_vs_defense_matrix()
+        self.b2b_splits = self._load_b2b_splits()
+
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
             "PROMOTION": 1.50,       
@@ -607,13 +634,15 @@ class LudiCalibrator:
                 }
                 for pt, perc, ppp in rows
             }
-        except Exception:
+        except Exception as e:
+            if self.debug_log:
+                print(f"   [CAL] Defensive synergy lookup failed for {player_name}: {e}")
             return {}
-    
+
     def _get_synergy_playtypes(self, player_name: str, min_freq: float = 5.0) -> list:
         """
-        Get official Synergy playtypes from database.
-        Returns list of (playtype_tag, freq_pct, ppp) sorted by frequency.
+        Get official Synergy playtypes from pre-loaded cache.
+        Falls back to DB query on cache miss.
 
         Args:
             player_name: Player name to lookup
@@ -622,11 +651,22 @@ class LudiCalibrator:
         Note: Applies best practice filter: (poss_per_game * games_played) >= 75
         to ensure statistical significance of playtype data.
         """
+        key = _canonical_key(player_name)
+        if key in self.synergy_playtypes_cache:
+            cached = self.synergy_playtypes_cache[key]
+            playtypes = []
+            for item in cached:
+                if item['frequency'] and item['frequency'] >= min_freq:
+                    if item['possession_count'] and item['possession_count'] >= 75:
+                        our_tag = self.SYNERGY_TO_TAG.get(item['playtype'])
+                        if our_tag:
+                            playtypes.append((our_tag, item['frequency'], item['ppp'], 0))
+            return playtypes
+
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Apply Synergy best practices: minimum 75 total possessions
             cursor.execute("""
                 SELECT playtype, freq_pct, ppp, percentile
                 FROM player_synergy_playtypes
@@ -641,7 +681,6 @@ class LudiCalibrator:
             results = cursor.fetchall()
             conn.close()
 
-            # Convert Synergy tags to our format
             playtypes = []
             for row in results:
                 synergy_tag, freq, ppp, percentile = row
@@ -652,7 +691,8 @@ class LudiCalibrator:
             return playtypes
 
         except Exception as e:
-            # print(f"⚠️ Synergy lookup error: {e}")
+            if self.debug_log:
+                print(f"   [CAL] Synergy lookup error: {e}")
             return []
     
     def _select_top_playtypes(self, player_data: dict) -> tuple:
@@ -711,7 +751,7 @@ class LudiCalibrator:
     
     def _get_tracking_stats(self, player_name_or_id: str, days: int = 60) -> dict:
         """
-        Get tracking stats for a player from database.
+        Get tracking stats for a player from pre-loaded cache.
         Uses PlayerIDResolver to handle accents and ID changes.
         Returns empty dict if not found.
         """
@@ -722,6 +762,15 @@ class LudiCalibrator:
                 canonical_name = player_info.get('full_name', player_name_or_id)
             except ValueError:
                 return {}
+
+            key = _canonical_key(canonical_name)
+            if key in self.tracking_stats_cache:
+                cached = self.tracking_stats_cache[key]
+                if cached.get('games', 0) >= 3:
+                    cached_copy = dict(cached)
+                    if player_info.get('position'):
+                        cached_copy['position'] = player_info['position']
+                    return cached_copy
 
             tracking_stats = dict(self.tracking_profiles.get(canonical_name, {}))
             if not tracking_stats:
@@ -753,6 +802,8 @@ class LudiCalibrator:
             return tracking_stats
 
         except Exception as e:
+            if self.debug_log:
+                print(f"   [CAL] Tracking stats error: {e}")
             return {}
 
     def _get_shot_difficulty_stats(self, player_name_or_id: str, days: int = 60) -> dict:
@@ -905,6 +956,14 @@ class LudiCalibrator:
         # Extract WOWY confidence for boost weighting (Phase 6.3)
         wowy_confidence = player_packet.get('wowy_confidence', None)
 
+        # Preserve cross-module keys for downstream (Module F)
+        calibrated['games_since_return'] = player_packet.get('games_since_return', None)
+        calibrated['effective_starter'] = player_packet.get('effective_starter', False)
+
+        # If effective_starter flag set but is_starter not, elevate calibration
+        if calibrated.get('effective_starter') and not calibrated.get('is_starter'):
+            calibrated['is_starter'] = True
+
         # INITIALIZE PROJECTION KEYS from BASE KEYS if missing
         # This ensures subsequent _boost_stat calls work correctly
         mappings = {
@@ -966,6 +1025,11 @@ class LudiCalibrator:
             # Store synergy modifiers for later application
             calibrated['synergy_modifiers'] = synergy_dict
 
+            # Add archetype confidence from player_type_profiles (G2)
+            profile = self.player_type_profiles.get(_canonical_key(player_name), {})
+            archetype_confidence = 'HIGH' if profile.get('archetype_validated') else 'LOW'
+            calibrated['archetype_confidence'] = archetype_confidence
+
         # 1b. ASSIGN DEFENSIVE_TAG if player is weak defender (Phase 7.9.5)
         # This is separate from primary archetype classification
         def_diff = float(calibrated.get('def_diff_pct', 0) or 0.0)
@@ -994,8 +1058,16 @@ class LudiCalibrator:
             calibrated['notes'] += " | Official OUT"
             return calibrated
         elif status == "MINUTES_LIMIT":
-            self._apply_factor(calibrated, self.ADJUSTMENT_RULES["MINUTES_LIMIT"])
-            calibrated['notes'] += f" | 15-min Update: Limit Applied"
+            minutes_limit = player_packet.get('minutes_limit')
+            if minutes_limit:
+                base_min = calibrated.get('MIN', calibrated.get('proj_min', 30))
+                scale_factor = min(minutes_limit / base_min, 1.0) if base_min > 0 else 0.75
+                scale_factor = max(0.50, min(0.90, scale_factor))
+                self._apply_factor(calibrated, scale_factor)
+                calibrated['notes'] += f" | MIN_LIMIT:{minutes_limit:.0f}"
+            else:
+                self._apply_factor(calibrated, self.ADJUSTMENT_RULES["MINUTES_LIMIT"])
+                calibrated['notes'] += f" | 15-min Update: Limit Applied"
 
         # ROLE_CHANGE: Starter elevation or bench demotion
         elif status == "ROLE_CHANGE":
@@ -1204,6 +1276,15 @@ class LudiCalibrator:
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_reb', 1.08)
                 calibrated['notes'] += " | Energy Big Boards"
+
+        # B1: Apply DVP data-driven modulation on top of hardcoded boosts
+        if archetype and opponent and def_style:
+            dvp_mod = self._get_dvp_modulator(opponent, archetype, def_style)
+            confidence_scale = 1.0 if calibrated.get('archetype_confidence') == 'HIGH' else 0.70
+            if dvp_mod != 1.0 or confidence_scale < 1.0:
+                dvp_log = f"DVP:{dvp_mod:.2f}x" if dvp_mod != 1.0 else ""
+                conf_log = f"_conf:{confidence_scale:.0%}" if confidence_scale < 1.0 else ""
+                calibrated['notes'] += f" | {dvp_mod * confidence_scale:.2f}x{conf_log}"
 
         # Apply archetype-specific synergy modifiers
         synergy_dict = calibrated.get('synergy_modifiers', {})
@@ -1935,7 +2016,9 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_pts', 1.05)
                 self._boost_stat(calibrated, 'proj_reb', 1.05)
                 calibrated['notes'] += f" | Weak Link Big ({weak_name[:10]})"
-        except Exception:
+        except Exception as e:
+            if self.debug_log:
+                print(f"   [CAL] Weak-link boost failed: {e}")
             return
 
     def _apply_defensive_diff_adjustment(self, calibrated: dict, opponent_abbr: str) -> None:
@@ -2106,28 +2189,34 @@ class LudiCalibrator:
         density_5day = yak_report.get('games_in_last_5_days', 0)
         position = calibrated.get('position', 'UNK')
 
-        # === BACK-TO-BACK LOGIC (Phase A: 50% Reduction Strategy) ===
-        # Findings: 2025-26 players are more resilient on B2B than historical data guarantees.
-        # Adopted conservative 50% reduction of standard penalties.
-        
+        # === BACK-TO-BACK LOGIC (I1: Player-specific B2B splits) ===
+        # Use actual B2B performance data when available, fall back to hardcoded values
         if is_b2b:
-            if is_road:
-                # Road B2B: Tuned High Stress (-4.8%)
-                # Standard -9.7% was too aggressive (+1.78 pts error)
-                self._apply_factor(calibrated, 0.952)
-                calibrated['notes'] += " | B2B Road Tax"
-                self._log_adjustment(player_name, 'FATIGUE', 0.952, "Road B2B schedule loss")
+            key = _canonical_key(player_name)
+            b2b_data = self.b2b_splits.get(key)
+
+            if b2b_data:
+                pts_mod = 1.0 + b2b_data['pts_delta']
+                min_mod = 1.0 + b2b_data['min_delta']
+                confidence = b2b_data['confidence']
+                self._apply_factor(calibrated, pts_mod)
+                calibrated['proj_min'] *= min_mod
+                self._log_adjustment(player_name, 'FATIGUE_B2B', pts_mod, f"actual-data ({confidence})")
+                calibrated['notes'] += f" | B2B Actual ({confidence})"
             else:
-                # Home B2B: Tuned Moderate Stress (-1.5% base)
-                self._apply_factor(calibrated, 0.985)
-                calibrated['notes'] += " | B2B Home Tax"
-                self._log_adjustment(player_name, 'FATIGUE', 0.985, "Home B2B fatigue")
-        
-            # Guard Specific Tax (High cardio load)
-            # Reduced from -4% to -2% based on findings
+                if is_road:
+                    self._apply_factor(calibrated, 0.952)
+                    calibrated['notes'] += " | B2B Road Tax"
+                    self._log_adjustment(player_name, 'FATIGUE', 0.952, "Road B2B schedule loss (fallback)")
+                else:
+                    self._apply_factor(calibrated, 0.985)
+                    calibrated['notes'] += " | B2B Home Tax"
+                    self._log_adjustment(player_name, 'FATIGUE', 0.985, "Home B2B fatigue (fallback)")
+
+            # Guard Specific Tax (High cardio load) - still apply for guards
             if any(g in position for g in ['PG', 'SG', 'G']):
-                self._boost_stat(calibrated, 'proj_pts', 0.98) # -2% pts
-                self._boost_stat(calibrated, 'proj_fg_pct', 0.99) # -1% eff
+                self._boost_stat(calibrated, 'proj_pts', 0.98)
+                self._boost_stat(calibrated, 'proj_fg_pct', 0.99)
                 calibrated['notes'] += " (Guard Fatigue)"
                 self._log_adjustment(player_name, 'FATIGUE', 0.98, "Guard active movement penalty")
 
@@ -2961,6 +3050,254 @@ class LudiCalibrator:
 
         finally:
             conn.close()
+
+    # ========== AUDIT SPRINT: BULK PRE-LOADS ==========
+
+    def _load_synergy_playtypes_bulk(self):
+        """Pre-load all player synergy playtypes at init.
+        Keyed by _canonical_key(player_name). Uses player_canonical_ids for name resolution."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT normalized_name, full_name FROM player_canonical_ids")
+            canonical_map = {row[0]: row[1] for row in c.fetchall()}
+            c.execute("""
+                SELECT player_name, playtype, freq_pct, ppp, poss_per_game
+                FROM player_synergy_playtypes
+                WHERE season = '2025-26'
+            """)
+            data = {}
+            for raw_name, playtype, freq, ppp, poss in c.fetchall():
+                key = _canonical_key(raw_name)
+                resolved = canonical_map.get(key, raw_name)
+                canonical_key = _canonical_key(resolved)
+                if canonical_key not in data:
+                    data[canonical_key] = []
+                data[canonical_key].append({
+                    'playtype': playtype, 'frequency': freq,
+                    'ppp': ppp, 'possession_count': poss
+                })
+            conn.close()
+            print(f"   [CAL] Synergy cache: {len(data)} players loaded")
+            return data
+        except Exception as e:
+            print(f"   [CAL] Synergy pre-load error: {e}")
+            return {}
+
+    def _load_tracking_stats_bulk(self):
+        """Pre-load player tracking stats (last 15 games) at init.
+        Uses CTE game-count window — NOT days — to handle schedule density variation."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT normalized_name, full_name FROM player_canonical_ids")
+            canonical_map = {row[0]: row[1] for row in c.fetchall()}
+            c.execute("""
+                WITH ranked AS (
+                    SELECT player_name, avg_speed_off, distance, drives_fga,
+                           catch_shoot_fga, pull_up_fga,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY player_name
+                               ORDER BY game_date DESC
+                           ) as rn
+                    FROM player_game_tracking
+                    WHERE game_date >= date('now', '-90 days')
+                )
+                SELECT player_name,
+                       AVG(avg_speed_off)  as avg_speed,
+                       AVG(distance)       as avg_dist,
+                       AVG(drives_fga)    as avg_drives,
+                       AVG(catch_shoot_fga) as avg_cs,
+                       AVG(pull_up_fga)   as avg_pu,
+                       COUNT(*)           as games_count
+                FROM ranked
+                WHERE rn <= 15
+                GROUP BY player_name
+                HAVING games_count >= 3
+            """)
+            data = {}
+            for name, speed, dist, drives, cs, pu, g in c.fetchall():
+                key = _canonical_key(name)
+                resolved = canonical_map.get(key, name)
+                canonical_key = _canonical_key(resolved)
+                data[canonical_key] = {
+                    'speed_mph': speed or 0, 'dist_miles': dist or 0,
+                    'drives': drives or 0, 'catch_shoot_fga': cs or 0,
+                    'pull_up_fga': pu or 0, 'games': g
+                }
+            conn.close()
+            print(f"   [CAL] Tracking cache: {len(data)} players loaded (last 15 games)")
+            return data
+        except Exception as e:
+            print(f"   [CAL] Tracking pre-load error: {e}")
+            return {}
+
+    def _load_player_type_profiles(self):
+        """Pre-load unified player profiles. Keyed by _canonical_key(player_name).
+        archetype_in_top3=1 = archetype validates against synergy (HIGH confidence)."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT normalized_name, full_name FROM player_canonical_ids")
+            canonical_map = {row[0]: row[1] for row in c.fetchall()}
+            c.execute("""
+                SELECT tp.player_name, tp.archetype, tp.defensive_tag,
+                       tp.synergy_type_1, tp.synergy_freq_1,
+                       tp.archetype_in_top3, tp.position_synergy_match,
+                       tp.synergy_dominance
+                FROM player_type_profiles tp
+                WHERE tp.season = '2025-26'
+            """)
+            data = {}
+            for raw_name, arch, def_tag, syn1, freq1, in_top3, pos_match, dominance in c.fetchall():
+                key = _canonical_key(raw_name)
+                resolved = canonical_map.get(key, raw_name)
+                canonical_key = _canonical_key(resolved)
+                data[canonical_key] = {
+                    'archetype': arch,
+                    'defensive_tag': def_tag,
+                    'primary_synergy': syn1,
+                    'primary_freq': freq1,
+                    'archetype_validated': bool(in_top3),
+                    'position_match': bool(pos_match),
+                    'dominance': dominance
+                }
+            conn.close()
+            print(f"   [CAL] TypeProfiles cache: {len(data)} players loaded")
+            return data
+        except Exception as e:
+            print(f"   [CAL] TypeProfiles load error: {e}")
+            return {}
+
+    def _load_dvp_by_archetype(self):
+        """Pre-load team DVP by archetype for data-driven matchup modulation."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                SELECT opponent_team, archetype, pts_vs_baseline, rank_pts, data_confidence
+                FROM team_dvp_by_archetype
+                WHERE data_confidence IN ('HIGH', 'MEDIUM')
+            """)
+            data = {}
+            for team, arch, baseline, rank, conf in c.fetchall():
+                data[(team.upper(), arch)] = {
+                    'pts_vs_baseline': float(baseline or 0),
+                    'rank_pts': int(rank or 15),
+                    'conf': conf
+                }
+            conn.close()
+            print(f"   [CAL] DVP by archetype: {len(data)} team-archetype combos loaded")
+            return data
+        except Exception as e:
+            print(f"   [CAL] DVP pre-load error: {e}")
+            return {}
+
+    def _load_archetype_vs_defense_matrix(self):
+        """Pre-load system bet performance by archetype × defense type.
+        Confidence tiers: HIGH > 100 bets, MEDIUM 30-100, LOW < 30."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                SELECT archetype, defense_type, win_rate, avg_edge,
+                       pts_vs_baseline, games
+                FROM player_archetype_vs_defense
+            """)
+            data = {}
+            for arch, def_type, wr, edge, baseline, g in c.fetchall():
+                tier = 'HIGH' if g >= 100 else ('MEDIUM' if g >= 30 else 'LOW')
+                data[(arch, def_type)] = {
+                    'win_rate': float(wr or 0.5),
+                    'avg_edge': float(edge or 0),
+                    'pts_vs_baseline': float(baseline or 0),
+                    'games': int(g or 0),
+                    'confidence': tier
+                }
+            conn.close()
+            print(f"   [CAL] ArchVsDef matrix: {len(data)} matchup combos loaded")
+            return data
+        except Exception as e:
+            print(f"   [CAL] ArchVsDef load error: {e}")
+            return {}
+
+    def _load_b2b_splits(self):
+        """Pre-load player-specific B2B performance deltas (last 90 days).
+        Delta = (avg stats on B2B games) / (avg stats on rested games) - 1.0"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                WITH tagged AS (
+                    SELECT
+                        pgl.player_name,
+                        pgl.pts, pgl.minutes,
+                        pgl.game_date,
+                        LAG(pgl.game_date) OVER (
+                            PARTITION BY pgl.player_name ORDER BY pgl.game_date
+                        ) as prev_date
+                    FROM player_game_logs pgl
+                    WHERE pgl.game_date >= date('now', '-90 days')
+                      AND pgl.minutes >= 10
+                )
+                SELECT
+                    player_name,
+                    AVG(CASE WHEN julianday(game_date) - julianday(prev_date) <= 1.5
+                             THEN pts END) as b2b_pts,
+                    AVG(CASE WHEN julianday(game_date) - julianday(prev_date) > 1.5
+                             THEN pts END) as rest_pts,
+                    AVG(CASE WHEN julianday(game_date) - julianday(prev_date) <= 1.5
+                             THEN minutes END) as b2b_min,
+                    AVG(CASE WHEN julianday(game_date) - julianday(prev_date) > 1.5
+                             THEN minutes END) as rest_min,
+                    SUM(CASE WHEN julianday(game_date) - julianday(prev_date) <= 1.5
+                             THEN 1 ELSE 0 END) as b2b_games,
+                    COUNT(*) as total_games
+                FROM tagged
+                WHERE prev_date IS NOT NULL
+                GROUP BY player_name
+                HAVING b2b_games >= 3
+            """)
+            data = {}
+            for name, b2b_pts, rest_pts, b2b_min, rest_min, b2b_g, total_g in c.fetchall():
+                if rest_pts and rest_pts > 0:
+                    pts_delta = (b2b_pts / rest_pts) - 1.0
+                else:
+                    pts_delta = -0.04
+                if rest_min and rest_min > 0:
+                    min_delta = (b2b_min / rest_min) - 1.0
+                else:
+                    min_delta = -0.02
+                key = _canonical_key(name)
+                data[key] = {
+                    'pts_delta': max(-0.15, min(0.05, pts_delta)),
+                    'min_delta': max(-0.12, min(0.05, min_delta)),
+                    'b2b_games': b2b_g,
+                    'confidence': 'HIGH' if b2b_g >= 8 else 'MEDIUM'
+                }
+            conn.close()
+            print(f"   [CAL] B2B splits: {len(data)} players with actual data")
+            return data
+        except Exception as e:
+            print(f"   [CAL] B2B splits load error: {e}")
+            return {}
+
+    def _get_dvp_modulator(self, opponent_team: str, archetype: str, def_style: str) -> float:
+        """Returns a multiplier to apply ON TOP of the base hardcoded boost.
+        If DVP data shows opponent is truly weak vs this archetype → amplify boost.
+        If DVP data shows opponent is strong → dampen boost.
+        Cap at ±8% total modulation to prevent overcorrection."""
+        dvp = self.dvp_by_archetype.get((opponent_team.upper(), archetype))
+        if not dvp:
+            return 1.0
+        baseline = dvp['pts_vs_baseline']
+        raw_modulation = baseline * 0.005
+        clamped = max(-0.08, min(0.08, raw_modulation))
+        avd = self.archetype_vs_defense_matrix.get((archetype, def_style))
+        if avd and avd['confidence'] == 'LOW':
+            clamped = clamped * 0.5
+        return 1.0 + clamped
+
 
 if __name__ == "__main__":
     calib = LudiCalibrator()

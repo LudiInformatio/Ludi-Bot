@@ -74,7 +74,7 @@ class LudiOrchestrator:
         # Database path
         self.db_path = "ludi.db"
 
-    def get_active_roster(self, team_abbr: str, limit: int = 8) -> List[Dict]:
+    def get_active_roster(self, team_abbr: str, limit: int = 12) -> List[Dict]:
         """Query database for top N players by minutes, joined with PBP Shot Quality.
         G1: Game-count window (last 25 played games) replaces calendar-day window.
         Calendar windows shrink to 1-4 games during All-Star break/injuries — game-count is stable.
@@ -459,12 +459,11 @@ class LudiOrchestrator:
                 },
                 'base_pts': sim.get('PTS', 0), 'base_reb': sim.get('REB', 0), 
                 'base_ast': sim.get('AST', 0), 'base_3pm': sim.get('FG3M', 0),
-                # TODO(main-audit): 'base_usg' key doesn't exist in sim_profile — Module C outputs
-                # 'USG_PCT' (as %). Correct fix: sim.get('USG_PCT', 0) / 100.0 so Module E's
-                # is_star check + archetype calibration see vacuum-boosted usage in OUT scenarios.
-                'base_min': sim.get('MIN', 0), 'base_usg': sim.get('base_usg', 0),
+                # H2: Fix USG% key - Module C outputs USG_PCT as percentage (e.g., 28.5 not 0.285)
+                'base_min': sim.get('MIN', 0), 'base_usg': sim.get('USG_PCT', 0) / 100.0,
                 'opponent_stats': opponent_stats,
-                'games_since_return': sim.get('GAMES_SINCE_RETURN')
+                'games_since_return': sim.get('GAMES_SINCE_RETURN'),
+                'effective_starter': sim.get('effective_starter', False)
             }
             
             # Map stats

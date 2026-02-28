@@ -349,4 +349,49 @@
   2. `classify_archetypes.py` — COALESCE query: prefers `player_canonical_ids.position` → `players.position` → UNK.
   3. `build_espn_crosswalk.py` — corrupt team-abbrev cleanup runs on every execution.
   4. Wired `--sync-positions` into `data_sync.yml` (1 cached API call/day, no extra quota cost).
-- **Result**: Active 21d window: 155 UNK → 4 (97% reduction). Gate 2 coverage: 17% → 88%.
+ - **Result**: Active 21d window: 155 UNK → 4 (97% reduction). Gate 2 coverage: 17% → 88%.
+
+---
+
+## 2026-02-27 — Module E Audit Sprint (DVP, Bulk Pre-loads, Backup Intelligence)
+
+- **Context**: Module E (`module_e.py`) audit — performance optimization, data accuracy, backup intelligence
+- **Root Cause**: Per-player DB queries, hardcoded matchup boosts, missing data sources
+- **Fixes Applied**:
+  1. **A1**: Synergy + tracking bulk pre-load at init — eliminates ~160 DB connections per slate
+     - `_load_synergy_playtypes_bulk()`: pre-loads player_synergy_playtypes with canonical name resolution
+     - `_load_tracking_stats_bulk()`: CTE-based last-15-games window (not days)
+     - `_get_synergy_playtypes()` + `_get_tracking_stats()`: cache-first with DB fallback
+  2. **B1**: DVP data-driven matchup modulation
+     - `_load_dvp_by_archetype()`: pre-loads team_dvp_by_archetype (HIGH/MEDIUM only)
+     - `_get_dvp_modulator()`: applies ±8% modulation based on real per-100-possession data
+     - Blends hardcoded boosts with DVP data for improved accuracy
+  3. **G1**: player_archetype_vs_defense matrix integration
+     - `_load_archetype_vs_defense_matrix()`: pre-loads system bet performance by archetype×defense
+     - DVP modulation dampened by 50% when system confidence is LOW (<30 bets)
+  4. **G2**: player_type_profiles confidence flag
+     - `_load_player_type_profiles()`: pre-loads archetype_in_top3 validation
+     - `archetype_confidence` flag added to calibrated dict (HIGH/LOW)
+     - Matchup boosts reduced 30% when archetype not validated by synergy data
+  5. **I1**: Player-specific B2B splits
+     - `_load_b2b_splits()`: CTE-based actual B2B vs rested delta from player_game_logs
+     - Replaces blanket -4.8%/-1.5% modifiers with player's actual performance delta
+     - Requires ≥3 B2B games, caps at ±15% to prevent outlier distortion
+  6. **I2**: MINUTES_LIMIT scaling uses actual player dict value
+     - Now reads `player_packet.get('minutes_limit')` instead of hardcoded 0.75
+  7. **H1**: main.py get_active_roster limit 8→12 (catches rank 9-12 backups)
+  8. **H2**: USG% key fix — `sim.get('USG_PCT', 0) / 100.0` (was reading wrong key)
+  9. **H3**: WOWY-based backup projections in module_x_scenario.py
+     - `_get_wowy_projections()`: uses actual per-36 stats from team_lineups
+  10. **H4**: effective_starter flag cross-module flow
+     - Added to module_x_scenario.py when elevated minutes ≥25
+     - Passed through main.py build_reporter_input()
+     - Module E calibrates as starter when flag is True
+  11. **H5**: depth_charts tier-0 backup lookup in module_x_scenario.py
+     - Position-specific backup lookup before beneficiary_minutes
+  12. **C1**: Removed dead `import pandas as pd` (line 1)
+  13. **C2**: Added named constants for magic numbers (GAME_TOTAL_HIGH/LOW_THRESHOLD, etc.)
+  14. **D1**: Added debug logging to 3 silent exception handlers
+- **Module Changes**: module_e.py (~320 lines), main.py (3 changes), module_x_scenario.py (3 additions)
+- **Verification**: Integration test `.venv/bin/python main.py --games CLE`
+

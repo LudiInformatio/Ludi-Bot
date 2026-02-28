@@ -184,10 +184,14 @@ class ScenarioBuilder:
                     old_min = l10_stats.get('MIN', old_min)
                 # Cap minutes reasonable (max 38 or +12 bump)
                 new_min = min(old_min + added_min, 38.0, old_min + 12.0)
-                
+
                 scale_ratio = new_min / old_min if old_min > 0 else 1.0
-                
+
                 new_p['MIN'] = new_min
+
+                # H4: Mark as effective_starter if elevated to starter-level minutes
+                if new_min >= 25.0:
+                    new_p['effective_starter'] = True
                 
                 # Attach WOWY confidence for tag classifier
                 if wowy_confidence:
@@ -346,6 +350,31 @@ class ScenarioBuilder:
                 print(f"[Module X] TIER 0A wowy_observed for {starter_out.get('PLAYER_NAME', '?')}: "
                       f"{list(absorption.keys())[:3]}")
                 return {'matrix': absorption, 'confidence': 'high'}
+
+        # H5: TIER 0 - depth_charts lookup (position-specific backup)
+        try:
+            conn = sqlite3.connect('ludi.db')
+            c = conn.cursor()
+            c.execute("""
+                SELECT dc.player_name
+                FROM depth_charts dc
+                WHERE dc.team_abbr = ?
+                  AND dc.position = (
+                      SELECT position FROM depth_charts
+                      WHERE player_name = ? AND team_abbr = ?
+                  )
+                  AND dc.depth_order = 2
+                  AND dc.player_name != ?
+            """, (team_abbr, starter_out.get('PLAYER_NAME', ''), team_abbr, starter_out.get('PLAYER_NAME', '')))
+            row = c.fetchone()
+            conn.close()
+            if row:
+                backup_name = row[0]
+                absorption = {backup_name: 0.70}
+                print(f"[Module X] H5 depth_charts backup for {starter_out.get('PLAYER_NAME', '?')}: {backup_name}")
+                return {'matrix': absorption, 'confidence': 'medium'}
+        except Exception as e:
+            pass
 
         # TIER 0B: beneficiary_minutes — data-driven absence analysis (Phase 8.9)
         bene_data = self._lookup_beneficiary_minutes(
@@ -541,6 +570,33 @@ class ScenarioBuilder:
             normalized.append(p)
             
         return normalized
+
+    def _get_wowy_projections(self, player_name: str, out_player_name: str, conn) -> dict:
+        """
+        H3: Fetch actual per-36 stats when out_player is not on court.
+        Source: team_lineups WOWY data (lineups WITHOUT out_player).
+        Returns dict of {stat: value} or None if insufficient data.
+        """
+        try:
+            c = conn.cursor()
+            c.execute("""
+                SELECT
+                    AVG(pts_per_36)  as pts,
+                    AVG(ast_per_36)  as ast,
+                    AVG(reb_per_36)  as reb,
+                    COUNT(*)         as lineups
+                FROM team_lineups
+                WHERE player_name = ?
+                  AND lineup_string NOT LIKE ?
+                  AND minutes >= 50
+            """, (player_name, f'%{out_player_name}%'))
+            row = c.fetchone()
+            if row and row[3] >= 5:
+                return {'pts': row[0], 'ast': row[1], 'reb': row[2], 'lineups': row[3]}
+        except Exception:
+            pass
+        return None
+
 
 if __name__ == "__main__":
     print("Module X (V3.7 - Live Schema) Loaded.")
