@@ -732,7 +732,11 @@ if __name__ == "__main__":
 
     if args.mode in ("pm_briefing", "morning_brief", "morning"):
         ProjectManagerBot().generate_briefing(mode="morning")
+    elif args.mode in ("pm_session", "session_debrief"):
+        # End-of-session debrief — uses recharging break graphic (header_break.png)
+        ProjectManagerBot().generate_briefing(mode="session")
     elif args.mode in ("pm_debrief", "nightly_brief", "nightly", "debrief"):
+        # Automated nightly P&L debrief — uses nightly graphic (header_nightly.png)
         ProjectManagerBot().generate_briefing(mode="nightly")
     elif args.mode in ("pm_break", "break", "break_notes", "state_preserve", "pause"):
         ProjectManagerBot().send_break_message()

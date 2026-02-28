@@ -256,8 +256,8 @@ Generate a morning briefing with the exact format below. Use real tasks from the
 Active sprint: {active_bullets}
 (Write ONE sharp sentence grounded in the active sprint above — no generic NBA trivia, reference the actual work in progress.)
 """
-        else:
-            # Pre-format completed tasks and next task
+        elif mode == "session":
+            # Session debrief — end-of-work break, uses recharging break graphic
             completed_tasks = roadmap['completed'][:3] if roadmap else []
             wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
             next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
@@ -266,6 +266,31 @@ Active sprint: {active_bullets}
             todays_focus = active_items[0] if active_items else current_phase
 
             header_img = str(self.break_img)
+            prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
+Generate a nightly debrief with the exact format below. Use real tasks from the data provided.
+
+📅 {today_str} | 🌙 OFFLINE
+──────────────
+**THE WINS** 🍾
+{wins_bullets}
+──────────────
+**THE PIVOT** 🥊
+Today's sprint: {todays_focus}
+Tomorrow: {next_task}
+──────────────
+**THE VIBE** 🧊
+(ONE closing line — reflect on the sprint above specifically, not generic motivation.)
+"""
+        else:
+            # Automated nightly debrief — P&L / settlement summary, uses nightly graphic
+            completed_tasks = roadmap['completed'][:3] if roadmap else []
+            wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
+            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8'
+            active_items = roadmap['in_progress'][:1] if roadmap else []
+            todays_focus = active_items[0] if active_items else current_phase
+
+            header_img = str(self.nightly_img)
             prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
 Generate a nightly debrief with the exact format below. Use real tasks from the data provided.
 
