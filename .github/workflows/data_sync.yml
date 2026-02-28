@@ -433,6 +433,7 @@ jobs:
           python3 scripts/validate_canonical_ids.py --warn-threshold 100 -v
 
       - name: Learn Daily Referee Trends
+        continue-on-error: true  # Non-critical: referee trends are supplementary
         timeout-minutes: 5
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -441,6 +442,12 @@ jobs:
           TANK01_TIER: paid
         run: |
           python3 scripts/learn_daily_trends.py
+
+      - name: Sync Team Betting Trends (H/A records + scoring + ATS)
+        continue-on-error: true  # Non-critical: supplementary context for bet cards
+        timeout-minutes: 3
+        run: |
+          python3 scripts/sync_team_betting_trends.py
 
       - name: Sync Scoring Environment (Phase 8.14)
         continue-on-error: true

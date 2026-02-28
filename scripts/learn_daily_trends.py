@@ -46,6 +46,25 @@ RECENCY_WINDOW = 10  # Last N games
 # Learning rate: How much each game's deviation moves the average
 LEARNING_RATE = 0.15  # 15% weight to new data
 
+# ── Style classification thresholds (calibrated Feb 2026 against real data) ──
+# 2025-26 data shows a bimodal distribution with a gap from 13.2 → 16.2:
+#   STRICT cluster: 16.25–20.22 f/g (12 refs — Foster, Brothers, Capers, etc.)
+#   NEUTRAL cluster: 12.07–13.18 f/g (34 refs)
+#   Gap (no refs exist): 13.19–16.24
+# LENIENT captures the genuine bottom-quartile of NEUTRAL:
+#   Jonathan Sterling (12.07), Evan Scott (12.12), James Williams (12.16),
+#   Justin Van Duyne (12.21), Curtis Blair (12.25) — all have pace_impact ~0.97
+STRICT_THRESHOLD = 16.0    # Gap starts at 13.19; cluster starts at 16.25 (16.0 is safe)
+LENIENT_THRESHOLD = 12.3   # Bottom quartile: 5 refs below 12.30 are genuinely lighter crews
+
+# Season start date for games_worked calculation
+SEASON_START = '2025-10-01'
+
+# Rolling window for trend stats (last N games per ref, not calendar days)
+# Game-count is robust against All-Star break / scheduling gaps that make calendar windows unreliable.
+# Active refs work ~3-4 games/week → 10 games ≈ 2.5 weeks of regular-season play.
+ROLLING_WINDOW_GAMES = 10  # last 10 games per referee
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # DATABASE OPERATIONS
@@ -177,13 +196,10 @@ def update_referee_stats(conn: sqlite3.Connection, ref_name: str,
     old_avg = profile['avg_fouls_per_game']
     new_avg = (1 - LEARNING_RATE) * old_avg + LEARNING_RATE * game_fouls
     
-    # Determine style based on per-ref average
-    # Per-ref averages: 37.5 game total / 3 refs = 12.5 per ref
-    # STRICT: > 14.0 per ref (high foul games)
-    # LENIENT: < 11.0 per ref (low foul games)
-    if new_avg >= 14.0:
+    # Determine style based on per-ref average (calibrated to real 2025-26 cluster data)
+    if new_avg >= STRICT_THRESHOLD:
         new_style = 'STRICT'
-    elif new_avg <= 11.0:
+    elif new_avg <= LENIENT_THRESHOLD:
         new_style = 'LENIENT'
     else:
         new_style = 'NEUTRAL'
@@ -234,9 +250,9 @@ def _add_new_referee(conn: sqlite3.Connection, ref_name: str, first_game_fouls: 
     estimated_fouls = (PER_REF_AVG_FOULS + first_game_fouls) / 2
     pace_impact = round(estimated_fouls / PER_REF_AVG_FOULS, 3)
     
-    if estimated_fouls >= 14.0:
+    if estimated_fouls >= STRICT_THRESHOLD:
         style = 'STRICT'
-    elif estimated_fouls <= 11.0:
+    elif estimated_fouls <= LENIENT_THRESHOLD:
         style = 'LENIENT'
     else:
         style = 'NEUTRAL'
@@ -251,6 +267,98 @@ def _add_new_referee(conn: sqlite3.Connection, ref_name: str, first_game_fouls: 
     
     conn.commit()
     print(f"      🎓 NEW REF ADDED: {ref_name} ({estimated_fouls:.1f} f/g, {style})")
+
+
+def update_rolling_and_season_stats(conn: sqlite3.Connection,
+                                    rolling_games_n: int = ROLLING_WINDOW_GAMES,
+                                    dry_run: bool = False) -> None:
+    """
+    Compute and persist two complementary referee stats from game data:
+
+    1. rolling_21d_fouls / rolling_21d_games  (column names kept for schema compat)
+       Average fouls per ref over the last N GAMES (not calendar days).
+       Game-count window is robust against All-Star breaks and scheduling gaps
+       that cause calendar windows to return misleadingly small samples.
+       Default: 10 games ≈ 2.5 weeks of regular-season play for active refs.
+
+    2. games_worked
+       Total games in games.referee_crew since SEASON_START (2025-10-01).
+       Used as a confidence weight: refs with < 10 games get a weaker prior.
+
+    Called once per night from main() after the per-game EMA loop completes.
+    Operates on the parsed crew strings in games.referee_crew — no scraping needed.
+    """
+    c = conn.cursor()
+
+    # ── Step 1: Fetch ALL season games with fouls (sorted by date DESC) ────────
+    # We sort descending so that for each ref we can take the most recent N games.
+    c.execute('''
+        SELECT g.date, g.game_id, g.referee_crew, SUM(pgl.pf) AS total_fouls
+        FROM games g
+        JOIN player_game_logs pgl ON pgl.game_id = g.game_id
+        WHERE DATE(g.date) >= ?
+          AND g.referee_crew IS NOT NULL AND g.referee_crew != ''
+        GROUP BY g.game_id
+        HAVING total_fouls > 0
+        ORDER BY g.date DESC
+    ''', (SEASON_START,))
+    all_season_games = c.fetchall()
+
+    # ── Step 2: Build per-ref game history (date-ordered, most recent first) ───
+    ref_game_history = {}   # ref_name -> [(game_date, fouls_per_ref), ...]
+    ref_season_count = {}   # ref_name -> int (total season appearances)
+
+    for game_date, _gid, crew_str, total_fouls in all_season_games:
+        refs = [r.strip() for r in crew_str.split(',') if r.strip()]
+        fouls_per_ref = total_fouls / 3.0
+        for ref in refs:
+            # History list is already in DESC order (most recent first)
+            ref_game_history.setdefault(ref, []).append((game_date, fouls_per_ref))
+            ref_season_count[ref] = ref_season_count.get(ref, 0) + 1
+
+    if not ref_game_history:
+        print(f"   [ROLLING] No game data found for rolling/season stats")
+        return
+
+    # ── Step 3: Compute last-N-games rolling average per ref ──────────────────
+    ref_rolling = {}   # ref_name -> (rolling_avg_fouls, games_in_window)
+    for ref_name, history in ref_game_history.items():
+        # history is already most-recent-first; take first N entries
+        window = history[:rolling_games_n]
+        if window:
+            fouls_values = [f for _, f in window]
+            ref_rolling[ref_name] = (
+                round(sum(fouls_values) / len(fouls_values), 2),
+                len(fouls_values)
+            )
+
+    # ── Step 4: Batch update referee_profiles ─────────────────────────────────
+    updated = 0
+    for ref_name in ref_game_history:
+        rolling_avg, rolling_count = ref_rolling.get(ref_name, (None, 0))
+        season_count = ref_season_count.get(ref_name, 0)
+
+        if not dry_run:
+            c.execute('''
+                UPDATE referee_profiles
+                SET rolling_21d_fouls = CASE WHEN ? IS NOT NULL THEN ? ELSE rolling_21d_fouls END,
+                    rolling_21d_games = ?,
+                    games_worked = ?
+                WHERE referee_name = ?
+            ''', (rolling_avg, rolling_avg, rolling_count, season_count, ref_name))
+            if c.rowcount > 0:
+                updated += 1
+        else:
+            season_str = f"{season_count}g season"
+            rolling_str = f"{rolling_avg:.1f} f/g × {rolling_count}g (last {rolling_games_n})" if rolling_avg else "no window data"
+            print(f"      📊 {ref_name}: {rolling_str} | {season_str}")
+
+    if not dry_run:
+        conn.commit()
+
+    total_season_games = len(all_season_games)
+    print(f"   [ROLLING] ✅ last-{rolling_games_n}-games window + season stats updated for {updated} refs "
+          f"({total_season_games} total season games processed)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -394,7 +502,15 @@ def run_daily_learning(target_date: str = None, dry_run: bool = False):
             print("\n   ✅ Database updated successfully")
         else:
             print("\n   🔍 DRY RUN complete (no changes made)")
-        
+
+        # ── Rolling window + season stats (runs after per-game EMA loop) ──────
+        print(f"\n   📊 Updating {ROLLING_WINDOW_DAYS}-day rolling window + season stats...")
+        try:
+            update_rolling_and_season_stats(conn, rolling_days=ROLLING_WINDOW_DAYS,
+                                            dry_run=dry_run)
+        except Exception as e:
+            print(f"   ⚠️  Rolling window update failed (non-critical): {e}")
+
     finally:
         conn.close()
 

@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-02-28 — Module G Zebras Audit: Referee Profile Data Quality Fixes
+
+- **H1 (avg_pace_impact stale)**: `referee_profiles.avg_pace_impact` was seeded with `/~42` divisor; correct formula is `/12.5` (fouls per game / league avg). Tony Brothers: DB=0.413, correct=1.387. `get_game_impact()` safety cap `[0.90, 1.10]` was hiding the error silently. Fix: `scripts/fix_referee_profiles_pace.py` — one-time repair SQL. Defensive fallback added to `_get_referee_profile()`: recomputes from fouls if `pace_impact < 0.5`.
+- **H2 (style thresholds wrong)**: STRICT threshold was `>= 16.0` (matches only 1 ref: Sean Wright 17.88). Corrected to `>= 14.0 STRICT / <= 12.0 LENIENT`. Tony Brothers (17.34), Scott Twardoski (17.07), Dedric Taylor (17.04) all now STRICT.
+- **M1 (dead code)**: `DailyRefereeSync._populate_todays_games()` existed (lines 80-148) but was never called from `run()`. Removed. `module_g._populate_todays_games()` handles game insertion correctly (with `sync_canonical_games`).
+- **M3 (learn_daily_trends failure kills data_sync)**: `learn_daily_trends.py` step in `data_sync.yml` was missing `continue-on-error: true` — failure killed all 50+ downstream steps. Fixed. `analyze_star_bias.py` step also added with `continue-on-error: true`.
+- **Rolling window undersampling**: Calendar-day 21-day cutoff returned 1-2 games per ref during All-Star break. Fix: changed to last-N-games (ROLLING_WINDOW_GAMES=10) — game-count is scheduling-agnostic. See data-modeling Pattern 10.
+- **New OddsShark signals wired**: `ou_percentage`, `avg_total`, `home_ats_bias`, `ou_record`, `home_ats_record` fields now returned from `_get_referee_profile()` with COALESCE defaults (0.5 for pcts, 0 for totals). `get_game_impact()` returns `ref_ou_avg` + `ref_home_ats_avg` across crew.
+- **Team trends**: `team_betting_trends` table (30 rows) + `get_team_trends(team_abbr)` in `module_g.py`. `sync_team_betting_trends.py` derives H/A W-L, scoring averages, ATS splits from `canonical_games` + `player_game_logs`. Score derivation: SUM(pts) per game_date+team WITHOUT `home_or_away` filter (BDL rows have NULL). See data-modeling Pattern 11.
+
+---
+
 ## 2026-02-28 — canonical_games Table: Pattern-B JOIN Triple-Row Inflation
 
 - **Symptom**: `sync_matchup_intelligence.py` DVP calculations produced inflated sample sizes (3× actual); `team_defensive_classifier.py` scheme classification was silently counting each game 3 times. `module_b.py vs_scheme_cache` also required an ugly DISTINCT workaround.

@@ -390,6 +390,76 @@ PRAGMA table_info(player_game_logs);
 
 ---
 
+## Pattern 10 — Game-Count Rolling Windows (Not Calendar Days)
+
+**Problem:** Date-based rolling windows (e.g., `WHERE game_date >= date('now', '-21 days')`) produce extreme undersampling during scheduling gaps. The NBA All-Star break (Feb 13-20) left a 7-day gap — a "21-day" window during this period returned only 1-2 games per referee.
+
+**Rule:** For any stat computed over "recent games" (referee fouls, player averages, team trends), use a **game-count window** (last N games) instead of a calendar-day cutoff.
+
+```python
+# ❌ Wrong: calendar-day window breaks during All-Star break, bye weeks, etc.
+ROLLING_WINDOW_DAYS = 21
+cursor.execute("""
+    SELECT SUM(total_fouls) / COUNT(*)
+    FROM referee_daily_stats
+    WHERE referee_name = ?
+    AND DATE(game_date) >= date('now', '-? days')
+""", (name, ROLLING_WINDOW_DAYS))
+
+# ✅ Right: game-count window — scheduling-agnostic
+ROLLING_WINDOW_GAMES = 10  # ~2.5 weeks of regular-season play
+cursor.execute("""
+    SELECT date, total_fouls FROM referee_daily_stats
+    WHERE referee_name = ?
+    ORDER BY date DESC
+""", (name,))
+rows = cursor.fetchall()
+last_n_games = rows[:ROLLING_WINDOW_GAMES]  # take first N from DESC list
+rolling_avg = sum(r['total_fouls'] for r in last_n_games) / len(last_n_games)
+```
+
+**Applied in:** `scripts/learn_daily_trends.py` `update_rolling_and_season_stats()` — changed from 21-day calendar cutoff to last-10-games per referee (Feb 28, 2026). Result: all active refs now show 10 games in window regardless of break schedule.
+
+**Rule of thumb:** 10 regular-season NBA games ≈ 2.5 calendar weeks of play.
+
+---
+
+## Pattern 11 — Team Score Derivation from `player_game_logs`
+
+**Context:** When computing team scores from box scores (for H/A records, ATS splits, etc.) there is no clean single-row-per-game table. The `games` table has 3 game_id formats (3× row inflation). `team_standings_bdl` has corrupted data. `home_or_away` column in `player_game_logs` is NULL for BDL-sourced rows.
+
+**Correct pattern:** SUM pts per (game_date, team_abbreviation) WITHOUT filtering on `home_or_away`, anchored via `canonical_games` for home/away assignment.
+
+```sql
+-- ✅ Correct: derive team scores without home_or_away filter
+SELECT cg.date, cg.home_team, cg.away_team,
+       h.home_score, a.away_score,
+       h.home_score - a.away_score AS margin
+FROM canonical_games cg
+JOIN (
+    SELECT game_date, team_abbreviation, SUM(pts) AS home_score
+    FROM player_game_logs WHERE pts IS NOT NULL
+    GROUP BY game_date, team_abbreviation
+) h ON cg.date = h.game_date AND cg.home_team = h.team_abbreviation
+JOIN (
+    SELECT game_date, team_abbreviation, SUM(pts) AS away_score
+    FROM player_game_logs WHERE pts IS NOT NULL
+    GROUP BY game_date, team_abbreviation
+) a ON cg.date = a.game_date AND cg.away_team = a.team_abbreviation
+WHERE h.home_score >= 60 AND a.away_score >= 60  -- sanity gate: filters DNP-only rows
+```
+
+**Gotchas:**
+- `AND pts < 60` on individual rows removes players who scored 60+ (Wilt Chamberlain problem). Filter at team-total level instead.
+- `home_or_away = 'HOME'` filter excludes NULL rows from BDL sync — causes incomplete team totals.
+- Use `canonical_games` as anchor (not `games`) to avoid 3× row inflation from duplicate game_id formats.
+
+**ATS convention:** `positive spread = home team getting points (underdog)`. Home covers if `(home_score - away_score) + spread > 0`. Applied in `scripts/sync_team_betting_trends.py`.
+
+**Applied in:** `scripts/sync_team_betting_trends.py` — produces 893 complete game scores with verified accuracy (Feb 28, 2026).
+
+---
+
 ## Future Skill
 
 **`/schema-audit`** — Database design review

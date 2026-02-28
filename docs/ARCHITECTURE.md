@@ -132,7 +132,8 @@ from module_e import LudiEvaluator           # ImportError
 | `odds` | Dynamic | Live market data from bookmakers |
 | `simulations` | Archive | Model output archive for backtesting |
 | `bet_recommendations` | Dynamic | Logged bets with tags |
-| `referee_profiles` | 78 | Referee baseline stats |
+| `referee_profiles` | 78 | Referee baseline stats + `rolling_21d_fouls` (last-10-game avg), `games_worked`, `ou_percentage`, `home_ats_bias` from OddsShark (Feb 28) |
+| `team_betting_trends` | 30 | H/A records, scoring avgs, ATS splits — computed from canonical_games + player_game_logs + bet_recommendations. Synced by `scripts/sync_team_betting_trends.py`. (Feb 28) |
 | `player_synergy_playtypes` | 1,326 | Synergy playtype data |
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
 | `team_lineups` | 10,669 | WOWY lineup data |

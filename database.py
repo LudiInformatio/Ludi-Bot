@@ -591,6 +591,20 @@ class LudiHistorian:
         except Exception:
             pass  # Column already exists
 
+        # Migration: Rolling window + season tracking columns (Feb 2026)
+        # rolling_21d_fouls  — avg fouls/ref over last 21 days (short-term trend)
+        # rolling_21d_games  — number of games in the 21-day window (confidence signal)
+        # games_worked       — total games tracked this season (season sample size)
+        for col_def in [
+            "ALTER TABLE referee_profiles ADD COLUMN rolling_21d_fouls REAL",
+            "ALTER TABLE referee_profiles ADD COLUMN rolling_21d_games INTEGER DEFAULT 0",
+            "ALTER TABLE referee_profiles ADD COLUMN games_worked INTEGER DEFAULT 0",
+        ]:
+            try:
+                c.execute(col_def)
+            except Exception:
+                pass  # Column already exists
+
         # 10. Referee Daily Stats Table (Module G v2.0 - Jan 15, 2026)
         c.execute('''
             CREATE TABLE IF NOT EXISTS referee_daily_stats (
@@ -1286,6 +1300,29 @@ class LudiHistorian:
                 streak         TEXT,
                 season         INT,
                 updated_at     TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # -- Module G: team_betting_trends (H/A records + scoring averages from internal data) --
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS team_betting_trends (
+                team             TEXT PRIMARY KEY,
+                home_wins        INTEGER DEFAULT 0,
+                home_losses      INTEGER DEFAULT 0,
+                away_wins        INTEGER DEFAULT 0,
+                away_losses      INTEGER DEFAULT 0,
+                home_ats_wins    INTEGER DEFAULT 0,
+                home_ats_losses  INTEGER DEFAULT 0,
+                away_ats_wins    INTEGER DEFAULT 0,
+                away_ats_losses  INTEGER DEFAULT 0,
+                home_avg_score   REAL,
+                home_avg_allowed REAL,
+                away_avg_score   REAL,
+                away_avg_allowed REAL,
+                avg_game_total   REAL,
+                games_tracked    INTEGER DEFAULT 0,
+                ats_games_tracked INTEGER DEFAULT 0,
+                last_updated     TIMESTAMP
             )
         ''')
 

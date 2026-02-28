@@ -53,8 +53,8 @@ def get_star_matchups(conn: sqlite3.Connection, target_date: str) -> List[Dict]:
     for row in c.fetchall():
         game_id, crew_str, pid, name, pts, pf, fta, mins, base_ppg = row
         
-        # Skip if no base PPG (can't calculate deviation)
-        if not base_ppg:
+        # Skip if no base PPG (can't calculate meaningful deviation)
+        if not base_ppg or base_ppg <= 0:
             continue
             
         crew = [r.strip() for r in crew_str.split(',') if r.strip()]

@@ -13,7 +13,6 @@ Designed for GitHub Actions automation (9:30 AM ET daily).
 import argparse
 import sqlite3
 import pandas as pd
-import requests
 import re
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Tuple
@@ -50,13 +49,24 @@ class DailyRefereeSync:
         self._ensure_todays_games()
     
     def _ensure_todays_games(self):
-        """Auto-populate today's games if missing (before any referee operations)"""
+        """Auto-populate today's games if missing. Delegates to Module G which
+        handles game insertion + sync_canonical_games() correctly."""
         print("   🔍 Checking today's games in database...")
-        
+
         if not self._check_todays_games_exist():
-            print("   📡 No games found - auto-populating today's slate...")
-            self._populate_todays_games()
-            print("   ✅ Games populated successfully")
+            print("   📡 No games found — delegating to Module G populate...")
+            try:
+                from module_g import LudiRefEngine
+                # LudiRefEngine.__init__ calls _ensure_todays_games internally,
+                # but we just need _populate_todays_games directly
+                engine = LudiRefEngine.__new__(LudiRefEngine)
+                engine.db_path = self.db_path
+                engine.LEAGUE_AVG_FOULS = 12.5
+                engine.daily_assignments = {}
+                engine._populate_todays_games()
+                print("   ✅ Games populated via Module G")
+            except Exception as e:
+                print(f"   ⚠️ Module G populate failed: {e}")
         else:
             print("   ✅ Today's games already exist")
 
@@ -77,90 +87,41 @@ class DailyRefereeSync:
             print(f"   ⚠️ Error checking games: {e}")
             return False
 
-    def _populate_todays_games(self):
-        """Populate today's games using The-Odds API (mirrors populate_todays_games.py logic)"""
-        try:
-            # Import config to access API key
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('scripts/sync_daily_referees.py'))))
-            import config
-            
-            # Fetch schedule from The-Odds API
-            url = 'https://api.the-odds-api.com/v4/sports/basketball_nba/odds'
-            params = {
-                'api_key': config.ODDS_API_KEY,
-                'regions': 'us',
-                'markets': 'h2h',  # We just need event info
-                'oddsFormat': 'american'
-            }
-            
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Get today's date in EST
-            import pytz
-            EST_TZ = pytz.timezone('US/Eastern')
-            today_str = datetime.now(EST_TZ).strftime('%Y-%m-%d')
-            
-            games_to_insert = []
-            for game in data:
-                # Convert UTC start time to EST date string
-                utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
-                est_time = utc_time.astimezone(EST_TZ)
-                game_date = est_time.strftime('%Y-%m-%d')
-                
-                if game_date == today_str:
-                    game_id = game['id']  # Use API ID as unique identifier
-                    home_team = resolve_team_abbr(game['home_team'])
-                    away_team = resolve_team_abbr(game['away_team'])
-                    
-                    if home_team and away_team:
-                        # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
-                        ludi_game_id = f"{est_time.strftime('%Y%m%d')}_{away_team}@{home_team}"
-                        
-                        games_to_insert.append((ludi_game_id, game_date, home_team, away_team))
-            
-            # Insert into database
-            if games_to_insert:
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                
-                for g in games_to_insert:
-                    g_id, g_date, home, away = g
-                    print(f"   🏀 {away} @ {home}")
-                    
-                    cursor.execute("""
-                        INSERT INTO games (game_id, date, home_team, away_team)
-                        VALUES (?, ?, ?, ?)
-                        ON CONFLICT(game_id) DO UPDATE SET
-                            date=excluded.date,
-                            home_team=excluded.home_team,
-                            away_team=excluded.away_team
-                    """, (g_id, g_date, home, away))
-                
-                conn.commit()
-                conn.close()
-                print(f"   ✅ Inserted {len(games_to_insert)} games")
-            else:
-                print("   ⚠️ No games found for today")
-                
-        except Exception as e:
-            print(f"   ❌ Error populating games: {e}")
-    
     def scrape_assignments(self) -> Dict[str, List[str]]:
         """
         Scrape today's referee assignments from NBA official site.
         Uses Playwright to handle dynamic JS rendering.
-        
+
+        DB-FIRST: If games.referee_crew is already populated for today (e.g., morning brief
+        already scraped via LudiRefEngine.build_ref_database()), return immediately and skip
+        Playwright entirely. Mirrors the caching pattern in module_g.build_ref_database().
+
         Returns:
             dict: {team_abbr: [ref1, ref2, ref3]}
         """
+        # ── DB-first cache check ────────────────────────────────────────────────
+        today_str = date.today().strftime('%Y-%m-%d')
+        try:
+            conn = sqlite3.connect(self.db_path)
+            rows = conn.execute(
+                "SELECT home_team, referee_crew FROM games "
+                "WHERE date = ? AND referee_crew IS NOT NULL AND referee_crew != ''",
+                (today_str,)
+            ).fetchall()
+            conn.close()
+            if rows:
+                result = {home: [r.strip() for r in crew.split(',')]
+                          for home, crew in rows}
+                print(f"   [SYNC] ✅ {len(result)} ref crew(s) already in DB — skipping Playwright")
+                return result
+        except Exception as e:
+            print(f"   [SYNC] DB-first check failed ({e}), falling through to scraper")
+
         url = "https://official.nba.com/referee-assignments/"
-        
+
         try:
             from playwright.sync_api import sync_playwright
-            
-            print(f"   [SYNC] Launching Playwright for {url}...")
+
             print(f"   [SYNC] Launching Playwright for {url}...")
             with sync_playwright() as p:
                 # User requested visible browser
@@ -437,42 +398,21 @@ class DailyRefereeSync:
         print()
         print(f"✅ Summary: {matched}/{len(games)} games updated")
         
-        # --- PERPLEXITY FALLBACK (when Playwright returns 0 assignments) ---
+        # --- PERPLEXITY FALLBACK — delegate to module_g (single authority) ---
         if matched == 0 and len(games) > 0 and not dry_run:
-            perplexity_key = os.environ.get('PERPLEXITY_API_KEY')
-            if perplexity_key:
-                print("\n⚠️  Playwright returned 0 assignments — attempting Perplexity fallback...")
-                try:
-                    from utils.perplexity_client import PerplexityClient
-                    perp = PerplexityClient()
-                    today_str = datetime.now().strftime('%Y-%m-%d')
-
-                    # Known referee names from referee_profiles table
-                    conn = sqlite3.connect(self.db_path)
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT referee_name FROM referee_profiles")
-                    known_refs = [r[0] for r in cursor.fetchall()]
-
-                    for game_id, home_team, away_team in games:
-                        query = f"NBA referee crew assignment {home_team} vs {away_team} tonight {today_str}"
-                        news = perp._query(query)
-                        if not news:
-                            continue
-                        news_lower = news.lower()
-                        found = [r for r in known_refs if r.lower() in news_lower]
-                        if found:
-                            cursor.execute(
-                                "UPDATE games SET referee_crew = ? WHERE game_id = ?",
-                                (', '.join(found), game_id)
-                            )
-                            matched += 1
-                            print(f"   ✅ Perplexity crew ({home_team}): {', '.join(found)}")
-
-                    conn.commit()
-                    conn.close()
-                    print(f"   Perplexity fallback matched {matched} game(s)")
-                except Exception as e:
-                    print(f"   ⚠️ Perplexity fallback failed: {e}")
+            print("\n⚠️  Playwright returned 0 assignments — delegating to Module G fallback...")
+            try:
+                from module_g import LudiRefEngine
+                engine = LudiRefEngine.__new__(LudiRefEngine)
+                engine.db_path = self.db_path
+                engine.LEAGUE_AVG_FOULS = 12.5
+                engine.daily_assignments = {}
+                result = engine.build_ref_database()
+                matched = len(result)
+                if matched:
+                    print(f"   ✅ Module G fallback populated {matched} game crew(s)")
+            except Exception as e:
+                print(f"   ⚠️ Module G fallback failed: {e}")
         # ---------------------------------------------------------------
 
         # --- VALIDATION GUARDRAIL ---

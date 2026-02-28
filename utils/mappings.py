@@ -50,22 +50,39 @@ TEAM_MAP = {
     "Washington Wizards": "WAS"
 }
 
-def resolve_team_abbr(raw_name: str) -> str:
+def resolve_team_abbr(raw_name: str, conn=None) -> str:
     """
     Standardize team names to 3-letter abbreviations.
+
+    When ``conn`` (a sqlite3 connection) is provided, tries canonical_teams
+    DB lookup first — this is the single source of truth for team mappings.
+    Falls back to the hardcoded TEAM_MAP dict if conn is None or query misses.
     """
     if not raw_name:
         return None
-        
+
     clean_name = raw_name.replace('.', '').strip()
-    
+
+    # DB-first: canonical_teams is the authoritative source (30 rows)
+    if conn is not None:
+        try:
+            row = conn.execute(
+                "SELECT standard_abbr FROM canonical_teams "
+                "WHERE standard_abbr = ? OR bdl_abbr = ? OR tank01_abbr = ? OR full_name = ?",
+                (clean_name, clean_name, clean_name, clean_name)
+            ).fetchone()
+            if row:
+                return row[0]
+        except Exception:
+            pass  # Table may not exist in test DBs — fall through to dict
+
     if clean_name in TEAM_MAP:
         return TEAM_MAP[clean_name]
-        
+
     for key, abbr in TEAM_MAP.items():
-        if key in clean_name: 
+        if key in clean_name:
             return abbr
-        
+
     # Final check for cases where the abbreviation itself is passed
     if len(clean_name) == 3 and clean_name.isupper() and clean_name in TEAM_MAP.values():
         return clean_name
