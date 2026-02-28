@@ -206,6 +206,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 | [docs/STATUS_HISTORY.md](docs/STATUS_HISTORY.md) | Archived project status updates (Phases 1-4) |
 | [docs/research/competitive/BETIQ_TEAMRANKINGS_RESEARCH.md](docs/research/competitive/BETIQ_TEAMRANKINGS_RESEARCH.md) | BetIQ/TeamRankings competitive analysis — ATS/O-U patterns, feature gap analysis, implementation roadmap |
 | [best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md](best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md) | BERT-derived prompt engineering patterns — 8 structural improvements for Claude prompts, implementation priority |
+| [best-practices/ai/PM_BOT_NOTES_GUIDE.md](best-practices/ai/PM_BOT_NOTES_GUIDE.md) | How to write ROADMAP header lines so PM bot generates specific Gemini messages (BERT grounding pattern) |
 
 ---
 

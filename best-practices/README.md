@@ -46,10 +46,11 @@ best-practices/
 ---
 
 ### 🤖 AI — Prompt Engineering Research (`ai/`)
-**Status:** ✅ Complete (Feb 20, 2026)
+**Status:** ✅ Complete (Feb 27, 2026)
 - `PROMPT_ENGINEERING_PATTERNS.md` — 8 BERT-derived patterns mapped to Claude prompts
 - Source: Google BERT codebase + Procedia CS 2024 sentiment paper
 - Explains root cause of format drift, 400 errors, and few-shot vs zero-shot tradeoffs
+- `PM_BOT_NOTES_GUIDE.md` — BERT grounding pattern applied to human-written ROADMAP notes; formula for `**Active Work:**`, `**Completed:**`, and `- [ ]` bullets so Gemini gets specific context
 
 ### 🤖 AI — Operational Prompting Guide (`ai-prompting/`)
 **Status:** ✅ Complete (Feb 20, 2026)
@@ -189,6 +190,6 @@ When you discover a new pattern or lesson:
 
 ---
 
-**Last Updated:** February 26, 2026 EST
+**Last Updated:** February 27, 2026 EST
 **Categories Complete:** 8 (api, ai, ai-prompting, coding, data, data-modeling, debugging, ops-hub)
 **Categories Initialized:** 2 (testing, deployment)

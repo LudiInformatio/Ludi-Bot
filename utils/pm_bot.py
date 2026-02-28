@@ -237,6 +237,8 @@ class ProjectManagerBot:
             pending_tasks = roadmap['pending'][:3] if roadmap else []
             task_bullets = "\n".join([f"• {t}" for t in pending_tasks]) or "• No pending tasks found"
             current_phase = roadmap['current_phase'] if roadmap else 'Phase 5 - Production Deployment & Automation'
+            active_items = roadmap['in_progress'][:2] if roadmap else []
+            active_bullets = "\n".join([f"• {t}" for t in active_items]) or f"• {current_phase}"
 
             header_img = str(self.morning_img)
             prompt = f"""You are the "Vibe Starters Assistant" (Powered by Ludi).
@@ -251,13 +253,17 @@ Generate a morning briefing with the exact format below. Use real tasks from the
 {task_bullets}
 ──────────────
 **THE INTEL** 🥃
-(Add ONE brief insight about NBA analytics or betting markets.)
+Active sprint: {active_bullets}
+(Write ONE sharp sentence grounded in the active sprint above — no generic NBA trivia, reference the actual work in progress.)
 """
         else:
             # Pre-format completed tasks and next task
             completed_tasks = roadmap['completed'][:3] if roadmap else []
             wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
             next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8'
+            active_items = roadmap['in_progress'][:1] if roadmap else []
+            todays_focus = active_items[0] if active_items else current_phase
 
             header_img = str(self.nightly_img)
             prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
@@ -269,10 +275,11 @@ Generate a nightly debrief with the exact format below. Use real tasks from the 
 {wins_bullets}
 ──────────────
 **THE PIVOT** 🥊
-Tomorrow's focus: {next_task}
+Today's sprint: {todays_focus}
+Tomorrow: {next_task}
 ──────────────
 **THE VIBE** 🧊
-(Add ONE brief motivational closing line.)
+(ONE closing line — reflect on the sprint above specifically, not generic motivation.)
 """
 
         try:

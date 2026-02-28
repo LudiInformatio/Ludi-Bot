@@ -259,5 +259,6 @@ This project has custom skills available:
   - **API Best Practices**: `best-practices/api/API_BEST_PRACTICES.md` (comprehensive guide)
   - **API Quick Reference**: `best-practices/api/API_QUICK_REFERENCE.md` (cheatsheet)
   - **Canonical Name Resolution**: `best-practices/data/CANONICAL_NAME_RESOLUTION.md` (accent handling across APIs, two-direction transforms, injection point table)
+  - **PM Bot Notes Guide**: `best-practices/ai/PM_BOT_NOTES_GUIDE.md` (how to write ROADMAP header lines so PM bot messages are specific, not generic)
 - **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
 - **Research**: `docs/research/` (competitive analysis, prompt engineering)
