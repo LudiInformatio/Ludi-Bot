@@ -215,9 +215,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
 | API | Tier | Purpose |
 |-----|------|---------|
-| The-Odds-API | Paid (20K/mo) | Game lines, player props (primary) |
+| The-Odds-API | Paid (20K credit/mo) | Game lines, player props (primary) |
 | Ball Don't Lie | Paid ($39.99/mo) | Fallback odds, injuries, game logs |
-| Tank01 | Paid (1K/day) | Rosters, injuries, box scores |
+| Tank01 | Paid (1K credits/day) | Rosters, injuries, box scores |
 | PBP Stats | Free | Shot quality, WOWY data |
 | Perplexity Sonar | Paid | News context for injuries + game notes |
 | SportsDataIO | Free (100 calls/day) | Fantasy stats enrichment (`started`, fantasy pts, doubles) |
