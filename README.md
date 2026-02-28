@@ -1,4 +1,4 @@
-# Ludi Informatio v2.0
+# Ludi Lens v2.0 — The Edge, Magnified
 
 **NBA Player Props Analytics | AI-Driven | Always On**
 
@@ -168,7 +168,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Module Audit Sprint (A+B) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul (Tank01 Tier 3, always-capture, quota TTL), `LudiEngine` class (HOT_STREAK fix, hit rates, line history) |
+| Infra | Module Audit Sprint (A+B+C+D+E) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul (Tank01 Tier 3, always-capture, quota TTL), `LudiEngine` class (HOT_STREAK fix, hit rates, line history); `LudiOracle` 8 pre-load dicts + zero-DB sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent, INJURY_RETURN edge type, ghost resolve fix; `USG_PCT` key fix in `main.py`; Module F (`LudiReporter`) next |
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
 | Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
 | Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
@@ -178,9 +178,9 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 
 **Active / Planned Next:**
-- Module Audit Sprint — A+B+C complete; Module D (`LudiYak`) next
+- Module Audit Sprint — A+B+C+D+E complete; Module F (`LudiReporter`) next
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
-- Phase 8.23: Wilson calibration at Layer 1 14-day mark (~Mar 10)
+- Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
 
 **Performance (Jan 7 – Feb 25, 2026):**
 - Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)
