@@ -266,10 +266,10 @@ Active sprint: {active_bullets}
             todays_focus = active_items[0] if active_items else current_phase
 
             header_img = str(self.break_img)
-            prompt = f"""You are the "Vibe Starters Assistant". End of day protocol.
-Generate a nightly debrief with the exact format below. Use real tasks from the data provided.
+            prompt = f"""You are the "Vibe Starters Assistant". End of session — recharging break.
+Generate a session debrief with the exact format below. Use real tasks from the data provided.
 
-📅 {today_str} | 🌙 OFFLINE
+📅 {today_str} | ⚡ RECHARGING
 ──────────────
 **THE WINS** 🍾
 {wins_bullets}
