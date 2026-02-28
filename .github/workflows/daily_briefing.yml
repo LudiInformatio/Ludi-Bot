@@ -87,6 +87,13 @@ jobs:
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
 
+      - name: Run News Agent (Automated News Catalyst Check)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          source .venv/bin/activate
+          python scripts/news_agent.py --mode automated
+
       - name: Run Morning Briefing
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

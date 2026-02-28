@@ -79,6 +79,9 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 [Use format: "OUT: name [TEAM] (Xd injury) → beneficiary +boost stat projection"]
 [Or: "GTD: name [TEAM] (injury) — pregame update critical"]
 
+📰 NON-INJURY NEWS:
+{news_signals}
+
 === CURRENT ROSTERS (last 14 days — use ONLY these players) ===
 {away_team}: {away_rotation}
 {home_team}: {home_rotation}

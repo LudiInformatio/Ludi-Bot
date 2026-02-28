@@ -343,6 +343,38 @@ def _get_team_situation_note(team_abbr, cursor):
 
     return " | ".join(notes) if notes else ""
 
+
+def _get_news_catalysts(conn, date: str) -> str:
+    """
+    Fetch non-injury news catalysts from claude_analysis_log for a given date.
+    Returns a formatted string of bullets for players with has_catalyst=True.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT player_name, catalyst_type, catalyst_signal, catalyst_confidence
+            FROM claude_analysis_log
+            WHERE date(analysis_date) = date(?)
+              AND has_catalyst = 1
+              AND analysis_type = 'news_catalyst'
+            ORDER BY catalyst_confidence DESC
+        """, (date,))
+        rows = cursor.fetchall()
+
+        if not rows:
+            return ""
+
+        lines = []
+        for player, ctype, signal, conf in rows:
+            conf_str = f"{conf:.0%}" if conf else "N/A"
+            lines.append(f"• {player}: {ctype} — {signal} (conf: {conf_str})")
+
+        return "\n".join(lines)
+    except Exception as e:
+        print(f"[TAG] News catalysts fetch error: {e}")
+        return ""
+
+
 import argparse
 
 class MorningBriefEngine:
@@ -919,6 +951,12 @@ Return JSON only."""
                         fatigue_flag = "None"
 
                     try:
+                        # Fetch news catalysts for today
+                        _today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+                        news_signals = _get_news_catalysts(conn, _today_str)
+                        if not news_signals:
+                            news_signals = "No non-injury news catalysts."
+
                         prompt = GAME_NOTES_TEMPLATE.format(
                             away_team=away_team,
                             home_team=home_team,
@@ -934,6 +972,7 @@ Return JSON only."""
                             fatigue_flag=fatigue_flag,
                             injury_intel_block=_safe_inject(injury_intel_block, _MAX_BLOCK_CHARS['injury_intel_block']),
                             beneficiary_block=_safe_inject(beneficiary_block, _MAX_BLOCK_CHARS['beneficiary_block']),
+                            news_signals=news_signals,
                             # Enriched scheme context (fixed 'DEFENSIVE'→'DEFENSE' typo + intelligence layer)
                             # Format: "OFF:MOTION · DEF:PAINT_PACK [WEAK] — allows 1.8 drives/g (#2)"
                             away_archetype_summary=(

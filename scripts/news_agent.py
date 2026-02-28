@@ -46,12 +46,92 @@ def get_team_players(conn: sqlite3.Connection, team_abbr: str) -> list:
     return [row[0] for row in cursor.fetchall()]
 
 
+def run_automated_mode():
+    """Automated mode: query today's Diamond/Blue Chip bets, check news for each player."""
+    import config
+    yak = LudiYak()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    print(f"\n[NEWS AGENT] Automated Mode — {today}")
+    print("=" * 50)
+
+    try:
+        db_path = getattr(config, 'DB_PATH', 'ludi.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT DISTINCT player_name FROM bet_recommendations
+            WHERE date(game_date) = date('now')
+              AND confidence_tier IN ('DIAMOND', 'BLUE CHIP')
+        """)
+        bet_players = [row[0] for row in cursor.fetchall()]
+
+        if not bet_players:
+            print("[NEWS AGENT] No Diamond/Blue Chip bets today. Skipping.")
+            conn.close()
+            return
+
+        print(f"[NEWS AGENT] Found {len(bet_players)} players with Diamond/Blue Chip bets today")
+
+        catalysts_found = []
+        for player in bet_players:
+            cursor.execute("SELECT team FROM players WHERE name = ?", (player,))
+            row = cursor.fetchone()
+            if not row:
+                continue
+            player_team = row[0]
+            cursor.execute("""
+                SELECT home_team, away_team FROM games
+                WHERE date(game_date) = date('now')
+                  AND (home_team = ? OR away_team = ?)
+                LIMIT 1
+            """, (player_team, player_team))
+            game_row = cursor.fetchone()
+            if not game_row:
+                opponent = "Opponent"
+            else:
+                opponent = game_row[0] if game_row[1] == player_team else game_row[1]
+
+            result = yak._check_news_catalyst(player, player_team, opponent)
+
+            if result:
+                catalysts_found.append({
+                    'player': player,
+                    'team': player_team,
+                    'type': result.get('catalyst_type'),
+                    'signal': result.get('signal'),
+                    'direction': result.get('bet_direction'),
+                    'confidence': result.get('confidence')
+                })
+
+                cursor.execute("""
+                    INSERT OR REPLACE INTO claude_analysis_log 
+                    (player_name, analysis_date, analysis_type, has_catalyst, catalyst_type, catalyst_signal, catalyst_confidence)
+                    VALUES (?, ?, 'news_catalyst', 1, ?, ?, ?)
+                """, (player, today, result.get('catalyst_type'), result.get('signal'), result.get('confidence')))
+                conn.commit()
+                print(f"  ✓ {player}: {result.get('catalyst_type')} ({result.get('bet_direction')})")
+
+        conn.close()
+        print(f"\n[NEWS AGENT] Complete. {len(catalysts_found)} catalysts found.")
+
+    except Exception as e:
+        print(f"[NEWS AGENT] Error: {e}")
+        sys.exit(0)
+
+
 def main():
     parser = argparse.ArgumentParser(description="News Catalyst Agent — Pre-game news research")
     parser.add_argument("--game", type=str, help="Game to analyze (e.g., CLE@DET)")
     parser.add_argument("--player", type=str, help="Specific player to analyze")
+    parser.add_argument("--mode", type=str, default="manual", help="Mode: manual (default) or automated")
     parser.add_argument("--verbose", action="store_true", help="Enable debug output")
     args = parser.parse_args()
+
+    if args.mode == "automated":
+        run_automated_mode()
+        sys.exit(0)
 
     if not args.game and not args.player:
         parser.error("Must specify --game or --player")
@@ -167,4 +247,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(0)
+    sys.exit(0)

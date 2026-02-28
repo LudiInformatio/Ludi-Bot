@@ -84,6 +84,13 @@ jobs:
           export PYTHONPATH=$PWD
           python3 scripts/sync_injuries.py --force || echo "⚠️ Injury refresh warning (non-fatal)"
 
+      - name: Run News Agent (Automated News Catalyst Check)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          source .venv/bin/activate
+          python scripts/news_agent.py --mode automated
+
       - name: Run Evening Lock Briefing
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
