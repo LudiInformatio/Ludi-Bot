@@ -323,7 +323,11 @@ Tomorrow: {next_task}
         state_text = f"Working on: {in_progress}" if in_progress else f"Current focus: {current_phase}"
 
         prompt = f"""You are the "Vibe Starters Assistant". Break/pause protocol.
-Generate a break message with the exact format below. Use real task data provided.
+
+OUTPUT ONLY the formatted card below — no prose, no intro, no explanation.
+The card is pre-filled. Your ONLY job is to replace [VIBE] with ONE sharp sentence
+that references the specific sprint work in STATE PRESERVED above. No generic motivation.
+No "go touch grass". Name the actual feature or file being built.
 
 🛑 PAUSED | {time_str}
 ──────────────
@@ -334,7 +338,7 @@ Generate a break message with the exact format below. Use real task data provide
 {wins_text}
 ──────────────
 **THE VIBE** 🧊
-Go touch grass. Context saved.
+[VIBE]
 """
 
         try:
