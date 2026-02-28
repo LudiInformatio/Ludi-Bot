@@ -513,6 +513,105 @@ class LudiRefEngine:
             print(f"   [ZEBRAS] team_trends lookup failed for {team_abbr}: {e}")
             return None
 
+    def get_player_crew_bias(self, player_name: str, crew: list) -> dict:
+        """
+        Returns aggregate ref-player bias for a player vs a given referee crew.
+
+        Queries referee_player_bias (populated daily by analyze_star_bias.py) for
+        each ref in the crew, weighted by games_officiated. Complements the
+        crew-level whistle_impact in get_game_impact() — this is the player-specific
+        layer on top of the crew aggregate.
+
+        Args:
+            player_name: Player's display name (exact match, then last-name fuzzy)
+            crew: List of referee names from daily_assignments
+
+        Returns:
+            dict: {
+                'avg_fta_awarded': float,  # avg FTA this player gets vs this crew
+                'avg_pf_called':   float,  # avg PF called on this player vs crew
+                'points_impact':   float,  # avg PPG delta vs player's base_ppg
+                'games_total':     int,    # total sample size across crew refs
+                'games_per_ref':   float,  # avg games per ref (confidence proxy)
+                'label':           str,    # 'STAR_KILLER' | 'PROTECTOR' | 'NEUTRAL'
+            }
+            or None if crew is empty, refs unresolved, or < 5 games total
+        """
+        GAMES_MIN = 5          # Minimum total games to surface any signal
+        IMPACT_THRESHOLD = 3.5 # PPG delta threshold for KILLER / PROTECTOR label
+
+        if not crew:
+            return None
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+
+            # Resolve crew names → referee_ids
+            placeholders = ','.join('?' * len(crew))
+            ref_rows = conn.execute(
+                f"SELECT referee_id FROM referee_profiles WHERE referee_name IN ({placeholders})",
+                crew
+            ).fetchall()
+
+            if not ref_rows:
+                conn.close()
+                return None
+
+            ref_ids = [r[0] for r in ref_rows]
+            id_ph = ','.join('?' * len(ref_ids))
+
+            # Exact name match first
+            rows = conn.execute(
+                f"""SELECT games_officiated, avg_pf_called, avg_fta_awarded, points_impact_vs_avg
+                    FROM referee_player_bias
+                    WHERE referee_id IN ({id_ph}) AND player_name = ?""",
+                (*ref_ids, player_name)
+            ).fetchall()
+
+            # Last-name fuzzy fallback
+            if not rows and ' ' in player_name:
+                last_name = player_name.split()[-1]
+                rows = conn.execute(
+                    f"""SELECT games_officiated, avg_pf_called, avg_fta_awarded, points_impact_vs_avg
+                        FROM referee_player_bias
+                        WHERE referee_id IN ({id_ph}) AND player_name LIKE ?""",
+                    (*ref_ids, f'%{last_name}%')
+                ).fetchall()
+
+            conn.close()
+
+            if not rows:
+                return None
+
+            total_games = sum(r[0] for r in rows)
+            if total_games < GAMES_MIN:
+                return None
+
+            # Weighted averages (weighted by each ref's games_officiated sample)
+            avg_pf     = sum(r[0] * r[1] for r in rows) / total_games
+            avg_fta    = sum(r[0] * r[2] for r in rows) / total_games
+            avg_impact = sum(r[0] * r[3] for r in rows) / total_games
+            games_per_ref = total_games / len(ref_rows)
+
+            label = 'NEUTRAL'
+            if avg_impact <= -IMPACT_THRESHOLD:
+                label = 'STAR_KILLER'
+            elif avg_impact >= IMPACT_THRESHOLD:
+                label = 'PROTECTOR'
+
+            return {
+                'avg_fta_awarded': round(avg_fta, 2),
+                'avg_pf_called':   round(avg_pf, 2),
+                'points_impact':   round(avg_impact, 2),
+                'games_total':     total_games,
+                'games_per_ref':   round(games_per_ref, 1),
+                'label':           label,
+            }
+
+        except Exception as e:
+            print(f"   [ZEBRAS] star bias lookup failed ({player_name}): {e}")
+            return None
+
     def get_game_impact(self, home_team_abbr):
         """
         Calculate referee impact for a game, now returning a dict with

@@ -477,6 +477,18 @@ class LudiReporter:
                                 ref_note = f"⚖️ Refs Boost Overs ({ref_pace}x)" if ref_pace > 1.0 else f"⚖️ Refs Drag Unders ({ref_pace}x)"
                                 note_elements.append(ref_note)
 
+                            # E2) Star Bias — per-player historical vs this specific crew
+                            # Only fires for STAR_KILLER / PROTECTOR labels (≥3.5 PPG delta, ≥5 games)
+                            _crew_bias = p.get('crew_bias')
+                            if _crew_bias and _crew_bias.get('label') in ('STAR_KILLER', 'PROTECTOR'):
+                                _impact = _crew_bias['points_impact']
+                                _fta    = _crew_bias['avg_fta_awarded']
+                                _sign   = '+' if _impact > 0 else ''
+                                _lbl    = '🔥 PROTECTOR' if _crew_bias['label'] == 'PROTECTOR' else '🩸 STAR_KILLER'
+                                note_elements.append(
+                                    f"{_lbl}: {_sign}{_impact:.1f} PPG / {_fta:.1f} FTA avg ({_crew_bias['games_total']}g)"
+                                )
+
                             # F) Yak Decision Note (V2.0 - Explicit Injury Confirmation)
                             if p.get('decision_note'):
                                 note_elements.append(p['decision_note'])

@@ -526,6 +526,14 @@ class LudiOrchestrator:
                     hit_rates = self.sim.calculate_hit_rates(sim, lines_for_calc)
                     p_dict['sim_hit_rates'] = hit_rates  # e.g. {'pts': 0.62, 'reb': 0.55}
                 
+                # Module G: Per-player star bias vs today's ref crew
+                _ref_data = game_data.get('archetypes', {}).get('ref_data', {})
+                _crew = _ref_data.get('crew', []) if isinstance(_ref_data, dict) else []
+                if _crew:
+                    _crew_bias = self.zebras.get_player_crew_bias(p_name, _crew)
+                    if _crew_bias:
+                        p_dict['crew_bias'] = _crew_bias
+
                 # Module B: Enrich with trends, hit rates, streak scores
                 self.engine.enrich_player(p_dict, props_fmt)
                 
