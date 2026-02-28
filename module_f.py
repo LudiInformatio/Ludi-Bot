@@ -6,7 +6,7 @@ import config
 from utils.devig import get_fair_probability, calculate_true_edge, american_to_implied
 from utils.bet_logger import get_bet_logger
 from utils.tag_classifier import get_tag_classifier
-from utils.time_utils import get_est_today, format_est_date
+from utils.time_utils import get_est_today, format_est_date, get_time_context
 
 # WOWY & Smart Blowout Tax (V4.7)
 try:
@@ -124,7 +124,7 @@ def _sanitize_archetype(raw: str) -> str:
     return _LEGACY_ARCHETYPE_MAP.get(arch, 'GENERALIST')
 
 
-def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str, games_since_return: int = None) -> str:
+def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str, games_since_return: int = None, player_name: str = None) -> str:
     """Phase 8.24 — Classify primary edge driver for bet labeling."""
     scenario_str = (scenario or '').upper()
     note_str = ' | '.join(note_elements).lower() if note_elements else ''
@@ -135,10 +135,11 @@ def _classify_edge_type(scenario: str, note_elements: list, tags_formatted: str,
         return 'Injury-Vacuum'
 
     # Injury return ramp-up (Module C G3) — players returning from 7+ day absence
-    # Check both parameter and dict-style lookup for flexibility
+    # main.py:465 passes sim.get('GAMES_SINCE_RETURN') — no DB fallback needed.
     gsr = games_since_return
     if gsr is None:
         gsr = note_elements[0].get('games_since_return') if note_elements and isinstance(note_elements[0], dict) else None
+
     if gsr and int(gsr) <= 4:
         return 'Injury-Return'
 
@@ -191,6 +192,9 @@ class LudiReporter:
             print(f"⚠️  Tag classifier unavailable: {e}")
             self.tag_classifier = None
 
+        # Phase 8.20: BDL fallback flag (set externally by Gatekeeper)
+        self._bdl_fallback_active = False
+
         # Phase 8.20: Load stat confidence cache (built nightly by build_stat_confidence.py)
         # When sample_n >= 200, live calibration_gap + RMSE override hardcoded constants.
         # Falls back to _STAT_EDGE_CALIBRATION / _STAT_RMSE when cache is missing or thin.
@@ -208,7 +212,11 @@ class LudiReporter:
         Processes the slate and applies 2026 sharp-market filters.
         """
         all_props = []
-        
+        # Time-context mode for this pipeline run — written to each bet_recommendation row.
+        # Drives confidence framing in downstream consumers (Ask Ludi, Ludi Lens, bet cards).
+        # EARLY_LOOK (<noon) → AFTERNOON (noon-5 PM) → PRE_GAME (5-7 PM) → LOCK_TIME (>7 PM)
+        _run_time_context = get_time_context()['mode']
+
         for game in processed_slate:
             # --- 1. SMART BLOWOUT TAX (V4.7) ---
             # Context-aware: Favorites get taxed, underdogs neutral, bench gets boost
@@ -303,6 +311,7 @@ class LudiReporter:
                                 continue  # Skip low-volume shooters
 
                         # Filter 3: TWO_LEVEL_SCORER OVER — systematically over-projected (35.7%, n=314)
+                        # FIXME: Calibration window — verify if this still holds post-ASB (Feb 2026 data)
                         if p.get('archetype') == 'TWO_LEVEL_SCORER' and bet_direction == 'over':
                             continue
 
@@ -484,6 +493,49 @@ class LudiReporter:
                             elif source_quality == 'ODDS_API' and vendor_count > 0:
                                 note_elements.append(f"[{vendor_count}bk]")
 
+                            # I) Multi-window hit rates (CR1 — Outlier/PropsMadness pattern)
+                            # Module B pre-computes L5/L10/L15/L20 in hit_rates_by_market — zero DB cost.
+                            # Keys: over_l5, over_l10, over_l15, over_l20 (same for under_).
+                            # Sample sizes are fixed by window, so counts are derivable.
+                            _hr_by_mkt = p.get('hit_rates_by_market')
+                            if _hr_by_mkt:
+                                _hr_entry = _hr_by_mkt.get(stat_key.lower())
+                                if _hr_entry:
+                                    _dir = bet_direction  # 'over' or 'under'
+                                    _l5 = _hr_entry.get(f'{_dir}_l5')
+                                    _l10 = _hr_entry.get(f'{_dir}_l10')
+                                    _l15 = _hr_entry.get(f'{_dir}_l15')
+                                    _l20 = _hr_entry.get(f'{_dir}_l20')
+                                    _hr_parts = []
+                                    if _l5 is not None:
+                                        _hr_parts.append(f"L5: {int(round(_l5 * 5))}/5 ({int(_l5 * 100)}%)")
+                                    if _l10 is not None:
+                                        _hr_parts.append(f"L10: {int(round(_l10 * 10))}/10 ({int(_l10 * 100)}%)")
+                                    if _l15 is not None:
+                                        _hr_parts.append(f"L15: {int(round(_l15 * 15))}/15 ({int(_l15 * 100)}%)")
+                                    if _l20 is not None:
+                                        _hr_parts.append(f"L20: {int(round(_l20 * 20))}/20 ({int(_l20 * 100)}%)")
+                                    if _hr_parts:
+                                        note_elements.append(" | ".join(_hr_parts))
+                                    # vs-scheme L5: how this player performs against TODAY's opponent
+                                    # defense type (e.g. PAINT_PACK, BLITZ). From Module B vs_scheme_cache
+                                    # which uses team_scheme_cache.active_style — live DB data, not hardcoded.
+                                    _vs_scheme = _hr_entry.get('vs_scheme')
+                                    _vs_l5 = _hr_entry.get(f'{_dir}_vs_scheme_l5')
+                                    _vs_n = _hr_entry.get('vs_scheme_sample', 0)
+                                    if _vs_scheme and _vs_l5 is not None and _vs_n:
+                                        _vs_hits = int(round(_vs_l5 * _vs_n))
+                                        note_elements.append(
+                                            f"vs {_vs_scheme} L{_vs_n}: {_vs_hits}/{_vs_n} ({int(_vs_l5 * 100)}%)"
+                                        )
+
+                            # TODO: Sprint 4 — Alt line sweep
+                            # Read game.get('alt_props', {}).get(stat_key, {}).get(p['name'], [])
+                            # For each alt at ±1.5/±3.0: compute EV via same devig formula as main.
+                            # If alt EV > main EV: note_elements.append("Alt: OVER {line} @ {odds}")
+                            # Module A Phase 2B writes alt_props to self.games[game_id]['alt_props'].
+                            # See plans/pure-baking-river.md PART 1 / Sprint 4 for full spec.
+
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
                             if self.tag_classifier:
@@ -558,14 +610,16 @@ class LudiReporter:
                                             p.get('scenario', 'BASE'),
                                             note_elements,
                                             tags_formatted,
-                                            p.get('games_since_return')
+                                            p.get('games_since_return'),
+                                            p.get('name')  # B3: fallback player_name for DB lookup
                                         ),
                                         'referee_impact': ref_pace,
                                         'blowout_modifier': round(blowout_mult, 3),
                                         'run_type': 'production',
                                         'source_quality': source_quality,
                                         'vendor_count': vendor_count,
-                                        'bookmaker': book_over if bet_direction == 'over' else book_under  # Line Shopping V2.0
+                                        'bookmaker': book_over if bet_direction == 'over' else book_under,  # Line Shopping V2.0
+                                        'time_context': _run_time_context,  # EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME
                                     }
                                     bet_id = self.bet_logger.log_recommendation(rec_data)
                                 except Exception as e:
@@ -601,11 +655,6 @@ class LudiReporter:
                                 "scenario": p.get('scenario', 'BASE'),
                             })
 
-                # --- 4. CORRELATION CHECK (SGP TARGETS) ---
-                if len([x for x in player_props if x['units'] >= 0.75]) >= 2:
-                    for x in player_props: 
-                        x['note'] += " [🔥 CORRELATED SGP]"
-                
                 all_props.extend(player_props)
 
         # --- DEDUPLICATION (Best Bet Per Player/Stat) ---
@@ -635,7 +684,7 @@ class LudiReporter:
                     'total_units': sum(p['units'] for p in all_props),
                     'pending': len(all_props),  # All bets start as pending
                     'avg_edge': sum(p.get('edge', 0) for p in all_props) / len(all_props) if all_props else 0,
-                    'avg_ev': sum(p['edge'] for p in all_props) / len(all_props),
+                    'avg_ev': sum(p.get('ev', 0) for p in all_props) / len(all_props),
                     'games_analyzed': len(processed_slate)
                 }
                 self.bet_logger.calculate_daily_summary(run_date, summary_data)
@@ -702,7 +751,8 @@ class LudiReporter:
     _STAT_COL_MAP = {
         'points': 'pts', 'rebounds': 'reb', 'assists': 'ast',
         'steals': 'stl', 'blocks': 'blk', 'turnovers': 'tov',
-        'threes': 'fg3m',
+        'threes': 'fg3m', 'pts': 'pts', 'reb': 'reb', 'ast': 'ast',
+        'stl': 'stl', 'blk': 'blk', 'tov': 'tov', '3pm': 'fg3m', 'fg3m': 'fg3m',
         'pra': 'pts + reb + ast', 'pa': 'pts + ast',
         'pr': 'pts + reb', 'ra': 'reb + ast',
         'fg': 'fgm', 'fga': 'fga', 'fta': 'fta', 'ftm': 'ftm',
@@ -790,8 +840,7 @@ class LudiReporter:
         # --- Archetype modifier (re-enabled after Phase 7.9 overhaul) ---
         positive_archetypes = {
             'HELIOCENTRIC_MAESTRO', 'SLASHING_CREATOR',
-            'SNIPER_ELITE', 'WARRIOR_BIG', 'RIM_GUARDIAN', 'PERIMETER_HAWK',
-            'SWITCHABLE_ANCHOR', 'HUSTLE_DISRUPTOR'
+            'SNIPER_ELITE', 'WARRIOR_BIG'
         }
         # Phase 7.9.5: Removed GENERALIST and WEAK_LINK penalties
         # GENERALIST = neutral (no strong playtype signal, but not a bad bet)
@@ -835,6 +884,28 @@ class LudiReporter:
                 # Fallback: inline DB query (fires only if Module B enrichment missed this player)
                 l5_hr, l10_hr = self._get_hit_rates_vs_line(player_name, stat_key, line, bet_direction)
             confirmation_score = round(0.40 * l5_hr + 0.35 * l10_hr + 0.25 * model_prob, 3)
+
+            # CR2: archetype_in_top3 signal boost (player_type_profiles table)
+            # When a player's offensive archetype aligns with their top-3 Synergy playtypes,
+            # the archetype label is validated by actual play patterns — stronger classification
+            # confidence → small bump to confirmation_score (+0.05).
+            # Only queries DB when archetype is already in positive_archetypes (avoids
+            # wasted DB round-trips for GENERALIST or neutral archetypes).
+            if archetype in positive_archetypes and player_name:
+                try:
+                    import sqlite3 as _sqlite3
+                    _conn_ptp = _sqlite3.connect(config.DB_PATH)
+                    _row_ptp = _conn_ptp.execute(
+                        "SELECT archetype_in_top3 FROM player_type_profiles "
+                        "WHERE player_name = ? AND season = '2025-26' LIMIT 1",
+                        (player_name,)
+                    ).fetchone()
+                    _conn_ptp.close()
+                    if _row_ptp and _row_ptp[0]:
+                        confirmation_score = min(1.0, round(confirmation_score + 0.05, 3))
+                except Exception:
+                    pass  # Minor signal — silent fail on any DB issue
+
             if confirmation_score >= 0.65:
                 tier_score += 1
             elif confirmation_score <= 0.35:
@@ -944,6 +1015,8 @@ class LudiReporter:
             Probability of going OVER the line (0.0 to 1.0)
         """
         # Typical standard deviations by stat category
+        # NOTE: These are static fallback values. Live calibration should come from
+        #       Module C's Monte Carlo sim_hit_rates (actual distribution), not this heuristic.
         # V5.1 (Feb 2026): Widened by ~30% to reduce overconfidence
         # Based on analysis showing model probabilities were too extreme
         # Research: FiveThirtyEight uses wider bands; props have high variance
@@ -1156,6 +1229,7 @@ class LudiReporter:
             'Projection': '📊',
             'Matchup': '🎯',
             'Injury-Vacuum': '🚀',
+            'Injury-Return': '🩹',
             'Hot-Streak': '🔥',
         }.get(edge_type, '📊')
         card += f"   {edge_type_emoji} EDGE: {edge_type}\n"

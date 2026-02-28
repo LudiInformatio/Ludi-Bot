@@ -136,6 +136,10 @@ class BetLogger:
                 -- Phase 8.26: SGP correlation risk flag (NULL = no risk detected)
                 sgp_correlation_risk TEXT DEFAULT NULL,
 
+                -- Time-context mode at pipeline run time (Ludi-Lite pattern)
+                -- EARLY_LOOK (<noon) / AFTERNOON (noon-5 PM) / PRE_GAME (5-7 PM) / LOCK_TIME (>7 PM)
+                time_context TEXT DEFAULT 'EARLY_LOOK',
+
                 -- Metadata
                 run_type TEXT DEFAULT 'production',
                 bookmaker TEXT DEFAULT 'consensus',
@@ -256,7 +260,7 @@ class BetLogger:
             'archetype', 'status', 'scenario', 'stat_category', 'bet_side', 'line',
             'odds_over', 'odds_under', 'projection', 'fair_prob', 'model_prob',
             'true_edge', 'ev', 'units', 'confidence_tier', 'confirmation_score', 'note', 'tags',
-            'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker'
+            'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker', 'time_context'
         ]
 
         # Get values (use None for missing optional fields)

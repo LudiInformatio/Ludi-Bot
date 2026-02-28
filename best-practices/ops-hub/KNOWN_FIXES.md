@@ -5,6 +5,44 @@
 
 ---
 
+## 2026-02-28 — canonical_games Table: Pattern-B JOIN Triple-Row Inflation
+
+- **Symptom**: `sync_matchup_intelligence.py` DVP calculations produced inflated sample sizes (3× actual); `team_defensive_classifier.py` scheme classification was silently counting each game 3 times. `module_b.py vs_scheme_cache` also required an ugly DISTINCT workaround.
+- **Root Cause**: The `games` table stores each game in **3 different `game_id` formats** from three different ingestion sources:
+  1. `002XXXXXXXX` — NBA official format (Module H, Tank01)
+  2. `22500XXX` — Shortened format (BDL backfill)
+  3. `20251021_HOU@OKC` — Date-team format (populate_todays_games.py, Module G)
+  Pattern-B JOINs (`JOIN games g ON g.date = x AND (g.home_team = y OR g.away_team = y)`) matched all 3 rows per game → 3× row multiplication.
+- **Fix Applied**: Added `canonical_games` table (Feb 28, 2026):
+  - `PRIMARY KEY canonical_game_id = '{date}_{home}_{away}'` — one row per game, always.
+  - `sync_canonical_games(conn)` importable from `database.py` — call after any `INSERT INTO games`.
+  - 1,926 raw rows → 902 canonical rows. Called automatically in `_initialize_db()`.
+  - Wired into: `module_b.py` (vs_scheme_cache), `populate_todays_games.py`, `module_g.py`, `scripts/sync_matchup_intelligence.py` (4 JOINs), `utils/team_defensive_classifier.py` (1 JOIN).
+- **Pattern**: `JOIN canonical_games g ON g.date = x AND (g.home_team = y OR g.away_team = y)` — safe, one row per game by design. COALESCE upsert preserves non-null data across all 3 source formats.
+- **Commit**: chore(session) end-of-session doc sync 2026-02-28
+
+---
+
+## 2026-02-28 — Module F Audit: 7 Bugs Fixed (LudiReporter)
+
+- **A1 (avg_ev)**: `bet_daily_summaries.avg_ev` stored `p['edge']` not `p['ev']` — mislabeled data since V5.0. Fix: `sum(p['ev'] for p in all_props)`.
+- **B1 (emoji map)**: `_classify_edge_type()` returns `'Injury-Return'` but emoji map had no entry → fell through to 📊 default. Fix: Added `'Injury-Return': '🩹'`.
+- **B2 (defensive archetypes)**: `positive_archetypes` contained `RIM_GUARDIAN`, `PERIMETER_HAWK`, `SWITCHABLE_ANCHOR`, `HUSTLE_DISRUPTOR` (all defensive tags). Caused tier bonus to fire for defensive roles. Fix: Removed all 4 defensive tags from set.
+- **C1 (old SGP block)**: 3-line SGP correlation block fired when single player had PTS OVER + AST OVER, mislabeling as `[🔥 CORRELATED SGP]`. Superseded by Phase 8.26 `curate_plays.py`. Fix: Removed entirely.
+- **C2 (_STAT_COL_MAP aliases)**: Map had `'points' → 'pts'` but NOT `'pts' → 'pts'`. Module A sends short-form keys — DB hit-rate fallback returned 0.5/0.5 neutral for every bet. Fix: Added 8 short-form aliases.
+- **C3 (_bdl_fallback_active)**: Read via `getattr` at line 1171 but never initialized in `__init__`. Fix: `self._bdl_fallback_active = False`.
+- **CR1 (multi-window hit rates)**: Bet card showed single hit rate. Fix: L5/L10/L15 windows now surface in note field when available from Module B.
+
+---
+
+## 2026-02-28 — Module B Enhancement: vs_scheme_cache + L20 Windows + time_context
+
+- **vs_scheme_cache**: Pre-loads last-5 game values per player/stat vs each defense scheme (live `team_scheme_cache.active_style`). L5/L10/L15/L20 windows + L5-vs-scheme all surfaced in CR1 note block.
+- **time_context**: `EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME` column added to `bet_recommendations`.
+- **Note**: Both features added in same session as Module F audit. Verified against HOU/MIA test with JSJ OUT scenario.
+
+---
+
 ## 2026-02-27 — Module D Audit Sprint (LudiYak)
 
 ### D1/G2: Haiku Empty-Response Guard (Correctness)

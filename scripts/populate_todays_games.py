@@ -25,6 +25,7 @@ import pytz
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 from utils.mappings import TEAM_MAP, normalize_bdl_abbr
+from database import sync_canonical_games
 
 DB_PATH = 'ludi.db'
 EST_TZ = pytz.timezone('US/Eastern')
@@ -279,6 +280,13 @@ def update_database(games: list) -> int:
             print(f"   DB Error for {g_id}: {e}")
 
     conn.commit()
+
+    # Keep canonical_games in sync — one clean row per game, no format duplicates.
+    # sync_canonical_games() is idempotent and fast (one upsert query).
+    sync_conn = sqlite3.connect(DB_PATH)
+    sync_canonical_games(sync_conn)
+    sync_conn.close()
+
     conn.close()
     return inserted
 

@@ -8,6 +8,7 @@ import sys
 import os
 import config
 from utils.mappings import resolve_team_abbr
+from database import sync_canonical_games
 from utils.browser_utils import close_popups, simulate_human_interaction
 
 # ==============================================================================
@@ -125,6 +126,8 @@ class LudiRefEngine:
                     """, (g_id, g_date, home, away))
                 
                 conn.commit()
+                # Keep canonical_games in sync after any games INSERT.
+                sync_canonical_games(conn)
                 conn.close()
                 print(f"   [ZEBRAS] ✅ Inserted {len(games_to_insert)} games")
             else:

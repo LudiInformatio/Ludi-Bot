@@ -135,7 +135,7 @@ class TeamDefensiveClassifier:
                 AVG(pg.avg_speed_off) as opp_speed,
                 AVG(pg.avg_defender_dist) as opp_avg_defender_dist
             FROM player_game_tracking pg
-            JOIN games g ON pg.game_date = g.date
+            JOIN canonical_games g ON pg.game_date = g.date
             WHERE (g.home_team = ? OR g.away_team = ?) -- Game involves target team
             AND pg.team_abbr != ? -- tracking stats for NON-target team (the opponent)
             AND pg.game_date >= date('now', '-' || ? || ' days')

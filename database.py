@@ -6,6 +6,64 @@ from utils.player_id_resolver import PlayerIDResolver
 
 DB_PATH = "ludi.db"
 
+
+def sync_canonical_games(conn):
+    """
+    Refresh canonical_games from the games table — single source of truth for game identity.
+
+    The games table stores up to 3 row formats per game (NBA official, shortened, date-team).
+    Any Pattern-B JOIN (date + team pair) returns 3× rows without this dedup layer.
+
+    Call this after any INSERT INTO games to keep canonical_games current.
+    Uses MAX() aggregation to pick the best available data from duplicate rows:
+      - nba_official_id: prefers 0022500001 format (10-char, starts with '002')
+      - referee_crew / pace / scores: first non-null/non-zero value wins
+    Safe to call repeatedly — ON CONFLICT DO UPDATE uses COALESCE to protect existing data.
+
+    Usage:
+        from database import sync_canonical_games
+        sync_canonical_games(conn)   # conn must be an open sqlite3.Connection
+    """
+    _sync_canonical_games(conn)
+
+
+def _sync_canonical_games(conn):
+    """Internal implementation — called by both sync_canonical_games() and create_tables()."""
+    conn.execute("""
+        INSERT INTO canonical_games
+            (canonical_game_id, date, home_team, away_team, nba_official_id,
+             home_score, away_score, pace, referee_crew, updated_at)
+        SELECT
+            date || '_' || home_team || '_' || away_team           AS canonical_game_id,
+            date,
+            home_team,
+            away_team,
+            -- Prefer the 10-char 002... format from NBA official/Tank01 sources
+            MAX(CASE WHEN length(game_id) = 10 AND game_id GLOB '002*'
+                     THEN game_id END)                             AS nba_official_id,
+            MAX(CASE WHEN home_score > 0 THEN home_score END)      AS home_score,
+            MAX(CASE WHEN away_score > 0 THEN away_score END)      AS away_score,
+            MAX(CASE WHEN pace > 0 THEN pace END)                  AS pace,
+            MAX(CASE WHEN referee_crew IS NOT NULL AND referee_crew != ''
+                     THEN referee_crew END)                        AS referee_crew,
+            datetime('now')                                        AS updated_at
+        FROM games
+        WHERE home_team IS NOT NULL AND home_team != ''
+          AND away_team IS NOT NULL AND away_team != ''
+          AND date IS NOT NULL AND date != '2025-10-20'
+        GROUP BY date, home_team, away_team
+        ON CONFLICT(canonical_game_id) DO UPDATE SET
+            -- COALESCE: keep existing non-null value if new row doesn't have one
+            nba_official_id = COALESCE(excluded.nba_official_id, canonical_games.nba_official_id),
+            home_score      = COALESCE(excluded.home_score,       canonical_games.home_score),
+            away_score      = COALESCE(excluded.away_score,       canonical_games.away_score),
+            pace            = COALESCE(excluded.pace,             canonical_games.pace),
+            referee_crew    = COALESCE(excluded.referee_crew,     canonical_games.referee_crew),
+            updated_at      = datetime('now')
+    """)
+    conn.commit()
+
+
 class LudiHistorian:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
@@ -1435,6 +1493,38 @@ class LudiHistorian:
             _team_seed
         )
 
+        # -- Canonical Games: single source of truth for game identity (Feb 28, 2026) --
+        # The games table stores up to 3 row formats per game from different sources:
+        #   0022500001    (NBA official format — from Module H / Tank01)
+        #   22500001      (shortened format — from BDL backfill)
+        #   20251021_HOU@OKC (date-team format — from populate_todays_games / Module G)
+        #
+        # Any JOIN on games using date + team pair (Pattern B) returns 3× rows.
+        # canonical_games deduplicates to exactly ONE row per game, using standard_abbr
+        # from canonical_teams for both home_team and away_team.
+        #
+        # PRIMARY KEY: {date}_{home_team}_{away_team} — e.g. "2025-10-21_OKC_HOU"
+        # Refreshed by sync_canonical_games(conn) — callable from any game writer.
+        # Pattern mirrors canonical_teams: seed once, upsert daily as data enriches.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS canonical_games (
+                canonical_game_id  TEXT PRIMARY KEY,   -- {date}_{home}_{away} e.g. 2025-10-21_OKC_HOU
+                date               TEXT NOT NULL,
+                home_team          TEXT NOT NULL,      -- canonical_teams.standard_abbr
+                away_team          TEXT NOT NULL,      -- canonical_teams.standard_abbr
+                nba_official_id    TEXT,               -- 0022500001 format; NULL until Module H resolves
+                home_score         INTEGER,
+                away_score         INTEGER,
+                pace               REAL,
+                referee_crew       TEXT,
+                created_at         TEXT DEFAULT (datetime('now')),
+                updated_at         TEXT DEFAULT (datetime('now')),
+                UNIQUE(date, home_team, away_team)
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cg_date   ON canonical_games(date)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cg_teams  ON canonical_games(home_team, away_team)")
+
         # -- Player news staging: discovered players from RSS feeds not in canonical_ids --
         # Enables tracking of rookies, two-ways, and call-ups found via news blurbs.
         # Auto-promotes to player_canonical_ids after 3+ consistent appearances.
@@ -1543,6 +1633,16 @@ class LudiHistorian:
             c.execute("ALTER TABLE bet_recommendations ADD COLUMN line_movement REAL")
         except Exception:
             pass  # Column already exists
+        # Module B/F — time_context: pipeline run mode (EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME)
+        # Enables downstream confidence framing in Ask Ludi, Ludi Lens, bet cards.
+        try:
+            c.execute("ALTER TABLE bet_recommendations ADD COLUMN time_context TEXT DEFAULT 'EARLY_LOOK'")
+        except Exception:
+            pass  # Column already exists
+
+        # Seed canonical_games from any games data already in the DB.
+        # Uses the same sync_canonical_games() function available to all game writers.
+        _sync_canonical_games(conn)
 
         conn.commit()
         conn.close()
@@ -1642,6 +1742,8 @@ class LudiHistorian:
     # Restored to init_db() above (Feb 2026):
     #   player_canonical_ids      — ID mapping table (559+ rows); CREATE TABLE restored Feb 24 2026
     #   canonical_teams           — 30-team BDL/Tank01/ESPN ID crosswalk; added Feb 24 2026
+    #   canonical_games           — Deduplicated game identity table; added Feb 28 2026
+    #                               sync_canonical_games(conn) keeps it current after any games INSERT
     #   claude_analysis_log       — Phase 8.23 Layer 1 feedback loop; added Feb 25 2026
     #
     # Source: Module B (LudiEngine) - Line History

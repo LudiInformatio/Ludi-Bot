@@ -162,7 +162,7 @@ def build_player_archetype_vs_defense(conn: sqlite3.Connection, window_days: int
             ROUND(AVG(COALESCE(gl.fg3m, 0)), 2) as avg_3pm
         FROM players p
         JOIN player_game_logs gl ON gl.player_name = p.name
-        JOIN games g ON g.date = gl.game_date
+        JOIN canonical_games g ON g.date = gl.game_date
           AND (g.home_team = gl.team_abbreviation OR g.away_team = gl.team_abbreviation)
         JOIN team_scheme_cache sc
           ON CASE WHEN g.home_team = gl.team_abbreviation THEN g.away_team
@@ -306,7 +306,7 @@ def build_team_playtype_allowed(conn: sqlite3.Connection, window_days: int = 60,
             ROUND(AVG(t.avg_speed_off), 3) as avg_speed,
             ROUND(AVG(t.avg_defender_dist), 3) as avg_dist
         FROM player_game_tracking t
-        JOIN games g ON g.date = t.game_date
+        JOIN canonical_games g ON g.date = t.game_date
           AND (g.home_team = t.team_abbr OR g.away_team = t.team_abbr)
         WHERE t.game_date >= ?
           AND t.drives_fga IS NOT NULL
@@ -459,7 +459,7 @@ def build_player_archetype_roster(conn: sqlite3.Connection, window_days: int = 6
         SELECT gl.player_name, sc.active_style as def_style,
             ROUND(AVG(gl.pts), 2) as avg_pts, COUNT(*) as games
         FROM player_game_logs gl
-        JOIN games g ON g.date = gl.game_date
+        JOIN canonical_games g ON g.date = gl.game_date
           AND (g.home_team = gl.team_abbreviation OR g.away_team = gl.team_abbreviation)
         JOIN team_scheme_cache sc
           ON CASE WHEN g.home_team = gl.team_abbreviation THEN g.away_team
@@ -656,7 +656,7 @@ def build_defensive_tag_vs_offense(conn: sqlite3.Connection, window_days: int = 
             ROUND(AVG(gl.pf), 2) as avg_pf
         FROM players p
         JOIN player_game_logs gl ON gl.player_name = p.name
-        JOIN games g ON g.date = gl.game_date
+        JOIN canonical_games g ON g.date = gl.game_date
           AND (g.home_team = gl.team_abbreviation OR g.away_team = gl.team_abbreviation)
         JOIN team_scheme_cache sc
           ON CASE WHEN g.home_team = gl.team_abbreviation THEN g.away_team

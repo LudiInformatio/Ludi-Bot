@@ -229,6 +229,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 - Always use correct class names (see Module Reference above)
 - Player name resolution: Odds API returns non-accented names (e.g. "Nikola Jokic") but `player_injuries` + `players` tables store canonical names with accents (e.g. "Nikola Jokić"). Always call `resolve_canonical_name(conn, player_name)` from `utils/player_id_resolver.py` before any name-based DB query in Claude prompt pipelines
 - `canonical_teams` table (30 rows) is the single source of truth for BDL/Tank01/ESPN team ID mappings — do NOT hardcode `ESPN_TEAM_IDS` dicts in new scripts
+- `canonical_games` table (902 rows) is the single source of truth for game identity — use for any JOIN on `(date, home_team, away_team)` (Pattern-B) to prevent 3× row inflation. The `games` table has 3 duplicate game_id formats per game (NBA official / shortened / date-team). Call `from database import sync_canonical_games` and `sync_canonical_games(conn)` after any INSERT INTO games. Never use `JOIN games g ON g.date = ... AND (g.home_team = ... OR g.away_team = ...)` — use `canonical_games` instead.
 - **ROADMAP.md Template Contract** — When any agent updates `ROADMAP.md`, preserve these patterns so `utils/pm_bot.py` parses correctly:
   - `**Active Work:**` — short phrase(s) separated by ` + `. First segment = current sprint focus (shown in break messages).
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).

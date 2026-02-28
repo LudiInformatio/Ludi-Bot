@@ -16,7 +16,7 @@ A production-grade autonomous analytics engine that generates player prop recomm
 | **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 27, 2026 5:56 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 28, 2026 12:20 PM EST) |
 
 ### Key Features
 
@@ -110,7 +110,7 @@ bash scripts/restore_database.sh archives/data/ludi.db.backup_*.gz # Restore
 ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backups
 ```
 
-**Key tables:** `player_game_logs`, `players`, `games`, `bet_recommendations`, `rotation_profiles`, `beneficiary_minutes`, `player_injuries`, `player_trends`, `player_synergy_playtypes`, `team_leverage_profiles`, `referee_profiles`, `player_foul_splits`, `team_dvp_by_archetype`, `player_canonical_ids`, `canonical_teams`
+**Key tables:** `player_game_logs`, `players`, `games`, `bet_recommendations`, `rotation_profiles`, `beneficiary_minutes`, `player_injuries`, `player_trends`, `player_synergy_playtypes`, `team_leverage_profiles`, `referee_profiles`, `player_foul_splits`, `team_dvp_by_archetype`, `player_canonical_ids`, `canonical_teams`, `canonical_games`
 
 ---
 
@@ -168,7 +168,8 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Module Audit Sprint (A+B+C+D+E) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul (Tank01 Tier 3, always-capture, quota TTL), `LudiEngine` class (HOT_STREAK fix, hit rates, line history); `LudiOracle` 8 pre-load dicts + zero-DB sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent, INJURY_RETURN edge type, ghost resolve fix; `USG_PCT` key fix in `main.py`; Module F (`LudiReporter`) next |
+| Infra | Module Audit Sprint (A+B+C+D+E+F) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul; `LudiEngine` class (HOT_STREAK fix, hit rates, vs_scheme_cache, L20 windows, time_context); `LudiOracle` 8 pre-load dicts + zero-DB sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent, INJURY_RETURN edge type, ghost resolve fix; `USG_PCT` key fix; `LudiReporter` (Module F): avg_ev fix, Injury-Return emoji, defensive tags removed from positive_archetypes, old SGP block removed, `_STAT_COL_MAP` short-form aliases, L5/L10/L15 multi-window hit rates |
+| Infra | canonical_games table — `database.py` + `sync_canonical_games(conn)` importable. 1,926 raw game rows → 902 deduplicated. Pattern-B JOINs fixed in `module_b.py`, `module_g.py`, `populate_todays_games.py`, `sync_matchup_intelligence.py` (4 JOINs), `team_defensive_classifier.py` (1 JOIN) |
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
 | Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
 | Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
@@ -178,7 +179,9 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 
 **Active / Planned Next:**
-- Module Audit Sprint — A+B+C+D+E complete; Module F (`LudiReporter`) next
+- Module Audit Sprint — A+B+C+D+E+F complete; G/H/X lower priority, schedule March
+- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade — spec in `plans/pure-baking-river.md` PART 2B/2C
+- Sprint 4: Alt line testing — Odds-API quota resets midnight UTC March 1 (~7 PM EST Feb 28)
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
 - Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
 

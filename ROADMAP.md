@@ -1,11 +1,13 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, February 27, 2026 — 10:35 PM EST
+**Last Updated:** Saturday, February 28, 2026 — 12:20 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Module Audit Sprint (A+B+C+D+E complete → Module F next) + Phase 8.23 Layer 1 collecting (~Mar 10) + 2024-25 Backfill running (~Mar 3)
-**Completed:** Module C Oracle Audit (Tiers A-F + G1-G4) ✅ + Module D Yak Audit (news_agent, INJURY_RETURN, ghost resolve) ✅ + Module E Calibrator Audit (bulk pre-loads, DVP, B2B splits) ✅
+**Active Work:** Sprint 2 (Dynamic Rec Lifecycle + Perplexity upgrade) + Alt Line Sprint 4 (Odds-API reset tonight ~7 PM EST) + Phase 8.23 Layer 1 collecting (~Mar 10)
+**Completed:** Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + Module B enhancement (vs_scheme cache, L20 windows, time_context) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅
 
-> **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled (6 Injury Refresh, Evening Slate Lock, 2 Closing Lines, 3 QA). Nightly Debrief ran successfully (yesterday's bets settled). Data Sync + PBP Stats completed. Queue is clear for today's schedule.
+> **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
+
+> **Ops Note (Feb 28):** Odds-API quota resets midnight UTC March 1 (~7 PM EST tonight). Alt line Sprint 4 testing window opens then. Key test: confirm that `_all_books` dict in `fetch_comprehensive_props()` Phase 1 captures ±1.5/±3.0 alt lines from DK/FD responses — no extra API call needed. Use `--limit-games 1` test run first to inspect raw `_all_books` structure before any writes. Do NOT enable alt line writes to DB until structure is verified. Odds-API resets monthly at midnight UTC on the 1st.
 
 This is the single source of truth for project tasks and priorities.
 
@@ -45,15 +47,23 @@ This is the single source of truth for project tasks and priorities.
 - [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
 - [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
 - [x] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
-- [-] Module-by-module audit sprint — A through H + X: Modules A+B+C+D+E complete. Module F (`module_f.py`, `LudiReporter`) is next.
-  - **Module C cross-module notes (for future audits):**
-    - **Module D**: James Harden AI blurb parse failure (`Expecting value: line 1 column 1`) fires repeatedly in integration test — Haiku returning empty/non-JSON. Needs graceful fallback + logging in `module_d.py`. Dedup fix (MEMORY.md) still pending.
-    - **Module F**: G3 ramp-up players (Mobley, Duren) generate UNDER edges with `EDGE: Projection` label — should add `INJURY_RETURN` edge type to `module_f.py:_classify_edge_type()` (Phase 8.24 pattern) so these are identifiable in bet logs.
-    - **module_h_historian.py**: BDL fallback abbreviation normalization **fixed this sprint** — `normalize_bdl_abbr()` now applied at write time. Verify in future audits.
-    - **backtest_model.py**: `ConceptValidator` is mock-only (hardcoded PTS=20 stats). For real historical backtesting of G2/G3 effects, needs to pass actual historical game-log data + `player_id` for ramp detection. Deferred until 2024-25 backfill completes (~Mar 3).
-    - **morning_brief.py / send_single_game_notes.py**: Both route through `build_simulation_scenario()` → `get_active_roster()` — automatically receive `GAMES_PLAYED` and game-count window fixes. No changes needed. ✓
-    - **main.py (`build_reporter_input`)**: `'base_usg': sim.get('base_usg', 0)` uses wrong key — Module C outputs `USG_PCT` (percentage). Fix: `sim.get('USG_PCT', 0) / 100.0`. Effect: Module E's `is_star` B2B check + archetype calibration will see vacuum-boosted usage in OUT/WOWY scenarios instead of always falling to historical DB lookup. Flagged with TODO comment at `main.py:462`. Audit during main.py sprint.
-    - **backtest_model.py**: Now can pass `LudiOracle(season='2024-25')` after Module C season param fix — shot quality + foul splits will load 2024-25 data for backtesting G2/G3 effects. Activate after backfill completes (~Mar 3).
+- [x] Module-by-module audit sprint — Modules A through F complete ✅ (Feb 28)
+  - **Module F audit complete (Feb 28):** `avg_ev` field fixed (`p['ev']` not `p['edge']`), Injury-Return emoji added, 4 defensive tags removed from `positive_archetypes`, B3 DB fallback replaced with clean wiring comment, old SGP correlation block removed, `_STAT_COL_MAP` short-form aliases added (`pts/reb/ast/stl/blk/tov/3pm/fg3m`), `_bdl_fallback_active` initialized in `__init__`.
+  - **Module B enhancement (Feb 28):** `vs_scheme_cache` added — pre-loads last-5 game values per player/stat vs each defense scheme (live `team_scheme_cache.active_style`). L20/L15/L10/L5 windows + L5-vs-scheme all surfaced in CR1 note block. `time_context` column (EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME) added to `bet_recommendations`.
+- [x] `canonical_games` table (Feb 28) — `database.py` + `sync_canonical_games(conn)` importable function. 1926 raw games → 902 deduplicated rows. `module_b.py` DISTINCT CTE replaced. `module_g.py` + `populate_todays_games.py` wired to call sync after INSERTs. `sync_matchup_intelligence.py` (4 JOINs) + `team_defensive_classifier.py` (1 JOIN) fixed to prevent 3× row multiplication in DVP/scheme calculations.
+  - **Remaining audit modules:** G (Zebras), H (Historian), X (Scenario Builder) — lower priority, schedule in March.
+  - **Cross-module notes (carry forward):**
+    - **Module D**: Harden AI blurb parse failure (`Expecting value: line 1 column 1`) — Haiku returning empty/non-JSON. Needs graceful fallback + logging. Dedup fix pending.
+    - **backtest_model.py**: `ConceptValidator` is mock-only. Activate `LudiOracle(season='2024-25')` after backfill completes (~Mar 3).
+    - **main.py**: `USG_PCT` key confirmed fixed at line 462. Verify in main.py audit sprint.
+- [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades (per-player context, 5-min late news TTL). Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
+- [ ] **Sprint 4: Alt line testing + implementation** — Odds-API resets midnight UTC March 1 (~7 PM EST Feb 28).
+  - **Test first (dry run):** `python main.py --limit-games 1 --verbose` → inspect raw `_all_books` dict to confirm ±1.5/±3.0 alt lines are captured per player/stat. Print `game['_all_books_debug']` or add temp logging. Do NOT write to DB until structure verified.
+  - **Caching strategy:** Alt lines are slate-level data — cache alongside main props per `fetch_comprehensive_props()` call. No separate cache needed; they expire with the game slate.
+  - **Credit-safe testing:** Odds-API charges per event request, not per market parsed. `_all_books` is populated from the SAME request as main props — zero extra credits for extracting alt lines from it.
+  - **Implement:** Phase 2B in `module_a.py` (extract ±1.5/±3.0 → `game['alt_props']`) + Module F sweep (compare EV → inject note). Full spec in `plans/pure-baking-river.md` Sprint 4.
+  - **Cross-module communication path:** Module A (`alt_props` on game dict) → `main.py:build_reporter_input()` passes `game` dict through → Module F reads `game.get('alt_props', {})` per bet → injects alt note into `bet_recommendations.note` column → Telegram card shows `"Alt: OVER 26.0 @ -138 available"`.
+  - **Workflows that need updating after Sprint 4:** `morning_brief.py` (show alt note on bet card), `bots/ask_ludi_db.py` (alt note visible in edges intent), `settle_bets.py` (no change — alt note is metadata only).
 - [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
 - [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
 - [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)
