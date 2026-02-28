@@ -187,6 +187,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 - BLOCKS UNDER: 70.7% WR — strongest signal in system
 - UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)
 - CLV: Positive across all edge buckets
+- All paper bet tracking in beta
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
