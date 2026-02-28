@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, February 28, 2026 — 3:07 PM EST
+**Last Updated:** Saturday, February 28, 2026 — 3:54 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + `perplexity_client.py` upgrade + Alt Line Sprint 4 (`module_a.py` `_all_books` extract, Odds-API reset ~7 PM EST) + Phase 8.23 Layer 1 collecting (~Mar 10)
-**Completed:** Module G Zebras Audit (`module_g.py`, `learn_daily_trends.py`) — ref thresholds, L10 rolling window, O/U/ATS signals, `team_betting_trends` table ✅ + Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅
+**Active Work:** Sprint 4.5 (`module_a.py` attempt props markets + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py`) + Sprint 4 (`_all_books` alt lines) — Odds-API reset ~7 PM EST tonight + Sprint 2 (`revalidate_recs.py`) — `is_valid` lifecycle + Phase 8.23 Layer 1 (~Mar 10)
+**Completed:** Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅ + Module G star bias (`module_g.py`, `main.py`, `module_f.py`) — `get_player_crew_bias()` + crew_bias bet card notes ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 
@@ -56,6 +56,9 @@ This is the single source of truth for project tasks and priorities.
     - **Module D**: Harden AI blurb parse failure (`Expecting value: line 1 column 1`) — Haiku returning empty/non-JSON. Needs graceful fallback + logging. Dedup fix pending.
     - **backtest_model.py**: `ConceptValidator` is mock-only. Activate `LudiOracle(season='2024-25')` after backfill completes (~Mar 3).
     - **main.py**: `USG_PCT` key confirmed fixed at line 462. Verify in main.py audit sprint.
+- [ ] **Sprint 4.5: Attempt props** — add `player_field_goals_attempted,player_free_throws_attempted,player_threes_attempted` to `module_a.py` markets string (~line 598); add `field_goals_attempted→fga`, `free_throws_attempted→fta`, `threes_attempted→fg3a` to `mk` dict in `main.py:build_reporter_input()`; add `'FG3A': 'proj_fg3a'` to STAT_MAPPING + `'fg3a': 'fg3a'` to `module_f._STAT_COL_MAP`. Test after Odds-API reset ~7 PM EST. **Full notes:** `memory/historical_odds_backfill_plan.md` (Sprint 4.5 section).
+- [ ] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: recalculates `avg_pace_impact` (fouls/12.5) + `style` thresholds in `referee_profiles` (Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT). Safe to run anytime.
+- [ ] **Run `backfill_referee_bias.py`** — populate historical `referee_player_bias` from 363 game dates (currently all `games_officiated=1` — backfill enables real PROTECTOR/STAR_KILLER signal).
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades (per-player context, 5-min late news TTL). Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Sprint 4: Alt line testing + implementation** — Odds-API resets midnight UTC March 1 (~7 PM EST Feb 28).
   - **Test first (dry run):** `python main.py --limit-games 1 --verbose` → inspect raw `_all_books` dict to confirm ±1.5/±3.0 alt lines are captured per player/stat. Print `game['_all_books_debug']` or add temp logging. Do NOT write to DB until structure verified.
