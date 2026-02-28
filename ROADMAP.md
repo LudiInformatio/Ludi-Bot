@@ -2,7 +2,7 @@
 
 **Last Updated:** Saturday, February 28, 2026 — 12:20 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (Dynamic Rec Lifecycle + Perplexity upgrade) + Alt Line Sprint 4 (Odds-API reset tonight ~7 PM EST) + Phase 8.23 Layer 1 collecting (~Mar 10)
+**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + `perplexity_client.py` upgrade + Alt Line Sprint 4 (`module_a.py` `_all_books` extract, Odds-API reset ~7 PM EST) + Phase 8.23 Layer 1 collecting (~Mar 10)
 **Completed:** Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + Module B enhancement (vs_scheme cache, L20 windows, time_context) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
