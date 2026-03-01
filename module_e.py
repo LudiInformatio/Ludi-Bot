@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import unicodedata
+import logging
 from pathlib import Path
 import config
 from utils.player_id_resolver import PlayerIDResolver
@@ -51,7 +52,6 @@ class LudiCalibrator:
         
         # Initialize debug logger if enabled
         if debug_log:
-            import logging
             logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             self.logger = logging.getLogger('module_e')
             self.logger.info("=== Module E Debug Logging Initialized ===")
@@ -95,6 +95,7 @@ class LudiCalibrator:
         self.dvp_by_archetype = self._load_dvp_by_archetype()
         self.archetype_vs_defense_matrix = self._load_archetype_vs_defense_matrix()
         self.b2b_splits = self._load_b2b_splits()
+        self.shot_quality_cache = self._load_shot_quality_bulk()
 
         self.ADJUSTMENT_RULES = {
             "MINUTES_LIMIT": 0.75,   
@@ -635,8 +636,7 @@ class LudiCalibrator:
                 for pt, perc, ppp in rows
             }
         except Exception as e:
-            if self.debug_log:
-                print(f"   [CAL] Defensive synergy lookup failed for {player_name}: {e}")
+            print(f"[Module E] Defensive synergy query error for {player_name}: {e}")
             return {}
 
     def _get_synergy_playtypes(self, player_name: str, min_freq: float = 5.0) -> list:
@@ -779,22 +779,10 @@ class LudiCalibrator:
             if tracking_stats.get('tracking_games', 0) < 3:
                 return {}
 
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT at_rim_freq, corner_3_freq
-                FROM player_shot_quality
-                WHERE player_id = ? AND season = '2025-26'
-                """,
-                (canonical_id,)
-            )
-            shot_row = cursor.fetchone()
-            conn.close()
-
+            shot_row = self.shot_quality_cache.get(canonical_name)
             if shot_row:
-                tracking_stats['rim_freq'] = shot_row[0] or 0
-                tracking_stats['corner_3_freq'] = shot_row[1] or 0
+                tracking_stats['rim_freq'] = shot_row.get('rim_freq', 0)
+                tracking_stats['corner_3_freq'] = shot_row.get('corner_3_freq', 0)
 
             if player_info.get('position'):
                 tracking_stats['position'] = player_info['position']
@@ -1016,7 +1004,7 @@ class LudiCalibrator:
             calibrated['def_distance_miles'] = defense.get('def_distance_miles', 0.0)
 
         # 1. ASSIGN UNIFIED ARCHETYPE (returns archetype + synergy dict)
-        archetype, synergy_dict = self._assign_unified_archetype(calibrated)
+        archetype, synergy_dict, def_syn = self._assign_unified_archetype(calibrated)
 
         if archetype:
             calibrated['archetype'] = archetype
@@ -1030,14 +1018,41 @@ class LudiCalibrator:
             archetype_confidence = 'HIGH' if profile.get('archetype_validated') else 'LOW'
             calibrated['archetype_confidence'] = archetype_confidence
 
-        # 1b. ASSIGN DEFENSIVE_TAG if player is weak defender (Phase 7.9.5)
-        # This is separate from primary archetype classification
-        def_diff = float(calibrated.get('def_diff_pct', 0) or 0.0)
-        def_freq = float(calibrated.get('def_freq_pct', 0) or 0.0)
+        # --- Defensive tag assignment (Phase 7.9.5 — hybrid off/def system) ---
         stl = float(calibrated.get('base_stl', 0) or 0)
         blk = float(calibrated.get('base_blk', 0) or 0)
+        def_diff = float(calibrated.get('def_diff_pct', 0) or 0.0)
+        def_freq = float(calibrated.get('def_freq_pct', 0) or 0.0)
+        position = str(calibrated.get('position', 'UNK') or 'UNK').upper()
 
-        if ((def_diff > 1.5 and def_freq > 8.0) or (def_diff > 2.0 and (stl + blk) < 1.0)):
+        # Extract def_syn percentiles (empty dict if no synergy data)
+        pr_roll_def = (def_syn.get('PR_ROLL_MAN') or {}).get('percentile', 0.0)
+        post_def    = (def_syn.get('POST_UP')    or {}).get('percentile', 0.0)
+        iso_def     = (def_syn.get('ISO')        or {}).get('percentile', 0.0)
+        spot_def    = (def_syn.get('SPOT_UP')    or {}).get('percentile', 0.0)
+
+        # Speed/distance from tracking (use 0.0 defaults safely)
+        speed        = float(calibrated.get('speed', 0.0) or 0.0)
+        def_distance = float(calibrated.get('def_distance', 0.0) or 0.0)
+
+        # Count strong defensive synergy types (percentile >= 70)
+        strong_def_tags = sum(1 for v in def_syn.values()
+                              if isinstance(v, dict) and v.get('percentile', 0) >= 70)
+
+        # Assign tag — priority order: RIM_GUARDIAN > PERIMETER_HAWK > SWITCHABLE_ANCHOR >
+        #                               HUSTLE_DISRUPTOR > WEAK_LINK > None
+        if ((blk >= 1.1 and position in ('F', 'C', 'UNK'))
+                or (pr_roll_def >= 75 and post_def >= 70)):
+            calibrated['defensive_tag'] = 'RIM_GUARDIAN'
+        elif ((stl >= 1.2 and position in ('G', 'F', 'UNK'))
+                or (iso_def >= 75 and spot_def >= 70)):
+            calibrated['defensive_tag'] = 'PERIMETER_HAWK'
+        elif (((stl + blk) >= 2.0 and speed > 3.9) or strong_def_tags >= 3):
+            calibrated['defensive_tag'] = 'SWITCHABLE_ANCHOR'
+        elif (stl > 1.15 or (stl > 0.9 and def_distance > 2.3)):
+            calibrated['defensive_tag'] = 'HUSTLE_DISRUPTOR'
+        elif ((def_diff > 1.5 and def_freq > 8.0)
+                or (def_diff > 2.0 and (stl + blk) < 1.0)):
             calibrated['defensive_tag'] = 'WEAK_LINK'
         else:
             calibrated['defensive_tag'] = None
@@ -1229,31 +1244,6 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
-        elif archetype == "RIM_GUARDIAN":
-            if def_style == "FUNNEL":
-                self._boost_stat(calibrated, 'proj_blk', 1.12)
-                calibrated['notes'] += " | Rim Guardian vs Funnel"
-            elif def_style == "BLITZ":
-                self._boost_stat(calibrated, 'proj_blk', 1.08)
-                self._boost_stat(calibrated, 'proj_reb', 1.05)
-                calibrated['notes'] += " | Rim Guardian Help Side"
-
-        elif archetype == "PERIMETER_HAWK":
-            if def_style == "PERIMETER":
-                self._boost_stat(calibrated, 'proj_stl', 1.02)
-                calibrated['notes'] += " | Hawk Passing Lanes"
-
-        elif archetype == "SWITCHABLE_ANCHOR":
-            if def_style == "BLITZ":
-                self._boost_stat(calibrated, 'proj_stl', 1.02)
-                self._boost_stat(calibrated, 'proj_blk', 1.04)
-                calibrated['notes'] += " | Switchable Pressure"
-
-        elif archetype == "HUSTLE_DISRUPTOR":
-            if def_style == "FUNNEL":
-                self._boost_stat(calibrated, 'proj_stl', 1.02)
-                calibrated['notes'] += " | Hustle vs Funnel"
-
         elif archetype == "CUTTER_SPECIALIST":
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_pts', 1.12)
@@ -1276,6 +1266,30 @@ class LudiCalibrator:
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_reb', 1.08)
                 calibrated['notes'] += " | Energy Big Boards"
+
+        # Defensive tag matchup boosts (independent of offensive archetype)
+        d_tag = calibrated.get('defensive_tag')
+        if d_tag == 'RIM_GUARDIAN':
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_blk', 1.12)
+                calibrated['notes'] += " | Rim Guardian vs Funnel"
+            elif def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_blk', 1.08)
+                self._boost_stat(calibrated, 'proj_reb', 1.05)
+                calibrated['notes'] += " | Rim Guardian Help Side"
+        if d_tag == 'PERIMETER_HAWK':
+            if def_style == "PERIMETER":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hawk Passing Lanes"
+        if d_tag == 'SWITCHABLE_ANCHOR':
+            if def_style == "BLITZ":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                self._boost_stat(calibrated, 'proj_blk', 1.04)
+                calibrated['notes'] += " | Switchable Pressure"
+        if d_tag == 'HUSTLE_DISRUPTOR':
+            if def_style == "FUNNEL":
+                self._boost_stat(calibrated, 'proj_stl', 1.02)
+                calibrated['notes'] += " | Hustle vs Funnel"
 
         # B1: Apply DVP data-driven modulation on top of hardcoded boosts
         if archetype and opponent and def_style:
@@ -1459,13 +1473,13 @@ class LudiCalibrator:
         Assign 1 of 16 unified archetypes that combine style + specialization.
         Synergy playtypes now become modifier weights, not separate classifications.
 
-        Returns: (archetype_str, synergy_dict)
+        Returns: (archetype_str, synergy_dict, def_syn_dict)
         """
         # 0. MANUAL OVERRIDE
         raw_name = p.get('name', p.get('PLAYER_NAME', ''))
         clean_name = raw_name.lower().replace(' ', '').replace('.', '').replace("'", "").replace('-', '')
         if clean_name in self.MANUAL_OVERRIDES:
-            return self.MANUAL_OVERRIDES[clean_name], {}
+            return self.MANUAL_OVERRIDES[clean_name], {}, {}
 
         # Extract Position
         position = p.get('position', 'UNK')
@@ -1518,28 +1532,28 @@ class LudiCalibrator:
         # HELIOCENTRIC_MAESTRO
         prh_freq = synergy_dict.get('P&R_HANDLER', (0, 0))[0]
         if (usg > 0.30 and ast > 6.0 and prh_freq > 15.0):
-            return 'HELIOCENTRIC_MAESTRO', synergy_dict
+            return 'HELIOCENTRIC_MAESTRO', synergy_dict, {}
 
         # SLASHING_CREATOR
         trans_freq = synergy_dict.get('TRANSITION', (0, 0))[0]
         if (pts > 22.0 and drives > 8.0 and tpm < 2.0 and trans_freq > 10.0):
-            return 'SLASHING_CREATOR', synergy_dict
+            return 'SLASHING_CREATOR', synergy_dict, {}
 
         # JUMBO_FACILITATOR
         if (reb > 6.0 and ast > 5.0 and prh_freq > 10.0):
-            return 'JUMBO_FACILITATOR', synergy_dict
+            return 'JUMBO_FACILITATOR', synergy_dict, {}
 
         # === TIER 2: SCORING SPECIALISTS ===
 
         # SNIPER_ELITE
         spot_freq = synergy_dict.get('SPOT_UP', (0, 0))[0]
         if (tpm > 2.8 and spot_freq > 15.0 and ast < 3.5):
-            return 'SNIPER_ELITE', synergy_dict
+            return 'SNIPER_ELITE', synergy_dict, {}
 
         # TWO_LEVEL_SCORER
         iso_freq = synergy_dict.get('ISO_SCORER', (0, 0))[0]
         if (pts > 22.0 and 1.5 < tpm < 2.5 and iso_freq > 8.0):
-            return 'TWO_LEVEL_SCORER', synergy_dict
+            return 'TWO_LEVEL_SCORER', synergy_dict, {}
 
         # === TIER 3: BIG MEN (Rebounding & Rim) ===
 
@@ -1549,15 +1563,15 @@ class LudiCalibrator:
         # WARRIOR_BIG
         prr_freq = synergy_dict.get('P&R_ROLL_MAN', (0, 0))[0]
         if (reb > 8.0 and contested_reb_pct > 0.40 and prr_freq > 8.0):
-            return 'WARRIOR_BIG', synergy_dict
+            return 'WARRIOR_BIG', synergy_dict, {}
 
         # STRETCH_BIG
         if (reb > 6.5 and tpm > 1.8 and ast < 4.0):
-            return 'STRETCH_BIG', synergy_dict
+            return 'STRETCH_BIG', synergy_dict, {}
 
         # ROLL_MAN
         if (rim_freq > 0.50 and prr_freq > 12.0 and ast < 3.0):
-            return 'ROLL_MAN', synergy_dict
+            return 'ROLL_MAN', synergy_dict, {}
 
         # === TIER 4: ROLE PLAYERS & DEFENDERS ===
 
@@ -1586,116 +1600,99 @@ class LudiCalibrator:
             if (def_syn.get(pt) or {}).get('percentile', 0.0) >= 70.0
         )
 
-        if ((blk >= 1.1 and position in ('F', 'C', 'UNK')) or (pr_roll_def >= 75 and post_def >= 70)):
-            return 'RIM_GUARDIAN', synergy_dict
-
-        if ((stl >= 1.2 and position in ('G', 'F', 'UNK')) or (iso_def >= 75 and spot_def >= 70)):
-            return 'PERIMETER_HAWK', synergy_dict
-
-        if (((stl + blk) >= 2.0 and speed > 3.9) or strong_def_tags >= 3):
-            return 'SWITCHABLE_ANCHOR', synergy_dict
-
-        if (stl > 1.15 or (stl > 0.9 and def_distance > 2.3)):
-            return 'HUSTLE_DISRUPTOR', synergy_dict
-
-        # WEAK_LINK removed from primary archetypes - now stored as defensive_tag
-        # if ((def_diff > 1.5 and def_freq > 8.0) or (def_diff > 2.0 and (stl + blk) < 1.0)):
-        #     return 'WEAK_LINK', synergy_dict
-        # This check now happens in calibrate_player() and writes to defensive_tag column
-
         # CUTTER_SPECIALIST
         cut_freq = synergy_dict.get('OFF_BALL_CUTTER', (0, 0))[0]
         if (rim_freq > 0.55 and cut_freq > 10.0 and drives < 2.0):
-            return 'CUTTER_SPECIALIST', synergy_dict
+            return 'CUTTER_SPECIALIST', synergy_dict, def_syn
 
         # FACILITATOR
         if (ast >= 5.0 and pts < 15.0 and usg < 0.28):
-            return 'FACILITATOR', synergy_dict
+            return 'FACILITATOR', synergy_dict, def_syn
 
         # === FALLBACK: Try relaxed thresholds to reduce GENERALIST % ===
 
         # Relaxed HELIOCENTRIC_MAESTRO (high usage + assists)
         if (usg > 0.28 and ast > 8.0):
-            return 'HELIOCENTRIC_MAESTRO', synergy_dict
+            return 'HELIOCENTRIC_MAESTRO', synergy_dict, def_syn
 
         # Relaxed SLASHING_CREATOR (high pts, low 3s)
         if (pts > 20.0 and tpm < 1.5 and usg > 0.28):
-            return 'SLASHING_CREATOR', synergy_dict
+            return 'SLASHING_CREATOR', synergy_dict, def_syn
 
         # Relaxed SNIPER_ELITE (just high 3PM)
         if (tpm > 2.5 and ast < 4.0):
-            return 'SNIPER_ELITE', synergy_dict
+            return 'SNIPER_ELITE', synergy_dict, def_syn
 
         # Relaxed STRETCH_BIG (reb + some 3s)
         if (reb > 5.5 and tpm > 1.5 and position in ['F', 'C', 'UNK']):
-            return 'STRETCH_BIG', synergy_dict
+            return 'STRETCH_BIG', synergy_dict, def_syn
 
         # Relaxed ROLL_MAN (big with high rim freq)
         if (reb > 7.0 and rim_freq > 0.45 and tpm < 1.0):
-            return 'ROLL_MAN', synergy_dict
+            return 'ROLL_MAN', synergy_dict, def_syn
 
         # Relaxed FACILITATOR (focus on passing)
         if (ast > 4.0 and pts < 18.0):
-            return 'FACILITATOR', synergy_dict
+            return 'FACILITATOR', synergy_dict, def_syn
 
         # === ADDITIONAL FALLBACKS (Feb 2026 Calibration) ===
 
         # TWO_LEVEL_SCORER fallback: Scoring guards/wings who don't fit other categories
         if (pts > 10.0 and tpm > 0.8 and usg > 0.19):
-            return 'TWO_LEVEL_SCORER', synergy_dict
+            return 'TWO_LEVEL_SCORER', synergy_dict, def_syn
 
         if (ast > 2.0 and pts < 14.0 and usg < 0.24):
-            return 'CONNECTOR', synergy_dict
+            return 'CONNECTOR', synergy_dict, def_syn
 
         if (reb > 3.5 and (stl + blk) > 0.8 and pts < 12.0 and position in ['F', 'C', 'UNK']):
-            return 'ENERGY_BIG', synergy_dict
+            return 'ENERGY_BIG', synergy_dict, def_syn
 
         # SNIPER_ELITE relaxed further: High 3PM shooters regardless of assists
         if (tpm > 2.2):
-            return 'SNIPER_ELITE', synergy_dict
+            return 'SNIPER_ELITE', synergy_dict, def_syn
 
         # CUTTER_SPECIALIST fallback: Role players with high rim freq
         if (rim_freq > 0.40 and pts < 15.0):
-            return 'CUTTER_SPECIALIST', synergy_dict
+            return 'CUTTER_SPECIALIST', synergy_dict, def_syn
 
         # ROLL_MAN fallback: Bigs without many stats
         if (reb > 5.0 and position in ['C', 'F-C', 'F'] and pts < 12.0):
-            return 'ROLL_MAN', synergy_dict
+            return 'ROLL_MAN', synergy_dict, def_syn
 
         # FACILITATOR relaxed: Any player with decent assists
         if (ast > 3.5):
-            return 'FACILITATOR', synergy_dict
+            return 'FACILITATOR', synergy_dict, def_syn
 
         # Synergy-dominant fallback: classify low-usage role players by clear action profile.
         if (spot_freq >= 20.0 and tpm >= 0.7 and ast < 3.0):
-            return 'SNIPER_ELITE', synergy_dict
+            return 'SNIPER_ELITE', synergy_dict, def_syn
 
         if (prh_freq >= 14.0 and ast >= 2.5 and usg < 0.26):
-            return 'CONNECTOR', synergy_dict
+            return 'CONNECTOR', synergy_dict, def_syn
 
         if (prr_freq >= 10.0 and reb >= 4.0 and position in ['F', 'C', 'UNK']):
-            return 'ENERGY_BIG', synergy_dict
+            return 'ENERGY_BIG', synergy_dict, def_syn
 
         # === FINAL CATCH-ALL: NBA-level production (Phase 7.9.5 Conservative Thresholds) ===
         # Tighter thresholds to avoid false positives on deep bench players
         if pts > 6.0 or ast > 2.0 or reb > 3.5:
             if tpm > 0.8 and usg > 0.18:
-                return 'TWO_LEVEL_SCORER', synergy_dict
+                return 'TWO_LEVEL_SCORER', synergy_dict, def_syn
             elif ast > 2.5 and pts < 14.0:
-                return 'CONNECTOR', synergy_dict
+                return 'CONNECTOR', synergy_dict, def_syn
             elif reb > 4.0 and position in ('F', 'C', 'UNK'):
-                return 'ENERGY_BIG', synergy_dict
+                return 'ENERGY_BIG', synergy_dict, def_syn
 
         # Minutes-based fallback: keep rotation players out of GENERALIST
         if mins > 15.0:
             if position in ('F', 'C', 'PF', 'SF', 'F-C', 'C-F'):
-                return 'ENERGY_BIG', synergy_dict
+                return 'ENERGY_BIG', synergy_dict, def_syn
             if position == 'UNK':
-                return ('ENERGY_BIG' if reb >= ast else 'CONNECTOR'), synergy_dict
-            return 'CONNECTOR', synergy_dict
+                return ('ENERGY_BIG' if reb >= ast else 'CONNECTOR'), synergy_dict, def_syn
+            return 'CONNECTOR', synergy_dict, def_syn
 
         # GENERALIST (final fallback - low usage role players)
-        return 'GENERALIST', synergy_dict
+        return 'GENERALIST', synergy_dict, def_syn
 
     def _log_adjustment(self, player_name: str, function: str, 
                         modifier: float, reason: str) -> None:
@@ -3084,6 +3081,24 @@ class LudiCalibrator:
             print(f"   [CAL] Synergy pre-load error: {e}")
             return {}
 
+    def _load_shot_quality_bulk(self) -> dict:
+        """Pre-load player_shot_quality into {player_name: {col: val}} dict."""
+        out = {}
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT player_name, rim_freq, mid_freq, corner_3_freq, "
+                "above_break_3_freq, heave_freq, rim_fga, shot_quality "
+                "FROM player_shot_quality"
+            ).fetchall()
+            conn.close()
+            for row in rows:
+                out[row['player_name']] = dict(row)
+        except Exception as e:
+            print(f"[Module E] shot_quality bulk load failed: {e}")
+        return out
+
     def _load_tracking_stats_bulk(self):
         """Pre-load player tracking stats (last 15 games) at init.
         Uses CTE game-count window — NOT days — to handle schedule density variation."""
@@ -3295,6 +3310,8 @@ class LudiCalibrator:
         clamped = max(-0.08, min(0.08, raw_modulation))
         avd = self.archetype_vs_defense_matrix.get((archetype, def_style))
         if avd and avd['confidence'] == 'LOW':
+            clamped = clamped * 0.5
+        if dvp.get('conf') == 'LOW':
             clamped = clamped * 0.5
         return 1.0 + clamped
 
