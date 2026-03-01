@@ -56,6 +56,20 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
+      - name: Check cache exists (informational)
+        continue-on-error: true
+        run: |
+          python3 -c "
+          import os, time
+          from datetime import datetime
+          date = datetime.now().strftime('%Y-%m-%d')
+          cache = f'cache/daily_games_{date}.json'
+          if not os.path.exists(cache):
+              print('WARNING: Pipeline cache not found - morning brief may use stale data or extra credits')
+          else:
+              print(f'Cache found: {cache}')
+          "
+
       - name: Verify image pipeline dependencies
         run: |
           python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"

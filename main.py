@@ -439,6 +439,7 @@ class LudiOrchestrator:
         players = []
         for sim in sim_results:
             p_name = sim.get('PLAYER_NAME')
+            if not p_name: continue  # BUG A3: guard against None player name
             if p_name not in props_data: continue
 
             is_home = sim.get('TEAM') == home
@@ -538,7 +539,10 @@ class LudiOrchestrator:
                 self.engine.enrich_player(p_dict, props_fmt)
                 
                 yak = {'status': sim.get('status', 'ACTIVE'), 'note': sim.get('injury_note', '')}
-                players.append(self.calib.calibrate_player(p_dict, yak))
+                # BUG A4: validate Module E output before appending
+                result = self.calib.calibrate_player(p_dict, yak)
+                if result:
+                    players.append(result)
 
         # Use the game's actual start_time for game_date — not today's date.
         # This prevents tomorrow's games (visible after 9 PM) from being logged

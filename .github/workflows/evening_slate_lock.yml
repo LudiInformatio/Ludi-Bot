@@ -115,10 +115,10 @@ jobs:
           CURRENT_HOUR_EST=$(TZ='America/New_York' date +%H)
           if [ "$CURRENT_HOUR_EST" -ge 20 ]; then
             echo "🌅 West coast run — showing only games tipping at 9 PM EST or later"
-            python3 -m morning_brief --mode evening --after-hour 21
+            python3 -m morning_brief --mode evening --after-hour 21 --force-fresh
           else
             echo "🏀 Evening lock run — showing all games"
-            python3 -m morning_brief --mode evening
+            python3 -m morning_brief --mode evening --force-fresh
           fi
 
       - name: Notify on failure

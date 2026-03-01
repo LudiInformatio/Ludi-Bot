@@ -377,8 +377,27 @@ def _get_news_catalysts(conn, date: str) -> str:
 
 import argparse
 
+def main():
+    parser = argparse.ArgumentParser(description='Ludi Morning Briefing')
+    parser.add_argument('--target-teams', nargs='*', help='Filter to specific teams')
+    parser.add_argument('--mode', default='morning', choices=['morning', 'evening'])
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--after-hour', type=int, help='Skip games starting before this hour (EST)')
+    parser.add_argument('--force-fresh', action='store_true', help='Skip cache and fetch fresh data')
+    args = parser.parse_args()
+    
+    engine = MorningBriefEngine(
+        target_teams=args.target_teams,
+        mode=args.mode,
+        dry_run=args.dry_run,
+        after_hour=args.after_hour,
+        force_fresh=args.force_fresh
+    )
+    engine.run()
+
+
 class MorningBriefEngine:
-    def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None):
+    def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None, force_fresh=False):
         print("\n" + "="*50)
         print(f"   🌅 LUDI {mode.upper()} BRIEF ENGINE")
         print(f"   Status: Production | Visual: V1.0 | Dry Run: {dry_run}")
@@ -388,6 +407,7 @@ class MorningBriefEngine:
         self.mode = mode
         self.dry_run = dry_run
         self.after_hour = after_hour  # If set, skip games starting before this hour (EST, 24h)
+        self.force_fresh = force_fresh  # If set, skip cache and fetch fresh data
         
         # Orchestrator helper (The Central Brain)
         self.orch = main.LudiOrchestrator(send_telegram=False) 
@@ -434,7 +454,11 @@ class MorningBriefEngine:
         # 1. Fetch Slate & Props — try daily odds cache first (written by 10 AM pipeline)
         # Cache includes full props from all books — cache hit skips BOTH fetch_live_slate
         # and fetch_comprehensive_props (0 Odds API credits). Falls back to live API if stale.
-        _cache_hit = self.gate.load_games_cache()
+        # BUG A1: Skip cache if --force-fresh is set (evening runs need fresh data)
+        if not self.force_fresh:
+            _cache_hit = self.gate.load_games_cache()
+        else:
+            _cache_hit = False
         if not _cache_hit:
             self.gate.fetch_live_slate()
 
