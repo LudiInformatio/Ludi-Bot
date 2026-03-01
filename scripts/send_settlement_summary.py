@@ -116,6 +116,56 @@ def _fmt_section(stats):
     )
 
 
+def _line_movement_summary(conn, game_date):
+    """
+    B3 consumer: Query prop_line_snapshots for line movement delta.
+    
+    Finds bets where |closing_line - opening_line| >= 0.5 OR 
+    |closing_odds - opening_odds| >= 10.
+    
+    Returns formatted string block or empty string if no significant movement.
+    """
+    c = conn.cursor()
+    c.execute('''
+        SELECT 
+            player_name,
+            stat_category,
+            opening_line,
+            closing_line,
+            opening_odds_over,
+            closing_odds_over,
+            team,
+            opponent
+        FROM prop_line_snapshots
+        WHERE game_date = ?
+          AND closing_line IS NOT NULL
+          AND opening_line IS NOT NULL
+          AND (
+              ABS(closing_line - opening_line) >= 0.5
+              OR ABS(COALESCE(closing_odds_over, 0) - COALESCE(opening_odds_over, 0)) >= 10
+          )
+        ORDER BY ABS(COALESCE(closing_line, 0) - opening_line) DESC
+        LIMIT 10
+    ''', (game_date,))
+    
+    rows = c.fetchall()
+    if not rows:
+        return ""
+    
+    lines = ["", "📈 **LINE MOVEMENT**", ""]
+    for r in rows:
+        player, stat, open_line, close_line, open_odds, close_odds, team, opp = r
+        line_move = close_line - open_line
+        odds_move = (close_odds or 0) - (open_odds or 0)
+        arrow = "📈" if line_move > 0 else "📉"
+        lines.append(
+            f"{arrow} {player} {stat}: {open_line:.1f} → {close_line:.1f} "
+            f"({line_move:+.1f}) | {open_odds:+d} → {close_odds:+d} ({odds_move:+d})"
+        )
+    
+    return "\n".join(lines)
+
+
 def main():
     """Generate and send settlement summary."""
     print("=" * 50)
@@ -141,6 +191,13 @@ def main():
 
     if ov:
         lines += ["🏦 **SINCE LAUNCH (Jan 7)**", _fmt_section(ov)]
+
+    # B3: Line movement summary from prop_line_snapshots
+    conn = sqlite3.connect('ludi.db')
+    movement_block = _line_movement_summary(conn, summary['date'])
+    conn.close()
+    if movement_block:
+        lines.append(movement_block)
 
     msg = "\n".join(lines)
 

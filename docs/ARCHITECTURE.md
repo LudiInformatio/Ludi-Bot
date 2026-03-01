@@ -144,7 +144,7 @@ from module_e import LudiEvaluator           # ImportError
 | `player_news_staging` | Dynamic | RSS-discovered players not yet in `player_canonical_ids` (rookies, two-ways, call-ups). `UNIQUE(player_name, source)`. Auto-promotes after 3+ appearances. Added Feb 25. |
 | `player_type_profiles` | 382 | Unified classification layer: archetype + defensive_tag + top-3 Synergy playtypes + freqs + PPPs + `archetype_in_top3` flag + `position_synergy_match`. `PRIMARY KEY (player_name, season)`. Feeds BERT negative few-shot injection. Added Feb 25. |
 | `player_foul_splits` | 459 | Rolling 21-day foul stats per player: `foul_rate`, `min_dampener` (0.70–1.0 scale), `data_confidence` (HIGH ≥ 10g / MEDIUM ≥ 5g). Synced daily via `scripts/sync_player_foul_splits.py`. Module C pre-loads at init via `_load_foul_splits_data()` — zero per-simulation DB connections. Added Feb 25 (Phase 8.17). |
-| `prop_line_snapshots` | Dynamic | Write-only currently — populated daily for future line movement analysis. Planned consumer: `scripts/analyze_line_movement.py` (post-Phase 8). |
+| `prop_line_snapshots` | Dynamic | Written by `module_b.snapshot_opening_lines()` daily; updated by `scripts/capture_closing_lines.py` (closing columns). **Primary consumer (Mar 2026):** `scripts/send_settlement_summary.py` — `_line_movement_summary()` function appends opening vs closing line deltas to nightly Telegram message for bets where line moved ≥0.5 or odds moved ≥10 pts. **Future consumers:** Ask Ludi `edges` intent ("what was the opening line for X?"); `scripts/analyze_line_movement.py` (weekly steam move detection, post-Phase 8). |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 
