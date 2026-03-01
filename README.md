@@ -65,6 +65,25 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 
 ---
 
+## AI Employee Workforce
+
+As of March 2026, the Ludi system is staffed by a 6-person AI team running on a hybrid architecture (Claude Agent Teams + Gemini CLI writer + OpenClaw always-on daemons). Each employee has a dedicated soul file in `employees/` that defines their role, communication style, and operating constraints.
+
+| Employee | Role | Runtime | Soul File |
+|----------|------|---------|-----------|
+| **Solomon** | PM Agent — sprint status, next actions, team health | Claude Agent Teams (lead) | `employees/solomon/` |
+| **Silas** | System Monitor — daily health checks, quota alerts, drift detection | OpenClaw (launchd daemon) | `employees/silas/` |
+| **Vera** | Pipeline QA — bet logic validation, settlement verification, edge sanity | Claude Agent Teams (teammate) | `employees/vera/` |
+| **Iris** | Social Scout — public sentiment, competitive intel, audience demand signals | OpenClaw (launchd daemon) | `employees/iris/` |
+| **Henrik** | Code Auditor — independent code review (uses Gemini CLI for genuine writer/auditor split) | Claude Agent Teams (teammate) | `employees/henrik/` |
+| **Maren** | Content Strategist — Telegram card copy, weekly report narrative, brand voice | Claude Agent Teams (teammate) | `employees/maren/` |
+
+**Architecture:** Claude calls `gemini -p "..." --yolo -m gemini-2.5-pro` as a Bash subprocess for writing tasks. Henrik (Claude) reviews Gemini's output. Different model + different company = genuine independent audit. Silas and Iris run as persistent macOS launchd daemons via OpenClaw.
+
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — full spec (~$4.60/mo total runtime cost)
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -137,7 +156,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** February 27, 2026 — 5:56 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 4:49 PM EST
 
 **Phase 8 Completions:**
 
@@ -177,13 +196,16 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Settlement Pipeline Hardening — date-ceiling guard; canonical name fallback; three-section report (daily/L10/launch); all-void guard |
 | Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive only; `players.defensive_tag` deterministic |
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
+| Infra | Module E Audit (LudiCalibrator) — hybrid off/def 3-tuple return; `_load_shot_quality_bulk()` schema drift fix; `_canonical_key()` cache consistency; `_load_dvp_by_archetype()` dead-code removal |
+| Infra | Sharp+P2P CLV System — `backfill_historical_odds.py` (83.9% coverage, +4.43c avg CLV); `capture_closing_lines.py` PREFERRED_BOOKS sort + `closing_book` column; `morning_brief.py` cache-first + 55-65% credit reduction |
 
 **Active / Planned Next:**
-- Module Audit Sprint — A+B+C+D+E+F complete; G/H/X lower priority, schedule March
-- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade — spec in `plans/pure-baking-river.md` PART 2B/2C
-- Sprint 4: Alt line testing — Odds-API quota resets midnight UTC March 1 (~7 PM EST Feb 28)
+- Module F fixes (`module_f.py` `LudiReporter`) — F1 div/zero in `avg_ev`, F2 double tier demotion, F3/F4 silent exception logging
+- Run `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns)
+- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade — spec in `plans/pure-baking-river.md` PART 2B/2C (~Mar 10)
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
 - Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
+- AI Employee Workforce — OpenClaw sprint (March 2026); see team roster below
 
 **Performance (Jan 7 – Feb 25, 2026):**
 - Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)

@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 1, 2026 — 4:11 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 4:49 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns) + AI Workforce Monday Kickoff (`employees/silas/run_check.py`, Agent Teams test) → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade (~Mar 10)
-**Completed:** CLV backfill (`scripts/backfill_historical_odds.py`) — sharp benchmarks + overnight capture + odds cache ✅ + Module D audit (`module_d.py`) — injury taxonomy + staleness challenger + 10 simplify fixes ✅ + AI Workforce Sunday Setup (`employees/` soul files, Discord server + bot, Solomon Telegram Bot 2) ✅
+**Active Work:** Module F fixes (`module_f.py` `LudiReporter`) — F1 div/zero + F2 tier demotion + F3/F4 logging + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade (~Mar 10)
+**Completed:** AI Workforce Sunday Setup (`employees/` soul files, Discord server + bot, Solomon Telegram Bot 2) ✅ + Module E audit (`module_e.py`) — hybrid off/def fix + shot_quality schema drift + 3 simplify fixes ✅ + Module F audit plan — F1 div/zero, F2 tier demotion, F3/F4 logging (4 fixes ready) ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 
@@ -95,6 +95,9 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 ### AI Employee Workforce (March 2026 — OpenClaw Sprint)
 **PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 6 AI employees on OpenClaw runtime (~$4.60/mo)
 **Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist)
+
+> **Welcome aboard, team.** Soul files created Mar 1, 2026. Discord server + channels live. Telegram Bot 2 (Solomon) active. The crew is assembled and ready — Monday kickoff begins the first live sprint. 🏀
+
 **Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
 - [x] Sunday setup: Telegram + Discord + soul files + webhooks ✅
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
