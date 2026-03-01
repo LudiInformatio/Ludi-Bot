@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.telegram_notifier import send_message
+from utils.telegram_notifier import send_solomon_message
 from utils.time_utils import get_est_yesterday
 
 
@@ -204,8 +204,8 @@ def main():
 
     msg = "\n".join(lines)
 
-    # Send to Telegram
-    success = send_message(msg)
+    # Send via Solomon Bot 2 (PM/ops channel)
+    success = send_solomon_message(msg)
 
     if success:
         print(f"✅ Sent: {d['wins']}-{d['losses']} ({d['net_units']:+.2f}u) | L10: {l10['net_units']:+.2f}u | Overall: {ov['net_units']:+.2f}u")

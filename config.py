@@ -107,6 +107,10 @@ GOOGLE_SEARCH_CX = os.getenv('GOOGLE_SEARCH_CX')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+# TELEGRAM BOT 2 — Solomon (PM briefs, session debriefs, settlement summaries)
+TELEGRAM_TOKEN_SOLOMON = os.getenv('TELEGRAM_TOKEN_SOLOMON')
+TELEGRAM_CHAT_ID_SOLOMON = os.getenv('TELEGRAM_CHAT_ID_SOLOMON')
+
 # SLACK (Ops/Work Notes — pipeline alerts, diagnostics, GitHub links)
 # Workspace: vibestarters.slack.com | Channel: C0AGBQXRXB3
 # Get webhook URL from app settings (A0AD1RWU6TG) → Incoming Webhooks

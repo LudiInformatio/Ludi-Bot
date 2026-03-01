@@ -8,7 +8,7 @@ Purpose: Enable Telegram notifications for daily briefings, alerts, and updates
 """
 
 import requests
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_TOKEN_SOLOMON, TELEGRAM_CHAT_ID_SOLOMON
 
 
 def send_message(text: str, parse_mode: str = "Markdown") -> bool:
@@ -209,6 +209,67 @@ def send_daily_briefing(briefing_text: str) -> bool:
             success = False
 
     return success
+
+
+# ====================================================
+# SOLOMON BOT — PM briefs, session debriefs, settlement summaries
+# ====================================================
+
+def send_solomon_message(text: str, parse_mode: str = "Markdown") -> bool:
+    """Send a PM/ops message via Solomon's Telegram bot (Bot 2)."""
+    if not TELEGRAM_TOKEN_SOLOMON or not TELEGRAM_CHAT_ID_SOLOMON:
+        print("❌ Solomon Telegram credentials not configured in .env")
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN_SOLOMON}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID_SOLOMON, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        response.raise_for_status()
+        if response.json().get("ok"):
+            print("✅ Solomon Telegram message sent successfully")
+            return True
+        else:
+            print(f"❌ Solomon Telegram API error: {response.json().get('description')}")
+            return False
+    except Exception as e:
+        print(f"❌ Failed to send Solomon Telegram message: {e}")
+        return False
+
+
+def send_solomon_photo(photo_path: str, caption: str = None, parse_mode: str = None) -> bool:
+    """Send a photo via Solomon's Telegram bot (Bot 2) — used for pm_session/pm_morning cards."""
+    if not TELEGRAM_TOKEN_SOLOMON or not TELEGRAM_CHAT_ID_SOLOMON:
+        print("❌ Solomon Telegram credentials not configured in .env")
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN_SOLOMON}/sendPhoto"
+
+    try:
+        with open(photo_path, 'rb') as f:
+            files = {'photo': f}
+            data = {'chat_id': TELEGRAM_CHAT_ID_SOLOMON}
+            if caption:
+                data['caption'] = caption
+                if parse_mode:
+                    data['parse_mode'] = parse_mode
+
+            response = requests.post(url, files=files, data=data, timeout=20)
+            response.raise_for_status()
+
+            if response.json().get("ok"):
+                print("✅ Solomon Telegram photo sent successfully")
+                return True
+            else:
+                print(f"❌ Solomon Telegram API error: {response.json().get('description')}")
+                return False
+
+    except Exception as e:
+        print(f"❌ Failed to send Solomon Telegram photo: {e}")
+        return False
 
 
 if __name__ == "__main__":

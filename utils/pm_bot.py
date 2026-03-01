@@ -23,7 +23,7 @@ except ModuleNotFoundError:
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-from utils.telegram_notifier import send_photo, send_message
+from utils.telegram_notifier import send_photo, send_message, send_solomon_photo
 from utils.slack_notifier import send_slack_message
 
 # Domain guardrail — prepended to every Gemini prompt (BERT Pattern 1: label space first).
@@ -328,9 +328,9 @@ Tomorrow: {next_task}
             )
             briefing_text = response.text
 
-            # Send to both — Telegram keeps image + formatting, Slack gets text for ops context
+            # Send to both — Solomon Bot 2 for Telegram (PM/ops channel), Slack for ops context
             send_slack_message(briefing_text)
-            return send_photo(header_img, caption=briefing_text, parse_mode=None)
+            return send_solomon_photo(header_img, caption=briefing_text, parse_mode=None)
 
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")
@@ -385,9 +385,9 @@ No "go touch grass". Name the actual feature or file being built.
                 model=self.model_id,
                 contents=_NBA_DOMAIN_GUARDRAIL + prompt
             )
-            # Send to both — Telegram keeps image + formatting, Slack gets text for ops context
+            # Send to both — Solomon Bot 2 for Telegram (PM/ops channel), Slack for ops context
             send_slack_message(response.text)
-            return send_photo(header_img, caption=response.text, parse_mode=None)
+            return send_solomon_photo(header_img, caption=response.text, parse_mode=None)
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
             return False
