@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, February 28, 2026 — 11:41 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 10:56 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns) → then Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade + Phase 8.23 Layer 1 (~Mar 10)
 **Completed:** Sprint 4 alt lines (`module_a.py` Phase 2B + `module_f.py` EV sweep) — zero extra credits ✅ + team_totals 422 fix — per-event enrichment, `TeamTotal` in Module E notes ✅ + CLV backfill (`scripts/backfill_historical_odds.py`) — sharp benchmarks + overnight capture + odds cache ✅
