@@ -68,6 +68,17 @@ class LudiYak:
         # [PHASE 3] Load Keyword Taxonomy
         self.keywords_config = self._load_keyword_config()
 
+        # [PHASE 8] Load Injury Taxonomy
+        try:
+            from utils.injury_taxonomy import INJURY_TAXONOMY, INJURY_LANGUAGE_MAP, SOURCE_CONFIDENCE_DECAY
+            self._taxonomy = INJURY_TAXONOMY
+            self._language_map = INJURY_LANGUAGE_MAP
+            self._source_decay = SOURCE_CONFIDENCE_DECAY
+        except ImportError:
+            self._taxonomy = {}
+            self._language_map = []
+            self._source_decay = {}
+
         # [RSS] Canonical player name set for validation (lazy-loaded on first RealGM fetch)
         self._canonical_names = None
 
@@ -188,7 +199,7 @@ class LudiYak:
             conn.commit()
         except Exception as e:
             # Silent fail - don't break pipeline for staging issues
-            pass
+            print(f"[YAK] ⚠️   Staging error for {player_name}: {e}")
         finally:
             if _close and conn:
                 conn.close()
@@ -739,6 +750,81 @@ class LudiYak:
         except Exception:
             pass
         return None
+
+    def _perplexity_freshness_check(self, player_name, current_status):
+        """Phase 8 Staleness Challenger — verify older uncertain statuses."""
+        query = f"{player_name} injury update playing tonight"
+        news_text = self.targeted_search(player_name, "NBA", context="injury")
+        
+        if not news_text or not news_text.get('items'):
+            if current_status in ['GTD', 'PROBABLE', 'DOUBTFUL', 'QUESTIONABLE']:
+                return {"status": "ACTIVE", "note": "[FRESHNESS] No new info, assumed Active", "confidence": 0.8}
+            return None
+            
+        items = news_text.get('items', [])
+        if not items or len(items[0].get('snippet', '')) < 20:
+            if current_status in ['GTD', 'PROBABLE', 'DOUBTFUL', 'QUESTIONABLE']:
+                return {"status": "ACTIVE", "note": "[FRESHNESS] No new info, assumed Active", "confidence": 0.8}
+            return None
+
+        news_snippet = items[0].get('snippet', '')[:500]
+        parsed = self._parse_with_taxonomy_injection(news_snippet, player_name, current_status)
+        return parsed
+
+    def _parse_with_taxonomy_injection(self, text, player_name, current_status):
+        """Calls Haiku with taxonomy vocabulary injected as context."""
+        try:
+            from utils.claude_client import get_claude_analysis, HAIKU_MODEL
+            from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
+            import json
+
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            prompt = INJURY_BLURB_PARSE_PROMPT.format(
+                description=text,
+                player_name=player_name,
+                today_date=today_date,
+                inj_return_date='unknown',
+            )
+
+            result_text = get_claude_analysis(
+                prompt=prompt,
+                system_prompt=INJURY_BLURB_SYSTEM,
+                model=HAIKU_MODEL,
+                temperature=0.0,
+                max_tokens=150,
+                call_type='injury_freshness',
+                player_name=player_name,
+            )
+
+            if not result_text or not result_text.strip():
+                return None
+
+            text_cleaned = result_text.strip()
+            if text_cleaned.startswith('```'):
+                text_cleaned = '\n'.join(text_cleaned.split('\n')[1:-1]).strip()
+
+            result = json.loads(text_cleaned)
+            
+            status_override = result.get('status_override')
+            if status_override:
+                return {"status": status_override, "note": f"[AI] Override: {status_override}", "confidence": 0.85}
+            
+            if result.get('no_designation'):
+                return {"status": "ACTIVE", "note": "[AI] No designation found", "confidence": 0.9}
+                
+            if result.get('rest'):
+                return {"status": "OUT_REST", "note": "[AI] Load management", "confidence": 0.9}
+            
+            tonight = result.get('tonight_available')
+            if tonight is False:
+                return {"status": "OUT", "note": "[AI] AI confirms out", "confidence": 0.85}
+            if tonight is True:
+                return {"status": "ACTIVE", "note": "[AI] AI confirms active", "confidence": 0.85}
+            
+            return None
+        except Exception as e:
+            print(f"   [YAK] AI freshness parse failed for {player_name}: {e}")
+            return None
     
     def get_team_schedule_context(self, team_name, target_date=None):
         """
@@ -861,7 +947,7 @@ class LudiYak:
             _db_path = getattr(config, 'DB_PATH', 'ludi.db')
             _conn = sqlite3.connect(_db_path, timeout=5)
             _row = _conn.execute(f'''
-                SELECT status, injury_type, days_out, source
+                SELECT status, injury_type, days_out, source, snapshot_time
                 FROM player_injuries
                 WHERE LOWER(player_name) = LOWER(?)
                   AND resolved_at IS NULL
@@ -874,7 +960,30 @@ class LudiYak:
             ''', (player_name,)).fetchone()
             _conn.close()
             if _row:
-                _status, _inj_type, _days_out, _source = _row
+                _status, _inj_type, _days_out, _source, _snapshot_time = _row
+                
+                from datetime import datetime
+                try:
+                    # Handle different ISO formats
+                    snapshot_dt = datetime.fromisoformat(_snapshot_time.replace('Z', '+00:00'))
+                    # If timezone aware, convert to naive for math or compare aware. 
+                    # Assuming local naive since we just use datetime.now() elsewhere
+                    if snapshot_dt.tzinfo:
+                        snapshot_dt = snapshot_dt.replace(tzinfo=None)
+                    age_hours = (datetime.now() - snapshot_dt).total_seconds() / 3600
+                except Exception:
+                    age_hours = 0
+                
+                from utils.injury_taxonomy import get_category, INJURY_TAXONOMY
+                cat = get_category(_status)
+                tax_info = INJURY_TAXONOMY.get(_status, {})
+                decay = tax_info.get('confidence_decay_hours', 24)
+                
+                if age_hours > decay and cat in ('UNCERTAIN', 'UNAVAILABLE'):
+                    fresh_intel = self._perplexity_freshness_check(player_name, _status)
+                    if fresh_intel:
+                        return fresh_intel
+
                 if _status in ('OUT', 'DOUBTFUL'):
                     # Hard status confirmed in DB — skip API calls entirely
                     days_note = f" ({_days_out}d)" if _days_out and _days_out > 0 else ""

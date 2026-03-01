@@ -64,6 +64,38 @@ def _sync_canonical_games(conn):
     conn.commit()
 
 
+def seed_injury_taxonomy(conn):
+    try:
+        from utils.injury_taxonomy import INJURY_TAXONOMY, INJURY_LANGUAGE_MAP
+    except ImportError:
+        return
+
+    c = conn.cursor()
+    for code, data in INJURY_TAXONOMY.items():
+        c.execute('''
+            INSERT OR REPLACE INTO canonical_injury_statuses (
+                status_code, category, display_name, severity_score, 
+                sim_multiplier, usage_vacuum_trigger, confidence_decay_hours, 
+                edge_type, actionable
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            code, data['category'], data['display_name'], data['severity_score'],
+            float(data['sim_multiplier']), 1 if data['usage_vacuum_trigger'] else 0, 
+            data['confidence_decay_hours'], data['edge_type'], 1 if data['actionable'] else 0
+        ))
+
+    for item in INJURY_LANGUAGE_MAP:
+        c.execute('''
+            INSERT OR REPLACE INTO injury_language_map (
+                source_phrase, source, canonical_status, parse_type, confidence
+            ) VALUES (?, ?, ?, ?, ?)
+        ''', (
+            item['source_phrase'], item['source'], item['canonical_status'],
+            item['parse_type'], float(item['confidence'])
+        ))
+    conn.commit()
+
+
 class LudiHistorian:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
@@ -843,6 +875,35 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_player_latest ON player_injuries(player_name, snapshot_time DESC)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_game_day ON player_injuries(snapshot_time, is_game_day_report)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_injuries_active ON player_injuries(status, resolved_at)')
+
+        # canonical_injury_statuses (Phase 8 Module D Overhaul)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS canonical_injury_statuses (
+                status_code TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                severity_score INTEGER NOT NULL,
+                sim_multiplier REAL NOT NULL,
+                usage_vacuum_trigger BOOLEAN NOT NULL,
+                confidence_decay_hours INTEGER NOT NULL,
+                edge_type TEXT NOT NULL,
+                actionable BOOLEAN NOT NULL
+            )
+        ''')
+
+        # injury_language_map (Phase 8 Module D Overhaul)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS injury_language_map (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_phrase TEXT NOT NULL,
+                source TEXT NOT NULL,
+                canonical_status TEXT NOT NULL,
+                parse_type TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                FOREIGN KEY(canonical_status) REFERENCES canonical_injury_statuses(status_code),
+                UNIQUE(source, source_phrase)
+            )
+        ''')
 
         # Add injury columns to players table (Phase 8.0)
         try:
@@ -1680,6 +1741,9 @@ class LudiHistorian:
         # Seed canonical_games from any games data already in the DB.
         # Uses the same sync_canonical_games() function available to all game writers.
         _sync_canonical_games(conn)
+        
+        # Seed injury taxonomy
+        seed_injury_taxonomy(conn)
 
         conn.commit()
         conn.close()

@@ -86,7 +86,7 @@ jobs:
         timeout-minutes: 5
         run: |
           source .venv/bin/activate
-          python scripts/sync_injuries.py
+          python scripts/sync_injuries.py --force
         env:
           IS_GAME_DAY_REPORT: "true"
           TANK01_KEY: ${{ secrets.TANK01_KEY }}

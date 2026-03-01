@@ -198,13 +198,30 @@ Your job: extract structured data from raw injury news blurbs.
 Focus on TONIGHT's game availability — not long-term prognosis.
 Return ONLY a valid JSON object. No explanation, no markdown.
 
-Severity guide (critical for bet edge calculation):
-- "minor": player expected to play tonight with no restriction (status = PROBABLE/ACTIVE)
-- "moderate": player is game-time decision or on minutes limit (status = GTD/DOUBTFUL)
-- "severe": player CANNOT play tonight (status = OUT)
-- "non_injury": trade adjustment, rest/load management, or no injury present
+TAXONOMY VOCABULARY:
+- ACTIVE: Available to play with no restrictions.
+- PROBABLE: Likely to play.
+- MINUTES_LIMIT: Playing but on a restriction.
+- GTD: Game Time Decision.
+- QUESTIONABLE: 50/50 chance to play.
+- DOUBTFUL: Unlikely to play.
+- OUT: Will not play due to injury.
+- OUT_REST: Will not play due to load management/rest.
+- SUSP: Suspended.
+- SEASON_ENDING: Out for the rest of the season.
 
-If the blurb is vague, contains no injury info, or is ambiguous — set tonight_available to "uncertain" and severity to "minor".
+CRITICAL PARSING RULES:
+- If the text implies "no designation" or "not on injury report" → set no_designation=true.
+- If the text mentions "load management" or "rest" → set rest=true.
+- status_override should ONLY be set to a taxonomy code if the text clearly contradicts the official status (e.g. coach confirms they will play → ACTIVE).
+
+Severity guide (critical for bet edge calculation):
+- "minor": expected to play tonight (ACTIVE/PROBABLE)
+- "moderate": GTD, QUESTIONABLE, or MINUTES_LIMIT
+- "severe": OUT or DOUBTFUL
+- "non_injury": rest, suspended, traded, etc.
+
+If the blurb is vague or has no injury info — set tonight_available to "uncertain" and severity to "minor".
 If blurb date is >3 days before today (blurb_is_stale=true), do not infer tonight's availability from it."""
 
 INJURY_BLURB_PARSE_PROMPT = """Parse this NBA injury report into structured JSON.
@@ -213,31 +230,31 @@ INJURY_BLURB_PARSE_PROMPT = """Parse this NBA injury report into structured JSON
 
 Blurb: "Feb 5: Herro (ribs) is not traveling with the Heat for their two-game road trip"
 Player: Tyler Herro
-Output: {{"body_part": "ribs", "severity": "severe", "games_out_estimate": "2-4 games", "context": "ongoing", "minutes_risk": false, "tonight_available": false}}
+Output: {{"body_part": "ribs", "severity": "severe", "games_out_estimate": "2-4 games", "context": "ongoing", "minutes_risk": false, "tonight_available": false, "status_override": "OUT", "rest": false, "no_designation": false}}
 
 Blurb: "Feb 7: Middleton (recently traded) is hoping to make his Mavericks debut Tuesday"
 Player: Khris Middleton
-Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1-2 games", "context": "recently_traded", "minutes_risk": true, "tonight_available": false}}
+Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1-2 games", "context": "recently_traded", "minutes_risk": true, "tonight_available": false, "status_override": null, "rest": false, "no_designation": false}}
 
 Blurb: "Feb 7: Hart (ankle) is listed as questionable for Sunday's game against the Celtics"
 Player: Josh Hart
-Output: {{"body_part": "ankle", "severity": "moderate", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": true, "tonight_available": "uncertain"}}
+Output: {{"body_part": "ankle", "severity": "moderate", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": true, "tonight_available": "uncertain", "status_override": null, "rest": false, "no_designation": false}}
 
 Blurb: "Feb 12: Marshall (foot) is probable for Thursday's game against the Lakers"
 Player: Naji Marshall
-Output: {{"body_part": "foot", "severity": "minor", "games_out_estimate": "0 games", "context": "returning_soon", "minutes_risk": true, "tonight_available": true}}
+Output: {{"body_part": "foot", "severity": "minor", "games_out_estimate": "0 games", "context": "returning_soon", "minutes_risk": true, "tonight_available": true, "status_override": null, "rest": false, "no_designation": false}}
 
 Blurb: "Feb 13: Marshall has been ruled out for the rest of Thursday's game due to a left foot strain. He collected 19 points in 29 minutes."
 Player: Naji Marshall
-Output: {{"body_part": "foot", "severity": "moderate", "games_out_estimate": "1-2 games", "context": "mid_game_exit", "minutes_risk": false, "tonight_available": false}}
+Output: {{"body_part": "foot", "severity": "moderate", "games_out_estimate": "1-2 games", "context": "mid_game_exit", "minutes_risk": false, "tonight_available": false, "status_override": "OUT", "rest": false, "no_designation": false}}
 
 Blurb: "Curry (rest) will sit out Sunday's game as part of his planned load management schedule"
 Player: Stephen Curry
-Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1 game", "context": "rest", "minutes_risk": false, "tonight_available": false, "blurb_is_stale": false}}
+Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1 game", "context": "rest", "minutes_risk": false, "tonight_available": false, "blurb_is_stale": false, "status_override": "OUT_REST", "rest": true, "no_designation": false}}
 
 Blurb: "Mitchell is dealing with some soreness and his status will be updated closer to game time"
 Player: Donovan Mitchell
-Output: {{"body_part": null, "severity": "minor", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": false, "tonight_available": "uncertain", "blurb_is_stale": false}}
+Output: {{"body_part": null, "severity": "minor", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": false, "tonight_available": "uncertain", "blurb_is_stale": false, "status_override": null, "rest": false, "no_designation": false}}
 
 === YOUR TASK ===
 
@@ -259,6 +276,9 @@ Fields:
 - minutes_risk: true if likely on minutes restriction even if active, false otherwise
 - tonight_available: true | false | "uncertain"
 - blurb_is_stale: true if blurb date is more than 3 days before today, false otherwise
+- status_override: canonical status code (e.g. "ACTIVE", "OUT_REST") or null
+- rest: true if player is resting or load managing, false otherwise
+- no_designation: true if player is healthy / not on the injury report, false otherwise
 
 Return JSON only."""
 

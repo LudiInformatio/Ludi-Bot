@@ -563,24 +563,39 @@ class InjurySync:
 
                 last_injury = self._get_last_injury_record(conn, player_name)
 
-                # ESPN PROTECTION: If ESPN already recorded a MORE severe status today,
-                # do not let BDL/Tank01 downgrade it (they lag behind ESPN by 2-6 hours).
-                # Example: ESPN=OUT (5PM surgery), BDL=GTD (3PM stale) → keep OUT.
-                # Status severity: OUT(4) > DOUBTFUL(3) > GTD(2) > PROBABLE(1)
-                _STATUS_SEVERITY = {'OUT': 4, 'DOUBTFUL': 3, 'GTD': 2, 'QUESTIONABLE': 2, 'PROBABLE': 1}
+                # ESPN PROTECTION: Use taxonomy and semantic distance for conflict resolution
+                from utils.injury_taxonomy import INJURY_TAXONOMY, get_category, semantic_distance
                 _espn_row = cursor.execute('''
-                    SELECT status FROM player_injuries
+                    SELECT status, snapshot_time FROM player_injuries
                     WHERE player_name = ? AND source = 'ESPN'
                       AND resolved_at IS NULL
                     ORDER BY snapshot_time DESC LIMIT 1
                 ''', (player_name,)).fetchone()
                 if _espn_row:
-                    _espn_severity = _STATUS_SEVERITY.get(_espn_row[0], 0)
-                    _new_severity = _STATUS_SEVERITY.get(new_status, 0)
-                    if _espn_severity > _new_severity:
-                        # ESPN has fresher, more severe status — skip BDL/Tank01 downgrade
-                        self._log(f"  🛡️  ESPN PROTECTION: {player_name} kept as {_espn_row[0]} (BDL reported {new_status})")
-                        continue
+                    espn_status, espn_time_str = _espn_row
+                    try:
+                        espn_time = datetime.fromisoformat(espn_time_str.replace('Z', '+00:00'))
+                        if espn_time.tzinfo: espn_time = espn_time.replace(tzinfo=None)
+                        espn_age_hours = (datetime.now() - espn_time).total_seconds() / 3600
+                    except:
+                        espn_age_hours = 0
+
+                    espn_cat = get_category(espn_status)
+                    new_cat = get_category(new_status)
+                    espn_sev = INJURY_TAXONOMY.get(espn_status, {}).get('severity_score', 0)
+                    new_sev = INJURY_TAXONOMY.get(new_status, {}).get('severity_score', 0)
+                    dist = semantic_distance(espn_status, new_status)
+                    
+                    if espn_cat == new_cat:
+                        # same-category conflict → recency tiebreaker
+                        if espn_age_hours < 2:
+                            self._log(f"  🛡️  ESPN PROTECTION (recency): {player_name} kept as {espn_status} (new: {new_status})")
+                            continue
+                    else:
+                        # cross-category conflict → keep harder status unless other is 2h+ fresher
+                        if espn_sev > new_sev and espn_age_hours < 2:
+                            self._log(f"  🛡️  ESPN PROTECTION (cross-cat, dist {dist}): {player_name} kept as {espn_status} (new: {new_status})")
+                            continue
 
                 should_insert = False
                 onset_date = None

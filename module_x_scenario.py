@@ -34,6 +34,7 @@ class ScenarioBuilder:
             c.execute("""
                 SELECT days_out FROM player_injuries
                 WHERE player_name = ? AND resolved_at IS NULL
+                  AND snapshot_time >= datetime('now','-14 days')
                   AND (team_abbreviation = ? OR team_abbreviation IS NULL)
                 ORDER BY snapshot_time DESC LIMIT 1
             """, (out_player_name, team_abbr))
