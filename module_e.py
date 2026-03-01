@@ -779,7 +779,7 @@ class LudiCalibrator:
             if tracking_stats.get('tracking_games', 0) < 3:
                 return {}
 
-            shot_row = self.shot_quality_cache.get(canonical_name)
+            shot_row = self.shot_quality_cache.get(_canonical_key(canonical_name))
             if shot_row:
                 tracking_stats['rim_freq'] = shot_row.get('rim_freq', 0)
                 tracking_stats['corner_3_freq'] = shot_row.get('corner_3_freq', 0)
@@ -1019,8 +1019,8 @@ class LudiCalibrator:
             calibrated['archetype_confidence'] = archetype_confidence
 
         # --- Defensive tag assignment (Phase 7.9.5 — hybrid off/def system) ---
-        stl = float(calibrated.get('base_stl', 0) or 0)
-        blk = float(calibrated.get('base_blk', 0) or 0)
+        def_stl = float(calibrated.get('base_stl', 0) or 0)
+        def_blk = float(calibrated.get('base_blk', 0) or 0)
         def_diff = float(calibrated.get('def_diff_pct', 0) or 0.0)
         def_freq = float(calibrated.get('def_freq_pct', 0) or 0.0)
         position = str(calibrated.get('position', 'UNK') or 'UNK').upper()
@@ -1041,18 +1041,18 @@ class LudiCalibrator:
 
         # Assign tag — priority order: RIM_GUARDIAN > PERIMETER_HAWK > SWITCHABLE_ANCHOR >
         #                               HUSTLE_DISRUPTOR > WEAK_LINK > None
-        if ((blk >= 1.1 and position in ('F', 'C', 'UNK'))
+        if ((def_blk >= 1.1 and position in ('F', 'C', 'UNK'))
                 or (pr_roll_def >= 75 and post_def >= 70)):
             calibrated['defensive_tag'] = 'RIM_GUARDIAN'
-        elif ((stl >= 1.2 and position in ('G', 'F', 'UNK'))
+        elif ((def_stl >= 1.2 and position in ('G', 'F', 'UNK'))
                 or (iso_def >= 75 and spot_def >= 70)):
             calibrated['defensive_tag'] = 'PERIMETER_HAWK'
-        elif (((stl + blk) >= 2.0 and speed > 3.9) or strong_def_tags >= 3):
+        elif (((def_stl + def_blk) >= 2.0 and speed > 3.9) or strong_def_tags >= 3):
             calibrated['defensive_tag'] = 'SWITCHABLE_ANCHOR'
-        elif (stl > 1.15 or (stl > 0.9 and def_distance > 2.3)):
+        elif (def_stl > 1.15 or (def_stl > 0.9 and def_distance > 2.3)):
             calibrated['defensive_tag'] = 'HUSTLE_DISRUPTOR'
         elif ((def_diff > 1.5 and def_freq > 8.0)
-                or (def_diff > 2.0 and (stl + blk) < 1.0)):
+                or (def_diff > 2.0 and (def_stl + def_blk) < 1.0)):
             calibrated['defensive_tag'] = 'WEAK_LINK'
         else:
             calibrated['defensive_tag'] = None
@@ -3082,17 +3082,16 @@ class LudiCalibrator:
             return {}
 
     def _load_shot_quality_bulk(self) -> dict:
-        """Pre-load player_shot_quality into {player_name: {rim_freq, corner_3_freq}} dict."""
+        """Pre-load player_shot_quality into {canonical_key: {rim_freq, corner_3_freq}} dict."""
         out = {}
         try:
-            conn = sqlite3.connect(self.db_path)
-            rows = conn.execute(
-                "SELECT player_name, at_rim_freq, corner_3_freq "
-                "FROM player_shot_quality"
-            ).fetchall()
-            conn.close()
+            with sqlite3.connect(self.db_path) as conn:
+                rows = conn.execute(
+                    "SELECT player_name, at_rim_freq, corner_3_freq "
+                    "FROM player_shot_quality"
+                ).fetchall()
             for player_name, at_rim, corner_3 in rows:
-                out[player_name] = {
+                out[_canonical_key(player_name)] = {
                     'rim_freq': at_rim or 0,
                     'corner_3_freq': corner_3 or 0,
                 }
