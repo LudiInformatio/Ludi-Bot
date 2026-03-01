@@ -158,9 +158,12 @@ def _line_movement_summary(conn, game_date):
         line_move = close_line - open_line
         odds_move = (close_odds or 0) - (open_odds or 0)
         arrow = "📈" if line_move > 0 else "📉"
+        # Guard against NULL odds (opening_odds_over / closing_odds_over are nullable)
+        o_fmt = f"{open_odds:+d}" if open_odds is not None else "—"
+        c_fmt = f"{close_odds:+d}" if close_odds is not None else "—"
         lines.append(
             f"{arrow} {player} {stat}: {open_line:.1f} → {close_line:.1f} "
-            f"({line_move:+.1f}) | {open_odds:+d} → {close_odds:+d} ({odds_move:+d})"
+            f"({line_move:+.1f}) | {o_fmt} → {c_fmt} ({odds_move:+d})"
         )
     
     return "\n".join(lines)
