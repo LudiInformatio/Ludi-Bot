@@ -122,6 +122,14 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 - [ ] Phase V3: Full catalog + `scripts/generate_all_charts.py`
 - [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted ad-hoc chart generation
 
+### Prop Card & Odds Widget (Post-Phase 8 — Frontend Sprint)
+**Research:** `docs/research/PROP_CARD_WIDGET_RESEARCH.md` — full design + data source map
+**Data:** All in `ludi.db` — zero new APIs needed
+- [ ] **Phase 1 — PIL PNG for Telegram**: `utils/card_engine.py` → `generate_player_prop_card(bet_dict, conn)` → 800×500px dark card. Wire into `morning_brief.py` (DIAMOND/BLUE CHIP) + `bots/ask_ludi_handlers.py` (edges intent). 1-session build.
+- [ ] **Phase 2 — Streamlit HTML component**: `app/components/prop_card.py` — right panel of two-column layout (Odds Widget iframe left, prop cards right).
+- [ ] **Phase 3 — Prop Pulse Score** (optional): `_prop_pulse_score()` → 0–100 composite: Edge% 40% + L10 hit rate 25% + DVP rank 20% + alt line EV delta 15%.
+- [ ] **Odds Widget**: Free Starter plan active (500 req/month). `ODDS_WIDGET_KEY` in `.env` — add to `.env.template`. Explore widget implementation at builder URL. **Telegram only**: iframe not supported — widget for Streamlit game lines sidebar only.
+
 ### CLV Tracking Enhancement
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
