@@ -26,6 +26,19 @@ except ModuleNotFoundError:
 from utils.telegram_notifier import send_photo, send_message
 from utils.slack_notifier import send_slack_message
 
+# Domain guardrail — prepended to every Gemini prompt (BERT Pattern 1: label space first).
+# Prevents sport-context drift when sprint names contain non-NBA trigger words
+# (e.g. "referee" → Mbappé/Real Madrid without this constraint).
+_NBA_DOMAIN_GUARDRAIL = (
+    "NBA ONLY. You are writing for an NBA basketball analytics platform called Ludi-Bot. "
+    "Every reference, athlete, team, and sport must be NBA basketball. "
+    "Never mention soccer, football, tennis, baseball, MLS, EPL, La Liga, or any non-NBA "
+    "league, athlete, or competition. "
+    "If the context mentions referees, officials, or crew assignments, keep it NBA/basketball "
+    "only (e.g., Tony Brothers, Scott Foster, Joey Crawford). "
+    "If in doubt, stay NBA.\n\n"
+)
+
 class ProjectManagerBot:
     """
     Vibe Starters Assistant - Powered by Ludi
@@ -308,10 +321,10 @@ Tomorrow: {next_task}
 """
 
         try:
-            # New SDK Syntax
+            # New SDK Syntax — domain guardrail prepended (BERT Pattern 1: label space first)
             response = self.client.models.generate_content(
                 model=self.model_id,
-                contents=prompt
+                contents=_NBA_DOMAIN_GUARDRAIL + prompt
             )
             briefing_text = response.text
 
@@ -367,9 +380,10 @@ No "go touch grass". Name the actual feature or file being built.
 """
 
         try:
+            # Domain guardrail prepended (BERT Pattern 1: label space first)
             response = self.client.models.generate_content(
                 model=self.model_id,
-                contents=prompt
+                contents=_NBA_DOMAIN_GUARDRAIL + prompt
             )
             # Send to both — Telegram keeps image + formatting, Slack gets text for ops context
             send_slack_message(response.text)

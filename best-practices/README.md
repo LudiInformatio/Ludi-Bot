@@ -46,11 +46,12 @@ best-practices/
 ---
 
 ### 🤖 AI — Prompt Engineering Research (`ai/`)
-**Status:** ✅ Complete (Feb 27, 2026)
+**Status:** ✅ Complete (Mar 1, 2026)
 - `PROMPT_ENGINEERING_PATTERNS.md` — 8 BERT-derived patterns mapped to Claude prompts
 - Source: Google BERT codebase + Procedia CS 2024 sentiment paper
 - Explains root cause of format drift, 400 errors, and few-shot vs zero-shot tradeoffs
 - `PM_BOT_NOTES_GUIDE.md` — BERT grounding pattern applied to human-written ROADMAP notes; formula for `**Active Work:**`, `**Completed:**`, and `- [ ]` bullets so Gemini gets specific context
+- `SKILLS_GUIDE.md` — How to write, assign, refine, and retire AI employee skills. Includes Maren's 3-question ideation test, refinement protocol, deprecation process, and skill creation template
 
 ### 🤖 AI — Operational Prompting Guide (`ai-prompting/`)
 **Status:** ✅ Complete (Feb 20, 2026)
@@ -184,12 +185,13 @@ When you discover a new pattern or lesson:
 - **Debugging Playbook:** [debugging/README.md](debugging/README.md)
 - **Ops Hub Fixes:** [ops-hub/KNOWN_FIXES.md](ops-hub/KNOWN_FIXES.md)
 - **Ops Hub Patterns:** [ops-hub/DOMAIN_PATTERNS.md](ops-hub/DOMAIN_PATTERNS.md)
+- **Skills Guide:** [ai/SKILLS_GUIDE.md](ai/SKILLS_GUIDE.md)
 - **Project Documentation:** [../docs/](../docs/)
 - **Architecture Guide:** [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 - **Roadmap:** [../ROADMAP.md](../ROADMAP.md)
 
 ---
 
-\*\*Last Updated:\*\* February 28, 2026 EST
+**Last Updated:** March 1, 2026 EST
 **Categories Complete:** 8 (api, ai, ai-prompting, coding, data, data-modeling, debugging, ops-hub)
 **Categories Initialized:** 2 (testing, deployment)

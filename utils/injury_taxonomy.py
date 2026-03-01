@@ -40,7 +40,7 @@ INJURY_TAXONOMY = {
         'severity_score': 1,
         'sim_multiplier': 0.5,
         'usage_vacuum_trigger': False,
-        'confidence_decay_hours': 6,
+        'confidence_decay_hours': 2,   # 2h: fires pre-game (Harden scenario)
         'edge_type': 'avoid',
         'actionable': False
     },
@@ -50,7 +50,7 @@ INJURY_TAXONOMY = {
         'severity_score': 1,
         'sim_multiplier': 0.5,
         'usage_vacuum_trigger': False,
-        'confidence_decay_hours': 12,
+        'confidence_decay_hours': 2,   # same as GTD — both are pre-game decisions
         'edge_type': 'avoid',
         'actionable': False
     },
@@ -60,7 +60,7 @@ INJURY_TAXONOMY = {
         'severity_score': 2,
         'sim_multiplier': 0.0,
         'usage_vacuum_trigger': True,
-        'confidence_decay_hours': 24,
+        'confidence_decay_hours': 6,   # 6h: challenge same-day Doubtful calls
         'edge_type': 'vacuum',
         'actionable': True
     },
@@ -70,7 +70,7 @@ INJURY_TAXONOMY = {
         'severity_score': 3,
         'sim_multiplier': 0.0,
         'usage_vacuum_trigger': True,
-        'confidence_decay_hours': 72,
+        'confidence_decay_hours': 4,   # 4h: catch same-day clearances before tipoff
         'edge_type': 'vacuum',
         'actionable': True
     },
@@ -90,7 +90,7 @@ INJURY_TAXONOMY = {
         'severity_score': 3,
         'sim_multiplier': 0.0,
         'usage_vacuum_trigger': True,
-        'confidence_decay_hours': 120,
+        'confidence_decay_hours': 48,  # 48h: suspensions change (appeal, reduction)
         'edge_type': 'vacuum',
         'actionable': True
     },
@@ -174,12 +174,36 @@ def get_category(status_code):
         return status_info['category']
     return 'UNCERTAIN'
 
+# Category order used by semantic_distance — defines adjacency
+_CATEGORY_ORDER = ['AVAILABLE', 'RESTRICTED', 'UNCERTAIN', 'UNAVAILABLE']
+
 def semantic_distance(status_a, status_b):
-    """Calculate the semantic distance between two status codes."""
-    a_info = INJURY_TAXONOMY.get(status_a.upper())
-    b_info = INJURY_TAXONOMY.get(status_b.upper())
-    
-    if a_info and b_info:
-        return abs(a_info['severity_score'] - b_info['severity_score'])
-    
-    return 0
+    """
+    Categorical distance between two status codes.
+      0 = same status
+      1 = same category, different status  (e.g. GTD vs DOUBTFUL)
+      2 = adjacent categories              (e.g. UNCERTAIN vs UNAVAILABLE)
+      3 = opposite ends                    (e.g. ACTIVE vs OUT)
+    """
+    a = status_a.upper()
+    b = status_b.upper()
+    if a == b:
+        return 0
+
+    a_info = INJURY_TAXONOMY.get(a)
+    b_info = INJURY_TAXONOMY.get(b)
+    if not a_info or not b_info:
+        return 0
+
+    a_cat = a_info['category']
+    b_cat = b_info['category']
+    if a_cat == b_cat:
+        return 1
+
+    try:
+        a_idx = _CATEGORY_ORDER.index(a_cat)
+        b_idx = _CATEGORY_ORDER.index(b_cat)
+    except ValueError:
+        return 1  # unknown category — treat as same-category
+
+    return min(abs(a_idx - b_idx) + 1, 3)

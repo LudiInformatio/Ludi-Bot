@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sports Data Model Architect"
+  short_description: "Audit and design sports analytics data models"
+  default_prompt: "Use $sports-data-model-architect to audit my schema and propose migration-safe SQL/Python changes for this analytics task."

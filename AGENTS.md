@@ -1,25 +1,15 @@
 # AGENTS.md
 
-## Purpose
-This file is the central operating guide for Codex agents working in `Ludi-Bot`.
+**Version:** 2.0 — AI Employee Workforce Edition
+**Last Updated:** March 1, 2026
+**Purpose:** Primary operating guide for all Claude Code agents working in Ludi-Bot — both solo sessions and Agent Teams teammates.
 
-Primary objective:
-- Make safe, testable, production-relevant changes that improve the NBA props analytics system without introducing data drift or workflow regressions.
-
----
-
-## Project Snapshot (Date-Bound)
-As of **February 16, 2026**:
-- `ROADMAP.md` was last updated **February 15, 2026**
-- Current phase (per roadmap): **Phase 7 - All-Star Break Sprint**
-- Active work (per roadmap): **Phase 7.9 Backtest Audit**
-- Truth source for current priorities: `ROADMAP.md` (not historical completion docs)
-
-If any doc conflicts with `ROADMAP.md`, follow `ROADMAP.md` and note the mismatch in your output.
+When instructions conflict: `AGENTS.md` > `ROADMAP.md` > `CLAUDE.md`
 
 ---
 
 ## Source-of-Truth Order
+
 Use this precedence when gathering context:
 
 1. `ROADMAP.md` (active priorities and phase)
@@ -32,42 +22,108 @@ Use this precedence when gathering context:
 ---
 
 ## Non-Negotiable Data Rules
+
 - Never assume current rosters, trades, or team assignments from model memory.
 - Use DB/API truth:
   - `ludi.db` tables (`players`, `player_game_logs`, `player_canonical_ids`, etc.)
-  - Live sources: Tank01, Ball Don’t Lie, PBP Stats
-- Before migrations or bulk update scripts:
-  - run backup (`bash scripts/backup_database.sh`)
+  - Live sources: Tank01, Ball Don't Lie, PBP Stats
+- Before migrations or bulk update scripts: run backup (`bash scripts/backup_database.sh`)
 - Do not commit `ludi.db` or treat git as DB state transport.
+- Current NBA season is 2025-26. Never use AI training data for current rosters,
+  trades, or injury status — it will be wrong. Always verify against `ludi.db` or a live API.
 
 ---
 
-## Working Style for Codex
+## AI Employee Workforce
+
+Ludi-Bot is staffed by 6 AI employees operating across two runtimes.
+
+### Employee Roster
+
+| Employee | Role | Model | Runtime | Discord Channel |
+| -------- | ---- | ----- | ------- | --------------- |
+| Solomon | PM Lead — coordinates all work, owns session lifecycle | Claude Sonnet | Agent Teams (session) | `#solomon` |
+| Henrik | Code Auditor — reviews ALL code changes | Claude Sonnet | Agent Teams (session) | `#henrik` |
+| Vera | Pipeline QA — pre-flight checks, model validation | Claude Haiku | Agent Teams (session) | `#vera` |
+| Maren | Content Strategist — brainstorming, BERT refinement, skill ideation | Claude Sonnet | Agent Teams (on-demand) | `#maren` |
+| Silas | System Monitor — GH Actions, quota, pipeline health | Claude Haiku | OpenClaw (always-on) | `#silas` |
+| Iris | Social Scout — Twitter/Reddit/Action Network signals | Haiku + HTTP/regex | OpenClaw (always-on) | `#iris` |
+
+**Discord server:** Ludi Lens
+
+**Channels:** `#solomon` · `#henrik` · `#vera` · `#maren` · `#silas` · `#iris` · `#weekly-roundtable` · `#general`
+
+### Skill Assignments
+
+| Employee | Skills | How to Invoke |
+| -------- | ------ | ------------- |
+| Henrik | `ludi-audit`, `sports-data-model-architect`, `simplify` | `/ludi-audit`, `/sma`, `/simplify` |
+| Vera | `daily`, `backtest` | `/daily`, `/backtest` |
+| Solomon | `session-brief`, `session-debrief` | `/session-brief`, `/session-debrief` |
+| Maren | `ultrathink`, `research`, `design` | `/ultrathink`, `/research`, `/design` |
+| Silas | N/A — runs via OpenClaw SOUL.md + HEARTBEAT.md | — |
+| Iris | N/A — runs via OpenClaw SOUL.md + HEARTBEAT.md | — |
+
+### Communication Protocol (Hub-and-Spoke)
+
+- Each employee writes only to **their own Discord channel** (e.g., Henrik posts to `#henrik` only)
+- **Solomon reads all channels** — he is the only hub that sees everything
+- Employees do not send direct messages to each other — all cross-team routing goes through Solomon
+- `#weekly-roundtable` is the exception: all employees post their weekly digest here Saturday 9 PM before Solomon's Sunday synthesis
+- `#general` is for announcements and onboarding — not operational comms
+
+### Quality Gate — Henrik Reviews All Code
+
+**No code change merges without Henrik's explicit sign-off.**
+
+This applies to:
+
+- Code written by Claude teammates during Agent Teams sessions
+- Code written by Gemini 2.5 Pro or Kimi K2.5 in OpenCode (Terminal 2)
+- Any script, SQL, or utility change — regardless of size
+
+Henrik's workflow:
+
+1. Runs `/simplify` first (generic code quality + DRY check)
+2. Runs `/ludi-audit` second (10-point Ludi-specific gotcha checklist)
+3. Returns: `APPROVED` | `APPROVED_WITH_NOTES` | `REVIEW_REQUIRED`
+
+### Writer/Auditor Separation
+
+Routine code (scripts, SQL, boilerplate) is written by **Gemini CLI** — called as a subprocess from Claude via Bash:
+
+```bash
+gemini -p "write a script that..." --yolo -m gemini-2.5-pro -o text
+```
+
+Henrik audits the output in Claude Code. Different model + different company = genuine independent review.
+OpenCode is not required — Gemini CLI is already installed, authenticated (Google AI Pro), and agentic.
+Kimi K2.5 via MiniMax remains an option for precise algorithm work if needed later.
+
+Core pipeline code (Modules A–F) stays in Claude only — IP protection + best cross-module reasoning.
+
+### Weekly Roundtable (Sunday)
+
+- **Saturday 9 PM**: Silas, Iris, and Henrik post their week digest to `#weekly-roundtable`
+- **Sunday 10 PM**: Solomon reads all digests + `git log --since="7 days ago"` + ROADMAP.md → synthesizes Monday morning report
+- **Monday AM**: Report posted to `#weekly-roundtable` + Telegram card to owner
+
+---
+
+## Working Style
+
 For every task, follow this sequence:
 
-1. Inspect
-- Read only relevant files first (`rg`, targeted `sed`, focused reads)
-- Identify stale-doc risk early
-
-2. Plan
-- State intended change scope
-- Call out risks/regression vectors
-
-3. Implement
-- Make minimal, coherent edits
-- Preserve existing architecture unless explicitly asked to refactor
-
-4. Validate
-- Run narrow tests first, then broader checks as needed
-- Prefer proving changed behavior over running everything blindly
-
-5. Report
-- Summarize what changed, what was tested, and residual risk
-- Include exact file references
+1. **Inspect** — Read only relevant files first. Identify stale-doc risk early.
+2. **Plan** — State intended change scope. Call out risks and regression vectors.
+3. **Implement** — Make minimal, coherent edits. Preserve existing architecture unless explicitly asked to refactor.
+4. **Validate** — Run narrow tests first, then broader checks as needed. Prove changed behavior.
+5. **Report** — Summarize what changed, what was tested, and residual risk. Include exact file references.
 
 ---
 
 ## Change Safety Rules
+
 - Never run destructive git/file commands unless explicitly requested.
 - Never revert unrelated local changes.
 - If unexpected unrelated modifications appear while editing, stop and ask user.
@@ -77,83 +133,104 @@ For every task, follow this sequence:
 ---
 
 ## Testing & Verification Standard
+
 Minimum expectation per code change:
+
 - Run at least one targeted verification tied to the changed component.
 - If tests cannot be run, explicitly say so and why.
-- For pipeline-impacting changes, include a short risk note:
-  - data freshness risk
-  - workflow schedule risk
-  - edge-calculation/regression risk
+- For pipeline-impacting changes, include a short risk note: data freshness risk, workflow schedule risk, edge-calculation/regression risk.
 
 Preferred commands:
-- `source .venv/bin/activate`
-- `.venv/bin/python main.py --limit-games 1 --verbose` (integration test — 1 game, verbose)
-- `.venv/bin/python -m pytest tests/...` (targeted)
-- `.venv/bin/python main.py` (only when appropriate and safe)
+
+```bash
+source .venv/bin/activate
+.venv/bin/python main.py --games LAL --verbose   # integration test (LAL plays most nights)
+.venv/bin/python -m pytest tests/...             # targeted unit tests
+.venv/bin/python main.py                         # only when appropriate and safe
+```
 
 ---
 
 ## Module Map (Quick Reference)
-- A: `module_a.py` (`Gatekeeper`)
-- B: `module_b.py`
-- C: `module_c.py` (`LudiOracle`)
-- D: `module_d.py` (`LudiYak`)
-- E: `module_e.py` (`LudiCalibrator`)
-- F: `module_f.py` (`LudiReporter`)
-- G: `module_g.py` (`LudiRefEngine`)
-- H: `module_h_historian.py` (`LudiHistorian`)
-- X: `module_x_scenario.py` (`ScenarioBuilder`)
+
+| Module | File | Class |
+| ------ | ---- | ----- |
+| A: Gatekeeper | `module_a.py` | `Gatekeeper` |
+| B: Engine | `module_b.py` | `LudiEngine` |
+| C: Oracle | `module_c.py` | `LudiOracle` |
+| D: Yak | `module_d.py` | `LudiYak` |
+| E: Calibrator | `module_e.py` | `LudiCalibrator` |
+| F: Alchemist | `module_f.py` | `LudiReporter` |
+| G: Zebras | `module_g.py` | `LudiRefEngine` |
+| H: Historian | `module_h_historian.py` | `LudiHistorian` |
+| X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` |
 
 ---
 
 ## Ops Commands (High-Frequency)
-- Setup:
-  - `python3.11 -m venv .venv`
-  - `source .venv/bin/activate`
-  - `pip install -r requirements.txt`
-- DB:
-  - `.venv/bin/python database.py`
-  - `bash scripts/backup_database.sh`
-  - `bash scripts/restore_database.sh`
-- Pipeline:
-  - `.venv/bin/python main.py`
-  - `.venv/bin/python main.py --limit-games 1 --verbose` (integration test)
+
+```bash
+# Environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Database
+.venv/bin/python database.py
+bash scripts/backup_database.sh
+bash scripts/restore_database.sh
+
+# Pipeline
+.venv/bin/python main.py
+.venv/bin/python main.py --games LAL --verbose   # integration test
+
+# Ask Ludi Bot
+.venv/bin/python bots/ask_ludi.py
+
+# PM Bot
+source .venv/bin/activate && python main.py --mode pm_session   # end-of-session
+source .venv/bin/activate && python main.py --mode pm_debrief   # nightly automated
+```
 
 ---
 
 ## Definition of Done
+
 A task is done only if:
+
 - Requested behavior is implemented
 - Relevant checks/tests were run (or inability clearly reported)
 - No conflict with non-negotiable data rules
-- Output includes:
-  - files changed
-  - why change was made
-  - verification performed
-  - remaining risks / next step (if any)
+- **Henrik has reviewed and returned APPROVED or APPROVED_WITH_NOTES**
+- Output includes: files changed, why change was made, verification performed, remaining risks / next step (if any)
 
 ---
 
-## Slash Aliases (Repo-Local)
-When a user message starts with one of these aliases, treat it as an explicit request to run the mapped skill workflow:
+## Slash Aliases
 
-- `/sports-model` -> `.claude/skills/sports-data-model-architect/SKILL.md`
-- `/sma` -> `.claude/skills/sports-data-model-architect/SKILL.md`
+When a message starts with one of these aliases, run the mapped skill workflow:
 
-### How to Invoke (Examples)
-Use these aliases by starting your message with the alias and your task in the same line.
+| Alias | Maps To | Owner |
+| ----- | ------- | ----- |
+| `/session-brief` | `.claude/skills/session-brief/SKILL.md` | Solomon |
+| `/session-debrief` | `.claude/skills/session-debrief/SKILL.md` | Solomon |
+| `/ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik |
+| `/sma` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik |
+| `/sports-model` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik |
+| `/simplify` | (global plugin) | Henrik |
+| `/daily` | `.claude/skills/daily/SKILL.md` | Vera |
+| `/backtest` | `.claude/skills/backtest/SKILL.md` | Vera |
+| `/ultrathink` | (global plugin) | Maren |
+| `/research` | (global plugin) | Maren |
+| `/design` | (global plugin) | Maren |
 
-- `/sma audit temporal integrity and feature coverage for current pipeline`
-- `/sma review schema changes for player_game_opponent integration`
-- `/sports-model propose migration-safe fixes for entity resolution drift`
+### Invoke Examples
 
-Note:
-- These are **repo-local alias instructions** for agents reading `AGENTS.md`.
-- They are not guaranteed to appear as native slash commands in every client UI.
-- Real command definitions are in `.claude/commands/sma.md` and `.claude/commands/sports-model.md`.
-- CLI fallbacks are available: `scripts/sma` and `scripts/sports-model`.
+```
+/ludi-audit review module_f.py changes for Ludi-specific gotchas
+/sma audit temporal integrity and feature coverage for current pipeline
+/session-debrief wrap up today's work and send PM break message
+/daily run pipeline health check before the 10 AM simulation
+```
 
-Alias behavior:
-- Run the audit-first balanced workflow from the mapped skill.
-- Use scripts in `skills/sports-data-model-architect/scripts/` when applicable.
-- Return findings first, then implementation snippets and validation checklist.
+Note: These are repo-local alias instructions for agents reading `AGENTS.md`. Real skill definitions live in `.claude/skills/{skill-name}/SKILL.md`.

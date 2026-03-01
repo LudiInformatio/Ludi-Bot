@@ -67,8 +67,13 @@ ludi_history_db.json
 .DS_Store
 Thumbs.db
 
-# Claude Code
-.claude/
+# Claude Code — exclude local settings, track shared skills/commands
+# Note: must use .claude/* (not .claude/) so negation patterns work for subdirs
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+!.claude/commands/
+!.claude/commands/**
 .claudeignore
 
 # Extensions
@@ -86,8 +91,10 @@ cache/historical_odds/
 cache/daily_games_*.json
 ludi_history_db.json
 
-# Tool logs (MCP, opencode, etc.)
+# Tool logs (MCP, opencode, etc.) — exclude local settings, track shared skills
 .playwright-mcp/
 .opencode/
-.gemini/
+.gemini/*
+!.gemini/skills/
+!.gemini/skills/**
 yak_cache.json
