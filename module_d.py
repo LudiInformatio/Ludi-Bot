@@ -24,6 +24,11 @@ from utils.bdl_client import BDLClient
 # [Tank01] Player ID Resolution
 from utils.player_id_resolver import PlayerIDResolver
 
+# [PHASE 8] Claude Haiku for injury blurb parsing
+from utils.claude_client import get_claude_analysis, HAIKU_MODEL
+from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
+from utils.injury_taxonomy import get_category
+
 # ==========================================
 # LUDI INFORMATIO | MODULE D: THE YAK
 # V3.5 - FULL STATUS SPECTRUM (2025-26)
@@ -68,16 +73,14 @@ class LudiYak:
         # [PHASE 3] Load Keyword Taxonomy
         self.keywords_config = self._load_keyword_config()
 
-        # [PHASE 8] Load Injury Taxonomy
+        # [PHASE 8] Load Injury Taxonomy (get_category imported at module level above)
         try:
-            from utils.injury_taxonomy import INJURY_TAXONOMY, INJURY_LANGUAGE_MAP, SOURCE_CONFIDENCE_DECAY
+            from utils.injury_taxonomy import INJURY_TAXONOMY, INJURY_LANGUAGE_MAP
             self._taxonomy = INJURY_TAXONOMY
             self._language_map = INJURY_LANGUAGE_MAP
-            self._source_decay = SOURCE_CONFIDENCE_DECAY
         except ImportError:
             self._taxonomy = {}
             self._language_map = []
-            self._source_decay = {}
 
         # [RSS] Canonical player name set for validation (lazy-loaded on first RealGM fetch)
         self._canonical_names = None
@@ -757,6 +760,20 @@ class LudiYak:
             pass
         return None
 
+    def _cache_and_return_status(self, cache_key: tuple, status: str, note: str, confidence: float) -> dict:
+        """Build a status result dict, store it in the Haiku cache, and return it.
+
+        Shared by _parse_with_taxonomy_injection and _ai_parse_blurb to avoid the
+        three-line (build / store / return) pattern repeated at every early-exit branch.
+        Includes a size guard so the cache doesn't grow unbounded in the ask_ludi bot
+        (long-running process) where a single LudiYak instance handles many requests.
+        """
+        if len(self._haiku_parse_cache) > 200:
+            self._haiku_parse_cache.clear()
+        out = {"status": status, "note": note, "confidence": confidence}
+        self._haiku_parse_cache[cache_key] = out
+        return out
+
     def _perplexity_freshness_check(self, player_name, current_status, team_name="NBA"):
         """Phase 8 Staleness Challenger — verify older uncertain statuses.
 
@@ -764,15 +781,10 @@ class LudiYak:
         callers share the same yak_cache entry and we don't double-hit Perplexity
         for the same player in the same pipeline run.
         """
-        query = f"{player_name} injury update playing tonight"
         news_text = self.targeted_search(player_name, team_name, context="injury")
-        
-        if not news_text or not news_text.get('items'):
-            if current_status in ['GTD', 'PROBABLE', 'DOUBTFUL', 'QUESTIONABLE']:
-                return {"status": "ACTIVE", "note": "[FRESHNESS] No new info, assumed Active", "confidence": 0.8}
-            return None
-            
-        items = news_text.get('items', [])
+        items = (news_text.get('items', []) if news_text else [])
+
+        # Consolidate both "no results" and "snippet too short" into one guard
         if not items or len(items[0].get('snippet', '')) < 20:
             if current_status in ['GTD', 'PROBABLE', 'DOUBTFUL', 'QUESTIONABLE']:
                 return {"status": "ACTIVE", "note": "[FRESHNESS] No new info, assumed Active", "confidence": 0.8}
@@ -784,18 +796,13 @@ class LudiYak:
 
     def _parse_with_taxonomy_injection(self, text, player_name, current_status):
         """Calls Haiku with taxonomy vocabulary injected as context."""
-        # Same cache as _ai_parse_blurb — both use the same prompt/schema so results are interchangeable.
-        _cache_key = (player_name, text.strip()[:80])
+        # 120 chars reduces collision risk on similar blurbs vs the original 80.
+        _cache_key = (player_name, text.strip()[:120])
         if _cache_key in self._haiku_parse_cache:
             raw = self._haiku_parse_cache[_cache_key]
-            # _ai_parse_blurb returns a raw dict; convert to freshness-check format
             if isinstance(raw, dict) and 'status' in raw:
-                return raw  # already in freshness format
+                return raw
         try:
-            from utils.claude_client import get_claude_analysis, HAIKU_MODEL
-            from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
-            import json
-
             today_date = datetime.now().strftime('%Y-%m-%d')
             prompt = INJURY_BLURB_PARSE_PROMPT.format(
                 description=text,
@@ -822,33 +829,22 @@ class LudiYak:
                 text_cleaned = '\n'.join(text_cleaned.split('\n')[1:-1]).strip()
 
             result = json.loads(text_cleaned)
-            
+
             status_override = result.get('status_override')
             if status_override:
-                out = {"status": status_override, "note": f"[AI] Override: {status_override}", "confidence": 0.85}
-                self._haiku_parse_cache[_cache_key] = out
-                return out
-
+                return self._cache_and_return_status(_cache_key, status_override, f"[AI] Override: {status_override}", 0.85)
             if result.get('no_designation'):
-                out = {"status": "ACTIVE", "note": "[AI] No designation found", "confidence": 0.9}
-                self._haiku_parse_cache[_cache_key] = out
-                return out
-
+                return self._cache_and_return_status(_cache_key, "ACTIVE", "[AI] No designation found", 0.9)
             if result.get('rest'):
-                out = {"status": "OUT_REST", "note": "[AI] Load management", "confidence": 0.9}
-                self._haiku_parse_cache[_cache_key] = out
-                return out
-
+                return self._cache_and_return_status(_cache_key, "OUT_REST", "[AI] Load management", 0.9)
             tonight = result.get('tonight_available')
             if tonight is False:
-                out = {"status": "OUT", "note": "[AI] AI confirms out", "confidence": 0.85}
-                self._haiku_parse_cache[_cache_key] = out
-                return out
+                return self._cache_and_return_status(_cache_key, "OUT", "[AI] AI confirms out", 0.85)
             if tonight is True:
-                out = {"status": "ACTIVE", "note": "[AI] AI confirms active", "confidence": 0.85}
-                self._haiku_parse_cache[_cache_key] = out
-                return out
+                return self._cache_and_return_status(_cache_key, "ACTIVE", "[AI] AI confirms active", 0.85)
 
+            # Ambiguous result — cache a sentinel so we don't re-run Haiku on next call
+            self._haiku_parse_cache[_cache_key] = {"status": None}
             return None
         except Exception as e:
             print(f"   [YAK] AI freshness parse failed for {player_name}: {e}")
@@ -990,21 +986,18 @@ class LudiYak:
             if _row:
                 _status, _inj_type, _days_out, _source, _snapshot_time = _row
                 
-                from datetime import datetime
                 try:
-                    # Handle different ISO formats
+                    # Handle both naive and timezone-aware ISO formats
                     snapshot_dt = datetime.fromisoformat(_snapshot_time.replace('Z', '+00:00'))
-                    # If timezone aware, convert to naive for math or compare aware. 
-                    # Assuming local naive since we just use datetime.now() elsewhere
                     if snapshot_dt.tzinfo:
                         snapshot_dt = snapshot_dt.replace(tzinfo=None)
                     age_hours = (datetime.now() - snapshot_dt).total_seconds() / 3600
                 except Exception:
                     age_hours = 0
-                
-                from utils.injury_taxonomy import get_category, INJURY_TAXONOMY
+
+                # get_category + self._taxonomy imported at module level / loaded at __init__
                 cat = get_category(_status)
-                tax_info = INJURY_TAXONOMY.get(_status, {})
+                tax_info = self._taxonomy.get(_status, {})
                 decay = tax_info.get('confidence_decay_hours', 24)
                 
                 if age_hours > decay and cat in ('UNCERTAIN', 'UNAVAILABLE'):
@@ -1096,17 +1089,12 @@ class LudiYak:
         if not description or len(description.strip()) < 10:
             return {}
 
-        # Haiku is deterministic (temperature=0.0) — cache by player + first 80 chars of blurb.
-        # Prevents redundant API calls if same player/blurb appears more than once per pipeline run.
-        _cache_key = (player_name, description.strip()[:80])
+        # 120 chars reduces collision risk on similar blurbs (e.g. same player different date).
+        _cache_key = (player_name, description.strip()[:120])
         if _cache_key in self._haiku_parse_cache:
             return self._haiku_parse_cache[_cache_key]
 
         try:
-            from utils.claude_client import get_claude_analysis, HAIKU_MODEL
-            from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
-            import json
-
             today_date = datetime.now().strftime('%Y-%m-%d')
             prompt = INJURY_BLURB_PARSE_PROMPT.format(
                 description=description,
