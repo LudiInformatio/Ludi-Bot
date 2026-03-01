@@ -244,7 +244,7 @@ class LudiOracle:
         try:
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
-            c.execute("""
+            c.execute(f"""
                 SELECT player_name, stats_json
                 FROM player_season_averages_bdl
                 WHERE category = 'general' AND stat_type = 'base' AND season = {self._bdl_season_int}
