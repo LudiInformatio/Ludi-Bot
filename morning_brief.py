@@ -378,15 +378,16 @@ def _get_news_catalysts(conn, date: str) -> str:
 import argparse
 
 class MorningBriefEngine:
-    def __init__(self, target_teams=None, mode="morning", dry_run=False):
+    def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None):
         print("\n" + "="*50)
         print(f"   🌅 LUDI {mode.upper()} BRIEF ENGINE")
         print(f"   Status: Production | Visual: V1.0 | Dry Run: {dry_run}")
         print("="*50)
-        
+
         self.target_teams = target_teams
         self.mode = mode
         self.dry_run = dry_run
+        self.after_hour = after_hour  # If set, skip games starting before this hour (EST, 24h)
         
         # Orchestrator helper (The Central Brain)
         self.orch = main.LudiOrchestrator(send_telegram=False) 
@@ -430,38 +431,63 @@ class MorningBriefEngine:
         6. Generate Visual Card
         7. Send to Telegram
         """
-        # 1. Fetch Slate & Refs
-        self.gate.fetch_live_slate()
-        
+        # 1. Fetch Slate & Props — try daily odds cache first (written by 10 AM pipeline)
+        # Cache includes full props from all books — cache hit skips BOTH fetch_live_slate
+        # and fetch_comprehensive_props (0 Odds API credits). Falls back to live API if stale.
+        _cache_hit = self.gate.load_games_cache()
+        if not _cache_hit:
+            self.gate.fetch_live_slate()
+
         # --- FILTER TARGETS ---
         if self.target_teams:
             # Normalize to uppercase
             targets = [t.upper() for t in self.target_teams]
             print(f"🎯 TARGETING SPECIFIC TEAMS: {targets}")
-            
+
             filtered = {}
             for gid, gdata in self.gate.games.items():
                 h = self.gate._get_abbr(gdata['home'])
                 a = self.gate._get_abbr(gdata['away'])
-                
+
                 # Check if EITHER team is in our target list
                 if h in targets or a in targets:
                     filtered[gid] = gdata
-                    
+
             self.gate.games = filtered
-            
+
         if not self.gate.games:
             print("📅 No NBA games on today's slate — skipping briefing.")
             self._notify_no_games()
             return
 
+        # --- AFTER-HOUR FILTER (west coast run: --after-hour 21 = 9 PM+ EST only) ---
+        if self.after_hour is not None:
+            import pytz as _pytz_ah
+            _est = _pytz_ah.timezone('US/Eastern')
+            filtered_late = {}
+            for gid, gdata in self.gate.games.items():
+                _s = gdata.get('start_time')
+                if _s:
+                    _s_est = _s if _s.tzinfo else _s.replace(tzinfo=_est)
+                    if _s_est.hour < self.after_hour:
+                        print(f"   ⏭️  Skipping {gdata.get('matchup','?')} — tips before {self.after_hour}:00 EST")
+                        continue
+                filtered_late[gid] = gdata
+            self.gate.games = filtered_late
+            if not self.gate.games:
+                print(f"📅 No games tipping at {self.after_hour}:00+ EST — skipping west coast brief.")
+                return
+
         print(f"✅ Processing {len(self.gate.games)} games.")
         print("🦓 Updating Referee Database...")
         self.zebras.build_ref_database()
-        
-        # 2. Fetch Props
-        print("📊 Fetching Market Data...")
-        self.gate.fetch_comprehensive_props(limit_games=len(self.gate.games))
+
+        # 2. Fetch Props (skipped if cache hit — props already in self.gate.games)
+        if not _cache_hit:
+            print("📊 Fetching Market Data...")
+            self.gate.fetch_comprehensive_props(limit_games=len(self.gate.games))
+        else:
+            print("📊 Market data loaded from cache — 0 Odds API credits used.")
         
         all_bets = []
 
@@ -1270,8 +1296,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["morning", "evening"], default="morning", help="Report mode")
     parser.add_argument("--dry-run", action="store_true", help="Skip Telegram sends")
+    parser.add_argument("--after-hour", type=int, default=None,
+                        help="Skip games starting before this hour EST (24h). E.g. 21 = 9 PM+ only (west coast run).")
     args = parser.parse_args()
 
     # Process all games on the slate (no hardcoded team filter)
-    engine = MorningBriefEngine(target_teams=None, mode=args.mode, dry_run=args.dry_run)
+    engine = MorningBriefEngine(target_teams=None, mode=args.mode, dry_run=args.dry_run,
+                                after_hour=args.after_hour)
     engine.run()

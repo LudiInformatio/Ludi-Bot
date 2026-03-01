@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, February 28, 2026 — 8:30 PM EST
+**Last Updated:** Saturday, February 28, 2026 — 11:41 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` pending + Phase 8.23 Layer 1 (~Mar 10)
-**Completed:** Module G star bias (`module_g.py`, `main.py`, `module_f.py`) — `get_player_crew_bias()` + crew_bias bet card notes ✅ + Sprint 4 alt lines (`module_a.py` Phase 2B + `module_f.py` EV sweep) — zero extra credits ✅ + team_totals 422 fix — per-event enrichment, `TeamTotal` in Module E notes ✅
+**Active Work:** `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns) → then Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade + Phase 8.23 Layer 1 (~Mar 10)
+**Completed:** Sprint 4 alt lines (`module_a.py` Phase 2B + `module_f.py` EV sweep) — zero extra credits ✅ + team_totals 422 fix — per-event enrichment, `TeamTotal` in Module E notes ✅ + CLV backfill (`scripts/backfill_historical_odds.py`) — sharp benchmarks + overnight capture + odds cache ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 

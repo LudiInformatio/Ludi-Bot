@@ -82,6 +82,8 @@ cache/nba_api/
 cache/sportsdata/
 cache/scoring_environment.json
 cache/odds_api_quota.json
+cache/historical_odds/
+cache/daily_games_*.json
 ludi_history_db.json
 
 # Tool logs (MCP, opencode, etc.)

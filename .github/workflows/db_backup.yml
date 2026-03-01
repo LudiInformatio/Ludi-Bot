@@ -70,6 +70,48 @@ jobs:
           echo "✅ Backup complete"
           echo "📊 Total backups: $BACKUP_COUNT"
 
+      # -----------------------------------------------------------------------
+      # Overnight CLV Backfill — runs AFTER backup, before data_sync (3 AM EST)
+      #
+      # Covers ALL game times (day + evening) via date=commence_time on the
+      # historical endpoint. Pinnacle (eu) + Novig/ProphetX (us_ex) benchmarks.
+      # Flat 10c/game — adding eu+us_ex regions costs nothing extra.
+      # -----------------------------------------------------------------------
+
+      - name: Check yesterday's slate (CLV gate)
+        id: yesterday_slate
+        if: steps.db.outputs.present == 'true'
+        run: |
+          source .venv/bin/activate 2>/dev/null || true
+          export PYTHONPATH=$PWD
+          # macOS: date -v-1d | Linux: date -d yesterday (both present on self-hosted runner)
+          YESTERDAY=$(TZ='America/New_York' date -v-1d +%Y-%m-%d 2>/dev/null || date -d 'yesterday' +%Y-%m-%d)
+          echo "Checking slate for $YESTERDAY"
+          set +e
+          python scripts/check_slate.py --date "$YESTERDAY"
+          CODE=$?
+          set -e
+          if [ $CODE -eq 2 ]; then
+            echo "has_games=false" >> $GITHUB_OUTPUT
+            echo "📅 No games yesterday — skipping CLV backfill"
+          else
+            echo "has_games=true" >> $GITHUB_OUTPUT
+            echo "✅ Games found yesterday — CLV backfill will run"
+          fi
+
+      - name: Run overnight CLV backfill (sharp + P2P benchmark)
+        if: steps.yesterday_slate.outputs.has_games == 'true'
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_KEY_BACKFILL: ${{ secrets.ODDS_API_KEY_BACKFILL }}
+          ODDS_API_TIER: paid
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=$PWD
+          # --yesterday resolves to yesterday EST (handles day games + evening)
+          # --reserve 500 stops if < 500 credits remain (protects live pipeline quota)
+          python scripts/backfill_historical_odds.py --yesterday --reserve 500 --verbose
+
       - name: Notify on failure
         if: failure()
         env:

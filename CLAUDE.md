@@ -189,7 +189,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 
 | Time (EST) | Workflow | Purpose |
 |------------|----------|---------|
-| 1:00 AM | `db_backup.yml` | Automated database backup |
+| 1:00 AM | `db_backup.yml` | Database backup + overnight CLV capture (`--yesterday`) |
 | 3:00 AM | `data_sync.yml` | Sync game logs, clutch, assists, enrichment |
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
@@ -198,9 +198,9 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
 | 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
-| 6:35 PM | `evening_slate_lock.yml` | Evening Telegram cards (with lineup refresh) |
+| 6:35 PM + 8:25 PM | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM all games; 8:25 PM west coast 9 PM+ only) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
-| 7:30-11:30 PM | `capture_closing_lines.yml` | CLV capture (5 runs/night) |
+| Manual only | `capture_closing_lines.yml` | CLV backfill re-runs (historical, on-demand; overnight handled by `db_backup.yml`) |
 | Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data (6hr sync) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |

@@ -626,6 +626,7 @@ class LudiOrchestrator:
         # STEP 2: FETCH PROPS
         self.gate.fetch_comprehensive_props(limit_games=len(self.gate.games))
         print("✅ Props loaded.")
+        self.gate.save_games_cache()  # Cache odds so morning_brief/evening_lock skip API re-fetch
 
         # STEP 2.5: Snapshot opening lines for line history (Module B)
         from datetime import datetime

@@ -2,8 +2,11 @@ name: Evening Slate Lock (6:35 PM EST)
 
 on:
   schedule:
-    # 6:35 PM EST = 23:35 UTC (Standard Time)
+    # Run 1 — 6:35 PM EST (23:35 UTC): all games (7 PM–8:30 PM tips)
     - cron: '35 23 * * *'
+    # Run 2 — 8:25 PM EST (01:25 UTC next day): west coast only (9 PM+ tips)
+    # Scheduled 5 min before nightly_debrief.yml (8:30 PM) to avoid SQLite overlap
+    - cron: '25 1 * * *'
   workflow_dispatch:
 
 jobs:
@@ -105,9 +108,18 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
-          # Run Visual Engine in Evening Mode (Final Lines/Injuries)
           export PYTHONPATH=$PWD
-          python3 -m morning_brief --mode evening
+          # Detect which run this is by EST hour:
+          #   6:35 PM run (23:35 UTC) → show all games (no filter)
+          #   8:25 PM run (01:25 UTC) → west coast only: --after-hour 21 (9 PM+ EST)
+          CURRENT_HOUR_EST=$(TZ='America/New_York' date +%H)
+          if [ "$CURRENT_HOUR_EST" -ge 20 ]; then
+            echo "🌅 West coast run — showing only games tipping at 9 PM EST or later"
+            python3 -m morning_brief --mode evening --after-hour 21
+          else
+            echo "🏀 Evening lock run — showing all games"
+            python3 -m morning_brief --mode evening
+          fi
 
       - name: Notify on failure
         if: failure()

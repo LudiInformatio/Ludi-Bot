@@ -112,6 +112,30 @@ def _quota_is_stale(cache_path: str) -> bool:
 # High-quality vendor filter — matches module_a.py BDL quality gate
 HIGH_QUALITY_VENDORS = ['draftkings', 'fanduel', 'caesars', 'betrivers', 'betmgm']
 
+# CLV benchmark priority: sharp/P2P first, NC Legal as coverage fallback only.
+# Bookmakers are sorted by this list before "first wins" logic — so Pinnacle
+# beats DraftKings even when DK appears first in the Odds API JSON response.
+PREFERRED_BOOKS = [
+    'pinnacle',       # Sharp Tier — sharpest market-maker globally (eu region)
+    'novig',          # P2P Tier — zero-vig exchange (us_ex region)
+    'prophetx',       # P2P Tier — zero-vig exchange (us_ex region)
+    'bovada',         # Sharp Tier fallback (eu region)
+    'betonline_us',   # Sharp Tier fallback
+    'fanduel',        # NC Legal — coverage fallback only (FD before DK — sharper lines)
+    'draftkings',
+    'betmgm',
+    'williamhill_us',
+    'caesars',
+]
+
+
+def _book_priority(bookmaker_key: str) -> int:
+    """Return sort priority (lower = higher priority). Unknown books rank last."""
+    try:
+        return PREFERRED_BOOKS.index(bookmaker_key)
+    except ValueError:
+        return len(PREFERRED_BOOKS)
+
 # Odds API market key → internal stat code
 ODDS_API_MARKET_TO_STAT = {
     'player_points':                    'pts',
@@ -200,6 +224,7 @@ def ensure_clv_columns(conn: sqlite3.Connection) -> None:
         ("clv_cents",          "REAL"),
         ("closing_time",       "TEXT"),
         ("line_movement",      "REAL"),
+        ("closing_book",       "TEXT"),   # Which book provided the CLV benchmark (e.g. 'pinnacle')
     ]
     c = conn.cursor()
     for col_name, col_type in columns_to_add:
@@ -434,14 +459,22 @@ def fetch_bdl_games_today(game_date: str) -> Tuple[List[Dict], Optional[object]]
 def normalize_odds_api_game(api_game: Dict) -> Dict:
     """
     Convert Odds API game structure to normalized format:
-      {home_team, away_team, source, players: {name: {stat: {line, over_odds, under_odds}}}}
+      {home_team, away_team, source, players: {name: {stat: {line, over_odds, under_odds, book}}}}
 
-    Iterates all bookmakers and accumulates the first over AND under odds found
-    for each player/stat/line combo. First bookmaker with real odds wins.
+    Bookmakers are sorted by PREFERRED_BOOKS priority before iteration, so the
+    sharpest available book (Pinnacle > Novig > ProphetX > ...) wins per stat.
+    The winning book key is stored in each stat slot as 'book' for closing_book tracking.
     """
     players: Dict[str, Dict] = {}
 
-    for bookmaker in api_game.get('bookmakers', []):
+    # Sort bookmakers by priority so Pinnacle/P2P beat NC Legal soft books
+    sorted_bookmakers = sorted(
+        api_game.get('bookmakers', []),
+        key=lambda bk: _book_priority(bk.get('key', ''))
+    )
+
+    for bookmaker in sorted_bookmakers:
+        bk_key = bookmaker.get('key', '')
         for market in bookmaker.get('markets', []):
             stat_key = ODDS_API_MARKET_TO_STAT.get(market.get('key', ''))
             if not stat_key:
@@ -460,15 +493,18 @@ def normalize_odds_api_game(api_game: Dict) -> Dict:
                     players[player_name] = {}
                 if stat_key not in players[player_name]:
                     players[player_name][stat_key] = {
-                        'line': line, 'over_odds': None, 'under_odds': None
+                        'line': line, 'over_odds': None, 'under_odds': None, 'book': None
                     }
 
                 slot = players[player_name][stat_key]
                 if line == slot['line']:
                     if side == 'over'  and slot['over_odds']  is None:
                         slot['over_odds']  = price
+                        slot['book'] = bk_key  # First (highest-priority) book to provide odds wins
                     elif side == 'under' and slot['under_odds'] is None:
                         slot['under_odds'] = price
+                        if slot['book'] is None:
+                            slot['book'] = bk_key
 
     return {
         'home_team': api_game.get('home_team', ''),
@@ -665,7 +701,8 @@ def update_bet_with_closing_lines(conn: sqlite3.Connection, bet_id: int,
                                    closing_over: Optional[int], closing_under: Optional[int],
                                    clv_cents: float, closing_time: str,
                                    closing_line: Optional[float] = None,
-                                   bet_line: Optional[float] = None) -> None:
+                                   bet_line: Optional[float] = None,
+                                   closing_book: Optional[str] = None) -> None:
     line_movement = None
     if closing_line is not None and bet_line is not None:
         line_movement = closing_line - bet_line
@@ -676,9 +713,10 @@ def update_bet_with_closing_lines(conn: sqlite3.Connection, bet_id: int,
             closing_odds_under = ?,
             clv_cents          = ?,
             closing_time       = ?,
-            line_movement      = ?
+            line_movement      = ?,
+            closing_book       = ?
         WHERE id = ?
-    ''', (closing_over, closing_under, clv_cents, closing_time, line_movement, bet_id))
+    ''', (closing_over, closing_under, clv_cents, closing_time, line_movement, closing_book, bet_id))
     conn.commit()
 
 
@@ -686,14 +724,15 @@ def update_bet_with_closing_lines(conn: sqlite3.Connection, bet_id: int,
 # Steps 4–6: Fixed match + CLV calculation
 # ---------------------------------------------------------------------------
 
-def match_closing_lines(bet: Dict, normalized_game: Dict) -> Tuple[Optional[int], Optional[int], Optional[float]]:
+def match_closing_lines(bet: Dict, normalized_game: Dict) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[str]]:
     """
     Look up closing odds for this bet from normalized game data.
-    Returns (closing_over_odds, closing_under_odds, closing_line).
+    Returns (closing_over_odds, closing_under_odds, closing_line, closing_book).
 
     Improvement over original: O(1) dict lookup instead of O(n³) nested loop.
     Includes accent-normalized matching (handles "Nikola Jokić" vs "Nikola Jokic").
     Line matching is relaxed - captures whatever closing line exists.
+    closing_book reflects the highest-priority book that provided odds (set by PREFERRED_BOOKS sort).
     """
     player_name = bet['player_name'].strip()
     stat_cat    = bet['stat_category'].lower()
@@ -713,17 +752,18 @@ def match_closing_lines(bet: Dict, normalized_game: Dict) -> Tuple[Optional[int]
                 break
 
     if not player_data:
-        return None, None, None
+        return None, None, None, None
 
     stat_data = player_data.get(stat_cat)
     if not stat_data:
-        return None, None, None
+        return None, None, None, None
 
     # Relaxed line matching: always capture whatever closing line exists
     # Line movement is tracked separately via line_movement column
     closing_line = stat_data.get('line')
+    closing_book = stat_data.get('book')  # Set during normalize — PREFERRED_BOOKS priority winner
 
-    return stat_data.get('over_odds'), stat_data.get('under_odds'), closing_line
+    return stat_data.get('over_odds'), stat_data.get('under_odds'), closing_line, closing_book
 
 
 def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dict],
@@ -736,7 +776,7 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
     source       = normalized_game.get('source', 'unknown')
 
     for bet in bets:
-        closing_over, closing_under, closing_line = match_closing_lines(bet, normalized_game)
+        closing_over, closing_under, closing_line, closing_book = match_closing_lines(bet, normalized_game)
 
         if closing_over is None and closing_under is None and closing_line is None:
             skipped += 1
@@ -766,15 +806,17 @@ def process_game(conn: sqlite3.Connection, normalized_game: Dict, bets: List[Dic
         if not dry_run:
             update_bet_with_closing_lines(
                 conn, bet['id'], closing_over, closing_under, clv, closing_time,
-                closing_line=closing_line, bet_line=bet.get('line')
+                closing_line=closing_line, bet_line=bet.get('line'),
+                closing_book=closing_book
             )
 
         updated += 1
         updated_ids.append(bet['id'])
         if verbose:
-            clv_str = f"{clv:+.2f}c" if clv is not None else "N/A (no odds)"
+            clv_str  = f"{clv:+.2f}c" if clv is not None else "N/A (no odds)"
+            book_str = f" via {closing_book}" if closing_book else ""
             print(f"  ✅    {bet['player_name']} {bet['stat_category']} "
-                  f"{bet['bet_side']} {bet['line']} | CLV: {clv_str} [{source}]")
+                  f"{bet['bet_side']} {bet['line']} | CLV: {clv_str}{book_str} [{source}]")
 
     return {'updated': updated, 'skipped': skipped, 'updated_ids': updated_ids}
 

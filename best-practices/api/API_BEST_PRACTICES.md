@@ -2269,6 +2269,21 @@ When adding a new API-calling workflow:
 **Impact:** Pipeline covered only 30% of games. 7 games silently skipped (no warning in output).
 **Fix:** Added explicit log when a game has no props: `print(f"No props for {matchup} — BDL coverage gap")`. Expected behavior, not a code bug — but must be surfaced clearly.
 
+### 9. Historical CLV Backfill Consumed Monthly Quota by Running on Cycle Reset Day (Mar 1, 2026)
+**Problem:** Ran `backfill_historical_odds.py` on March 1 (first day of new quota cycle). Live pipeline (daily simulation, morning brief, evening lock, CLV capture ×5, data sync, referee sync) ran concurrently on the same API key all day, consuming ~18,000 credits. The backfill script itself used only ~200 credits. The 3,000-credit "live pipeline reserve" protected only the minimum floor — it didn't account for same-day pipeline burns.
+**Impact:** March quota exhausted on day 1. Feb 9–22 CLV backfill (~640 credits) deferred to April.
+**Fix (3 parts):**
+1. **Use a temporary second API key for backfill** — register a free/trial Odds API key, set `ODDS_API_KEY_BACKFILL=<temp_key>` in `.env`, pass it to `backfill_historical_odds.py`. Live pipeline key never touched.
+2. **Cache events lists** — historical events for past dates never change. `{date}_events.json` added to `cache/historical_odds/` alongside props cache. Re-runs of any date now cost 0 credits.
+3. **Schedule backfills off-peak** — run backfill late at night (midnight–4 AM EST) when no GH Actions workflows are active.
+
+**Credit cost reality check (historical endpoint):**
+- Events call (`markets=h2h`): **1 credit** (NOT 10 — `h2h` is a single lightweight market)
+- Props call (11 markets, `regions=us,us2`): **10 credits**
+- Full 2025-26 CLV backfill (~47 dates × ~6 games): ~300 credits for the script
+- Monthly live pipeline burn: ~1,000–1,500 credits (35/night × ~30 nights)
+- Safe monthly budget for backfill: **quota − live_pipeline_estimate − 2,000 buffer**
+
 ---
 
 ## 16. BallDontLie (BDL) Complete Endpoint Reference
@@ -2474,6 +2489,83 @@ Industry standard is a layered trust stack — never one source:
 **Perplexity recency filter:** Use `_get_recency_filter(hours_to_game)` for dynamic search windows — `"hour"` (<2hrs to tip for late scratches), `"day"` (<12hrs for game-day context), `"week"` (advance look). Avoids paying for expensive "hour" searches on morning runs. Cache key must include recency filter to prevent stale cross-contamination.
 
 **Suspension gap:** Tank01 and BDL do not reliably surface suspension status as a distinct type. ESPN API returns `INJURY_STATUS_SUSPENSION` (type.id=17) with `returnDate` for all suspension categories: altercation bans, anti-drug violations, conduct violations. Use `scripts/sync_suspensions_espn.py` (30-team scan, free, no auth) to write to `player_injuries` daily. Found 5 active suspensions — including a same-day flagrant foul #6 auto-ban — on first run. Without ESPN, these players would generate bets incorrectly.
+
+---
+
+## 17. The-Odds-API: Historical Endpoint Reference (CLV Backfill Pattern)
+
+**Last Updated:** March 1, 2026 | **Script:** `scripts/backfill_historical_odds.py`
+**Use case:** Populate `closing_odds_over/under`, `clv_cents`, `line_movement` for settled bets after the fact.
+
+### Endpoint Differences: Live vs Historical
+
+| | Live (`/v4/sports/...`) | Historical (`/v4/historical/sports/...`) |
+|--|------------------------|------------------------------------------|
+| Events list response | `resp.json()` = list | `resp.json()['data']` = list |
+| Props response | `resp.json()['bookmakers']` | `resp.json()['data']['bookmakers']` |
+| Credit cost (events) | 1 credit | 1 credit |
+| Credit cost (props) | 1 credit/game | **10 credits/game** |
+| `date` param on props | Not applicable (live) | Required — pass `commence_time` for closing line |
+| Closing line trick | N/A | `date=commence_time` = snapshot at game start = true closing line |
+
+**Critical:** Missing the `['data']` wrapper on historical responses returns an empty dict silently — no error, just no data. Always use `.get('data', {})` and `.get('data', [])`.
+
+### Credit Cost Reality
+
+```
+Events call (markets=h2h, regions=us):    1 credit
+Props call (11 markets, regions=us,us2): 10 credits
+
+Full 2025-26 CLV gap (~47 dates × ~6 games avg):
+  Events:  47 × 1  =   47 credits
+  Props:   280 × 10 = 2,800 credits
+  Total:  ~2,850 credits  (not ~3,000 — events are cheap)
+```
+
+### Two-Key Rotation Pattern (Backfill vs Live Pipeline)
+
+The biggest budgeting risk is running backfill and live pipeline on the same key concurrently. Live pipeline burns ~35 credits/night × 30 nights = ~1,050/month. On the quota reset day, all GH Actions workflows fire AND the backfill runs, potentially burning the full month in one day.
+
+**Solution: use a temporary free/trial key for backfill only.**
+
+```python
+# In backfill script — reads separate env var, falls back to primary key
+BACKFILL_API_KEY = os.getenv('ODDS_API_KEY_BACKFILL') or config.ODDS_API_KEY
+```
+
+```bash
+# .env — set before running backfill
+ODDS_API_KEY_BACKFILL=<temp_trial_key>
+```
+
+This fully decouples budget consumption. The temp key can be a free-tier trial (500 credits/month — enough for a single backfill session at ~300 credits).
+
+### Caching Strategy (Both Events and Props)
+
+```
+cache/historical_odds/
+├── 2026-01-09_events.json          # events list — 1 credit, cached permanently
+├── 2026-01-09_a9857db3....json     # props for one game — 10 credits, cached permanently
+└── ...
+```
+
+**Rule:** Past dates never change. Cache events and props indefinitely. Every re-run of a date after the first costs 0 credits. Always save cache BEFORE any DB writes — if script crashes mid-run, re-run is free.
+
+### Off-Peak Scheduling
+
+Run historical backfills when GH Actions workflows are not active. The daily window is approximately **midnight–4 AM EST** (no simulation, no briefing, no CLV capture). Avoids competing with live pipeline for quota on the same API key.
+
+### `--reserve` Flag Pattern
+
+Always protect a floor for the live pipeline. Default reserve = 3,000. Use `--reserve` to override when you know the live pipeline's actual monthly cost:
+
+```bash
+# Safe backfill: keep 500 credits for remaining live capture
+python scripts/backfill_historical_odds.py --from 2026-02-09 --to 2026-02-22 --reserve 500
+
+# Aggressive (dedicated backfill key only — live pipeline on separate key)
+python scripts/backfill_historical_odds.py --reserve 0
+```
 
 ---
 

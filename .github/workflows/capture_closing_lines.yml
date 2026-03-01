@@ -1,10 +1,12 @@
 name: Capture Closing Lines
 
+# CLV capture is now handled by the overnight historical run in db_backup.yml (1 AM EST).
+# That run covers ALL game times (day games + evening) via date=commence_time, using
+# Pinnacle + Novig/ProphetX as sharp benchmarks at flat 10c/game credit cost.
+#
+# This workflow is kept for MANUAL TRIGGER ONLY (e.g. re-running a specific date).
+# Remove the schedule block entirely — overnight is the primary CLV path.
 on:
-  schedule:
-    - cron: '25,55 23,0,1,2,3,4 * * *'  # :25 and :55 past each hour, 6:25 PM–11:55 PM EST
-                                          # Fires 5 min before every :00 and :30 tipoff
-                                          # 12 runs/night — check-slate gate keeps non-game-night runs cheap
   workflow_dispatch:
     inputs:
       game_date:
@@ -61,16 +63,6 @@ jobs:
 
       - name: Install dependencies
         run: pip3 install -r requirements.txt
-
-      - name: Sync Injuries (Pre-Tipoff)
-        continue-on-error: true  # Tank01/BDL outage must not block CLV capture
-        run: |
-          source .venv/bin/activate
-          python scripts/sync_injuries.py
-        env:
-          IS_GAME_DAY_REPORT: "true"
-          TANK01_KEY: ${{ secrets.TANK01_KEY }}
-          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
       - name: Capture closing lines
         env:

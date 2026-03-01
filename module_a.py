@@ -1342,6 +1342,34 @@ class Gatekeeper:
         # Keep existing Tank01 logic here
         print(f"   ✅ Packet Secured.")
 
+    def save_games_cache(self, date_str=None):
+        """Write self.games to cache/daily_games_{date}.json so morning_brief can skip API re-fetch."""
+        import json, pathlib, datetime as _dt
+        date_str = date_str or _dt.datetime.now().strftime('%Y-%m-%d')
+        p = pathlib.Path(__file__).parent / 'cache' / f'daily_games_{date_str}.json'
+        p.parent.mkdir(exist_ok=True)
+        p.write_text(json.dumps(self.games, default=str))
+        print(f"   💾 Games cache written: {p.name} ({len(self.games)} games)")
+
+    def load_games_cache(self, date_str=None, max_age_hours=14):
+        """Load self.games from cache if fresh (< max_age_hours old). Returns True if loaded."""
+        import json, pathlib, datetime as _dt
+        date_str = date_str or _dt.datetime.now().strftime('%Y-%m-%d')
+        p = pathlib.Path(__file__).parent / 'cache' / f'daily_games_{date_str}.json'
+        if not p.exists():
+            return False
+        age_hours = (_dt.datetime.now().timestamp() - p.stat().st_mtime) / 3600
+        if age_hours > max_age_hours:
+            print(f"   ⚠️  Games cache is {age_hours:.1f}h old (limit {max_age_hours}h) — falling back to API")
+            return False
+        try:
+            self.games = json.load(p.open())
+            print(f"   ✅ Odds cache hit: {p.name} ({len(self.games)} games, {age_hours:.1f}h old) — 0 credits")
+            return True
+        except Exception as e:
+            print(f"   ⚠️  Cache load failed: {e} — falling back to API")
+            return False
+
     def display_final_handshake(self):
         print("\n========================================")
         print("      LUDI INFORMATIO | PIPELINE CERTIFIED      ")
