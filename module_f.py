@@ -541,12 +541,42 @@ class LudiReporter:
                                             f"vs {_vs_scheme} L{_vs_n}: {_vs_hits}/{_vs_n} ({int(_vs_l5 * 100)}%)"
                                         )
 
-                            # TODO: Sprint 4 — Alt line sweep
-                            # Read game.get('alt_props', {}).get(stat_key, {}).get(p['name'], [])
-                            # For each alt at ±1.5/±3.0: compute EV via same devig formula as main.
-                            # If alt EV > main EV: note_elements.append("Alt: OVER {line} @ {odds}")
-                            # Module A Phase 2B writes alt_props to self.games[game_id]['alt_props'].
-                            # See plans/pure-baking-river.md PART 1 / Sprint 4 for full spec.
+                            # Sprint 4 — Alt line sweep
+                            # Module A Phase 2B wrote alt_props[stat_key][player_name][alt_line]
+                            # Read: game → stat_key → player name → dict of {line: {odds}}
+                            _alt_lines = (
+                                game.get('alt_props', {})
+                                .get(stat_key, {})
+                                .get(p['name'], {})
+                            )
+                            if _alt_lines:
+                                _best_alt_note = None
+                                _best_alt_ev = ev  # Only surface if strictly better than main EV
+                                for _alt_line, _alt_data in _alt_lines.items():
+                                    _alt_odds = (
+                                        _alt_data.get('odds_over') if bet_direction == 'over'
+                                        else _alt_data.get('odds_under')
+                                    )
+                                    _alt_book = (
+                                        _alt_data.get('book_over') if bet_direction == 'over'
+                                        else _alt_data.get('book_under')
+                                    )
+                                    if not _alt_odds:
+                                        continue
+                                    _alt_dec = (
+                                        1 + (_alt_odds / 100) if _alt_odds > 0
+                                        else 1 + (100 / abs(_alt_odds))
+                                    )
+                                    _alt_ev = round((win_prob * _alt_dec - 1) * 100, 2)
+                                    if _alt_ev > _best_alt_ev:
+                                        _best_alt_ev = _alt_ev
+                                        _sign = '+' if _alt_odds > 0 else ''
+                                        _best_alt_note = (
+                                            f"Alt: {bet_direction.upper()} {_alt_line} "
+                                            f"@ {_sign}{_alt_odds} ({_alt_book})"
+                                        )
+                                if _best_alt_note:
+                                    note_elements.append(_best_alt_note)
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags

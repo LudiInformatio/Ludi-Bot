@@ -102,6 +102,8 @@ class Gatekeeper:
         # Keyed by normalized player name (lowercase, accent-stripped) → tank01 player_id_str.
         # Enables _validate_line_with_tank01() to actually validate single-vendor BDL lines.
         self._tank01_name_to_id = {}  # {normalized_name_str: tank01_player_id_str}
+        # Reverse map — needed for Tank01 3rd fallback to resolve player names from cached IDs.
+        self._tank01_id_to_name = {}  # {tank01_player_id_str: display_player_name}
 
 
     def _get_abbr(self, team_name):
@@ -119,8 +121,8 @@ class Gatekeeper:
         url = f'https://api.the-odds-api.com/v4/sports/{sport}/odds'
         params = {
             'api_key': config.ODDS_API_KEY,
-            'regions': 'us,us2',
-            'markets': 'h2h,spreads,totals,team_totals',
+            'regions': 'us,us2,eu',  # eu added Mar 1 2026: unlocks Pinnacle for game line CLV
+            'markets': 'h2h,spreads,totals',  # team_totals NOT supported on this endpoint (422)
             'oddsFormat': 'american'
         }
         
@@ -195,10 +197,10 @@ class Gatekeeper:
                 
                 # 4. Extract Vegas Lines
                 for book in game['bookmakers']:
-                    # A4: Expanded to all NC Legal + sharp books. Note: uses API 'key' format (not title).
-                    # mgm=BetMGM, espnbet=TheScore Bet (rebranded Dec 2025). Verify exact keys on Mar 1 (E7).
-                    if book['key'] in ['draftkings', 'fanduel', 'mgm', 'bovada', 'pinnacle', 'caesars',
-                                       'bet365', 'hardrockbet', 'fanatics', 'espnbet']:
+                    # Uses API key format. Verified Mar 1 2026:
+                    # betmgm=BetMGM, williamhill_us=Caesars, espnbet=theScore Bet, pinnacle via eu region.
+                    if book['key'] in ['draftkings', 'fanduel', 'betmgm', 'williamhill_us',
+                                       'fanatics', 'espnbet', 'pinnacle', 'bovada']:
                         for market in book['markets']:
                             if market['key'] == 'spreads':
                                 for outcome in market['outcomes']:
@@ -210,12 +212,6 @@ class Gatekeeper:
                                     if outcome['name'] == 'Over':  # A1: Odds-API uses "Over"/"Under" for totals (not team names)
                                         self.games[game_id]['vegas']['total'] = outcome.get('point')
                                         break
-                            if market['key'] == 'team_totals':
-                                for outcome in market['outcomes']:
-                                    if outcome['name'] == home:
-                                        self.games[game_id]['vegas']['team_total_home'] = outcome.get('point')
-                                    elif outcome['name'] == away:
-                                        self.games[game_id]['vegas']['team_total_away'] = outcome.get('point')
                             if market['key'] == 'h2h':
                                 for outcome in market['outcomes']:
                                     if outcome['name'] == home:
@@ -233,6 +229,51 @@ class Gatekeeper:
                     'ref_data': ref_data,  # V3.0: Full dict
                     'sort_key': est_time
                 })
+
+            # --- PHASE 1.5: Team Totals Enrichment ---
+            # team_totals is not supported on the bulk /odds endpoint (returns 422).
+            # Fetch per-event after the slate is built. Cost: 1 credit per game.
+            # Per-event format: outcome['description'] = team name, outcome['name'] = Over/Under.
+            # Non-blocking: failure → Module E falls back to implied team total (total ± spread / 2).
+            _tt_books = {'draftkings', 'fanduel', 'betmgm', 'williamhill_us', 'fanatics'}
+            _tt_written = 0
+            for _gid, _gdata in list(self.games.items()):
+                try:
+                    _tt_url = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{_gid}/odds'
+                    _tt_params = {
+                        'api_key': config.ODDS_API_KEY,
+                        'regions': 'us,us2',
+                        'markets': 'team_totals',
+                        'oddsFormat': 'american',
+                    }
+                    _tt_resp = self.session.get(_tt_url, params=_tt_params, timeout=15)
+                    if _tt_resp.status_code != 200:
+                        continue
+                    _tt_json = _tt_resp.json()
+                    _home = _gdata['home']
+                    _away = _gdata['away']
+                    for _bk in _tt_json.get('bookmakers', []):
+                        if _bk['key'] not in _tt_books:
+                            continue
+                        for _mkt in _bk.get('markets', []):
+                            if _mkt['key'] != 'team_totals':
+                                continue
+                            for _oc in _mkt['outcomes']:
+                                _team = _oc.get('description', '')
+                                _side = _oc.get('name', '')   # "Over" or "Under"
+                                _pt = _oc.get('point')
+                                if _side == 'Over' and _pt is not None:
+                                    if _team == _home and _gdata['vegas']['team_total_home'] is None:
+                                        _gdata['vegas']['team_total_home'] = _pt
+                                        _tt_written += 1
+                                    elif _team == _away and _gdata['vegas']['team_total_away'] is None:
+                                        _gdata['vegas']['team_total_away'] = _pt
+                                        _tt_written += 1
+                        break  # first valid book is enough for the line value
+                except Exception:
+                    continue  # non-blocking — Module E implied fallback handles missing data
+            if _tt_written:
+                print(f"   ✅ Team totals enriched: {_tt_written} values across {len(self.games)} games")
 
             # --- DISPLAY WITH HEADERS ---
             # Sort by Time
@@ -593,19 +634,22 @@ class Gatekeeper:
         print(f"[3] 📡 Fetching Prop Targets (Limit: {limit_games})...")
         target_ids = list(self.games.keys())[:limit_games]
         
-        # Valid betting markets (validated 2026-01-07)
-        # Note: Attempts (FGA, FTA, FG3A) come from database, not betting markets
+        # Valid betting markets (verified live Mar 1 2026 via /events/{id}/markets endpoint)
+        # Removed: player_turnovers (PrizePicks-only, 1 book — not worth a market slot)
+        # Added: player_points_rebounds_assists (17 books — nearly as wide as individual stats)
+        # Attempt markets (FGA/FTA/3PA) do NOT exist on Odds API — Module C projects these internally.
         markets = (
             "player_points,player_rebounds,player_assists,"
             "player_threes,player_steals,player_blocks,"
-            "player_turnovers,player_double_double,player_triple_double"
+            "player_points_rebounds_assists,"
+            "player_double_double,player_triple_double"
         )
         
         for g_id in target_ids:
             url = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{g_id}/odds'
             params = {
                 'api_key': config.ODDS_API_KEY,
-                'regions': 'us,us2,us_dfs,us_ex',  # V9.4: Added us_ex for Novig/ProphetX
+                'regions': 'us,us2,us_dfs,us_ex,eu',  # eu added Mar 1 2026: unlocks Pinnacle for prop CLV
                 'markets': markets,
                 'oddsFormat': 'american'
             }
@@ -621,14 +665,16 @@ class Gatekeeper:
                     found_books = [b['title'] for b in data.get('bookmakers', [])]
                     print(f"      ↳ Found Books: {found_books}")
                     
-                    # --- V8.14: 5-TIER BOOK STRUCTURE ---
-                    # Tier 0: Sharps (CLV) | Tier 1: P2P | Tier 2: NC Legal | Tier 3: DFS | Tier 4: Other
-                    nc_legal = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'bet365', 'Hard Rock Bet', 'Fanatics', 'TheScore Bet']
-                    sharps = ['Pinnacle', 'Bovada', 'BetOnline.ag']
-                    dfs = ['PrizePicks', 'Underdog Fantasy', 'Betr', 'Fliff']
-                    peer_to_peer = ['Novig', 'ProphetX', 'Rebet']
+                    # --- V9.5 (Mar 1 2026): 4-TIER BOOK STRUCTURE — verified live via API ---
+                    # Verified: bet365 NOT on Odds API. williamhill_us API key = Caesars (book name in NC).
+                    # Removed: Hard Rock Bet + BetRivers (not NC-legal). Fixed title mismatches (Mar 1).
+                    nc_legal    = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars', 'Fanatics', 'theScore Bet']
+                    sharps      = ['Pinnacle', 'Bovada', 'BetOnline.ag']
+                    peer_to_peer = ['Novig', 'ProphetX']
+                    dfs         = ['PrizePicks', 'Underdog', 'Betr DFS', 'DraftKings Pick6', 'Fliff']
+                    prediction  = ['Kalshi', 'Polymarket']  # regulated prediction markets — alt line reference
 
-                    target_books = nc_legal + sharps + dfs + peer_to_peer
+                    target_books = nc_legal + sharps + peer_to_peer + dfs + prediction
                     priority_books = ['FanDuel', 'DraftKings', 'BetMGM', 'Caesars']  # For consensus line
 
                     # Helper function for odds comparison
@@ -736,6 +782,40 @@ class Gatekeeper:
                             )
                             prop['vendor_count'] = nc_books_at_main
                             prop['source_quality'] = 'ODDS_API'
+
+                            # --- PHASE 2B: Alt line extraction (Sprint 4) ---
+                            # Capture ±1.5 and ±3.0 lines from NC Legal books into
+                            # game['alt_props'][stat_key][player_name] for Module F EV sweep.
+                            # Zero extra API cost — data already in _all_books from Phase 1.
+                            for _delta in [1.5, 3.0]:
+                                for _alt_line in [main_line + _delta, main_line - _delta]:
+                                    if _alt_line <= 0:
+                                        continue
+                                    _bo, _bbo, _bu, _bbu = None, None, None, None
+                                    for _bk in nc_legal:
+                                        if _bk not in prop['_all_books']:
+                                            continue
+                                        _bk_o = prop['_all_books'][_bk].get(_alt_line, {})
+                                        if _bk_o.get('over') and (
+                                            _bo is None or odds_value(_bk_o['over']) > odds_value(_bo)
+                                        ):
+                                            _bo, _bbo = _bk_o['over'], _bk
+                                        if _bk_o.get('under') and (
+                                            _bu is None or odds_value(_bk_o['under']) > odds_value(_bu)
+                                        ):
+                                            _bu, _bbu = _bk_o['under'], _bk
+                                    if _bo is not None or _bu is not None:
+                                        # Write to game-level alt_props dict
+                                        # Structure: alt_props[stat_key][player_name][line] = {odds}
+                                        # Module F reads: game.get('alt_props',{}).get(stat_key,{}).get(player_name,{})
+                                        (self.games[g_id]
+                                            .setdefault('alt_props', {})
+                                            .setdefault(short_key, {})
+                                            .setdefault(player, {})
+                                        )[_alt_line] = {
+                                            'odds_over': _bo, 'book_over': _bbo,
+                                            'odds_under': _bu, 'book_under': _bbu,
+                                        }
 
                             # Find best NC Legal at main line (FOR BETTING)
                             for book in nc_legal:
@@ -873,7 +953,7 @@ class Gatekeeper:
             'bet365': 'bet365',
             'fanatics': 'Fanatics',        # NC Legal — confirmed returning props via BDL
             'rebet': 'Rebet',              # P2P near-zero vig — confirmed returning props via BDL
-            'espnbet': 'TheScore Bet',     # Rebranded from ESPN Bet Dec 2025; Odds-API key still 'espnbet'
+            'espnbet': 'theScore Bet',     # Rebranded from ESPN Bet Dec 2025; lowercase matches Odds-API title
         }
         COMBO_MAP = {
             'points_rebounds_assists': 'pra',
@@ -895,12 +975,13 @@ class Gatekeeper:
             internal_key = COMBO_MAP.get(prop_type, prop_type)
             line = float(prop.get('line_value', 0))
             vendor = BDL_VENDOR_MAP.get(prop.get('vendor', ''), prop.get('vendor', ''))
-            over_odds = prop.get('market', {}).get('over_odds', -110)
-            under_odds = prop.get('market', {}).get('under_odds', -110)
+            market = prop.get('market') or {}
+            over_odds = market.get('over_odds') or -110   # guard None from explicit null
+            under_odds = market.get('under_odds') or -110
 
             if abs(over_odds) < 100 or abs(under_odds) < 100:
                 print(f"Skipping corrupt odds: {over_odds}/{under_odds} for {player_name}")
-                continue # Skip this prop — corrupt/truncated odds value
+                continue  # Corrupt/truncated odds (e.g. BDL milestone bug: -2, -4, -9)
 
             key = (player_name, internal_key)
             if key not in raw:
@@ -1022,26 +1103,28 @@ class Gatekeeper:
         #   calling self._parse_bdl_props(game_id, props).  Then Tank01 coverage will
         #   automatically fill gaps for players with zero BDL props.
         #
-        # CURRENT STATE (Feb 2026): The Tank01 playerID is in _tank01_props_cache keys,
-        # but we don't have a playerID → player_name map for Tank01 IDs in module_a.
-        # Once the cross-walk table (player_canonical_ids: bdl_id ↔ tank01_id ↔ name)
-        # is leveraged here, this block will populate real names. Until then it is a
-        # framework placeholder that logs what WOULD be written.
-        #
-        # TODO (Phase 8 follow-up): resolve Tank01 playerID → player_name via
-        #   ludi.db player_canonical_ids table, then uncomment the write below.
+        # CURRENT STATE (Mar 1 2026): Uses _tank01_id_to_name reverse map (built in
+        # _load_tank01_props alongside _tank01_name_to_id). Writes Tank01-only props
+        # at -110/-110 for players with zero BDL/Odds-API coverage. Tagged
+        # 'TANK01_ONLY' for downstream QA. Canonical name alignment future upgrade:
+        # could query player_canonical_ids.normalized_name for accent consistency.
         # ------------------------------------------------------------------
         if getattr(config, 'USE_TANK01_PROP_FALLBACK', True) and self._tank01_props_cache:
             game_props = self.games[game_id]['props']
+            t01_written = 0
 
-            # Build set of players already covered (BDL or Odds-API)
-            covered_players = set(game_props.keys())
-
-            t01_only_count = 0
             for t01_player_id, t01_stats in self._tank01_props_cache.items():
-                # Reverse-map Tank01 stat keys → our internal keys
+                # Resolve player name via id→name reverse map (built in _load_tank01_props)
+                t01_player_name = self._tank01_id_to_name.get(t01_player_id)
+                if not t01_player_name:
+                    continue  # Can't write without a name — skip silently
+
+                # Skip players already covered by Odds-API or BDL (fallback = gaps only)
+                if t01_player_name in game_props:
+                    continue
+
+                # Write Tank01-only props with -110/-110 assumed odds (line value only)
                 for t01_key, t01_line in t01_stats.items():
-                    # Find internal key for this Tank01 stat
                     internal_key = next(
                         (ik for ik, tk in self._TANK01_STAT_MAP.items() if tk == t01_key),
                         None,
@@ -1049,15 +1132,30 @@ class Gatekeeper:
                     if not internal_key:
                         continue  # Combo or unmapped stat — skip
 
-                    # We cannot write without a player NAME (pipeline keyed by name).
-                    # The cross-walk (tank01_id → name) will be added in Phase 8 follow-up.
-                    # For now: log the gap so we can see how many players are missing.
-                    t01_only_count += 1
+                    if t01_player_name not in game_props:
+                        game_props[t01_player_name] = {}
+                    if internal_key not in game_props[t01_player_name]:
+                        game_props[t01_player_name][internal_key] = {
+                            'line': t01_line,
+                            'odds_over': -110, 'book_over': 'Tank01',
+                            'odds_under': -110, 'book_under': 'Tank01',
+                            'vendor_count': 1,
+                            'source_quality': 'TANK01_ONLY',  # No real market odds
+                        }
+                        t01_written += 1
 
-            if t01_only_count > 0:
-                print(f"      [T01] {t01_only_count} Tank01 stat-entries available for "
-                      f"players not in BDL. Full 3rd-fallback needs ID cross-walk "
-                      f"(player_canonical_ids bdl↔tank01). See TODO in _parse_bdl_props.")
+            if t01_written > 0:
+                t01_only_key = 'TANK01_ONLY'
+                t01_only_count = len([
+                    p for p in game_props
+                    if game_props[p] and all(
+                        v.get('source_quality') == t01_only_key
+                        for v in game_props[p].values()
+                        if isinstance(v, dict)
+                    )
+                ])
+                print(f"      [T01] {t01_written} prop entries written for "
+                      f"{t01_only_count} Tank01-only players (no BDL/Odds-API coverage)")
 
     def _build_bdl_player_cache(self):
         """Fetch all active BDL players and build {bdl_id: full_name} cache.
@@ -1177,10 +1275,11 @@ class Gatekeeper:
                         if cleaned:
                             self._tank01_props_cache[player_id] = cleaned
                             loaded_players += 1
-                            # A6: Build name→ID cross-walk for _validate_line_with_tank01()
+                            # A6: Build name→ID AND id→name cross-walks
                             if player_name:
                                 norm_name = _normalize_t01_name(player_name)
                                 self._tank01_name_to_id[norm_name] = player_id
+                                self._tank01_id_to_name[player_id] = player_name
 
             print(f"[Module A] Tank01 props loaded: {loaded_players} players "
                   f"({len(games_with_props)} games), {len(self._tank01_name_to_id)} name cross-walk entries")

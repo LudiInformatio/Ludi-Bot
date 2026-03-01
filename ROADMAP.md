@@ -1,13 +1,13 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, February 28, 2026 — 7:05 PM EST
+**Last Updated:** Saturday, February 28, 2026 — 8:30 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 4.5 (`module_a.py` attempt props markets + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py`) + Sprint 4 (`_all_books` alt lines) — Odds-API reset ~7 PM EST tonight + Sprint 2 (`revalidate_recs.py`) — `is_valid` lifecycle + Phase 8.23 Layer 1 (~Mar 10)
-**Completed:** Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅ + Module G star bias (`module_g.py`, `main.py`, `module_f.py`) — `get_player_crew_bias()` + crew_bias bet card notes ✅
+**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` pending + Phase 8.23 Layer 1 (~Mar 10)
+**Completed:** Module G star bias (`module_g.py`, `main.py`, `module_f.py`) — `get_player_crew_bias()` + crew_bias bet card notes ✅ + Sprint 4 alt lines (`module_a.py` Phase 2B + `module_f.py` EV sweep) — zero extra credits ✅ + team_totals 422 fix — per-event enrichment, `TeamTotal` in Module E notes ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 
-> **Ops Note (Feb 28):** Odds-API quota resets midnight UTC March 1 (~7 PM EST tonight). Alt line Sprint 4 testing window opens then. Key test: confirm that `_all_books` dict in `fetch_comprehensive_props()` Phase 1 captures ±1.5/±3.0 alt lines from DK/FD responses — no extra API call needed. Use `--limit-games 1` test run first to inspect raw `_all_books` structure before any writes. Do NOT enable alt line writes to DB until structure is verified. Odds-API resets monthly at midnight UTC on the 1st.
+> **Ops Note (Feb 28 PM):** Sprint 4 alt lines SHIPPED. team_totals 422 fixed — `team_totals` not supported on bulk `/odds` endpoint; now fetched per-event (`/events/{id}/odds`, 1 credit/game). Sprint 4.5 attempt props INVALIDATED — FGA/FTA/3PA markets don't exist on Odds-API NBA. Odds-API new quota cycle: 19,756 credits remaining.
 
 This is the single source of truth for project tasks and priorities.
 
@@ -43,36 +43,13 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
-- [x] Phase 8.13: Build `bots/ask_ludi.py` — entry point, long-polling loop, `/start` + free-text handler
-- [x] Phase 8.13: Build `bots/ask_ludi_db.py` — 8 intent handlers (injuries/edges/trends/schedule/recap)
-- [x] Phase 8.13: Build `bots/ask_ludi_handlers.py` — Haiku intent → DB → Sonnet narrative → reply
-- [x] Phase 8.13: Wire `scripts/launchd/com.ludi.askludi.plist` — macOS keepalive for self-hosted runner
-- [x] Phase 8.13: Data freshness layer — full-day slate access + next-day after 9 PM EST for early research
-- [x] Module-by-module audit sprint — Modules A through F complete ✅ (Feb 28)
-  - **Module F audit complete (Feb 28):** `avg_ev` field fixed (`p['ev']` not `p['edge']`), Injury-Return emoji added, 4 defensive tags removed from `positive_archetypes`, B3 DB fallback replaced with clean wiring comment, old SGP correlation block removed, `_STAT_COL_MAP` short-form aliases added (`pts/reb/ast/stl/blk/tov/3pm/fg3m`), `_bdl_fallback_active` initialized in `__init__`.
-  - **Module B enhancement (Feb 28):** `vs_scheme_cache` added — pre-loads last-5 game values per player/stat vs each defense scheme (live `team_scheme_cache.active_style`). L20/L15/L10/L5 windows + L5-vs-scheme all surfaced in CR1 note block. `time_context` column (EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME) added to `bet_recommendations`.
-- [x] `canonical_games` table (Feb 28) — `database.py` + `sync_canonical_games(conn)` importable function. 1926 raw games → 902 deduplicated rows. `module_b.py` DISTINCT CTE replaced. `module_g.py` + `populate_todays_games.py` wired to call sync after INSERTs. `sync_matchup_intelligence.py` (4 JOINs) + `team_defensive_classifier.py` (1 JOIN) fixed to prevent 3× row multiplication in DVP/scheme calculations.
-  - **Remaining audit modules:** G (Zebras), H (Historian), X (Scenario Builder) — lower priority, schedule in March.
-  - **Cross-module notes (carry forward):**
-    - **Module D**: Harden AI blurb parse failure (`Expecting value: line 1 column 1`) — Haiku returning empty/non-JSON. Needs graceful fallback + logging. Dedup fix pending.
-    - **backtest_model.py**: `ConceptValidator` is mock-only. Activate `LudiOracle(season='2024-25')` after backfill completes (~Mar 3).
-    - **main.py**: `USG_PCT` key confirmed fixed at line 462. Verify in main.py audit sprint.
-- [ ] **Sprint 4.5: Attempt props** — add `player_field_goals_attempted,player_free_throws_attempted,player_threes_attempted` to `module_a.py` markets string (~line 598); add `field_goals_attempted→fga`, `free_throws_attempted→fta`, `threes_attempted→fg3a` to `mk` dict in `main.py:build_reporter_input()`; add `'FG3A': 'proj_fg3a'` to STAT_MAPPING + `'fg3a': 'fg3a'` to `module_f._STAT_COL_MAP`. Test after Odds-API reset ~7 PM EST. **Full notes:** `memory/historical_odds_backfill_plan.md` (Sprint 4.5 section).
-- [ ] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: recalculates `avg_pace_impact` (fouls/12.5) + `style` thresholds in `referee_profiles` (Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT). Safe to run anytime.
-- [ ] **Run `backfill_referee_bias.py`** — populate historical `referee_player_bias` from 363 game dates (currently all `games_officiated=1` — backfill enables real PROTECTOR/STAR_KILLER signal).
-- [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades (per-player context, 5-min late news TTL). Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
-- [ ] **Sprint 4: Alt line testing + implementation** — Odds-API resets midnight UTC March 1 (~7 PM EST Feb 28).
-  - **Test first (dry run):** `python main.py --limit-games 1 --verbose` → inspect raw `_all_books` dict to confirm ±1.5/±3.0 alt lines are captured per player/stat. Print `game['_all_books_debug']` or add temp logging. Do NOT write to DB until structure verified.
-  - **Caching strategy:** Alt lines are slate-level data — cache alongside main props per `fetch_comprehensive_props()` call. No separate cache needed; they expire with the game slate.
-  - **Credit-safe testing:** Odds-API charges per event request, not per market parsed. `_all_books` is populated from the SAME request as main props — zero extra credits for extracting alt lines from it.
-  - **Implement:** Phase 2B in `module_a.py` (extract ±1.5/±3.0 → `game['alt_props']`) + Module F sweep (compare EV → inject note). Full spec in `plans/pure-baking-river.md` Sprint 4.
-  - **Cross-module communication path:** Module A (`alt_props` on game dict) → `main.py:build_reporter_input()` passes `game` dict through → Module F reads `game.get('alt_props', {})` per bet → injects alt note into `bet_recommendations.note` column → Telegram card shows `"Alt: OVER 26.0 @ -138 available"`.
-  - **Workflows that need updating after Sprint 4:** `morning_brief.py` (show alt note on bet card), `bots/ask_ludi_db.py` (alt note visible in edges intent), `settle_bets.py` (no change — alt note is metadata only).
-- [ ] Research follow-up: Alt line edge sweep in `module_f.py` — sweep ±1.5/±3.0 alt lines per player, surface best-value alt line in bet card (confirmed by OddsJam + Outlier + Action Network — `COMPETITIVE_RESEARCH_2026.md` Tier 1)
-- [ ] Research follow-up: Surface `player_injuries.snapshot_time` in `morning_brief.py` Telegram cards — "OUT (updated 5:18 PM)" format (confirmed by Outlier + StraightBettin)
-- [ ] Research follow-up: Add `pct_money` + `diff` (money%-bets%) fields to Phase 8.22 `social_signals` — sharper than `pct_bets` alone (Action Network DIFF column + Outlier confirmed both signals)
-- [ ] Research follow-up: Add `edges` intent to `bots/ask_ludi_db.py` — "Check [Player] [Line]" returns 11-row PropsMadness-style scorecard (L15 avg/hit, H2H, DVP rank, expected minutes, similar players) from existing tables — zero new data
-- [ ] Research follow-up: Add `injuries` sub-intent "who benefits if X is out?" → `wowy_calculator.find_beneficiaries()` → delta table (name + PTS delta) in Ask Ludi reply (StraightBettin WOWY pattern)
+- [ ] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: `avg_pace_impact` (fouls/12.5) + `style` thresholds. Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT. Safe anytime.
+- [ ] **Run `backfill_referee_bias.py`** — populate `referee_player_bias` from 363 game dates (all `games_officiated=1` now → backfill enables real PROTECTOR/STAR_KILLER signal).
+- [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
+- [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
+- [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
+
+_Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audit A–F + canonical_games ✅ | Sprint 4 alt lines + team_totals fix ✅ | Sprint 4.5 INVALIDATED (attempt markets don't exist on Odds-API)_
 
 ---
 

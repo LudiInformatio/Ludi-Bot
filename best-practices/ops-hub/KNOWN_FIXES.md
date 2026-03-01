@@ -445,3 +445,39 @@
 - **Module Changes**: module_e.py (~320 lines), main.py (3 changes), module_x_scenario.py (3 additions)
 - **Verification**: Integration test `.venv/bin/python main.py --games CLE`
 
+
+---
+
+## 2026-02-28 — Odds-API: `team_totals` Silently Killing Entire Game Slate (422)
+
+- **Affected file**: `module_a.py` — `fetch_live_slate()`
+- **Symptom**: `⚠️ The-Odds-API Failed: 422 Unprocessable Entity` — entire Gatekeeper falls back to BDL, which only had 3/5 games with lines. Two upcoming games invisible to pipeline every day.
+- **Root Cause**: `team_totals` was in the bulk `/v4/sports/basketball_nba/odds` markets string (`h2h,spreads,totals,team_totals`). The bulk endpoint does NOT support `team_totals` — it returns 422 and drops ALL markets/games.
+- **Fix**: Remove `team_totals` from bulk call. Add Phase 1.5 per-event enrichment loop: after game slate built, call `/v4/sports/{sport}/events/{event_id}/odds?markets=team_totals` per game (1 credit/game). Parse using `outcome['description']` (team name) + `outcome['name']` (Over/Under) — different from old bulk format that used `outcome['name']` for team.
+- **Field mapping (per-event format)**:
+  ```python
+  # outcome['description'] = team name (e.g. "Toronto Raptors")
+  # outcome['name'] = "Over" or "Under"
+  # outcome['point'] = the line value
+  # (old bulk parser was wrong — used outcome['name'] == home_team, never fired)
+  ```
+- **Credit cost**: 1 credit per game per day (~5 games = 5 credits). Previously 0 credits but 0 data.
+- **Verification**: `TeamTotal:114.5` appears in Module E bet card notes confirming data flows correctly.
+
+---
+
+## 2026-02-28 — Python 3.11: Backslash Escapes in f-string Expressions
+
+- **Affected file**: `module_a.py` — Tank01 3rd fallback logging line
+- **Symptom**: `SyntaxError: unexpected character after line continuation character` at module import. `from module_a import Gatekeeper` fails immediately.
+- **Root Cause**: Python 3.11 does not allow backslash escape sequences (`\"`) inside f-string `{}` expression braces. This was fixed in Python 3.12 but breaks on the project's current 3.11 runtime.
+- **Fix**: Extract the string literal to a variable before the f-string, or lift complex expressions out entirely.
+  ```python
+  # BROKEN (Python 3.11):
+  f'{len([p for p in d if all(v.get(\"key\") == \"val\" for v in d[p].values())])}'
+  # FIXED:
+  target_val = 'val'
+  count = len([p for p in d if all(v.get('key') == target_val for v in d[p].values())])
+  f'{count} items found'
+  ```
+- **Rule**: Never use `\"` inside f-string `{}` blocks in this codebase (Python 3.11).

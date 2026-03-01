@@ -557,6 +557,9 @@ class LudiOrchestrator:
             'home_team': home, 'away_team': away, 'opponent': '',
             'spread': float(spread) if spread != 'N/A' else 0,
             'ref_data': game_data.get('archetypes', {}).get('ref_data', {'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0}),
+            # Sprint 4: alt lines captured by Module A Phase 2B → consumed by Module F EV sweep
+            # Structure: {stat_key: {player_name: {alt_line: {odds_over, book_over, odds_under, book_under}}}}
+            'alt_props': game_data.get('alt_props', {}),
             'players': players
         }]
 
