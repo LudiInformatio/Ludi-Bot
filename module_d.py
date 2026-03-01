@@ -82,6 +82,12 @@ class LudiYak:
         # [RSS] Canonical player name set for validation (lazy-loaded on first RealGM fetch)
         self._canonical_names = None
 
+        # [CACHE] Per-run Haiku parse cache — keyed by (player_name, text_prefix).
+        # temperature=0.0 makes Haiku deterministic: same input → same output every time.
+        # Prevents redundant Haiku calls when _ai_parse_blurb + _parse_with_taxonomy_injection
+        # fire for the same player in the same pipeline run.
+        self._haiku_parse_cache: dict = {}
+
 
     def _load_cache(self):
         if os.path.exists(self.cache_file):
@@ -751,10 +757,15 @@ class LudiYak:
             pass
         return None
 
-    def _perplexity_freshness_check(self, player_name, current_status):
-        """Phase 8 Staleness Challenger — verify older uncertain statuses."""
+    def _perplexity_freshness_check(self, player_name, current_status, team_name="NBA"):
+        """Phase 8 Staleness Challenger — verify older uncertain statuses.
+
+        team_name must match what _nuance_check passes to targeted_search so both
+        callers share the same yak_cache entry and we don't double-hit Perplexity
+        for the same player in the same pipeline run.
+        """
         query = f"{player_name} injury update playing tonight"
-        news_text = self.targeted_search(player_name, "NBA", context="injury")
+        news_text = self.targeted_search(player_name, team_name, context="injury")
         
         if not news_text or not news_text.get('items'):
             if current_status in ['GTD', 'PROBABLE', 'DOUBTFUL', 'QUESTIONABLE']:
@@ -773,6 +784,13 @@ class LudiYak:
 
     def _parse_with_taxonomy_injection(self, text, player_name, current_status):
         """Calls Haiku with taxonomy vocabulary injected as context."""
+        # Same cache as _ai_parse_blurb — both use the same prompt/schema so results are interchangeable.
+        _cache_key = (player_name, text.strip()[:80])
+        if _cache_key in self._haiku_parse_cache:
+            raw = self._haiku_parse_cache[_cache_key]
+            # _ai_parse_blurb returns a raw dict; convert to freshness-check format
+            if isinstance(raw, dict) and 'status' in raw:
+                return raw  # already in freshness format
         try:
             from utils.claude_client import get_claude_analysis, HAIKU_MODEL
             from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
@@ -807,20 +825,30 @@ class LudiYak:
             
             status_override = result.get('status_override')
             if status_override:
-                return {"status": status_override, "note": f"[AI] Override: {status_override}", "confidence": 0.85}
-            
+                out = {"status": status_override, "note": f"[AI] Override: {status_override}", "confidence": 0.85}
+                self._haiku_parse_cache[_cache_key] = out
+                return out
+
             if result.get('no_designation'):
-                return {"status": "ACTIVE", "note": "[AI] No designation found", "confidence": 0.9}
-                
+                out = {"status": "ACTIVE", "note": "[AI] No designation found", "confidence": 0.9}
+                self._haiku_parse_cache[_cache_key] = out
+                return out
+
             if result.get('rest'):
-                return {"status": "OUT_REST", "note": "[AI] Load management", "confidence": 0.9}
-            
+                out = {"status": "OUT_REST", "note": "[AI] Load management", "confidence": 0.9}
+                self._haiku_parse_cache[_cache_key] = out
+                return out
+
             tonight = result.get('tonight_available')
             if tonight is False:
-                return {"status": "OUT", "note": "[AI] AI confirms out", "confidence": 0.85}
+                out = {"status": "OUT", "note": "[AI] AI confirms out", "confidence": 0.85}
+                self._haiku_parse_cache[_cache_key] = out
+                return out
             if tonight is True:
-                return {"status": "ACTIVE", "note": "[AI] AI confirms active", "confidence": 0.85}
-            
+                out = {"status": "ACTIVE", "note": "[AI] AI confirms active", "confidence": 0.85}
+                self._haiku_parse_cache[_cache_key] = out
+                return out
+
             return None
         except Exception as e:
             print(f"   [YAK] AI freshness parse failed for {player_name}: {e}")
@@ -980,7 +1008,8 @@ class LudiYak:
                 decay = tax_info.get('confidence_decay_hours', 24)
                 
                 if age_hours > decay and cat in ('UNCERTAIN', 'UNAVAILABLE'):
-                    fresh_intel = self._perplexity_freshness_check(player_name, _status)
+                    # Pass team_name so targeted_search uses same cache key as _nuance_check
+                    fresh_intel = self._perplexity_freshness_check(player_name, _status, team_name=team_name)
                     if fresh_intel:
                         return fresh_intel
 
@@ -1067,6 +1096,12 @@ class LudiYak:
         if not description or len(description.strip()) < 10:
             return {}
 
+        # Haiku is deterministic (temperature=0.0) — cache by player + first 80 chars of blurb.
+        # Prevents redundant API calls if same player/blurb appears more than once per pipeline run.
+        _cache_key = (player_name, description.strip()[:80])
+        if _cache_key in self._haiku_parse_cache:
+            return self._haiku_parse_cache[_cache_key]
+
         try:
             from utils.claude_client import get_claude_analysis, HAIKU_MODEL
             from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
@@ -1102,6 +1137,7 @@ class LudiYak:
                 text = '\n'.join(lines_list[1:-1]).strip()
 
             result = json.loads(text)
+            self._haiku_parse_cache[_cache_key] = result  # store for same-run reuse
             return result
         except Exception as e:
             print(f"   [YAK] AI blurb parse failed for {player_name}: {e}")
