@@ -59,7 +59,11 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
           source .venv/bin/activate 2>/dev/null || true
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+          # Game-time runs (6 PM - 10:59 PM EST = 23:00-03:59 UTC) always use --force so
+          # BDL/Tank01 corroborates ESPN even after ESPN wrote a fresh snapshot_time.
+          # Daytime runs (11 AM - 5 PM EST) use the staleness check to save quota.
+          HOUR=$(TZ='America/New_York' date +%H)
+          if [ "$HOUR" -ge 18 ] || [ "${{ github.event.inputs.force }}" = "true" ]; then
             python3 scripts/sync_injuries.py --force
           else
             python3 scripts/sync_injuries.py

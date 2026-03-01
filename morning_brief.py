@@ -796,8 +796,14 @@ Return JSON only."""
                     injuries = cursor.fetchall()
 
                     # Deduplicate by player: when ESPN and BDL/Tank01 conflict, keep most severe status.
-                    # Status severity: OUT(4) > DOUBTFUL(3) > GTD(2) > PROBABLE(1)
-                    STATUS_SEVERITY = {'OUT': 4, 'DOUBTFUL': 3, 'GTD': 2, 'PROBABLE': 1}
+                    # Derived from taxonomy severity_score — covers all statuses incl. SUSP/QUESTIONABLE/MINUTES_LIMIT/OUT_REST.
+                    try:
+                        from utils.injury_taxonomy import INJURY_TAXONOMY as _IT
+                        STATUS_SEVERITY = {k: v.get('severity_score', 0) for k, v in _IT.items()}
+                    except ImportError:
+                        STATUS_SEVERITY = {'OUT': 3, 'SUSP': 3, 'OUT_REST': 3, 'SEASON_ENDING': 3,
+                                           'DOUBTFUL': 2, 'GTD': 1, 'QUESTIONABLE': 1, 'MINUTES_LIMIT': 1,
+                                           'PROBABLE': 0, 'ACTIVE': 0}
                     best_injury = {}
                     for row in injuries:
                         pname, status, days_out, inj_type = row[0], row[1], row[2], row[3]

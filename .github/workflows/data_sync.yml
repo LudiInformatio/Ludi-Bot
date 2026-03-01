@@ -250,7 +250,9 @@ jobs:
         timeout-minutes: 5
         run: |
           source .venv/bin/activate
-          python scripts/sync_injuries.py
+          # --force bypasses _is_db_fresh() so BDL/Tank01 runs even if ESPN wrote
+          # a recent snapshot_time during last night's intraday cycles (< 8h old).
+          python scripts/sync_injuries.py --force
         env:
           IS_GAME_DAY_REPORT: "false"
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
