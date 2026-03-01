@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 1, 2026 — 12:12 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 4:11 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns) → then Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade + Phase 8.23 Layer 1 (~Mar 10)
-**Completed:** Sprint 4 alt lines (`module_a.py` Phase 2B + `module_f.py` EV sweep) — zero extra credits ✅ + team_totals 422 fix — per-event enrichment, `TeamTotal` in Module E notes ✅ + CLV backfill (`scripts/backfill_historical_odds.py`) — sharp benchmarks + overnight capture + odds cache ✅
+**Active Work:** `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns) + AI Workforce Monday Kickoff (`employees/silas/run_check.py`, Agent Teams test) → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + Perplexity upgrade (~Mar 10)
+**Completed:** CLV backfill (`scripts/backfill_historical_odds.py`) — sharp benchmarks + overnight capture + odds cache ✅ + Module D audit (`module_d.py`) — injury taxonomy + staleness challenger + 10 simplify fixes ✅ + AI Workforce Sunday Setup (`employees/` soul files, Discord server + bot, Solomon Telegram Bot 2) ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 

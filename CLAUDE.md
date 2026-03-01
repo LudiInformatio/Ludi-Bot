@@ -247,6 +247,7 @@ This project has custom skills available:
 - `/backtest` - Run validation suite and check model accuracy
 - `/daily` - Daily pipeline health check
 - `/sports-model` (alias: `/sma`) - Use `skills/sports-data-model-architect` for balanced audit-first data modeling + implementation support
+- `/ludi-audit` - Henrik's 10-point Ludi-specific gotcha checklist (run after `/simplify` on any diff)
 
 ---
 

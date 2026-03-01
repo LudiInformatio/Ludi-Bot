@@ -2,6 +2,44 @@
 
 This document captures patterns for always-on agents (Silas, Iris) running via macOS launchd.
 
+## Initial Setup Lessons (Mar 1, 2026)
+
+Lessons learned during the first Discord + Telegram Bot 2 setup — avoid these mistakes next time.
+
+### Discord
+
+**1. Bot creation requires human CAPTCHA** — Discord's developer portal shows an hCaptcha when creating a new application via automated browser. Cannot be bypassed with Playwright. User must create the app manually in their own browser. Channels and webhooks CAN be automated (no CAPTCHA).
+
+**2. Webhook vs bot token scope:**
+- **Webhook URL**: Post-only to one channel. Returns HTTP **204** (No Content) on success — not 200. Safer for always-on agents (Silas/Iris). Anyone with the URL can post to that one channel only.
+- **Bot token**: Full server access. Returns HTTP **200** on success. Required for reading messages, reacting, DMs. Never use in launchd scripts (rotate if exposed).
+
+**3. Channel IDs are stable snowflakes** — Pre-fill all `DISCORD_CHANNEL_*` IDs in `.env.template` when the server is created. They never change. Avoids the "which channel was that?" lookup problem later.
+
+**4. `@everyone` Create Invite OFF** — First thing to do on a private ops server. Prevents users from inviting strangers. Server Settings → Roles → @everyone → Permissions → Create Invite = ❌.
+
+### Telegram
+
+**5. `TELEGRAM_CHAT_ID` is the RECIPIENT's ID, not the bot's ID** — Common mistake: pasting the first 10 digits of the bot token (the bot's own ID) as the chat ID. The chat ID is the person/group you want to receive messages. For a personal bot, this is your personal Telegram user ID (found via `@userinfobot`). When in doubt: look at the existing working `TELEGRAM_CHAT_ID` in `.env` — Solomon's should match unless you want a separate channel.
+
+**6. Bot can't message you until you've messaged it first** — Telegram bots can't initiate conversations with users who haven't started a chat. Send `/start` to the new bot before testing `sendMessage`. This creates the chat and makes the `chat_id` valid.
+
+### Testing Checklist (run after any bot/webhook setup)
+
+```python
+# Test all 3 Discord webhooks
+for name, url in webhooks.items():
+    resp = requests.post(url, json={'content': f'test', 'username': name})
+    assert resp.status_code == 204, f"#{name} failed: {resp.status_code}"
+
+# Test Telegram bot
+resp = requests.post(f'https://api.telegram.org/bot{token}/sendMessage',
+    json={'chat_id': chat_id, 'text': 'test'})
+assert resp.status_code == 200, f"Telegram failed: {resp.text}"
+```
+
+---
+
 ## Architecture Decision
 
 **We use Gemini CLI (`gemini -p "..." -m gemini-2.5-pro --yolo`) as the writer model, not OpenClaw.**

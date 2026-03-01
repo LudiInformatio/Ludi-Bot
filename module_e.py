@@ -3082,19 +3082,21 @@ class LudiCalibrator:
             return {}
 
     def _load_shot_quality_bulk(self) -> dict:
-        """Pre-load player_shot_quality into {player_name: {col: val}} dict."""
+        """Pre-load player_shot_quality into {player_name: {rim_freq, corner_3_freq}} dict."""
         out = {}
         try:
             conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                "SELECT player_name, rim_freq, mid_freq, corner_3_freq, "
-                "above_break_3_freq, heave_freq, rim_fga, shot_quality "
+                "SELECT player_name, at_rim_freq, corner_3_freq "
                 "FROM player_shot_quality"
             ).fetchall()
             conn.close()
-            for row in rows:
-                out[row['player_name']] = dict(row)
+            for player_name, at_rim, corner_3 in rows:
+                out[player_name] = {
+                    'rim_freq': at_rim or 0,
+                    'corner_3_freq': corner_3 or 0,
+                }
+            print(f"   [CAL] Shot quality bulk load: {len(out)} players")
         except Exception as e:
             print(f"[Module E] shot_quality bulk load failed: {e}")
         return out
@@ -3310,8 +3312,6 @@ class LudiCalibrator:
         clamped = max(-0.08, min(0.08, raw_modulation))
         avd = self.archetype_vs_defense_matrix.get((archetype, def_style))
         if avd and avd['confidence'] == 'LOW':
-            clamped = clamped * 0.5
-        if dvp.get('conf') == 'LOW':
             clamped = clamped * 0.5
         return 1.0 + clamped
 
