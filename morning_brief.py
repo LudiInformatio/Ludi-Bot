@@ -377,24 +377,6 @@ def _get_news_catalysts(conn, date: str) -> str:
 
 import argparse
 
-def main():
-    parser = argparse.ArgumentParser(description='Ludi Morning Briefing')
-    parser.add_argument('--target-teams', nargs='*', help='Filter to specific teams')
-    parser.add_argument('--mode', default='morning', choices=['morning', 'evening'])
-    parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument('--after-hour', type=int, help='Skip games starting before this hour (EST)')
-    parser.add_argument('--force-fresh', action='store_true', help='Skip cache and fetch fresh data')
-    args = parser.parse_args()
-    
-    engine = MorningBriefEngine(
-        target_teams=args.target_teams,
-        mode=args.mode,
-        dry_run=args.dry_run,
-        after_hour=args.after_hour,
-        force_fresh=args.force_fresh
-    )
-    engine.run()
-
 
 class MorningBriefEngine:
     def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None, force_fresh=False):
@@ -1322,9 +1304,11 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Skip Telegram sends")
     parser.add_argument("--after-hour", type=int, default=None,
                         help="Skip games starting before this hour EST (24h). E.g. 21 = 9 PM+ only (west coast run).")
+    parser.add_argument("--force-fresh", action="store_true",
+                        help="Skip cache and fetch fresh data from API (used by evening runs).")
     args = parser.parse_args()
 
     # Process all games on the slate (no hardcoded team filter)
     engine = MorningBriefEngine(target_teams=None, mode=args.mode, dry_run=args.dry_run,
-                                after_hour=args.after_hour)
+                                after_hour=args.after_hour, force_fresh=args.force_fresh)
     engine.run()
