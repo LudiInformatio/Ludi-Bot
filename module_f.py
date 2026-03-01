@@ -541,6 +541,12 @@ class LudiReporter:
                                             f"vs {_vs_scheme} L{_vs_n}: {_vs_hits}/{_vs_n} ({int(_vs_l5 * 100)}%)"
                                         )
 
+                            # BUG B2: Trend context (HOT/COLD only, not STABLE)
+                            trend_label = p.get('trend_label')
+                            trend_delta = p.get('trend_delta')
+                            if trend_label and trend_delta and trend_label not in ('STABLE', 'NEUTRAL'):
+                                note_elements.append(f"Trend: {trend_label} ({trend_delta:+.1f} vs season)")
+
                             # Sprint 4 — Alt line sweep
                             # Module A Phase 2B wrote alt_props[stat_key][player_name][alt_line]
                             # Read: game → stat_key → player name → dict of {line: {odds}}

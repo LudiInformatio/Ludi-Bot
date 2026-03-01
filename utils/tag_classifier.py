@@ -266,11 +266,16 @@ class TagClassifier:
                 ('L5_REB', 'L10_REB', 'L15_REB', 'base_reb'),
                 ('L5_AST', 'L10_AST', 'L15_AST', 'base_ast'),
             ]:
-                season_avg = player.get(base_key, 0) or 0
-                l5_avg = player.get(l5_key) or 0
-                l10_avg = player.get(l10_key) or 0
-                l15_avg = player.get(l15_key) or 0
-                if calculate_streak_score(l5_avg, l10_avg, l15_avg, season_avg) >= 2:
+                precomputed = player.get('streak_score')
+                if precomputed is not None:
+                    score = precomputed
+                else:
+                    season_avg = player.get(base_key, 0) or 0
+                    l5_avg = player.get(l5_key) or 0
+                    l10_avg = player.get(l10_key) or 0
+                    l15_avg = player.get(l15_key) or 0
+                    score = calculate_streak_score(l5_avg, l10_avg, l15_avg, season_avg)
+                if score >= 2:
                     hot_streak_detected = True
                     break
 

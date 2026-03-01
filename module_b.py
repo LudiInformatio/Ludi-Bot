@@ -269,6 +269,7 @@ class LudiEngine:
         """
         player_name = p_dict.get('name', '')
         if not player_name:
+            print(f"⚠️   Module B enrich_player: missing 'name' key — skipping enrichment for this player")
             return
 
         normalized = self._normalize_name(player_name)
