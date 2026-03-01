@@ -96,8 +96,12 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 **PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 6 AI employees on OpenClaw runtime (~$4.60/mo)
 **Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist)
 **Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
-- [ ] Sunday setup: Telegram + Discord + OpenClaw repo clone
-- [ ] Monday kickoff: First employee soul file (Solomon PM Agent)
+- [x] Sunday setup: Telegram + Discord + soul files + webhooks ✅
+- [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
+- [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
+- [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live
+- [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon (sprint status, next actions, team health). Pattern: `bots/ask_ludi.py`. Week 1 build.
+- [ ] **Discord two-way** — command handlers in employee channels so you can message Silas/Iris/Henrik in Discord and they respond/act (e.g. `/run-check` in #silas, `/audit file.py` in #henrik). Requires Discord bot polling loop.
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
