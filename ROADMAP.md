@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, February 28, 2026 — 3:54 PM EST
+**Last Updated:** Saturday, February 28, 2026 — 7:05 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 4.5 (`module_a.py` attempt props markets + `fix_referee_profiles_pace.py` + `backfill_referee_bias.py`) + Sprint 4 (`_all_books` alt lines) — Odds-API reset ~7 PM EST tonight + Sprint 2 (`revalidate_recs.py`) — `is_valid` lifecycle + Phase 8.23 Layer 1 (~Mar 10)
 **Completed:** Module F Alchemist Audit (avg_ev fix, B3 DB fallback removed, 7 bugs total) ✅ + canonical_games table (database.py + 5-module Pattern-B JOIN fix) ✅ + Module G star bias (`module_g.py`, `main.py`, `module_f.py`) — `get_player_crew_bias()` + crew_bias bet card notes ✅
@@ -23,6 +23,7 @@ This is the single source of truth for project tasks and priorities.
 - `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md` — Social Intel + Prop Pulse Score full spec
 - `docs/FUTURE_DATA_SOURCES.md` — Ask Ludi architecture (§6) + competitive patterns (§5.2-B) + PBP Stats endpoints (§4.4)
 - `best-practices/api/API_BEST_PRACTICES.md` — BDL + Tank01 + ESPN endpoint reference
+- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — AI Employee Workforce PRD (6 employees, OpenClaw runtime, ~$4.60/mo)
 
 ---
 
@@ -113,6 +114,13 @@ This is the single source of truth for project tasks and priorities.
 ---
 
 ## Medium Priority
+
+### AI Employee Workforce (March 2026 — OpenClaw Sprint)
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 6 AI employees on OpenClaw runtime (~$4.60/mo)
+**Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist)
+**Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
+- [ ] Sunday setup: Telegram + Discord + OpenClaw repo clone
+- [ ] Monday kickoff: First employee soul file (Solomon PM Agent)
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
