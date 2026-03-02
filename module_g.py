@@ -648,9 +648,10 @@ class LudiRefEngine:
         avg_whistle = sum(whistle_factors) / len(whistle_factors)
         confidence = known_count / len(crew)
 
-        # Apply safety caps (MAX 10% deviation from baseline)
-        avg_pace = max(0.90, min(1.10, avg_pace))
-        avg_whistle = max(0.90, min(1.10, avg_whistle))
+        # Apply safety caps (MAX 15% deviation from baseline — calibrated to 2025-26 data)
+        # Old ±10% clipped 12 refs on pace and 4 refs on whistle (e.g. Bill Kennedy 0.878, Dannica Baroody 0.864)
+        avg_pace = max(0.85, min(1.15, avg_pace))
+        avg_whistle = max(0.85, min(1.15, avg_whistle))
 
         return {
             'pace_impact': round(avg_pace, 3),
