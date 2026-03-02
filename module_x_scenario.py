@@ -428,6 +428,24 @@ class ScenarioBuilder:
             # --- CASE D: Everyone Else ---
             else:
                 pass 
+
+            # Build scenario context for conditional baseline
+            scenario_context = {
+                'home_or_away': 'home' if new_p.get('TEAM_ABBREVIATION') == game.get('home_team') else 'away',
+                'opponent_team': game.get('away_team') if new_p.get('TEAM_ABBREVIATION') == game.get('home_team') else game.get('home_team'),
+            }
+
+            # Attach conditional baseline modifiers to player dict
+            # We need to provide is_starter and player_id to _build_conditional_baseline
+            player_for_baseline = {
+                'player_id': new_p.get('PLAYER_ID') or new_p.get('player_id'),
+                'effective_starter': new_p.get('effective_starter', False),
+                'is_starter': new_p.get('is_starter', p.get('is_starter', False))
+            }
+
+            conditional_mods = self._build_conditional_baseline(player_for_baseline, scenario_context)
+            if any(abs(v - 1.0) > 0.01 for v in conditional_mods.values()):
+                new_p['conditional_baseline_mods'] = conditional_mods
                 
             raw_players.append(new_p)
             
@@ -772,4 +790,4 @@ class ScenarioBuilder:
 
 
 if __name__ == "__main__":
-    print("Module X (V3.7 - Live Schema) Loaded.")
+    print("Module X (V3.8 - Conditional Baselines) Loaded.")
