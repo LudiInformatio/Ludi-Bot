@@ -552,11 +552,12 @@ class LudiOrchestrator:
         # This prevents tomorrow's games (visible after 9 PM) from being logged
         # with today's date in bet_recommendations.
         _start_time = game_data.get('start_time')
-        _actual_game_date = (
-            _start_time.strftime('%Y-%m-%d')
-            if _start_time and hasattr(_start_time, 'strftime')
-            else get_est_today()
-        )
+        if _start_time and hasattr(_start_time, 'strftime'):
+            _actual_game_date = _start_time.strftime('%Y-%m-%d')
+        elif isinstance(_start_time, str) and len(_start_time) >= 10:
+            _actual_game_date = _start_time[:10] # ISO string from games cache
+        else:
+            _actual_game_date = get_est_today()
 
         return [{
             'game_id': game_data.get('matchup', 'UNKNOWN').replace(' @ ', '_vs_'),

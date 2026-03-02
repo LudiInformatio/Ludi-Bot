@@ -181,6 +181,7 @@ class ScenarioBuilder:
             for row in rows:
                 pid, ha, n, pts, fta, ast, reb = row['player_id'], row['home_or_away'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
                 pid = str(pid)
+                ha = ha.lower() if ha else ha  # normalize: 'HOME'→'home', 'AWAY'→'away' (DB stores uppercase)
                 if pid not in result:
                     result[pid] = {}
                 result[pid][ha] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
@@ -419,7 +420,7 @@ class ScenarioBuilder:
         """
         import sqlite3
         try:
-            conn = sqlite3.connect("ludi.db", timeout=30)
+            conn = sqlite3.connect(DB_PATH, timeout=30)
             conn.execute("PRAGMA journal_mode=WAL")
             c = conn.cursor()
             # Phase 8.12: filter by team to avoid stale injury from old team post-trade
@@ -453,7 +454,7 @@ class ScenarioBuilder:
         """Get last 10 games average stats from player_game_logs. Returns {} if unavailable."""
         import sqlite3
         try:
-            conn = sqlite3.connect("ludi.db", timeout=30)
+            conn = sqlite3.connect(DB_PATH, timeout=30)
             conn.execute("PRAGMA journal_mode=WAL")
             c = conn.cursor()
             c.execute("""
@@ -664,7 +665,7 @@ class ScenarioBuilder:
         if not star_canonical_id or not team_abbr:
             return []
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(DB_PATH)
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT wo.canonical_id, wo.pts_delta, wo.min_delta,
@@ -698,7 +699,7 @@ class ScenarioBuilder:
         if not out_player_id or not team_abbr:
             return []
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(DB_PATH)
             rows = conn.execute("""
                 SELECT beneficiary_player_id, beneficiary_player_name,
                        minutes_delta, games_without
@@ -765,7 +766,7 @@ class ScenarioBuilder:
 
         # H5: TIER 0 - depth_charts lookup (position-specific backup)
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("""
                 SELECT dc.player_name
@@ -876,7 +877,7 @@ class ScenarioBuilder:
         Returns dict of {teammate_name: share_pct} or empty dict if unavailable.
         """
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("""
                 SELECT scorer_name, assist_count
@@ -918,7 +919,7 @@ class ScenarioBuilder:
         import sqlite3
         
         try:
-            conn = sqlite3.connect('ludi.db')
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             
             # Bulk pre-fetch — single query instead of N per-player queries
@@ -948,7 +949,7 @@ class ScenarioBuilder:
             
             conn.close()
         except Exception as e:
-            pass
+            print(f"[Module X] _set_wowy_confidence_for_players failed: {e}")
 
     def _apply_vegas_guardrail(self, players, odds):
         spread = odds.get('spread', 0)

@@ -249,6 +249,7 @@ class LudiHistorian:
     # =========================================================
 
     def _write_game_logs_to_db(self, records: list) -> int:
+        # NOTE: SportsDataIO columns (started, fantasy_pts_dk, fantasy_pts_fd, home_or_away, double_doubles, triple_doubles) are intentionally absent from this INSERT. They are filled by sync_sportsdata_enrichment.py via COALESCE — never overwritten here.
         """
         Write game log records directly to SQLite.
         
@@ -538,8 +539,6 @@ class LudiHistorian:
 
     def _resume_from_state(self, state):
         """Resume sync from paused state."""
-        from utils.telegram_notifier import send_message
-
         completed = state['completed_dates']
         remaining = state['remaining_dates']
 
@@ -564,7 +563,7 @@ class LudiHistorian:
         Returns:
             Number of dates successfully processed
         """
-        from utils.telegram_notifier import send_message
+        from utils.telegram_notifier import send_solomon_message
 
         all_new_records = []
         dates_processed = 0

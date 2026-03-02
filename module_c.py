@@ -426,6 +426,27 @@ class LudiOracle:
                     # Track games_since_return for edge classification in Module F
                     player['_games_since_return'] = games_back
 
+                # --- Conditional Baseline Mods (Module X Scenario) --- #
+                # Applied after G2/G3 have settled player base stats, before Poisson lambda.
+                # Modifies volume inputs (FGA/FG3A/FTA/AST/REB) so the simulation
+                # reflects lineup-conditional, H/A, and starter/bench historical splits.
+                cond_mods = player.get('conditional_baseline_mods', {})
+                if cond_mods:
+                    pts_mod = cond_mods.get('pts', 1.0)
+                    fta_mod = cond_mods.get('fta', 1.0)
+                    ast_mod = cond_mods.get('ast', 1.0)
+                    reb_mod = cond_mods.get('reb', 1.0)
+                    # pts modifier scales FGA/FG3A (volume follows scoring opportunity)
+                    for vol_stat in ('FGA', 'FG3A'):
+                        if vol_stat in player and abs(pts_mod - 1.0) > 0.01:
+                            player[vol_stat] = round(player[vol_stat] * pts_mod, 2)
+                    if 'FTA' in player and abs(fta_mod - 1.0) > 0.01:
+                        player['FTA'] = round(player['FTA'] * fta_mod, 2)
+                    if 'AST' in player and abs(ast_mod - 1.0) > 0.01:
+                        player['AST'] = round(player['AST'] * ast_mod, 2)
+                    if 'REB' in player and abs(reb_mod - 1.0) > 0.01:
+                        player['REB'] = round(player['REB'] * reb_mod, 2)
+
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
 

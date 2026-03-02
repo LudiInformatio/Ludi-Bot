@@ -77,7 +77,7 @@ jobs:
           print(f'✅ Deduped {deduped} player_game_logs records')
 
           # Create UNIQUE index (required for Module H upserts)
-          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(game_id, player_id)')
+          c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(player_id, game_date)')
 
           # Create referee unique index
           c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_referee_daily_unique ON referee_daily_stats(referee_id, sync_date)')
@@ -156,6 +156,7 @@ jobs:
           HISTORIAN_MAX_RUNTIME_SEC: 540
           PYTHONUNBUFFERED: "1"
         run: |
+          source .venv/bin/activate
           python3 module_h_historian.py --mode daily --force-daily
 
       # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
