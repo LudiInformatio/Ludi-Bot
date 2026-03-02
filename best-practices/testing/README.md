@@ -286,6 +286,17 @@ Run when verifying any new conditional baseline, modifier engine, or data-driven
 | Teams | 3–4 | Pick diverse defensive schemes — at least one PAINT_PACK, one BLITZ, one NEUTRAL |
 | Players | 7–9 | High-usage + high-minutes only: `usg_pct >= 0.18` AND `base_min >= 24` |
 
+**Run order — team first, then player:**
+1. **Team-level check** (verify infrastructure): scheme cache row exists, depth chart rows, beneficiary count, recent game logs. If any layer is empty, player signal tests are meaningless.
+2. **Player-level check** (verify signal): conditional baseline mods — any `abs(mod - 1.0) > 0.01` means real data is flowing through.
+
+**Before writing any string-based lookup on a new column:** confirm the exact values stored:
+```python
+# e.g. don't assume 'H'/'A' vs 'HOME'/'AWAY' vs 'home'/'away'
+conn.execute("SELECT DISTINCT home_or_away FROM player_game_logs WHERE home_or_away IS NOT NULL LIMIT 5").fetchall()
+```
+Real incident: `_load_ha_splits()` stored `'HOME'`/`'AWAY'` keys (from DB) but looked up `'home'`/`'away'` (from pipeline). Condition 1 was silently dead for every player until caught by smoke test — all mods showed `1.0`.
+
 **Why not fewer:** Low-touch players (`usg_pct < 0.12`) are filtered out at the modifier layer. Testing them returns `None` across the board — you learn nothing about whether the signal logic works.
 
 **What to verify in output:**

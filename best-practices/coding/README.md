@@ -273,6 +273,31 @@ def get_matchup_analysis(stat_category):
 
 ---
 
+## Pattern 8 — Normalize String Values at Load Time, Not Lookup Time
+
+**Problem:** DB columns written by external APIs often use different casing or format than the code expects. If you normalize at lookup time, you have to remember it everywhere. Normalize once at load — at the `_load_*()` method — and the rest of the codebase sees a clean value.
+
+```python
+# ❌ DB stores 'HOME'/'AWAY', lookup expects 'home'/'away' — silently returns None everywhere
+ha_stats = ha_data.get(scenario_context['home_or_away'])  # 'home' → never matches 'HOME'
+
+# ✅ Normalize at load time — one place, fixes every downstream call
+for row in rows:
+    ha = row['home_or_away'].lower() if row['home_or_away'] else row['home_or_away']
+    result[pid][ha] = {...}  # stored as 'home'/'away' — matches all lookups
+```
+
+**Rule:** Before writing any dict keyed by a DB string column, verify the exact stored values first:
+```python
+conn.execute("SELECT DISTINCT col FROM table WHERE col IS NOT NULL LIMIT 5").fetchall()
+```
+
+**When this applies:** Any `_load_*()` method that groups by a DB column used as a dict key: `home_or_away`, `style`, `active_style`, `position`, `archetype`, `source`.
+
+**Real incident:** `module_x_scenario._load_ha_splits()` keyed on `'HOME'`/`'AWAY'` (raw from DB). Condition 1 H/A modifier returned `None` for every player. Caught by smoke test — all mods were exactly `1.0`.
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why It's Bad | Fix |
