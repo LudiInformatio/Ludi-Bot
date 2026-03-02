@@ -199,7 +199,33 @@ Contains all 40+ PBP Stats endpoints documented with:
 
 ---
 
-### 5.3 Anti-Patterns to Avoid
+### 5.3 Telegram Native Formatting — Screenshot Analysis (Mar 1, 2026)
+
+**Screenshots reviewed:** `docs/research-screenshots/` (12 screenshots — BucketsToBucks, LandYourBets, PropsMadness, StraightBettin, Outlier, Props.Cash, Ludi header)
+
+**Immediately actionable — pure text changes to `morning_brief.py`, zero new APIs or images:**
+
+| Pattern | Source Screenshot | Telegram Implementation | Data Already In DB |
+|---------|------------------|------------------------|--------------------|
+| `>` blockquote Key Advantage | b2b-matchup-details.png (green highlight box) | Wrap `_get_key_advantage_callout()` output in `>` | ✅ Already built |
+| Monospace projection table | lyb-free-edges.png (5-col edge table) | ` ```Player \| Stat \| Line \| Proj \| Diff``` ` code block replaces prose bet cards | ✅ `bet_recommendations` |
+| L10 team context line | b2b-schedule-feb12.png (game card sub-line) | `L10: 5-5 \| Pts: 110.2 \| Opp: 112.7` under each game header | ✅ `team_betting_trends` |
+| Shot type progress bar | propsmadness-player-detail.png | `Rim ▓▓▓░░ 35% · C&S ▓▓░░░ 20% · Pull-Up ▓▓▓▓░ 45%` | ✅ `player_shot_quality` |
+| O/D rankings inline | b2b-matchup-details.png (ranking matrix) | `Pace #3 \| Paint D #26 \| 3PT D #14` one-liner per game | ✅ `team_dvp_by_archetype` |
+
+**LandYourBets 4-section structure** (lyb-free-edges.png) maps directly to our morning brief sections:
+- NBA PROJECTIONS EDGES → our DIAMOND/BLUE CHIP cards
+- NBA HOT & COLD EDGES → our HOT_STREAK tags (already in `tag_classifier.py`)
+- NBA MATCHUP EDGES → our archetype-vs-scheme callouts
+- NBA INJURY EDGES → our beneficiary block (already in `get_beneficiary_context()`)
+Their format just makes each section a clearly labelled header — we already have the data, not the structure.
+
+**Requires images (defer to `card_engine.py` sprint):**
+- Color-coded O/D ranking badges (green/red cells)
+- Shot zone court diagram (PropsMadness)
+- Full ON/OFF comparison grid (StraightBettin)
+
+### 5.4 Anti-Patterns to Avoid
 
 | Anti-Pattern | Source | Lesson |
 |-------------|--------|--------|

@@ -48,6 +48,8 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
+- [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
+- [ ] **Game notes team totals fix** (`morning_brief.py` ~L758) — `{home_team_total}` / `{away_team_total}` always 'N/A'. Load from `cache/daily_games_{date}.json` instead of `bet_recommendations`. Data exists, just not wired.
 
 _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audit A–F + canonical_games ✅ | Sprint 4 alt lines + team_totals fix ✅ | Sprint 4.5 INVALIDATED (attempt markets don't exist on Odds-API)_
 
