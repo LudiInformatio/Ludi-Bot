@@ -433,6 +433,8 @@ class LudiReporter:
                                 'THE STEAL': 0.25,
                             }
                             units = TIER_UNITS.get(confidence_tier, 0.25)
+                            if confidence_tier not in TIER_UNITS:
+                                print(f"⚠️  Unknown confidence_tier '{confidence_tier}' — defaulting to 0.25u")
 
                             # V5.3: RMSE-based sizing modifier
                             # High projection uncertainty (PTS/PRA) → smaller bet at same tier
@@ -732,7 +734,7 @@ class LudiReporter:
                     'total_units': sum(p['units'] for p in all_props),
                     'pending': len(all_props),  # All bets start as pending
                     'avg_edge': sum(p.get('edge', 0) for p in all_props) / len(all_props) if all_props else 0,
-                    'avg_ev': sum(p.get('ev', 0) for p in all_props) / len(all_props),
+                    'avg_ev': sum(p.get('ev', 0) for p in all_props) / len(all_props) if all_props else 0,
                     'games_analyzed': len(processed_slate)
                 }
                 self.bet_logger.calculate_daily_summary(run_date, summary_data)
@@ -840,7 +842,8 @@ class LudiReporter:
             """, (player_name,))
             rows = [r[0] for r in cursor.fetchall() if r[0] is not None]
             conn.close()
-        except Exception:
+        except Exception as e:
+            print(f"⚠️  Hit rate query failed for {player_name}/{stat_key}: {e}")
             self._hit_rate_cache[cache_key] = (0.5, 0.5)
             return (0.5, 0.5)
 
@@ -968,7 +971,7 @@ class LudiReporter:
         # only meaningful when the underlying edge is also real.
         if tier_score == 3 and edge < 10.0:   # DIAMOND floor: must have ≥10% edge
             tier_score = 2
-        if tier_score == 2 and edge < 7.0:    # BLUE CHIP floor: must have ≥7% edge
+        elif tier_score == 2 and edge < 7.0:  # BLUE CHIP floor: must have ≥7% edge
             tier_score = 1
 
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
