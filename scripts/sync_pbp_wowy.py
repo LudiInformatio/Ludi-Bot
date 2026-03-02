@@ -528,6 +528,12 @@ Examples:
 
         print("="*70)
 
+        # Fail-loud: exit 1 if all writes failed (prevents silent green check)
+        total_attempted = total_success + total_fail
+        if total_attempted > 0 and total_success == 0:
+            print(f"\n❌ FATAL: 0/{total_attempted} players written — likely DB lock or API failure")
+            sys.exit(1)
+
     finally:
         conn.close()
 

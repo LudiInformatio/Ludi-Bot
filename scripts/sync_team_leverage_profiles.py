@@ -372,6 +372,11 @@ def main():
     print(f"  Player records: {total_players}")
     print(f"  Avg pace variance: {pace_variance_avg:.1f}")
 
+    # Fail-loud: exit 1 if all teams failed (prevents silent green check)
+    if len(teams) > 0 and total_teams_success == 0:
+        print(f"\n❌ FATAL: 0/{len(teams)} teams synced — likely DB lock or API failure")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
