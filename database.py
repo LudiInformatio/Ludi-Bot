@@ -637,6 +637,22 @@ class LudiHistorian:
             except Exception:
                 pass  # Column already exists
 
+        # 9b. Referee Game Assignments Crosswalk (Mar 2026)
+        # Keyed by (game_date, home_team) — decoupled from games.game_id format.
+        # Survives BDL fallback, Odds API quota exhaustion, or any game_id change.
+        # Written by build_ref_database() after every scrape (Playwright or Perplexity).
+        # Read by build_ref_database() DB-first check instead of games.referee_crew.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS referee_game_assignments (
+                game_date  TEXT NOT NULL,
+                home_team  TEXT NOT NULL,
+                crew       TEXT NOT NULL,
+                source     TEXT DEFAULT 'nba_official',
+                scraped_at TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (game_date, home_team)
+            )
+        ''')
+
         # 10. Referee Daily Stats Table (Module G v2.0 - Jan 15, 2026)
         c.execute('''
             CREATE TABLE IF NOT EXISTS referee_daily_stats (

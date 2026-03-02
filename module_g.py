@@ -253,23 +253,23 @@ class LudiRefEngine:
         present. Falls back to web scraping when the DB is empty (e.g. manual trigger
         before 9:30 AM, or if referee_sync.yml failed).
         """
-        # DB-FIRST: If referee_sync.yml already ran today, load from games.referee_crew.
-        # Eliminates redundant Playwright scrapes during morning brief + evening lock.
+        # DB-FIRST: Read from referee_game_assignments crosswalk — keyed by (date, home_team),
+        # not game_id. Survives BDL fallback (game rows have NULL referee_crew), Odds API
+        # quota exhaustion, and any game_id format change.
         try:
             import sqlite3
             from datetime import date
             _conn = sqlite3.connect(self.db_path)
             today_str = date.today().strftime('%Y-%m-%d')
             _rows = _conn.execute(
-                "SELECT home_team, referee_crew FROM games "
-                "WHERE date = ? AND referee_crew IS NOT NULL AND referee_crew != ''",
+                "SELECT home_team, crew FROM referee_game_assignments WHERE game_date = ?",
                 (today_str,)
             ).fetchall()
             _conn.close()
             if _rows:
                 for _home, _crew in _rows:
                     self.daily_assignments[_home] = [r.strip() for r in _crew.split(',')]
-                print(f"   [ZEBRAS] ✅ Loaded {len(_rows)} ref crew(s) from DB (skip scrape)")
+                print(f"   [ZEBRAS] ✅ Loaded {len(_rows)} ref crew(s) from crosswalk (skip scrape)")
                 return self.daily_assignments
         except Exception as _e:
             print(f"   [ZEBRAS] DB-first check failed ({_e}), falling back to scraper")
@@ -409,6 +409,24 @@ class LudiRefEngine:
             
             print(f"✅ Success. Found assignments for {count} games.")
 
+            # Write to crosswalk table — decoupled from game_id format
+            if count > 0:
+                try:
+                    _cw_today = datetime.now().strftime('%Y-%m-%d')
+                    _cw_conn = sqlite3.connect(self.db_path)
+                    for _home, _crew in self.daily_assignments.items():
+                        _cw_conn.execute(
+                            """INSERT OR REPLACE INTO referee_game_assignments
+                               (game_date, home_team, crew, source)
+                               VALUES (?, ?, ?, 'nba_official')""",
+                            (_cw_today, _home, ', '.join(_crew))
+                        )
+                    _cw_conn.commit()
+                    _cw_conn.close()
+                    print(f"   [ZEBRAS] 📋 Crosswalk updated: {count} crew(s) written")
+                except Exception as _cw_e:
+                    print(f"   [ZEBRAS] ⚠️ Crosswalk write failed ({_cw_e})")
+
             # Perplexity bulk fallback — single query instead of N per-game queries
             if count == 0 and getattr(config, 'PERPLEXITY_API_KEY', None):
                 try:
@@ -447,6 +465,12 @@ class LudiRefEngine:
                                     conn.execute(
                                         "UPDATE games SET referee_crew = ? WHERE game_id = ?",
                                         (', '.join(matched), game_id)
+                                    )
+                                    conn.execute(
+                                        """INSERT OR REPLACE INTO referee_game_assignments
+                                           (game_date, home_team, crew, source)
+                                           VALUES (?, ?, ?, 'perplexity')""",
+                                        (today_str, home_team, ', '.join(matched))
                                     )
                                     print(f"   [ZEBRAS] 🔍 Perplexity crew ({home_team}): {', '.join(matched)}")
                                     perp_count += 1

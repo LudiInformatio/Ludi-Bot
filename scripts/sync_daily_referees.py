@@ -287,14 +287,27 @@ class DailyRefereeSync:
         cursor = conn.cursor()
         
         cursor.execute("""
-            UPDATE games 
-            SET referee_crew = ? 
+            UPDATE games
+            SET referee_crew = ?
             WHERE game_id = ?
         """, (crew_string, game_id))
-        
+
+        # Also write to crosswalk — keyed by (date, home_team), not game_id
+        # Ensures BDL fallback game rows can find ref data even with NULL referee_crew
+        cw_row = conn.execute(
+            "SELECT date, home_team FROM games WHERE game_id = ?", (game_id,)
+        ).fetchone()
+        if cw_row:
+            conn.execute(
+                """INSERT OR REPLACE INTO referee_game_assignments
+                   (game_date, home_team, crew, source)
+                   VALUES (?, ?, ?, 'nba_official')""",
+                (cw_row[0], cw_row[1], crew_string)
+            )
+
         conn.commit()
         conn.close()
-        
+
         print(f"✅ Updated game {game_id}: {crew_string}")
     
     def register_new_referee(self, ref_name: str, badge_number: int = None, dry_run=False):
