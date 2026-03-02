@@ -83,7 +83,7 @@ def run_automated_mode():
             player_team = row[0]
             cursor.execute("""
                 SELECT home_team, away_team FROM games
-                WHERE date(game_date) = date('now')
+                WHERE date(date) = date('now')
                   AND (home_team = ? OR away_team = ?)
                 LIMIT 1
             """, (player_team, player_team))

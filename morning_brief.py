@@ -505,15 +505,24 @@ class MorningBriefEngine:
             if not game_data.get('props'): continue
 
             # Skip games that tipped off >45 min ago (e.g. 5pm game at 6pm evening lock)
-            _start = game_data.get('start_time')
-            if _start:
+            _start_raw = game_data.get('start_time')
+            if _start_raw:
                 import pytz as _pytz_skip
                 _est_now = datetime.datetime.now(_pytz_skip.timezone('US/Eastern'))
-                _start_aware = _start if _start.tzinfo else _start.replace(
-                    tzinfo=_pytz_skip.timezone('US/Eastern'))
-                if _start_aware < _est_now - datetime.timedelta(minutes=45):
-                    print(f"   ⏭️  Skipping {game_data.get('matchup','?')} — tipped off >45min ago")
-                    continue
+                # start_time may be a string (from JSON cache) or datetime (from live fetch)
+                if isinstance(_start_raw, str):
+                    try:
+                        _start = datetime.datetime.fromisoformat(_start_raw)
+                    except ValueError:
+                        _start = None
+                else:
+                    _start = _start_raw
+                if _start:
+                    _start_aware = _start if _start.tzinfo else _start.replace(
+                        tzinfo=_pytz_skip.timezone('US/Eastern'))
+                    if _start_aware < _est_now - datetime.timedelta(minutes=45):
+                        print(f"   ⏭️  Skipping {game_data.get('matchup','?')} — tipped off >45min ago")
+                        continue
             
             print(f"   > Analyzing {game_data['matchup']}...")
             
