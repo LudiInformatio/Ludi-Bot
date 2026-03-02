@@ -16,6 +16,7 @@ class BetSettler:
         self.db_path = db_path
         self.logger = get_bet_logger(db_path=db_path)
         self.conn = sqlite3.connect(db_path)
+        self.conn.execute("PRAGMA busy_timeout = 30000")
         self.resolver = PlayerIDResolver(db_path=db_path)
 
     def run_settlement(self, target_date=None):

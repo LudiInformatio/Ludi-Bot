@@ -201,7 +201,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 6:35 PM + 8:25 PM | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM all games; 8:25 PM west coast 9 PM+ only) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
 | Manual only | `capture_closing_lines.yml` | CLV backfill re-runs (historical, on-demand; overnight handled by `db_backup.yml`) |
-| Sundays | `ghost_protocol_sync.yml` | NBA.com tracking data (6hr sync) |
+| Sundays + Thursdays | `ghost_protocol_sync.yml` | NBA.com tracking data (Sunday: 7-day sweep, Thursday: gap-fill only) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
 | 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
@@ -232,6 +232,8 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 - `canonical_games` table (902 rows) is the single source of truth for game identity — use for any JOIN on `(date, home_team, away_team)` (Pattern-B) to prevent 3× row inflation. The `games` table has 3 duplicate game_id formats per game (NBA official / shortened / date-team). Call `from database import sync_canonical_games` and `sync_canonical_games(conn)` after any INSERT INTO games. Never use `JOIN games g ON g.date = ... AND (g.home_team = ... OR g.away_team = ...)` — use `canonical_games` instead.
 - **Odds-API `team_totals`** — NOT supported on the bulk `/v4/sports/basketball_nba/odds` endpoint (returns 422, drops entire slate). Fetch separately via `/v4/sports/{sport}/events/{event_id}/odds?markets=team_totals`. Per-event format: `outcome['description']=team name`, `outcome['name']=Over/Under`. Cost: 1 credit/game.
 - **`sharp_book` direction key** — `module_a.py` writes `sharp_book_over` and `sharp_book_under` as separate keys per stat in `sportsbook_props`. Using `v.get('sharp_book')` (no direction suffix) always returns `None`. When passing sharp book to `module_f.py`, always use the direction-specific key: `v.get('sharp_book_over')` / `v.get('sharp_book_under')`.
+- **`games` table column is `date`** — NOT `game_date`. `bet_recommendations` uses `game_date`, but `games` uses `date`. Querying `games.game_date` returns "no such column". Common mistake in new scripts.
+- **`start_time` from JSON cache is a string** — `save_games_cache()` serializes `datetime` → string. After `load_games_cache()`, always parse with `datetime.fromisoformat(start_time)` before accessing `.tzinfo` or comparing with `datetime.now()`.
 - **ROADMAP.md Template Contract** — When any agent updates `ROADMAP.md`, preserve these patterns so `utils/pm_bot.py` parses correctly:
   - `**Active Work:**` — short phrase(s) separated by ` + `. First segment = current sprint focus (shown in break messages).
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).

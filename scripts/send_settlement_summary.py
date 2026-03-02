@@ -39,6 +39,7 @@ def _calc_stats(row):
 def get_settlement_summary():
     """Query yesterday's settled bets and season-to-date totals."""
     conn = sqlite3.connect('ludi.db')
+    conn.execute("PRAGMA busy_timeout = 30000")
     c = conn.cursor()
 
     yesterday = get_est_yesterday()

@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 2, 2026 — 10:37 AM EST
+**Last Updated:** Monday, March 2, 2026 — 12:03 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Referee intelligence v2 (`sync_external_intelligence.py`) — OddsShark fouls + header-based scraping + 42 duplicate cleanup + Pattern 11 → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` + Perplexity upgrade (~Mar 10)
-**Completed:** GH Actions zombie kill + WOWY busy_timeout + fail-loud error handling ✅ + Team scheme cache (`update_team_scheme_cache.py`) — game-count windows (30g/15g/7g) replacing calendar-day 60d/21d/7d ✅ + Referee intel v2 (`sync_external_intelligence.py`) — OddsShark Home/Away Fouls, header-based scraping, name normalization, 42 duplicate cleanup, Pattern 11 ✅
+**Active Work:** Ghost Protocol gap-fill (`sync_browser_backfill.py`) — `--gap-fill` + Thursday cron + pagination retry + settlement busy_timeout → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` + Perplexity upgrade (~Mar 10)
+**Completed:** Pipeline `sharp_consensus` NameError fix (`module_f.py`) + morning brief cache parse (`morning_brief.py`) + PBP Stats fail-loud (3 scripts) ✅ + Referee intel v2 (`sync_external_intelligence.py`) — OddsShark fouls + header-based scraping + duplicate cleanup ✅ + Ghost Protocol gap-fill (`sync_browser_backfill.py`) — `find_gap_dates()` + Thursday cron + settlement busy_timeout ✅
 
 > **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
 

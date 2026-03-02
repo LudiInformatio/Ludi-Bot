@@ -51,7 +51,9 @@ class BetLogger:
         """Create a new database connection (or return persistent connection for :memory:)."""
         if self._persistent_conn:
             return self._persistent_conn
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout = 30000")
+        return conn
 
     def _initialize_schema(self):
         """Create bet tracking tables if they don't exist."""

@@ -84,6 +84,13 @@ def close_popups(page):
             "button[class*='close']",
             "div[class*='close']",
             ".p-close", # Common in some frameworks
+            # NBA.com email signup / newsletter popup
+            "[class*='newsletter'] button[class*='close']",
+            "[class*='Newsletter'] button[class*='close']",
+            "[class*='email-signup'] button[class*='close']",
+            "[data-testid='modal-close']",
+            "[class*='modal-overlay'] button[class*='close']",
+            "button[class*='modal-close']",
             # OddsShark Specific
             ".os-react-modal-close",
             "div[class*='os-react-modal'] button",

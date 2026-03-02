@@ -188,13 +188,18 @@ def get_db_connection():
     return conn
 
 def handle_pagination(page, category_label=None):
-    """Ensure all rows are visible by selecting 'All' in pagination."""
+    """Ensure all rows are visible by selecting 'All' in pagination.
+    Retries up to 3 times when dropdown is disabled (race condition during table load)."""
     try:
         close_popups(page)
 
         select_selector = ".Pagination_pageDropdown__KgjBU select"
-        if page.is_visible(select_selector):
-            # Check if dropdown is disabled before attempting to select
+        max_retries = 3
+
+        for attempt in range(max_retries):
+            if not page.is_visible(select_selector):
+                break  # No pagination element at all (very small table)
+
             select_element = page.locator(select_selector)
             is_disabled = select_element.get_attribute("disabled")
 
@@ -208,9 +213,15 @@ def handle_pagination(page, category_label=None):
                 wait_ms = 4000 if category_label in slow_categories else 2000
                 page.wait_for_timeout(wait_ms)
                 print(f"      ✓ Pagination set to 'All' (full dataset)")
+                return
             else:
-                # Dropdown is disabled - skip gracefully
-                print(f"      ⚠️  Pagination disabled (low-data day, using default view)")
+                # Dropdown disabled — may be temporarily disabled during table load
+                if attempt < max_retries - 1:
+                    print(f"      ⏳ Pagination disabled, retry {attempt+1}/{max_retries}...")
+                    close_popups(page)
+                    page.wait_for_timeout(3000)
+                else:
+                    print(f"      ⚠️  Pagination disabled after {max_retries} retries (using default view)")
     except Exception as e:
         print(f"      ⚠️  Pagination Error (Non-Critical): {e}")
 
@@ -740,18 +751,79 @@ def process_closest_defender(page, date_str, nba_date):
 
 
 # ============================================================
+# SMART GAP-FILL DETECTION
+# ============================================================
+
+def find_gap_dates(lookback_days=14):
+    """Query DB for dates with missing or incomplete tracking data.
+    Compares canonical_games (truth) vs player_game_tracking (actual).
+    Returns list of date strings (YYYY-MM-DD) needing re-scrape."""
+    conn = get_db_connection()
+    rows = conn.execute("""
+        SELECT
+            cg.date AS game_date,
+            COUNT(DISTINCT cg.canonical_game_id) AS games,
+            COALESCE(t.total_rows, 0) AS tracking_rows,
+            COALESCE(t.drives_pct, 0) AS drives_pct,
+            COALESCE(t.speed_pct, 0) AS speed_pct,
+            COALESCE(t.cs_pct, 0) AS cs_pct
+        FROM canonical_games cg
+        LEFT JOIN (
+            SELECT game_date,
+                   COUNT(*) AS total_rows,
+                   ROUND(SUM(CASE WHEN drives_fga > 0 OR drives_fgm > 0 THEN 1.0 ELSE 0 END) / COUNT(*) * 100, 0) AS drives_pct,
+                   ROUND(SUM(CASE WHEN avg_speed_off > 0 THEN 1.0 ELSE 0 END) / COUNT(*) * 100, 0) AS speed_pct,
+                   ROUND(SUM(CASE WHEN catch_shoot_fga > 0 THEN 1.0 ELSE 0 END) / COUNT(*) * 100, 0) AS cs_pct
+            FROM player_game_tracking
+            GROUP BY game_date
+        ) t ON t.game_date = cg.date
+        WHERE cg.date >= date('now', ? || ' days')
+          AND cg.date < date('now')
+        GROUP BY cg.date
+        ORDER BY cg.date
+    """, (f'-{lookback_days}',)).fetchall()
+    conn.close()
+
+    gap_dates = []
+    for row in rows:
+        game_date, games, tracking_rows, drives_pct, speed_pct, cs_pct = row
+        # Thresholds based on observed healthy baselines:
+        # Drives ~65%, Speed ~99%, C&S ~80% on healthy dates
+        if tracking_rows == 0:
+            gap_dates.append((game_date, 'NO_DATA'))
+        elif drives_pct < 40:
+            gap_dates.append((game_date, f'LOW_DRIVES({int(drives_pct)}%)'))
+        elif speed_pct < 70:
+            gap_dates.append((game_date, f'LOW_SPEED({int(speed_pct)}%)'))
+        elif cs_pct < 50:
+            gap_dates.append((game_date, f'LOW_CS({int(cs_pct)}%)'))
+
+    return gap_dates
+
+
+# ============================================================
 # MAIN GHOST PROTOCOL LOOP
 # ============================================================
 
-def run_ghost_protocol(start_date, end_date, headless=False, closest_only=False, skip_advanced=False):
-    print("\n" + "="*50)
-    print(f"👻 LUDI GHOST PROTOCOL v2.1 | HUMAN STEALTH MODE")
-    print(f"📅 Range: {start_date} -> {end_date}")
-    print(f"🖥️  Mode: {'Headless' if headless else 'Visible Browser'}")
-    print("="*50)
-
-    delta = end_date - start_date
-    date_list = [start_date + timedelta(days=i) for i in range(delta.days + 1)]
+def run_ghost_protocol(start_date=None, end_date=None, headless=False, closest_only=False,
+                       skip_advanced=False, custom_date_list=None):
+    """Run Ghost Protocol scraping.
+    Either provide start_date+end_date for a range, or custom_date_list for specific dates."""
+    if custom_date_list:
+        date_list = custom_date_list
+        print("\n" + "="*50)
+        print(f"👻 LUDI GHOST PROTOCOL v2.1 | SMART GAP-FILL MODE")
+        print(f"📅 Dates: {[d.strftime('%Y-%m-%d') for d in date_list]}")
+        print(f"🖥️  Mode: {'Headless' if headless else 'Visible Browser'}")
+        print("="*50)
+    else:
+        print("\n" + "="*50)
+        print(f"👻 LUDI GHOST PROTOCOL v2.1 | HUMAN STEALTH MODE")
+        print(f"📅 Range: {start_date} -> {end_date}")
+        print(f"🖥️  Mode: {'Headless' if headless else 'Visible Browser'}")
+        print("="*50)
+        delta = end_date - start_date
+        date_list = [start_date + timedelta(days=i) for i in range(delta.days + 1)]
 
     with sync_playwright() as p:
         # Browser Launch Args for Stealth
@@ -861,19 +933,34 @@ if __name__ == "__main__":
     parser.add_argument("--closest-only", action="store_true", help="Only sync closest defender data")
     parser.add_argument("--skip-advanced", action="store_true",
                         help="Skip player_game_advanced writes (BDL V2 now handles this via sync_bdl_advanced_stats.py)")
+    parser.add_argument("--gap-fill", action="store_true",
+                        help="Smart backfill: query DB for dates with incomplete tracking data (last 14 days)")
     args = parser.parse_args()
 
-    end = datetime.now()
-    if args.end_date:
-        end = datetime.strptime(args.end_date, "%Y-%m-%d")
-    
-    start = end
-    if args.start_date:
-        start = datetime.strptime(args.start_date, "%Y-%m-%d")
-    elif args.days:
-        start = end - timedelta(days=args.days)
-        if args.days == 1:
-            end = start
+    if args.gap_fill:
+        # Smart gap-fill mode: find dates with missing/incomplete data
+        gap_dates = find_gap_dates(lookback_days=14)
+        if not gap_dates:
+            print("✅ No tracking gaps found in last 14 days — nothing to backfill.")
+            sys.exit(0)
+        print(f"🔍 Found {len(gap_dates)} dates with tracking gaps:")
+        for d, reason in gap_dates:
+            print(f"   📅 {d} — {reason}")
+        custom_dates = [datetime.strptime(d, "%Y-%m-%d") for d, _ in gap_dates]
+        run_ghost_protocol(headless=args.headless, closest_only=args.closest_only,
+                           skip_advanced=args.skip_advanced, custom_date_list=custom_dates)
+    else:
+        end = datetime.now() - timedelta(days=1)
+        if args.end_date:
+            end = datetime.strptime(args.end_date, "%Y-%m-%d")
 
-    run_ghost_protocol(start, end, headless=args.headless, closest_only=args.closest_only,
-                       skip_advanced=args.skip_advanced)
+        start = end
+        if args.start_date:
+            start = datetime.strptime(args.start_date, "%Y-%m-%d")
+        elif args.days:
+            start = end - timedelta(days=args.days)
+            if args.days == 1:
+                end = start
+
+        run_ghost_protocol(start, end, headless=args.headless, closest_only=args.closest_only,
+                           skip_advanced=args.skip_advanced)

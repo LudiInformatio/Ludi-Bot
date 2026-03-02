@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-03-02 — Morning Briefing: start_time String AttributeError (Cache Deserialization)
+
+**Symptom:** `daily_briefing.yml` crashes with `AttributeError: 'str' object has no attribute 'tzinfo'` at `morning_brief.py` line 512. Ops Hub issue #27.
+
+**Root cause:** `save_games_cache()` serializes `datetime` → JSON string. `load_games_cache()` reads it back as string. Line 512 assumed `start_time` was always a `datetime` object (`_start.tzinfo`). First scheduled run to hit cache path since the odds cache feature shipped (Mar 1).
+
+**Fix:** `morning_brief.py` L508-516 — `isinstance(str)` check + `datetime.fromisoformat()` parse before accessing `.tzinfo`. Handles both live (datetime) and cache (string) paths.
+
+**Also fixed:** `scripts/news_agent.py` L86 — `games.game_date` → `games.date` (column doesn't exist; correct column is `date`).
+
+---
+
+## 2026-03-02 — Pipeline NameError: sharp_consensus Not Defined
+
+**Symptom:** `daily_simulation_pipeline.yml` crashes with `NameError: name 'sharp_consensus' is not defined` at `module_f.py` line 762.
+
+**Root cause:** Agent cleanup Fix C3 (Mar 1) deleted dead assignment `sharp_consensus = confirmation_score` but left 2 dict references at lines 709 and 762 that used the variable.
+
+**Fix:** `module_f.py` — compute `sharp_consensus` in `generate_report()` using `self._sharp_consensus()` with direction-specific sharp/actual odds.
+
+---
+
+## 2026-03-02 — PBP Stats 3-Script Silent Failure (Fail-Loud Added)
+
+**Symptom:** `pbp_stats_sync.yml` exits 0 (green check) but all 3 scripts write 0 rows to DB. Same zombie sqlite3 lock as WOWY sync.
+
+**Fix:** Added `sys.exit(1)` when `total_success == 0 && total_attempted > 0` to: `sync_pbp_wowy.py`, `sync_four_factor_wowy.py`, `sync_team_leverage_profiles.py`.
+
+---
+
 ## 2026-03-02 — WOWY Sync Silent Failure: 345 Rows Scraped, 0 Written
 
 **Symptom:** `wowy_sync.yml` exits 0 (green check) but 0 lineup records actually persisted. Logs show 345 rows scraped by Ghost Protocol over 31 minutes, then every INSERT fails with `database is locked`.

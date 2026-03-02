@@ -2,8 +2,10 @@ name: Ghost Protocol Tracking Sync
 
 on:
   schedule:
-    # Sunday 11:00 UTC (6 AM EST) — weekly catch-up for data not covered by BDL API
+    # Sunday 11:00 UTC (6 AM EST) — weekly full sweep (last 7 days)
     - cron: '0 11 * * 0'
+    # Thursday 11:00 UTC (6 AM EST) — smart gap-fill (re-scrape incomplete dates)
+    - cron: '0 11 * * 4'
   workflow_dispatch:
 
 permissions:
@@ -40,16 +42,24 @@ jobs:
       - name: Install Playwright browsers
         run: python3 -m playwright install chromium
 
-      - name: Run Ghost Protocol sync (last 7 days)
+      - name: Run Ghost Protocol sync
         # Phase 8.21 demotion: --skip-advanced skips player_game_advanced writes
         # (BDL V2 advanced stats now via sync_bdl_advanced_stats.py in data_sync.yml)
         # Ghost Protocol still handles: drives, catch_and_shoot, pull_up, closest_defender, clutch
+        # Sunday: full 7-day sweep | Thursday: smart gap-fill (only incomplete dates)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
         run: |
           export PYTHONPATH=$PWD
-          caffeinate -i python3 scripts/sync_browser_backfill.py --days 7 --skip-advanced
+          DAY_OF_WEEK=$(date +%u)
+          if [ "$DAY_OF_WEEK" = "4" ]; then
+            echo "📋 Thursday — smart gap-fill mode"
+            caffeinate -i python3 scripts/sync_browser_backfill.py --gap-fill --skip-advanced
+          else
+            echo "📋 Sunday — full weekly sweep"
+            caffeinate -i python3 scripts/sync_browser_backfill.py --days 7 --skip-advanced
+          fi
 
       # Synergy playtypes (isolation PPP, transition, handoff, cut, etc.) now via BDL API:
       # sync_bdl_season_averages.py --category playtype runs weekly in weekly_validation.yml
