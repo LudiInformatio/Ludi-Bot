@@ -69,6 +69,31 @@ _STAT_RMSE = {
     'pa':  4.80,  'pr': 4.96,  'pra': 5.51,
 }
 #
+# --- STAT EDGE MINIMUMS (V5.4) ---
+STAT_EDGE_MINIMUMS = {
+    'blk':   3.0,   # Blocks UNDER — structural edge, even 3% wins 70.7%
+    'blocks': 3.0,
+    'pts':   {'over': 8.0, 'under': 7.0},   # 19.5% overconfident both sides
+    'reb':   {'over': 9.0, 'under': 6.0},   # REB OVER degrading (39.7% WR)
+    'ast':   6.0,                             # 13% overconfident
+    'pra':   {'over': 999.0, 'under': 6.0},  # PRA OVER = skip (STRUCTURAL_LOSERS covers this)
+    'pa':    {'over': 999.0, 'under': 6.0},
+}
+DEFAULT_EDGE_MIN = 5.0
+
+# --- STRUCTURAL LOSERS (V5.4) ---
+# Stat+direction combos with no recoverable edge — skip entirely before threshold check.
+STRUCTURAL_LOSERS = {
+    ('pra', 'over'),   # 25.0% WR — F grade
+    ('pa',  'over'),   # 36.9% WR — F grade
+}
+
+def _get_stat_edge_min(stat_key, direction):
+    floor = STAT_EDGE_MINIMUMS.get(stat_key.lower(), DEFAULT_EDGE_MIN)
+    if isinstance(floor, dict):
+        return floor.get(direction.lower(), DEFAULT_EDGE_MIN)
+    return floor
+
 # --- CANONICAL STAT CATEGORY MAP (Feb 25, 2026) ────────────────────────────
 # All prop market names normalize to these canonical keys at write time.
 # This prevents BLOCKS vs BLK split in analytics (same prop, two names across
@@ -379,8 +404,13 @@ class LudiReporter:
                         # Store fair probability for reporting
                         fair_prob = get_fair_probability(odds_over, odds_under, bet_direction)
 
-                        # --- 2. THE SHARP FILTER (5% Minimum Edge) ---
-                        if edge >= 5.0:
+                        # --- STRUCTURAL LOSERS FILTER ---
+                        if (stat_key.lower(), bet_direction.lower()) in STRUCTURAL_LOSERS:
+                            continue
+
+                        # --- 2. THE SHARP FILTER (Stat-Specific Minimum Edge) ---
+                        min_edge = _get_stat_edge_min(stat_key, bet_direction)
+                        if edge >= min_edge:
                             # V4.6: Use real model probability (removed 0.51-0.75 clamp)
                             win_prob = model_prob
 
@@ -413,7 +443,9 @@ class LudiReporter:
                                 ev_flag = "📊 EXCEPTIONAL"   # 15-25% → strong edge
 
                             # V5.2: Composite confidence tier (edge + gold combos)
-                            # C1: Returns (tier_name, confirmation_score) tuple
+                            # Prefer stat-specific streak from Module B hit_rates_by_market
+                            _hrm = p.get('hit_rates_by_market') or {}
+                            _stat_hrm = _hrm.get(stat_key, {}) if isinstance(_hrm, dict) else {}
                             confidence_tier, confirmation_score = self._calculate_confidence_tier(
                                 edge=edge,
                                 archetype=p.get('archetype', ''),
@@ -422,15 +454,32 @@ class LudiReporter:
                                 model_prob=model_prob,
                                 player_name=p['name'],
                                 line=line,
-                                hit_rates_by_market=p.get('hit_rates_by_market'),  # From Module B
+                                hit_rates_by_market=p.get('hit_rates_by_market'),
+                                streak_score=_stat_hrm.get('streak_score', p.get('streak_score', 0.5)),
+                                matchup_modifier=p.get('scheme_modifier', 0.0),
+                                dvp_rank=p.get('dvp_rank', None),
+                                odds_over=odds_over,
+                                odds_under=odds_under,
+                                sharp_odds_over=p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_odds_over') if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None,
+                                sharp_odds_under=p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_odds_under') if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None,
+                                wowy_confidence=p.get('wowy_confidence'),
+                                crew_bias=p.get('crew_bias', {}).get('label') if isinstance(p.get('crew_bias'), dict) else None
                             )
+                            # Let's save sharp values for DB logging
+                            sharp_odds_over_at_bet = p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_odds_over') if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None
+                            sharp_odds_under_at_bet = p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_odds_under') if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None
+                            sharp_book_at_bet = (
+                                p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_book_over')
+                                if bet_direction == 'over' else
+                                p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_book_under')
+                            ) if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None
 
                             # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
                             TIER_UNITS = {
-                                'DIAMOND': 1.0,
-                                'BLUE CHIP': 0.75,
-                                'CORE ASSET': 0.5,
-                                'THE STEAL': 0.25,
+                                'DIAMOND': 1.25,
+                                'BLUE CHIP': 1.00,
+                                'CORE ASSET': 0.65,
+                                'THE STEAL': 0.35,
                             }
                             units = TIER_UNITS.get(confidence_tier, 0.25)
                             if confidence_tier not in TIER_UNITS:
@@ -654,6 +703,10 @@ class LudiReporter:
                                         'units': units,
                                         'confidence_tier': confidence_tier,
                                         'confirmation_score': round(confirmation_score, 3),  # C1
+                                        'sharp_odds_over_at_bet': sharp_odds_over_at_bet,
+                                        'sharp_odds_under_at_bet': sharp_odds_under_at_bet,
+                                        'sharp_book_at_bet': sharp_book_at_bet,
+                                        'sharp_consensus': round(sharp_consensus, 3),
                                         'note': " | ".join(note_elements),
                                         'tags': tags_formatted,  # Week 2, Days 3-4: Tag classification
                                         'edge_type': _classify_edge_type(  # Phase 8.24: Edge driver label
@@ -703,6 +756,10 @@ class LudiReporter:
                                 "source_quality": source_quality,
                                 "vendor_count": vendor_count,
                                 "scenario": p.get('scenario', 'BASE'),
+                                "sharp_odds_over_at_bet": sharp_odds_over_at_bet,
+                                "sharp_odds_under_at_bet": sharp_odds_under_at_bet,
+                                "sharp_book_at_bet": sharp_book_at_bet,
+                                "sharp_consensus": round(sharp_consensus, 3),
                             })
 
                 all_props.extend(player_props)
@@ -847,26 +904,76 @@ class LudiReporter:
             self._hit_rate_cache[cache_key] = (0.5, 0.5)
             return (0.5, 0.5)
 
-        if not rows:
+        MIN_SAMPLE = 3
+        if len(rows) < MIN_SAMPLE:
             self._hit_rate_cache[cache_key] = (0.5, 0.5)
             return (0.5, 0.5)
 
         def _hit(val):
-            """True if this game beats the line in the bet direction."""
             return (val > line) if direction == 'over' else (val <= line)
 
         l10_hits = sum(1 for v in rows if _hit(v))
         l10_hr = l10_hits / len(rows)
         l5_rows = rows[:5]
-        l5_hr = sum(1 for v in l5_rows if _hit(v)) / len(l5_rows) if l5_rows else l10_hr
+        if len(l5_rows) < MIN_SAMPLE:
+            l5_hr = l10_hr
+        else:
+            l5_hr = sum(1 for v in l5_rows if _hit(v)) / len(l5_rows)
 
         result = (round(l5_hr, 3), round(l10_hr, 3))
         self._hit_rate_cache[cache_key] = result
         return result
 
+    def _sharp_consensus(self, nc_odds, sharp_odds, bet_direction):
+        if not nc_odds or not sharp_odds: return 0.50
+        nc_dec    = 1 + 100/abs(nc_odds)    if nc_odds > 0 else 1 + abs(nc_odds)/100
+        sharp_dec = 1 + 100/abs(sharp_odds) if sharp_odds > 0 else 1 + abs(sharp_odds)/100
+        delta = sharp_dec - nc_dec
+        if   delta >= 0.10: return 0.90
+        elif delta >= 0.05: return 0.75
+        elif delta >= 0.00: return 0.60
+        elif delta >= -0.05: return 0.40
+        elif delta >= -0.10: return 0.25
+        else:                return 0.10
+
+    def _historical_clv_signal(self, stat_key, direction, player_name):
+        try:
+            import sqlite3 as _sqlite3
+            conn = _sqlite3.connect(config.DB_PATH)
+            conn.row_factory = _sqlite3.Row
+            stat_sql = '''
+                SELECT AVG(clv_cents) as avg_clv, COUNT(*) as n
+                FROM bet_recommendations
+                WHERE stat_category = ? AND bet_side = ?
+                  AND clv_cents IS NOT NULL
+                  AND closing_book IN ('pinnacle','novig','prophetx')
+                  AND outcome IN ('WIN','LOSS')
+            '''
+            player_sql = stat_sql + " AND player_name = ?"
+            stat_row   = conn.execute(stat_sql, [stat_key, direction]).fetchone()
+            player_row = conn.execute(player_sql, [stat_key, direction, player_name]).fetchone()
+            conn.close()
+            stat_clv   = stat_row['avg_clv']   if stat_row   and stat_row['n']   >= 50 else None
+            player_clv = player_row['avg_clv'] if player_row and player_row['n'] >= 10 else None
+            if   player_clv is not None and stat_clv is not None:
+                avg_clv = 0.60 * player_clv + 0.40 * stat_clv
+            elif player_clv is not None:
+                avg_clv = player_clv
+            elif stat_clv is not None:
+                avg_clv = stat_clv
+            else:
+                return 0.50
+            return max(0.0, min(1.0, 0.50 + (avg_clv / 16.0)))
+        except Exception:
+            return 0.50
+
     def _calculate_confidence_tier(self, edge, archetype='', stat_key='', bet_direction='',
                                    model_prob=0.5, player_name='', line=0.0,
-                                   hit_rates_by_market=None):
+                                   hit_rates_by_market=None,
+                                   streak_score=0.5, matchup_modifier=0.0, dvp_rank=None,
+                                   odds_over=-110, odds_under=-110,
+                                   sharp_odds_over=None, sharp_odds_under=None,
+                                   wowy_confidence=None, crew_bias=None):
         """
         Composite confidence tier using edge + historical performance signals.
 
@@ -896,71 +1003,89 @@ class LudiReporter:
         # Phase 7.9.5: Removed GENERALIST and WEAK_LINK penalties
         # GENERALIST = neutral (no strong playtype signal, but not a bad bet)
         # WEAK_LINK = moved to defensive_tag column (not a primary archetype)
-        negative_archetypes = set()  # Empty set - no archetype penalties
+        # negative_archetypes = set()  # Reserved for future negative modifiers
         if archetype in positive_archetypes:
             tier_score += 1
-        elif archetype in negative_archetypes:
-            tier_score -= 1
 
         # --- Stat-direction modifier (gold combos from backtest) ---
         GOLD_COMBOS = {
-            'BLK_UNDER',   # +122.6u, 71.9% WR
-            '3PM_UNDER',   # +151.1u, 68.1% WR
-            'TOV_UNDER',   # +79.8u, 71.1% WR
-            'STL_UNDER',   # +114.5u, 53.4% WR
+            'BLK_UNDER':  1,    # +1 tier — A+ structural edge (70.7% WR)
+            'TOV_UNDER':  1,    # +1 tier — B solid (72.2% WR)
+            '3PM_UNDER':  1,    # +1 tier — B reliable (61.4% WR)
+            'STL_UNDER':  0,    # Demote to 0 — C grade (54.8% WR), better handled by calibration
         }
         STAT_SHORT = {'steals': 'stl', 'blocks': 'blk', 'turnovers': 'tov', 'defensive_rebounds': 'dreb', 'threes': '3pm'}
         norm_key = STAT_SHORT.get(stat_key.lower(), stat_key.lower())
         stat_dir = f"{norm_key}_{bet_direction}".upper()
-        if stat_dir in GOLD_COMBOS:
-            tier_score += 1
+        tier_score += GOLD_COMBOS.get(stat_dir, 0)
 
-        # --- C1: Hit rate confirmation modifier ---
-        # confirmation_score blends recent form vs specific line with model probability.
-        # L5 (0.40) + L10 (0.35) + model_prob (0.25) — heavier weight on recent history.
-        # +1 tier when score >= 0.65 (hot player AND model sees structural edge).
-        # -1 tier when score <= 0.35 (cold player fighting history despite model edge).
-        confirmation_score = 0.5  # Neutral default if no player/line data provided
+        # --- PART 2: Prop Confidence Score (8 signals) ---
+        prop_confidence_score = 0.5  # Neutral default if no player/line data provided
+        
+        # 1. hit_rate_signal (0.20)
+        hit_rate_signal = 0.5
         if player_name and line > 0:
-            # Prefer Module B pre-computed data (zero DB cost)
-            l5_hr, l10_hr = 0.5, 0.5  # Default fallback
+            l5_hr, l10_hr = 0.5, 0.5
             stat_key_norm = stat_key.lower()
             hr = (hit_rates_by_market or {}).get(stat_key_norm)
             if hr:
-                # Use pre-computed hit rates from Module B
                 direction_key = f'{bet_direction}_l5'
                 l5_hr = hr.get(direction_key, 0.5)
                 l10_hr = hr.get(direction_key.replace('_l5', '_l10'), 0.5)
             else:
-                # Fallback: inline DB query (fires only if Module B enrichment missed this player)
                 l5_hr, l10_hr = self._get_hit_rates_vs_line(player_name, stat_key, line, bet_direction)
-            confirmation_score = round(0.40 * l5_hr + 0.35 * l10_hr + 0.25 * model_prob, 3)
+            hit_rate_signal = 0.60 * l5_hr + 0.40 * l10_hr
 
-            # CR2: archetype_in_top3 signal boost (player_type_profiles table)
-            # When a player's offensive archetype aligns with their top-3 Synergy playtypes,
-            # the archetype label is validated by actual play patterns — stronger classification
-            # confidence → small bump to confirmation_score (+0.05).
-            # Only queries DB when archetype is already in positive_archetypes (avoids
-            # wasted DB round-trips for GENERALIST or neutral archetypes).
-            if archetype in positive_archetypes and player_name:
-                try:
-                    import sqlite3 as _sqlite3
-                    _conn_ptp = _sqlite3.connect(config.DB_PATH)
-                    _row_ptp = _conn_ptp.execute(
-                        "SELECT archetype_in_top3 FROM player_type_profiles "
-                        "WHERE player_name = ? AND season = '2025-26' LIMIT 1",
-                        (player_name,)
-                    ).fetchone()
-                    _conn_ptp.close()
-                    if _row_ptp and _row_ptp[0]:
-                        confirmation_score = min(1.0, round(confirmation_score + 0.05, 3))
-                except Exception:
-                    pass  # Minor signal — silent fail on any DB issue
+        # 2. streak_signal (0.20)
+        streak_sig_val = 0.50
+        if streak_score >= 0.7: streak_sig_val = 1.0
+        elif streak_score >= 0.5: streak_sig_val = 0.65
+        elif streak_score >= 0.3: streak_sig_val = 0.50
+        elif streak_score >= 0.1: streak_sig_val = 0.35
+        else: streak_sig_val = 0.20
+        
+        # 3. matchup_signal (0.15)
+        matchup_score_val = max(0.0, min(1.0, 0.50 + (matchup_modifier / 60.0)))
+        dvp_score_val = (30 - dvp_rank) / 29.0 if dvp_rank is not None else 0.5
+        matchup_sig = 0.60 * matchup_score_val + 0.40 * dvp_score_val if dvp_rank is not None else matchup_score_val
+        
+        # 4. sharp_consensus_signal (0.15)
+        bet_odds = sharp_odds_over if bet_direction == 'over' else sharp_odds_under
+        actual_odds = odds_over if bet_direction == 'over' else odds_under
+        sharp_consensus_sig = self._sharp_consensus(actual_odds, bet_odds, bet_direction)
 
-            if confirmation_score >= 0.65:
-                tier_score += 1
-            elif confirmation_score <= 0.35:
-                tier_score -= 1
+        # 5. clv_track_record (0.15)
+        clv_sig = self._historical_clv_signal(stat_key.lower(), bet_direction.upper(), player_name)
+        
+        # 6. model_signal (0.10)
+        model_sig = model_prob
+        
+        # 7. wowy_signal (0.05)
+        wowy_sig = 0.50
+        if wowy_confidence == 'high': wowy_sig = 0.85
+        elif wowy_confidence == 'medium': wowy_sig = 0.60
+        elif wowy_confidence == 'low': wowy_sig = 0.40
+        
+        # 8. referee_signal (0.05)
+        ref_sig = 0.50
+        if crew_bias == 'PROTECTOR': ref_sig = 0.80
+        elif crew_bias == 'STAR_KILLER': ref_sig = 0.20
+        
+        prop_confidence_score = (
+            0.20 * hit_rate_signal
+          + 0.20 * streak_sig_val
+          + 0.15 * matchup_sig
+          + 0.15 * sharp_consensus_sig
+          + 0.15 * clv_sig
+          + 0.10 * model_sig
+          + 0.05 * wowy_sig
+          + 0.05 * ref_sig
+        )
+
+        if prop_confidence_score >= 0.68:
+            tier_score += 1
+        elif prop_confidence_score <= 0.38:
+            tier_score -= 1
 
         # Clamp to valid range [0, 3]
         tier_score = max(0, min(3, tier_score))
@@ -969,13 +1094,13 @@ class LudiReporter:
         # Prevents composite bonus abuse (e.g. 7% edge BLK_UNDER for RIM_GUARDIAN
         # getting double-bumped to DIAMOND). Gold combos are high-WR signals but
         # only meaningful when the underlying edge is also real.
-        if tier_score == 3 and edge < 10.0:   # DIAMOND floor: must have ≥10% edge
+        if tier_score == 3 and edge < 15.0:   # DIAMOND floor: must have ≥15% edge
             tier_score = 2
-        elif tier_score == 2 and edge < 7.0:  # BLUE CHIP floor: must have ≥7% edge
+        elif tier_score == 2 and edge < 10.0:  # BLUE CHIP floor: must have ≥10% edge
             tier_score = 1
 
         TIER_NAMES = ['THE STEAL', 'CORE ASSET', 'BLUE CHIP', 'DIAMOND']
-        return TIER_NAMES[tier_score], confirmation_score  # C1: tuple (tier_name, confirmation_score)
+        return TIER_NAMES[tier_score], prop_confidence_score  # C1: tuple (tier_name, confirmation_score)
 
     @staticmethod
     def _load_stat_confidence_cache() -> dict:

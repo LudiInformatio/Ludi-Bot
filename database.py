@@ -1747,12 +1747,22 @@ class LudiHistorian:
             c.execute("ALTER TABLE bet_recommendations ADD COLUMN line_movement REAL")
         except Exception:
             pass  # Column already exists
+
         # Module B/F — time_context: pipeline run mode (EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME)
         # Enables downstream confidence framing in Ask Ludi, Ludi Lens, bet cards.
         try:
             c.execute("ALTER TABLE bet_recommendations ADD COLUMN time_context TEXT DEFAULT 'EARLY_LOOK'")
         except Exception:
             pass  # Column already exists
+            
+        # Part 2B: Sharp consensus schema additions
+
+        for col in ['sharp_odds_over_at_bet INTEGER', 'sharp_odds_under_at_bet INTEGER', 'sharp_book_at_bet TEXT', 'sharp_consensus REAL']:
+            try:
+                c.execute(f"ALTER TABLE bet_recommendations ADD COLUMN {col}")
+            except Exception:
+                pass
+
 
         # Seed canonical_games from any games data already in the DB.
         # Uses the same sync_canonical_games() function available to all game writers.

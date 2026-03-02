@@ -707,11 +707,11 @@ class LudiHistorian:
 
     def _finalize_sync(self, completed_dates, total_records):
         """Clean up after successful completion."""
-        from utils.telegram_notifier import send_message
+        from utils.telegram_notifier import send_solomon_message
 
-        # Send completion alert
+        # Send completion alert to Solomon (ops channel — not the bet channel)
         try:
-            send_message(
+            send_solomon_message(
                 f"✅ *Historian Sync Complete*\n"
                 f"Dates synced: {len(completed_dates)}\n"
                 f"Records added: {total_records}\n"

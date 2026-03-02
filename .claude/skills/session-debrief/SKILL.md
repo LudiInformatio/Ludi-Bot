@@ -100,6 +100,7 @@ Use the Step 2 findings to determine what to check:
 | Database schema (`database.py`) | `docs/ARCHITECTURE.md` schema section |
 | New API behavior confirmed | `CLAUDE.md` API Configuration table |
 | New scripts added | `CLAUDE.md` Quick Commands or `docs/TOOLS_GUIDE.md` |
+| Any session with shipped features or phase completions | `README.md` — update Status date, Active/Planned Next section, add to Phase 8 completions table if warranted |
 
 If nothing in the relevant doc is wrong → skip this step entirely.
 

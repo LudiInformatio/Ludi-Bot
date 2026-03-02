@@ -114,6 +114,12 @@ class BetLogger:
 
                 -- Phase C1: Hit rate confirmation score (0.40*L5_hr + 0.35*L10_hr + 0.25*model_prob)
                 confirmation_score REAL,
+                
+                -- Phase 8: Sharp consensus / CLV
+                sharp_odds_over_at_bet INTEGER,
+                sharp_odds_under_at_bet INTEGER,
+                sharp_book_at_bet TEXT,
+                sharp_consensus REAL,
 
                 -- Outcome tracking (NULL until settled)
                 outcome TEXT,
@@ -259,7 +265,9 @@ class BetLogger:
             'spread', 'total', 'player_id', 'player_name', 'team', 'opponent',
             'archetype', 'status', 'scenario', 'stat_category', 'bet_side', 'line',
             'odds_over', 'odds_under', 'projection', 'fair_prob', 'model_prob',
-            'true_edge', 'ev', 'units', 'confidence_tier', 'confirmation_score', 'note', 'tags',
+            'true_edge', 'ev', 'units', 'confidence_tier', 'confirmation_score', 
+            'sharp_odds_over_at_bet', 'sharp_odds_under_at_bet', 'sharp_book_at_bet', 'sharp_consensus',
+            'note', 'tags',
             'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker', 'time_context'
         ]
 
@@ -330,7 +338,8 @@ class BetLogger:
                 'archetype', 'status', 'scenario', 'stat_category', 'bet_side', 'line',
                 'odds_over', 'odds_under', 'projection', 'fair_prob', 'model_prob',
                 'true_edge', 'ev', 'units', 'confidence_tier', 'note', 'tags',
-                'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker'
+                'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker',
+                'sharp_odds_over_at_bet', 'sharp_odds_under_at_bet', 'sharp_book_at_bet', 'sharp_consensus'
             ]
 
             placeholders = ','.join(['?' for _ in fields])

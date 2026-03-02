@@ -16,7 +16,7 @@ A production-grade autonomous analytics engine that generates player prop recomm
 | **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (Feb 28, 2026 12:20 PM EST) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (March 1, 2026) |
 
 ### Key Features
 
@@ -156,7 +156,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Sunday, March 1, 2026 — 4:49 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 10:04 PM EST
 
 **Phase 8 Completions:**
 
@@ -187,7 +187,8 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Module Audit Sprint (A+B+C+D+E+F) — Gatekeeper bug fixes (totals, BDL crash, timeouts), CLV overhaul; `LudiEngine` class (HOT_STREAK fix, hit rates, vs_scheme_cache, L20 windows, time_context); `LudiOracle` 8 pre-load dicts + zero-DB sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent, INJURY_RETURN edge type, ghost resolve fix; `USG_PCT` key fix; `LudiReporter` (Module F): avg_ev fix, Injury-Return emoji, defensive tags removed from positive_archetypes, old SGP block removed, `_STAT_COL_MAP` short-form aliases, L5/L10/L15 multi-window hit rates |
+| Infra | Module Audit Sprint (A–F) — `LudiOracle` 8 pre-load dicts + zero-DB 10K sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent + INJURY_RETURN edge type; `USG_PCT` key fix; `LudiReporter` avg_ev fix + `_STAT_COL_MAP` short-form aliases + L5/L10/L15 hit rates |
+| Infra | Module F Confidence Tier Redesign — 8-signal `prop_confidence_score` (hit_rate + streak + matchup + sharp_consensus + CLV track record + model + WOWY + referee); STRUCTURAL_LOSERS module-level filter; stat-specific edge floors (`STAT_EDGE_MINIMUMS`); tier floor thresholds fixed (DIAMOND ≥15%, BLUE CHIP ≥10%); `module_h_historian` Solomon notification routing fix |
 | Infra | canonical_games table — `database.py` + `sync_canonical_games(conn)` importable. 1,926 raw game rows → 902 deduplicated. Pattern-B JOINs fixed in `module_b.py`, `module_g.py`, `populate_todays_games.py`, `sync_matchup_intelligence.py` (4 JOINs), `team_defensive_classifier.py` (1 JOIN) |
 | Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
 | Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
@@ -198,16 +199,18 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
 | Infra | Module E Audit (LudiCalibrator) — hybrid off/def 3-tuple return; `_load_shot_quality_bulk()` schema drift fix; `_canonical_key()` cache consistency; `_load_dvp_by_archetype()` dead-code removal |
 | Infra | Sharp+P2P CLV System — `backfill_historical_odds.py` (83.9% coverage, +4.43c avg CLV); `capture_closing_lines.py` PREFERRED_BOOKS sort + `closing_book` column; `morning_brief.py` cache-first + 55-65% credit reduction |
+| Infra | Module G Zebras Audit — ref thresholds calibrated to real 2025-26 data (STRICT 16.0/LENIENT 12.3); rolling L10-game window replaces calendar-day; `team_betting_trends` table (30 rows); `get_team_trends()` on `LudiRefEngine` |
+| Infra | AI Employee Workforce Setup — 6 soul files (`employees/`); Discord Ludi Lens server + 7 channels + webhooks; Solomon Telegram Bot 2 (`TELEGRAM_TOKEN_SOLOMON`); Gemini CLI writer confirmed working; hybrid Claude Agent Teams + OpenClaw architecture |
 
 **Active / Planned Next:**
-- Module F fixes (`module_f.py` `LudiReporter`) — F1 div/zero in `avg_ev`, F2 double tier demotion, F3/F4 silent exception logging
+- Module F confidence tier redesign — 8-signal `prop_confidence_score` + C1-C5 cleanup ✅ (Mar 1, 2026)
 - Run `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns)
-- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade — spec in `plans/pure-baking-river.md` PART 2B/2C (~Mar 10)
+- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade (~Mar 10)
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
 - Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
-- AI Employee Workforce — OpenClaw sprint (March 2026); see team roster below
+- AI Employee Workforce kickoff — employee onboarding docs + Monday Agent Teams live test (Solomon → Henrik first audit)
 
-**Performance (Jan 7 – Feb 25, 2026):**
+**Performance (Jan 7 – Mar 1, 2026):**
 - Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)
 - BLOCKS UNDER: 70.7% WR — strongest signal in system
 - UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)

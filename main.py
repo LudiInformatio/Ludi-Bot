@@ -511,7 +511,11 @@ class LudiOrchestrator:
                         'odds_over': o_over, 
                         'odds_under': o_under,
                         'book_over': book_over,
-                        'book_under': book_under
+                        'book_under': book_under,
+                        'sharp_odds_over': v.get('sharp_odds_over') if isinstance(v, dict) else None,
+                        'sharp_odds_under': v.get('sharp_odds_under') if isinstance(v, dict) else None,
+                        'sharp_book_over':  v.get('sharp_book_over')  if isinstance(v, dict) else None,
+                        'sharp_book_under': v.get('sharp_book_under') if isinstance(v, dict) else None
                     }
                 except Exception as e:
                     print(f"   >>> [main] Prop format error for {k}: {e}")
