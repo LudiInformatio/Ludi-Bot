@@ -56,19 +56,25 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install -r requirements.txt
 
-      - name: Check cache exists (informational)
-        continue-on-error: true
+      - name: Wait for pipeline cache (A2 gate — 5-min poll)
         run: |
-          python3 -c "
-          import os, time
-          from datetime import datetime
-          date = datetime.now().strftime('%Y-%m-%d')
-          cache = f'cache/daily_games_{date}.json'
-          if not os.path.exists(cache):
-              print('WARNING: Pipeline cache not found - morning brief may use stale data or extra credits')
-          else:
-              print(f'Cache found: {cache}')
-          "
+          # If the 10 AM pipeline runs late, wait up to 5 min before proceeding.
+          # Cache miss is non-fatal: morning_brief fetches fresh (costs ~460-730 extra credits).
+          CACHE="cache/daily_games_$(date +'%Y-%m-%d').json"
+          if [ -f "$CACHE" ]; then
+            echo "✅ Cache found — proceeding immediately"
+          else
+            echo "⏳ Cache not found — waiting up to 5 min for pipeline to complete..."
+            for i in $(seq 1 10); do
+              sleep 30
+              if [ -f "$CACHE" ]; then
+                echo "✅ Cache appeared at attempt $i — proceeding"
+                break
+              fi
+              echo "  Attempt $i/10 — still waiting..."
+            done
+            [ -f "$CACHE" ] || echo "⚠️  Cache still missing — brief will fetch fresh (extra credits)"
+          fi
 
       - name: Verify image pipeline dependencies
         run: |
