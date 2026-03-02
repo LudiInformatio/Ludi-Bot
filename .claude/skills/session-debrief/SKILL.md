@@ -168,6 +168,21 @@ EOF
 Replace YYYY-MM-DD with today's date. If no doc changes were needed (clean session),
 still commit with "no doc changes needed — working tree clean".
 
+**CRITICAL: Always push immediately after committing.**
+The GH Actions runner checks out `origin/main` — if you commit but don't push, the runner
+runs stale code for every workflow until the next push. This is a silent failure mode.
+
+```bash
+git push origin main
+```
+
+If push is rejected with "branches diverged" (GH Actions data-sync commits ran overnight):
+```bash
+git diff main...origin/main --stat   # Verify only log files differ
+git merge origin/main --no-edit      # Safe merge — logs only, no conflicts
+git push origin main
+```
+
 ---
 
 ### Step 9 — Send PM bot break message (always last, always after commit)

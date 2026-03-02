@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-03-01 — Runner Stale Code: GH Actions Using Old module_a.py
+
+**Symptom:** Workflow fails with 422 on `markets=h2h,spreads,totals,team_totals` bulk endpoint even though local code removed team_totals. Runner's `capture_closing_lines.yml` also shows `TANK01_KEY not set` even though the secret exists.
+
+**Root cause:** GH Actions runner checks out `origin/main`. If local commits are never pushed (especially after a divergence), the runner runs stale code indefinitely. Overnight `chore: data sync` commits from the runner push to `origin/main` without the developer's local commits, creating a divergence that blocks `git push`.
+
+**Fix sequence:**
+```bash
+git fetch origin
+git diff main...origin/main --stat     # Confirm only log files differ
+git merge origin/main --no-edit        # Safe — logs only, no conflicts
+git push origin main                   # Runner now gets correct code
+```
+
+**Prevention:** Always run `git push origin main` at end of every session, immediately after the debrief commit. This is now required in Step 8 of the `session-debrief` skill.
+
+**Secondary fix (CLV workflow):** `capture_closing_lines.yml` was missing `TANK01_KEY` + `TANK01_TIER` in the `Capture closing lines` step env block. Tank01 Tier 3 fallback silently failed auth on every CLV run. Fixed 2026-03-01 in commit `96fc556`.
+
+---
+
 ## 2026-02-28 — Module G Zebras Audit: Referee Profile Data Quality Fixes
 
 - **H1 (avg_pace_impact stale)**: `referee_profiles.avg_pace_impact` was seeded with `/~42` divisor; correct formula is `/12.5` (fouls per game / league avg). Tony Brothers: DB=0.413, correct=1.387. `get_game_impact()` safety cap `[0.90, 1.10]` was hiding the error silently. Fix: `scripts/fix_referee_profiles_pace.py` — one-time repair SQL. Defensive fallback added to `_get_referee_profile()`: recomputes from fouls if `pace_impact < 0.5`.
