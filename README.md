@@ -211,9 +211,9 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 - AI Employee Workforce kickoff — employee onboarding docs + Monday Agent Teams live test (Solomon → Henrik first audit)
 
 **Performance (Jan 7 – Mar 1, 2026):**
-- Settled Bets: 16,336+ | Win Rate: ~53.2% overall | ROI: -0.1% (model in BETA)
-- BLOCKS UNDER: 70.7% WR — strongest signal in system
-- UNDER bets: 55.0% | OVER bets: 42.1% (OVER filters actively suppressing weak categories)
+- Settled Bets: 21,079 | Win Rate: 54.0% overall | ROI: tracking (model in BETA)
+- BLOCKS UNDER: 70.0% WR (2,315 bets) — strongest signal in system
+- UNDER bets: 57.1% | OVER bets: 47.2% (OVER filters actively suppressing weak categories)
 - CLV: Positive across all edge buckets
 - All paper bet tracking in beta
 
