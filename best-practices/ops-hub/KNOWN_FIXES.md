@@ -535,3 +535,19 @@ git push origin main                   # Runner now gets correct code
   f'{count} items found'
   ```
 - **Rule**: Never use `\"` inside f-string `{}` blocks in this codebase (Python 3.11).
+
+---
+
+## 2026-03-02 — Referee External Intelligence: Stale Seeded Data + 42 Duplicates
+
+- **Affected file**: `scripts/sync_external_intelligence.py` (full rewrite v2)
+- **Symptom**: `referee_profiles.avg_fouls_per_game` contained BBR-seeded values (e.g., Tony Brothers=17.34) on a different scale than internal rolling L10 data (~11.80). Result: ~66 refs incorrectly labeled STRICT. Also 42 duplicate rows with `(#N)` badge suffix alongside bare-name rows.
+- **Root Cause**: Original scraper used hardcoded column indices (broke on site layout changes), no name normalization, no duplicate detection. OddsShark Home/Away Fouls were never scraped — only ATS data was captured.
+- **Fix**: Full rewrite with 5 improvements:
+  1. **Header-based column matching**: JavaScript `evaluate()` builds header index map from `<th>` — resilient to column reorder
+  2. **Name normalization**: `_normalize_ref_name()` strips `(#N)` badge suffix, removes periods in initials ("J.B." → "JB"), lowercases
+  3. **OddsShark Home/Away Fouls**: `(home_fouls + away_fouls) / 3` = per-ref scale matching internal rolling_21d_fouls
+  4. **Style recalculation**: STRICT ≥13.5, LENIENT ≤11.0, NEUTRAL otherwise (per-ref scale, not BBR team-total scale)
+  5. **Duplicate cleanup**: `_cleanup_duplicate_rows()` deletes `(#N)` suffixed rows where bare-name exists
+- **Result**: 42 duplicates cleaned, NULL ou_percentage 48%→12%, NULL home_ats_bias 50%→8%, style distribution corrected (59 NEUTRAL + 26 STRICT vs mostly-STRICT before)
+- **Pattern 11 compliance**: `setup_page()` after `context.new_page()`, `close_popups()` after `page.goto()`, `wait_until='domcontentloaded'`

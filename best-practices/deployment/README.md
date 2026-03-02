@@ -20,6 +20,9 @@ This guide covers GitHub Actions workflow patterns for the Ludi-Bot production p
 | `timeout-minutes` at two levels | All workflows | Job-level (max total) + step-level (per heavy step) |
 | `workflow_run` failure monitor | `claude-ops-hub.yml` | Reactive auto-diagnosis fires on workflow failure, not on schedule |
 | `|| echo` on notifications | All `failure()` steps | Telegram down shouldn't cause a second workflow failure |
+| Ghost Protocol `wait_until` | `sync_wowy_backfill.py`, `sync_browser_backfill.py` | Always `domcontentloaded` + 90s — `load` times out, `commit` aborts on redirects |
+| `close_popups()` before `scrape_table()` | All Ghost Protocol scrapers | Call explicitly after `page.goto()`, not just inside `scrape_table()` |
+| `IS_SELF_HOSTED=true` (exact string) | All `sync_*.py` scrapers | Empty string is falsy → `headless=None` → WAF blocks headless Chromium |
 
 ---
 
@@ -335,6 +338,98 @@ jobs:
 
 ---
 
+---
+
+### 11. Ghost Protocol — NBA.com Browser Scraping Patterns
+
+**Problem:** NBA.com stats pages use Akamai WAF + consent popups that block automated browser access.
+
+#### `wait_until` strategy — use `'domcontentloaded'`, not `'load'` or `'commit'`
+
+```python
+# ❌ 'load' — waits for ALL resources (ads, tracking pixels, analytics).
+# NBA.com stats pages never fully "load". Times out in 45s–90s.
+page.goto(url, timeout=45000)                          # default wait_until='load'
+
+# ❌ 'commit' — requires HTTP response headers before returning.
+# ERR_ABORTED immediately on Akamai connection resets and redirects.
+page.goto(url, wait_until='commit', timeout=90000)
+
+# ✅ 'domcontentloaded' — fires when HTML is parsed, ignores remaining resources.
+# Follows redirect chains. NBA.com stats tables are usable at this point.
+page.goto(url, wait_until='domcontentloaded', timeout=90000)
+```
+
+**Real incident (Mar 2, 2026):** `sync_wowy_backfill.py` used `wait_until='load', timeout=45000`. The NBA.com consent popup blocked page load → 45s timeout on every date. Upgraded to `domcontentloaded + 90s` to match `sync_browser_backfill.py` (Ghost Protocol v2.1).
+
+#### Popup dismissal — call `close_popups()` AFTER `page.goto()`
+
+```python
+from utils.browser_utils import close_popups, setup_page
+
+# ✅ Correct order: goto → close_popups → scrape
+page.goto(url, wait_until='domcontentloaded', timeout=90000)
+close_popups(page)       # Dismisses NBA.com consent modal + OneTrust banner
+data = scrape_table(page, label)
+
+# ❌ Wrong: close_popups only inside scrape_table() is too late.
+# If the popup fires during page load, domcontentloaded is blocked
+# before scrape_table() is ever reached.
+data = scrape_table(page, label)   # close_popups() buried inside here = too late
+```
+
+**Why `close_popups()` inside `scrape_table()` is insufficient:** NBA.com consent modal fires during page initialization. If `page.goto()` is waiting for `domcontentloaded`, and the popup fires as a JS modal that prevents DOM initialization, `domcontentloaded` never fires. Calling `close_popups()` BEFORE `scrape_table()` ensures the modal is gone before waiting for the stats table.
+
+#### `setup_page()` — register JS dialog handler on new page
+
+```python
+page = context.new_page()
+setup_page(page)   # Registers: page.on('dialog', lambda d: d.accept())
+                   # Auto-dismisses any JS alert/confirm/prompt on ANY page load
+```
+
+Call `setup_page()` once after `context.new_page()`. The dialog handler is registered globally for the page's lifetime — no need to call it per URL.
+
+#### `IS_SELF_HOSTED=true` — exact string required for visible browser
+
+```python
+# In sync_wowy_backfill.py and sync_browser_backfill.py:
+is_self_hosted = os.environ.get('IS_SELF_HOSTED') == 'true'   # EXACT string 'true'
+headless_mode = False if is_self_hosted else headless
+```
+
+Without `IS_SELF_HOSTED=true`, `headless_mode` falls through to the `headless` parameter default. With `headless=None`, Playwright may default to headless mode — which gets fingerprinted and blocked by Akamai WAF.
+
+```bash
+# Local manual runs — always set explicitly:
+IS_SELF_HOSTED=true python3 scripts/sync_wowy_hybrid.py --days 1 --ghost
+
+# GitHub Actions self-hosted runner — set in workflow env:
+env:
+  IS_SELF_HOSTED: 'true'
+```
+
+#### Full working pattern (copy-paste template)
+
+```python
+from utils.browser_utils import simulate_human_interaction, close_popups, wait_for_selector_safe, setup_page
+
+# Inside sync function:
+page = context.new_page()
+setup_page(page)   # JS dialog auto-dismiss
+
+for url in urls:
+    try:
+        page.goto(url, wait_until='domcontentloaded', timeout=90000)
+        close_popups(page)                          # Consent modal + OneTrust
+        data = scrape_table(page, label)            # Handles its own close_popups + wait
+        time.sleep(random.uniform(2.5, 5.0))        # Human-like pause between pages
+    except Exception as e:
+        print(f"   ❌ {label} Error: {e}")
+```
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Consequence | Fix |
@@ -345,6 +440,9 @@ jobs:
 | `continue-on-error: true` on data-critical steps | Stale data silently degrades pipeline for days/weeks | Remove it, or log the failure explicitly inside the script |
 | Secrets not in `env:` block | Python notifiers see empty TELEGRAM_TOKEN and silently skip | Every step that reads secrets needs its own `env:` block |
 | No job-level `timeout-minutes` | One hanging NBA.com request freezes the runner for hours | Always set `timeout-minutes` at both job and step level |
+| `wait_until='load'` on NBA.com stats | Page never fully loads → 45-90s timeout on every date | Use `wait_until='domcontentloaded'` (Ghost Protocol standard) |
+| `close_popups()` only inside `scrape_table()` | Consent modal fires during goto → domcontentloaded never fires | Call `close_popups(page)` explicitly after every `page.goto()` |
+| `IS_SELF_HOSTED` empty/unset | `headless=None` → Akamai WAF fingerprints and blocks the browser | Always set `IS_SELF_HOSTED=true` (exact value) on local runs |
 
 ---
 
