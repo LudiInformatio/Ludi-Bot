@@ -433,10 +433,10 @@ class DailyRefereeSync:
             error_msg = f"CRITICAL: Found 0 referee assignments for {len(games)} games.\nPlaywright and Perplexity both failed. Check official.nba.com for changes or blocking."
             print(f"\n❌ {error_msg}")
             
-            # Send Telegram Alert
+            # Send alert via Solomon (PM/ops channel)
             try:
-                from utils.telegram_notifier import send_alert
-                send_alert("Referee Sync Failed", error_msg)
+                from utils.telegram_notifier import send_solomon_message
+                send_solomon_message(f"⚠️ *Referee Sync Failed*\n\n{error_msg}")
             except ImportError:
                 print("   ⚠️ Could not import telegram_notifier for alert")
             except Exception as e:

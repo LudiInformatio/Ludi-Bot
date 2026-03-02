@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import project modules
 from utils.slack_notifier import send_slack_alert as send_alert
+from utils.telegram_notifier import send_solomon_message
 
 
 class SystemHealthMonitor:
@@ -485,6 +486,8 @@ class SystemHealthMonitor:
                 # In production mode, send all alerts
                 alert_message = f"🚨 **SYSTEM HEALTH ALERT**\n\n" + "\n".join(self.alerts)
                 send_alert("Production System Alert", alert_message)
+                # Also route to Solomon (PM/ops channel)
+                send_solomon_message(f"🚨 *SYSTEM HEALTH ALERT*\n\n{chr(10).join(self.alerts)}")
             else:
                 # In test mode, just print them
                 print("\n🚨 ALERTS DETECTED:")
