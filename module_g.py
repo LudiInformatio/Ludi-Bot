@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import sqlite3
 import time
+import pytz
 from datetime import datetime, timedelta
 from io import StringIO
 import sys
@@ -54,87 +55,32 @@ class LudiRefEngine:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            today = datetime.now().strftime('%Y-%m-%d')
+            today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
             cursor.execute("SELECT COUNT(*) FROM games WHERE date = ?", (today,))
             count = cursor.fetchone()[0]
-            
+
             conn.close()
             return count > 0
-            
+
         except Exception as e:
             print(f"   [ZEBRAS] ⚠️ Error checking games: {e}")
             return False
 
     def _populate_todays_games(self):
-        """Populate today's games using The-Odds API (mirrors populate_todays_games.py logic)"""
+        """Populate today's games using the 4-source fallback chain.
+
+        Delegates to scripts/populate_todays_games.main() which tries:
+        Odds API -> Tank01 -> BDL -> ESPN (free, no auth).
+        """
         try:
-            # Import config to access API key
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            import config
-            
-            # Fetch schedule from The-Odds API
-            url = 'https://api.the-odds-api.com/v4/sports/basketball_nba/odds'
-            params = {
-                'api_key': config.ODDS_API_KEY,
-                'regions': 'us',
-                'markets': 'h2h',  # We just need event info
-                'oddsFormat': 'american'
-            }
-            
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Get today's date in EST
-            import pytz
-            EST_TZ = pytz.timezone('US/Eastern')
-            today_str = datetime.now(EST_TZ).strftime('%Y-%m-%d')
-            
-            games_to_insert = []
-            for game in data:
-                # Convert UTC start time to EST date string
-                utc_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
-                est_time = utc_time.astimezone(EST_TZ)
-                game_date = est_time.strftime('%Y-%m-%d')
-                
-                if game_date == today_str:
-                    game_id = game['id']  # Use API ID as unique identifier
-                    home_team = resolve_team_abbr(game['home_team'])
-                    away_team = resolve_team_abbr(game['away_team'])
-                    
-                    # Construct ludi_game_id format: YYYYMMDD_AWAY@HOME
-                    ludi_game_id = f"{est_time.strftime('%Y%m%d')}_{away_team}@{home_team}"
-                    
-                    games_to_insert.append((ludi_game_id, game_date, home_team, away_team))
-            
-            # Insert into database
-            if games_to_insert:
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                
-                for g in games_to_insert:
-                    g_id, g_date, home, away = g
-                    print(f"   [ZEBRAS] 🏀 {away} @ {home}")
-                    
-                    cursor.execute("""
-                        INSERT INTO games (game_id, date, home_team, away_team)
-                        VALUES (?, ?, ?, ?)
-                        ON CONFLICT(game_id) DO UPDATE SET
-                            date=excluded.date,
-                            home_team=excluded.home_team,
-                            away_team=excluded.away_team
-                    """, (g_id, g_date, home, away))
-                
-                conn.commit()
-                # Keep canonical_games in sync after any games INSERT.
-                sync_canonical_games(conn)
-                conn.close()
-                print(f"   [ZEBRAS] ✅ Inserted {len(games_to_insert)} games")
+            from scripts.populate_todays_games import main as populate_main
+            count = populate_main()
+            if count > 0:
+                print(f"   [ZEBRAS] ✅ Inserted {count} games via populate_todays_games")
             else:
-                print("   [ZEBRAS] ⚠️ No games found for today")
-                
+                print("   [ZEBRAS] ⚠️ populate_todays_games returned 0 games")
         except Exception as e:
-            print(f"   [ZEBRAS] ❌ Error populating games: {e}")
+            print(f"   [ZEBRAS] ❌ populate_todays_games failed: {e}")
 
     def _verify_database(self):
         """Verify referee_profiles table exists and has data."""

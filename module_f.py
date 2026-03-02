@@ -474,6 +474,11 @@ class LudiReporter:
                                 p.get('sportsbook_props', {}).get(stat_key, {}).get('sharp_book_under')
                             ) if isinstance(p.get('sportsbook_props', {}).get(stat_key), dict) else None
 
+                            # Compute sharp_consensus for DB logging (same calc as inside _calculate_confidence_tier)
+                            _bet_sharp_odds = sharp_odds_over_at_bet if bet_direction == 'over' else sharp_odds_under_at_bet
+                            _bet_actual_odds = odds_over if bet_direction == 'over' else odds_under
+                            sharp_consensus = self._sharp_consensus(_bet_actual_odds, _bet_sharp_odds, bet_direction)
+
                             # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
                             TIER_UNITS = {
                                 'DIAMOND': 1.25,

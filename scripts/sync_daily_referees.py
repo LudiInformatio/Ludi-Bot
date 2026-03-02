@@ -13,6 +13,7 @@ Designed for GitHub Actions automation (9:30 AM ET daily).
 import argparse
 import sqlite3
 import pandas as pd
+import pytz
 import re
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Tuple
@@ -49,40 +50,37 @@ class DailyRefereeSync:
         self._ensure_todays_games()
     
     def _ensure_todays_games(self):
-        """Auto-populate today's games if missing. Delegates to Module G which
-        handles game insertion + sync_canonical_games() correctly."""
+        """Auto-populate today's games if missing. Delegates to the 4-source
+        fallback chain in populate_todays_games.py (Odds API → Tank01 → BDL → ESPN)."""
         print("   🔍 Checking today's games in database...")
 
         if not self._check_todays_games_exist():
-            print("   📡 No games found — delegating to Module G populate...")
+            print("   📡 No games found — running 4-source populate chain...")
             try:
-                from module_g import LudiRefEngine
-                # LudiRefEngine.__init__ calls _ensure_todays_games internally,
-                # but we just need _populate_todays_games directly
-                engine = LudiRefEngine.__new__(LudiRefEngine)
-                engine.db_path = self.db_path
-                engine.LEAGUE_AVG_FOULS = 12.5
-                engine.daily_assignments = {}
-                engine._populate_todays_games()
-                print("   ✅ Games populated via Module G")
+                from scripts.populate_todays_games import main as populate_main
+                count = populate_main()
+                if count > 0:
+                    print(f"   ✅ Games populated: {count}")
+                else:
+                    print("   ⚠️ populate_todays_games returned 0 games")
             except Exception as e:
-                print(f"   ⚠️ Module G populate failed: {e}")
+                print(f"   ⚠️ populate_todays_games failed: {e}")
         else:
             print("   ✅ Today's games already exist")
 
     def _check_todays_games_exist(self) -> bool:
-        """Check if any games exist for today's date"""
+        """Check if any games exist for today's date (EST-aware)"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
-            today = datetime.now().strftime('%Y-%m-%d')
+
+            today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
             cursor.execute("SELECT COUNT(*) FROM games WHERE date = ?", (today,))
             count = cursor.fetchone()[0]
-            
+
             conn.close()
             return count > 0
-            
+
         except Exception as e:
             print(f"   ⚠️ Error checking games: {e}")
             return False
@@ -411,15 +409,12 @@ class DailyRefereeSync:
         print()
         print(f"✅ Summary: {matched}/{len(games)} games updated")
         
-        # --- PERPLEXITY FALLBACK — delegate to module_g (single authority) ---
+        # --- MODULE G FALLBACK — delegate to LudiRefEngine (single authority) ---
         if matched == 0 and len(games) > 0 and not dry_run:
             print("\n⚠️  Playwright returned 0 assignments — delegating to Module G fallback...")
             try:
                 from module_g import LudiRefEngine
-                engine = LudiRefEngine.__new__(LudiRefEngine)
-                engine.db_path = self.db_path
-                engine.LEAGUE_AVG_FOULS = 12.5
-                engine.daily_assignments = {}
+                engine = LudiRefEngine(db_path=self.db_path)
                 result = engine.build_ref_database()
                 matched = len(result)
                 if matched:

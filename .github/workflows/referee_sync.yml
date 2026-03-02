@@ -69,6 +69,7 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
@@ -77,7 +78,16 @@ jobs:
 
       - name: Verify sync completion
         run: |
-          REFEREE_COUNT=$(python3 -c "import sqlite3; conn = sqlite3.connect('ludi.db'); cursor = conn.cursor(); cursor.execute(\"SELECT COUNT(*) FROM games WHERE date = date('now') AND referee_crew IS NOT NULL\"); print(cursor.fetchone()[0]); conn.close()")
+          REFEREE_COUNT=$(python3 -c "
+          import sqlite3, pytz
+          from datetime import datetime
+          today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
+          conn = sqlite3.connect('ludi.db')
+          c = conn.cursor()
+          c.execute('SELECT COUNT(*) FROM games WHERE date = ? AND referee_crew IS NOT NULL', (today,))
+          print(c.fetchone()[0])
+          conn.close()
+          ")
           echo "✅ Referee assignments synced: ${REFEREE_COUNT} games updated locally"
           echo "📊 Database updated at: $(date +'%Y-%m-%d %H:%M')"
 
