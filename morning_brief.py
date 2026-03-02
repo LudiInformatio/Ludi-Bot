@@ -919,7 +919,31 @@ Return JSON only."""
                                              if situational_context else f"{away_team}: {away_situation}")
                     if not situational_context:
                         situational_context = "No specific situational flags."
-                    
+
+                    # Inject ref crew + whistle signal into situational context (BERT Pattern 6)
+                    try:
+                        ref_impact = self.zebras.get_game_impact(home_team)
+                        crew = ref_impact.get('crew', [])
+                        if crew:
+                            ref_parts = [f"Crew: {', '.join(crew[:3])}"]
+                            whistle = ref_impact.get('whistle_impact', 1.0)
+                            ou_avg = ref_impact.get('ref_ou_avg')
+                            if whistle > 1.05:
+                                ref_parts.append(f"heavy whistle (+{(whistle-1)*100:.0f}% FTA)")
+                            elif whistle < 0.95:
+                                ref_parts.append(f"tight whistle ({(whistle-1)*100:.0f}% FTA)")
+                            if ou_avg and ou_avg > 0.55:
+                                ref_parts.append(f"O/U trend {ou_avg:.0%} OVER")
+                            elif ou_avg and ou_avg < 0.45:
+                                ref_parts.append(f"O/U trend {ou_avg:.0%} UNDER")
+                            ref_note = " | ".join(ref_parts)
+                            if situational_context == "No specific situational flags.":
+                                situational_context = ref_note
+                            else:
+                                situational_context = f"{situational_context} | {ref_note}"
+                    except Exception:
+                        pass  # Ref data unavailable — continue without it
+
                     env = config.get_scoring_environment()
                     over_rate = env.get('over_hit_rate_14d', 0)
                     env_label = env.get('environment', 'NEUTRAL')
@@ -1088,7 +1112,7 @@ Return JSON only."""
                             if not use_cache and response:
                                 try:
                                     player_snapshots = {}
-                                    for pname, (status, days_out, inj_type) in best_injury.items():
+                                    for pname, (status, days_out, inj_type, team_abbr, snapshot_time) in best_injury.items():
                                         player_snapshots[pname] = status
                                     
                                     game_date_str = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
@@ -1101,7 +1125,7 @@ Return JSON only."""
                                         'lineup_confirmed': False,
                                         'starters': {},
                                         'key_angle': "",
-                                        'injuries': {pname: {'status': s, 'days_out': d, 'type': t} for pname, (s, d, t) in best_injury.items()},
+                                        'injuries': {pname: {'status': s, 'days_out': d, 'type': t, 'team': ta} for pname, (s, d, t, ta, _snap) in best_injury.items()},
                                         'player_snapshots': player_snapshots,
                                         'notes_text': response,
                                         'projections_summary': {},
