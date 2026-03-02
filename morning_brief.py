@@ -485,8 +485,11 @@ class MorningBriefEngine:
                 return
 
         print(f"✅ Processing {len(self.gate.games)} games.")
-        print("🦓 Updating Referee Database...")
-        self.zebras.build_ref_database()
+        if not self.zebras.daily_assignments:
+            print("🦓 Updating Referee Database...")
+            self.zebras.build_ref_database()
+        else:
+            print(f"🦓 Ref database already loaded ({len(self.zebras.daily_assignments)} crews) — skipping scrape")
 
         # 2. Fetch Props (skipped if cache hit — props already in self.gate.games)
         if not _cache_hit:
@@ -620,11 +623,10 @@ class MorningBriefEngine:
                     if gid not in game_groups: game_groups[gid] = []
                     game_groups[gid].append(bet)
 
-                # 2. Deterministic game selection — score by tier quality, pick top 4
+                # 2. Deterministic game selection — score by tier quality, full slate
                 # DIAMOND=4.0, BLUE CHIP=2.5, CORE ASSET=1.0, THE STEAL=0.5
                 # BENEFICIARY tag bonus=1.0 (usage vacuum games have high narrative value)
                 # Top 5 plays (curate_plays.py) are independent and board-wide — not tied to game selection
-                MAX_GAME_NOTES = 4
                 _tier_weights = {'DIAMOND': 4.0, 'BLUE CHIP': 2.5, 'CORE ASSET': 1.0, 'THE STEAL': 0.5}
                 _INJURY_KWS = ["out", "ruled out", "scratch", "game-time", "gtd", "doubtful"]
                 _NARRATIVE_KWS = ["revenge", "rivalry", "return", "milestone", "debut"]
@@ -728,10 +730,8 @@ Return JSON only."""
                     return min(score, 20.0)
 
                 scored_games = sorted(game_groups.items(), key=lambda x: _score_game(x[1], x[0]), reverse=True)
-                top_games = scored_games[:MAX_GAME_NOTES]
-                skipped = len(scored_games) - len(top_games)
-                if skipped > 0:
-                    print(f"   ℹ️  {len(scored_games)} games on slate — generating notes for top {len(top_games)}, skipping {skipped} low-value games")
+                top_games = scored_games  # Full slate — no arbitrary cap
+                print(f"   📋 Generating game notes for all {len(top_games)} game(s) on slate")
 
                 # Collect all teams on tonight's full slate (ALL scored games, not just top N)
                 # Used by slate trends header — ensures teams from lower-ranked games are included
