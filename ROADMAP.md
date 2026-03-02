@@ -100,6 +100,7 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 
 **Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
 - [x] Sunday setup: Telegram + Discord + soul files + webhooks ✅
+- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 7 employees (6 Agent Teams + Gemini junior dev). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 6: project context + domain ownership + first task + red lines. Build before first Agent Teams session.
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
 - [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
 - [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live
