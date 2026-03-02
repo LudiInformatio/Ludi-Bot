@@ -39,7 +39,7 @@ def main():
         UPDATE referee_profiles
         SET avg_pace_impact = ROUND(avg_fouls_per_game / ?, 3),
             style = CASE
-                WHEN avg_fouls_per_game >= 14.0 THEN 'STRICT'
+                WHEN avg_fouls_per_game >= 13.5 THEN 'STRICT'
                 WHEN avg_fouls_per_game <= 11.0 THEN 'LENIENT'
                 ELSE 'NEUTRAL'
             END

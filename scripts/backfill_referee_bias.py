@@ -49,6 +49,18 @@ def main():
         conn.commit()
         print("Cleared existing bias data (will rebuild from all dates)")
 
+    # Pre-compute per-player baseline FTA and PF (same minutes filter as analysis)
+    print("Pre-loading player baselines (FTA, PF)...")
+    player_baselines = {}
+    for row in conn.execute('''
+        SELECT player_id, AVG(fta), AVG(pf)
+        FROM player_game_logs
+        WHERE minutes >= 20
+        GROUP BY player_id
+    ''').fetchall():
+        player_baselines[row[0]] = {'base_fta': row[1] or 0.0, 'base_pf': row[2] or 0.0}
+    print(f"Baselines loaded for {len(player_baselines)} players")
+
     # Build referee_name → referee_id lookup
     ref_lookup = {}
     for row in conn.execute("SELECT referee_id, referee_name FROM referee_profiles").fetchall():
@@ -82,6 +94,9 @@ def main():
         for crew_str, pid, pname, pts, pf, fta, base_ppg in rows:
             crew = [r.strip() for r in crew_str.split(',') if r.strip()]
             ppg_dev = pts - base_ppg
+            baseline = player_baselines.get(pid, {})
+            fta_dev = (fta or 0) - baseline.get('base_fta', 0.0)
+            pf_dev  = (pf  or 0) - baseline.get('base_pf',  0.0)
 
             for ref_name in crew:
                 ref_id = ref_lookup.get(ref_name)
@@ -94,37 +109,46 @@ def main():
 
                 # Upsert with running average
                 existing = conn.execute(
-                    "SELECT games_officiated, avg_pf_called, avg_fta_awarded, points_impact_vs_avg "
+                    "SELECT games_officiated, avg_pf_called, avg_fta_awarded, "
+                    "points_impact_vs_avg, fta_impact_vs_avg, pf_impact_vs_avg "
                     "FROM referee_player_bias WHERE referee_id = ? AND player_id = ?",
                     (ref_id, pid)
                 ).fetchone()
 
                 if existing:
-                    n, old_pf, old_fta, old_impact = existing
-                    new_n = n + 1
-                    new_pf = ((old_pf * n) + (pf or 0)) / new_n
-                    new_fta = ((old_fta * n) + (fta or 0)) / new_n
+                    n, old_pf, old_fta, old_impact, old_fta_dev, old_pf_dev = existing
+                    new_n      = n + 1
+                    new_pf     = ((old_pf * n) + (pf or 0)) / new_n
+                    new_fta    = ((old_fta * n) + (fta or 0)) / new_n
                     new_impact = ((old_impact * n) + ppg_dev) / new_n
+                    new_fta_dev = (((old_fta_dev or 0) * n) + fta_dev) / new_n
+                    new_pf_dev  = (((old_pf_dev  or 0) * n) + pf_dev)  / new_n
                 else:
-                    new_n = 1
-                    new_pf = pf or 0
-                    new_fta = fta or 0
-                    new_impact = ppg_dev
+                    new_n       = 1
+                    new_pf      = pf or 0
+                    new_fta     = fta or 0
+                    new_impact  = ppg_dev
+                    new_fta_dev = fta_dev
+                    new_pf_dev  = pf_dev
 
                 conn.execute('''
                     INSERT INTO referee_player_bias
                         (referee_id, player_id, player_name,
                          games_officiated, avg_pf_called, avg_fta_awarded,
-                         points_impact_vs_avg, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         points_impact_vs_avg, fta_impact_vs_avg, pf_impact_vs_avg,
+                         last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(referee_id, player_id) DO UPDATE SET
-                        games_officiated = excluded.games_officiated,
-                        avg_pf_called = excluded.avg_pf_called,
-                        avg_fta_awarded = excluded.avg_fta_awarded,
+                        games_officiated    = excluded.games_officiated,
+                        avg_pf_called       = excluded.avg_pf_called,
+                        avg_fta_awarded     = excluded.avg_fta_awarded,
                         points_impact_vs_avg = excluded.points_impact_vs_avg,
-                        last_updated = excluded.last_updated
+                        fta_impact_vs_avg   = excluded.fta_impact_vs_avg,
+                        pf_impact_vs_avg    = excluded.pf_impact_vs_avg,
+                        last_updated        = excluded.last_updated
                 ''', (ref_id, pid, pname, new_n,
                       round(new_pf, 2), round(new_fta, 2), round(new_impact, 2),
+                      round(new_fta_dev, 2), round(new_pf_dev, 2),
                       target_date))
 
                 date_pairs += 1

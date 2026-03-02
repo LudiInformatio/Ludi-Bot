@@ -215,7 +215,8 @@ class LudiRefEngine:
             _conn.close()
             if _rows:
                 for _home, _crew in _rows:
-                    self.daily_assignments[_home] = [r.strip() for r in _crew.split(',')]
+                    # Strip badge numbers e.g. "John Goble (#10)" → "John Goble"
+                    self.daily_assignments[_home] = [r.strip().split('(')[0].strip() for r in _crew.split(',')]
                 print(f"   [ZEBRAS] ✅ Loaded {len(_rows)} ref crew(s) from crosswalk (skip scrape)")
                 return self.daily_assignments
         except Exception as _e:
@@ -534,11 +535,15 @@ class LudiRefEngine:
             ref_ids = [r[0] for r in ref_rows]
             id_ph = ','.join('?' * len(ref_ids))
 
+            _SEL = (
+                "SELECT games_officiated, avg_pf_called, avg_fta_awarded, "
+                "points_impact_vs_avg, fta_impact_vs_avg, pf_impact_vs_avg "
+                "FROM referee_player_bias"
+            )
+
             # Exact name match first
             rows = conn.execute(
-                f"""SELECT games_officiated, avg_pf_called, avg_fta_awarded, points_impact_vs_avg
-                    FROM referee_player_bias
-                    WHERE referee_id IN ({id_ph}) AND player_name = ?""",
+                f"{_SEL} WHERE referee_id IN ({id_ph}) AND player_name = ?",
                 (*ref_ids, player_name)
             ).fetchall()
 
@@ -546,9 +551,7 @@ class LudiRefEngine:
             if not rows and ' ' in player_name:
                 last_name = player_name.split()[-1]
                 rows = conn.execute(
-                    f"""SELECT games_officiated, avg_pf_called, avg_fta_awarded, points_impact_vs_avg
-                        FROM referee_player_bias
-                        WHERE referee_id IN ({id_ph}) AND player_name LIKE ?""",
+                    f"{_SEL} WHERE referee_id IN ({id_ph}) AND player_name LIKE ?",
                     (*ref_ids, f'%{last_name}%')
                 ).fetchall()
 
@@ -562,9 +565,12 @@ class LudiRefEngine:
                 return None
 
             # Weighted averages (weighted by each ref's games_officiated sample)
-            avg_pf     = sum(r[0] * r[1] for r in rows) / total_games
-            avg_fta    = sum(r[0] * r[2] for r in rows) / total_games
-            avg_impact = sum(r[0] * r[3] for r in rows) / total_games
+            avg_pf        = sum(r[0] * r[1] for r in rows) / total_games
+            avg_fta       = sum(r[0] * r[2] for r in rows) / total_games
+            avg_impact    = sum(r[0] * r[3] for r in rows) / total_games
+            # Delta fields may be NULL on rows backfilled before this schema update
+            fta_delta     = sum(r[0] * (r[4] or 0) for r in rows) / total_games if any(r[4] is not None for r in rows) else None
+            pf_delta      = sum(r[0] * (r[5] or 0) for r in rows) / total_games if any(r[5] is not None for r in rows) else None
             games_per_ref = total_games / len(ref_rows)
 
             label = 'NEUTRAL'
@@ -574,12 +580,14 @@ class LudiRefEngine:
                 label = 'PROTECTOR'
 
             return {
-                'avg_fta_awarded': round(avg_fta, 2),
-                'avg_pf_called':   round(avg_pf, 2),
-                'points_impact':   round(avg_impact, 2),
-                'games_total':     total_games,
-                'games_per_ref':   round(games_per_ref, 1),
-                'label':           label,
+                'avg_fta_awarded':  round(avg_fta, 2),
+                'avg_pf_called':    round(avg_pf, 2),
+                'points_impact':    round(avg_impact, 2),
+                'fta_impact':       round(fta_delta, 2) if fta_delta is not None else None,
+                'pf_impact':        round(pf_delta, 2) if pf_delta is not None else None,
+                'games_total':      total_games,
+                'games_per_ref':    round(games_per_ref, 1),
+                'label':            label,
             }
 
         except Exception as e:

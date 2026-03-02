@@ -686,12 +686,20 @@ class LudiHistorian:
                 avg_pf_called REAL DEFAULT 0.0,
                 avg_fta_awarded REAL DEFAULT 0.0,
                 points_impact_vs_avg REAL DEFAULT 0.0,
+                fta_impact_vs_avg REAL DEFAULT NULL,  -- FTA delta vs player baseline (Phase 2 delta, Mar 2026)
+                pf_impact_vs_avg REAL DEFAULT NULL,   -- PF delta vs player baseline (foul-trouble signal)
                 last_updated DATE,
                 PRIMARY KEY (referee_id, player_id),
                 FOREIGN KEY (referee_id) REFERENCES referee_profiles(referee_id)
             )
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_ref_bias_player ON referee_player_bias(player_id)')
+        # Migration: add delta columns to existing DBs (safe to re-run)
+        for _col, _type in [('fta_impact_vs_avg', 'REAL'), ('pf_impact_vs_avg', 'REAL')]:
+            try:
+                c.execute(f'ALTER TABLE referee_player_bias ADD COLUMN {_col} {_type} DEFAULT NULL')
+            except Exception:
+                pass  # column already exists
 
         # 12. Depth Charts Table (Phase 6.1 - Feb 2, 2026)
         # Stores official NBA depth charts from Tank01 API
