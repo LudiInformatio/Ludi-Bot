@@ -68,6 +68,8 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          TANK01_TIER: paid
           ODDS_API_TIER: paid
         run: |
           # Always pass --game-date in EST to avoid UTC midnight date mismatch
