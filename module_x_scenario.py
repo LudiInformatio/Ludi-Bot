@@ -2,6 +2,17 @@ import pandas as pd
 import numpy as np
 import sqlite3
 import config
+from database import DB_PATH
+
+# Module X — Scenario building thresholds
+EFFECTIVE_STARTER_MIN_THRESHOLD = 25.0   # MPG threshold for bench player starter elevation
+PRIMARY_BACKUP_ABSORPTION = 0.60         # Usage absorption rate for primary beneficiary (heuristic)
+SECONDARY_BACKUP_ABSORPTION = 0.30       # Usage absorption rate for secondary beneficiary
+DEPTH_CHART_ABSORPTION = 0.70            # Absorption rate from depth_chart position-specific backup
+MAX_ABSORPTION_CAP = 0.80                # Maximum absorption rate any beneficiary can receive
+EFFICIENCY_DAMPENING = 0.90              # Stat scale dampening for elevated-role players
+WOWY_LOW_CONFIDENCE_PENALTY = 0.20       # Additional reduction for low-confidence WOWY data
+WOWY_MEDIUM_CONFIDENCE_PENALTY = 0.10    # Additional reduction for medium-confidence WOWY data
 
 # ==========================================
 # LUDI INFORMATIO | MODULE X: SCENARIO BUILDER
@@ -15,8 +26,191 @@ class ScenarioBuilder:
         print(f"   >>> DYNAMIC ROSTERS | LIVE SCHEMA ACTIVE")
         print(f"{'='*40}")
         
-        self.rotation_cache = {}
+        try:
+            self.conn = sqlite3.connect(DB_PATH, timeout=30)
+            self.conn.row_factory = sqlite3.Row
+        except sqlite3.Error as e:
+            print(f"   [Module X] FATAL: Could not connect to ludi.db: {e}")
+            self.conn = None
+
         self.TANK_KEY = getattr(config, 'TANK01_KEY', '')
+
+        # Conditional baseline pre-loads (loaded once at init, used across all scenarios)
+        self._ha_splits = self._load_ha_splits()         # Condition 1: home/away split
+        self._starter_splits = self._load_starter_splits()  # Condition 4: starter/bench split
+        self._scheme_map = self._load_scheme_map()       # Condition 3: scheme baseline
+        # Condition 2 (lineup-conditional) uses self.wowy_calc which is already loaded
+
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
+
+    def _load_ha_splits(self) -> dict:
+        """Pre-load home vs away avg PPG per player for conditional baseline."""
+        if not self.conn: return {}
+        try:
+            rows = self.conn.execute('''
+                SELECT l.player_id,
+                       l.home_or_away,
+                       COUNT(*) as n_games,
+                       AVG(l.pts) as avg_pts,
+                       AVG(l.fta) as avg_fta,
+                       AVG(l.ast) as avg_ast,
+                       AVG(l.reb) as avg_reb
+                FROM player_game_logs l
+                WHERE l.home_or_away IS NOT NULL
+                  AND l.home_or_away != ''
+                  AND l.minutes >= 20
+                GROUP BY l.player_id, l.home_or_away
+                HAVING COUNT(*) >= 3
+            ''').fetchall()
+
+            result = {}
+            for row in rows:
+                pid, ha, n, pts, fta, ast, reb = row['player_id'], row['home_or_away'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                if pid not in result:
+                    result[pid] = {}
+                result[pid][ha] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
+                                   'ast': ast or 0, 'reb': reb or 0}
+            return result
+        except sqlite3.Error as e:
+            print(f"   [Module X] _load_ha_splits failed: {e}")
+            return {}
+
+    def _load_starter_splits(self) -> dict:
+        """Pre-load starter vs bench avg stats per player."""
+        if not self.conn: return {}
+        try:
+            rows = self.conn.execute('''
+                SELECT l.player_id,
+                       l.started,
+                       COUNT(*) as n_games,
+                       AVG(l.pts) as avg_pts,
+                       AVG(l.fta) as avg_fta,
+                       AVG(l.ast) as avg_ast,
+                       AVG(l.reb) as avg_reb
+                FROM player_game_logs l
+                WHERE l.started IS NOT NULL
+                  AND l.minutes >= 15
+                GROUP BY l.player_id, l.started
+                HAVING COUNT(*) >= 3
+            ''').fetchall()
+
+            result = {}
+            for row in rows:
+                pid, started, n, pts, fta, ast, reb = row['player_id'], row['started'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                if pid not in result:
+                    result[pid] = {}
+                key = 'starter' if started == 1 else 'bench'
+                result[pid][key] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
+                                    'ast': ast or 0, 'reb': reb or 0}
+            return result
+        except sqlite3.Error as e:
+            print(f"   [Module X] _load_starter_splits failed: {e}")
+            return {}
+
+    def _load_scheme_map(self) -> dict:
+        """Pre-load current defensive scheme per team."""
+        if not self.conn: return {}
+        try:
+            # Corrected query based on schema investigation
+            rows = self.conn.execute('''
+                SELECT team_abbr, active_style
+                FROM team_scheme_cache
+            ''').fetchall()
+            return {r['team_abbr']: r['active_style'] for r in rows}
+        except Exception as e:
+            print(f"   [Module X] scheme_map load failed (non-fatal): {e}")
+            return {}
+
+    def _build_conditional_baseline(self, player: dict, scenario_context: dict) -> dict:
+        """
+        Compute a combined conditional modifier for a player given tonight's context.
+
+        Returns a dict of stat-specific multipliers, e.g.:
+        {'pts': 1.08, 'fta': 1.12, 'ast': 1.02, 'reb': 0.96, 'combined_n': 15}
+
+        Uses dampened modifier approach:
+        - modifier = conditional_avg / season_avg
+        - dampened = 1 + (modifier - 1) * confidence_weight
+        - confidence_weight = clamp((n_qualifying - 5) / 15.0, 0.0, 1.0)
+        """
+        pid = player.get('player_id')
+        modifiers = {}  # stat_key -> list of (modifier_value, n_games)
+
+        # --- Condition 1: H/A Split ---
+        ha_context = scenario_context.get('home_or_away')  # 'home' or 'away'
+        ha_data = self._ha_splits.get(pid, {})
+
+        if ha_context and ha_data:
+            ha_stats = ha_data.get(ha_context)
+            all_games = list(ha_data.values())
+            if ha_stats and len(all_games) >= 2:
+                # Compute season avg from both home + away games
+                total_n = sum(g['n'] for g in all_games)
+                for stat in ['pts', 'fta', 'ast', 'reb']:
+                    season_avg = sum(g[stat] * g['n'] for g in all_games) / total_n if total_n > 0 else 0
+                    conditional_avg = ha_stats[stat]
+                    n = ha_stats['n']
+                    if season_avg > 0 and n >= 3:
+                        raw_mod = conditional_avg / season_avg
+                        weight = min(1.0, max(0.0, (n - 5) / 15.0))
+                        dampened = 1.0 + (raw_mod - 1.0) * weight
+                        modifiers.setdefault(stat, []).append((dampened, n))
+
+        # --- Condition 4: Starter/Bench Split ---
+        # Only applies when player is an effective_starter (bench player elevated tonight)
+        if player.get('effective_starter') and not player.get('is_starter'):
+            starter_data = self._starter_splits.get(pid, {})
+            starter_stats = starter_data.get('starter')
+            bench_stats = starter_data.get('bench')
+
+            if starter_stats and bench_stats:
+                # Compare starter games vs bench games for this player
+                for stat in ['pts', 'fta', 'ast', 'reb']:
+                    bench_avg = bench_stats[stat]
+                    starter_avg = starter_stats[stat]
+                    n = starter_stats['n']
+                    if bench_avg > 0 and n >= 3:
+                        # Modifier: how much better does this player perform when starting?
+                        raw_mod = starter_avg / bench_avg
+                        weight = min(1.0, max(0.0, (n - 3) / 12.0)) # Lower threshold for starter split
+                        dampened = 1.0 + (raw_mod - 1.0) * weight
+                        modifiers.setdefault(stat, []).append((dampened, n))
+
+        # --- Condition 3: Scheme-Conditional ---
+        opponent_team = scenario_context.get('opponent_team')
+        opp_scheme = self._scheme_map.get(opponent_team) if opponent_team else None
+        # NOTE: Scheme-conditional baseline requires per-game scheme JOIN — deferred to Sprint 2
+        # Current: scheme modifier comes from Module E archetype matchup, not baseline shift
+        # Placeholder for future: when player_game_logs has opponent_scheme column per game
+
+        # --- Combine all modifiers ---
+        # For each stat: average all condition modifiers (weighted by n), then cap
+        combined = {}
+        for stat, mod_list in modifiers.items():
+            if not mod_list:
+                combined[stat] = 1.0
+                continue
+            # Simple average of all dampened modifiers for this stat
+            avg_mod = sum(m for m, n in mod_list) / len(mod_list)
+            # Per-condition cap: ±20%
+            combined[stat] = max(0.80, min(1.20, avg_mod))
+
+        # Apply combined cap: ±25% across all stats
+        pts_mod = combined.get('pts', 1.0)
+        fta_mod = combined.get('fta', 1.0)
+        ast_mod = combined.get('ast', 1.0)
+        reb_mod = combined.get('reb', 1.0)
+
+        # Don't over-dampen: if any single modifier is significant, trust it
+        # (combined cap handles outliers without zeroing signal)
+        combined['pts'] = max(0.75, min(1.25, pts_mod))
+        combined['fta'] = max(0.75, min(1.25, fta_mod))
+        combined['ast'] = max(0.75, min(1.25, ast_mod))
+        combined['reb'] = max(0.75, min(1.25, reb_mod))
+
+        return combined
 
     def _classify_vacuum_smart(self, out_player_name: str, team_abbr: str) -> dict:
         """
@@ -84,7 +278,7 @@ class ScenarioBuilder:
                 'FTA': round(row[6] or 0, 1)
             }
         except Exception as e:
-            print(f"[TAG] Context: {e}")
+            print(f"[Module X _get_l10_stats]: {e}")
             return {}
 
     def generate_scenarios(self, processed_slate):
@@ -191,7 +385,7 @@ class ScenarioBuilder:
                 new_p['MIN'] = new_min
 
                 # H4: Mark as effective_starter if elevated to starter-level minutes
-                if new_min >= 25.0:
+                if new_min >= EFFECTIVE_STARTER_MIN_THRESHOLD:
                     new_p['effective_starter'] = True
                 
                 # Attach WOWY confidence for tag classifier
@@ -199,16 +393,16 @@ class ScenarioBuilder:
                     new_p['wowy_confidence'] = wowy_confidence
 
                 # Efficiency Tax (10% decay on volume efficiency)
-                dampened_ratio = 1.0 + ((scale_ratio - 1.0) * 0.90)
+                dampened_ratio = 1.0 + ((scale_ratio - 1.0) * EFFICIENCY_DAMPENING)
 
                 # WOWY Confidence Penalty (Phase 6.3 Enhancement)
-                # Further dampen volume boost for low-confidence WOWY data
+                # Dampen the effect further if we don't fully trust the WOWY sample
                 if wowy_confidence == 'low':
                     # Extra 20% dampening: if dampened_ratio was 1.54, now 1.432
-                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * 0.80)
+                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * (1.0 - WOWY_LOW_CONFIDENCE_PENALTY))
                 elif wowy_confidence == 'medium':
                     # Extra 10% dampening: if dampened_ratio was 1.54, now 1.486
-                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * 0.90)
+                    dampened_ratio = 1.0 + ((dampened_ratio - 1.0) * (1.0 - WOWY_MEDIUM_CONFIDENCE_PENALTY))
                 # HIGH confidence: no extra penalty (already has 90% efficiency tax)
 
                 # SCALE LIST: Updated to match LIVE SCHEMA (Uppercase)
@@ -307,7 +501,7 @@ class ScenarioBuilder:
                 for r in rows
             ]
         except Exception as e:
-            print(f"[TAG] Context: {e}")
+            print(f"[Module X _lookup_beneficiary_minutes]: {e}")
             return []
 
     def _infer_dynamic_backup(self, all_players, starter_out):
@@ -346,7 +540,7 @@ class ScenarioBuilder:
                 pts_delta = r.get('pts_delta') or 0
                 if ben_name and pts_delta > 0:
                     # Normalize to fraction of star's offensive output (absorption rate)
-                    absorption[ben_name] = round(min(pts_delta / max(star_base_pts, 1), 0.8), 3)
+                    absorption[ben_name] = round(min(pts_delta / max(star_base_pts, 1), MAX_ABSORPTION_CAP), 3)
             if absorption:
                 print(f"[Module X] TIER 0A wowy_observed for {starter_out.get('PLAYER_NAME', '?')}: "
                       f"{list(absorption.keys())[:3]}")
@@ -371,11 +565,12 @@ class ScenarioBuilder:
             conn.close()
             if row:
                 backup_name = row[0]
-                absorption = {backup_name: 0.70}
+                absorption = {backup_name: DEPTH_CHART_ABSORPTION}
                 print(f"[Module X] H5 depth_charts backup for {starter_out.get('PLAYER_NAME', '?')}: {backup_name}")
                 return {'matrix': absorption, 'confidence': 'medium'}
         except Exception as e:
-            pass
+            player_name = starter_out.get('PLAYER_NAME', '?')
+            print(f"   [Module X] depth_charts lookup failed for {player_name}: {e}")
 
         # TIER 0B: beneficiary_minutes — data-driven absence analysis (Phase 8.9)
         bene_data = self._lookup_beneficiary_minutes(
@@ -427,7 +622,7 @@ class ScenarioBuilder:
             matrix = {}
             for name, share in sorted_shares[:3]:  # Top 3 beneficiaries
                 # Scale: highest share teammate gets ~60% absorption, others proportional
-                matrix[name] = round(share * 0.60 / sorted_shares[0][1], 2) if sorted_shares[0][1] > 0 else 0
+                matrix[name] = round(share * PRIMARY_BACKUP_ABSORPTION / sorted_shares[0][1], 2) if sorted_shares[0][1] > 0 else 0
             print(f"[Module X] Using assist combo data for {star_name} beneficiaries ({len(matrix)} teammates)")
             return {'matrix': matrix, 'confidence': 'medium'}
 
@@ -451,9 +646,9 @@ class ScenarioBuilder:
         # The primary backup gets 60% of minutes, secondary gets 30%
         matrix = {}
         if len(bench_candidates) >= 1:
-            matrix[bench_candidates[0]['PLAYER_NAME']] = 0.60
+            matrix[bench_candidates[0]['PLAYER_NAME']] = PRIMARY_BACKUP_ABSORPTION
         if len(bench_candidates) >= 2:
-            matrix[bench_candidates[1]['PLAYER_NAME']] = 0.30
+            matrix[bench_candidates[1]['PLAYER_NAME']] = SECONDARY_BACKUP_ABSORPTION
 
         print(f"[Module X] Using heuristic backup matrix (WOWY + assist combos unavailable)")
         return {'matrix': matrix, 'confidence': None}
@@ -509,19 +704,20 @@ class ScenarioBuilder:
             conn = sqlite3.connect('ludi.db')
             c = conn.cursor()
             
+            # Bulk pre-fetch — single query instead of N per-player queries
+            all_wowy = conn.execute(
+                "SELECT player_name, on_off_diff FROM player_season_wowy WHERE season = '2025-26'"
+            ).fetchall()
+            wowy_lookup = {row[0]: row[1] for row in all_wowy}
+            
             for player in players:
                 player_name = player.get('PLAYER_NAME', '')
                 if not player_name:
                     continue
                 
-                c.execute('''
-                    SELECT on_off_diff 
-                    FROM player_season_wowy 
-                    WHERE player_name = ? AND season = '2025-26'
-                    LIMIT 1
-                ''', (player_name,))
+                on_off_diff_val = wowy_lookup.get(player_name)
+                row = (on_off_diff_val,) if on_off_diff_val is not None else None
                 
-                row = c.fetchone()
                 if row and row[0] is not None:
                     on_off_diff = float(row[0])
                     if on_off_diff > 5.0:
@@ -550,7 +746,7 @@ class ScenarioBuilder:
             total = float(total)
             spread = float(spread) if spread != 'N/A' else 0
         except Exception as e:
-            print(f"[TAG] Context: {e}")
+            print(f"[Module X _apply_vegas_guardrail]: {e}")
             return players
 
         implied_total = (total / 2) - (spread / 2)
@@ -572,31 +768,7 @@ class ScenarioBuilder:
             
         return normalized
 
-    def _get_wowy_projections(self, player_name: str, out_player_name: str, conn) -> dict:
-        """
-        H3: Fetch actual per-36 stats when out_player is not on court.
-        Source: team_lineups WOWY data (lineups WITHOUT out_player).
-        Returns dict of {stat: value} or None if insufficient data.
-        """
-        try:
-            c = conn.cursor()
-            c.execute("""
-                SELECT
-                    AVG(pts_per_36)  as pts,
-                    AVG(ast_per_36)  as ast,
-                    AVG(reb_per_36)  as reb,
-                    COUNT(*)         as lineups
-                FROM team_lineups
-                WHERE player_name = ?
-                  AND lineup_string NOT LIKE ?
-                  AND minutes >= 50
-            """, (player_name, f'%{out_player_name}%'))
-            row = c.fetchone()
-            if row and row[3] >= 5:
-                return {'pts': row[0], 'ast': row[1], 'reb': row[2], 'lineups': row[3]}
-        except Exception:
-            pass
-        return None
+
 
 
 if __name__ == "__main__":

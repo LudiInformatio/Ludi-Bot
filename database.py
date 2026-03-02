@@ -169,10 +169,30 @@ class LudiHistorian:
                 tov INTEGER, pf INTEGER, pts INTEGER,
                 plus_minus INTEGER,
                 fantasy_pts REAL,
+                started INTEGER,
+                fantasy_pts_dk REAL,
+                fantasy_pts_fd REAL,
+                home_or_away TEXT,
+                double_doubles INTEGER,
+                triple_doubles INTEGER,
                 video_available INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # SportsDataIO Columns Migration
+        for col_def in [
+            "started INTEGER",
+            "fantasy_pts_dk REAL",
+            "fantasy_pts_fd REAL",
+            "home_or_away TEXT",
+            "double_doubles INTEGER",
+            "triple_doubles INTEGER"
+        ]:
+            try:
+                c.execute(f"ALTER TABLE player_game_logs ADD COLUMN {col_def}")
+            except Exception:
+                pass
 
         # Add indexes for performance
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_id ON player_game_logs(player_id)')

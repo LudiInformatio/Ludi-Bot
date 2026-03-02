@@ -623,7 +623,7 @@ class LudiHistorian:
                 # Send Telegram alert
                 try:
                     progress_pct = len(completed_dates) / (len(completed_dates) + len(remaining)) * 100
-                    send_message(
+                    send_solomon_message(
                         f"⏱️ *Historian Sync Paused (Time Budget)*\n"
                         f"Progress: {len(completed_dates)}/{len(completed_dates) + len(remaining)} ({progress_pct:.0f}%)\n"
                         f"Remaining: {len(remaining)} dates\n"
@@ -656,7 +656,7 @@ class LudiHistorian:
                 # Send Telegram alert
                 try:
                     progress_pct = len(completed_dates) / (len(completed_dates) + len(remaining)) * 100
-                    send_message(
+                    send_solomon_message(
                         f"⚠️ *Historian Sync Paused*\n"
                         f"Progress: {len(completed_dates)}/{len(completed_dates) + len(remaining)} ({progress_pct:.0f}%)\n"
                         f"Remaining: {len(remaining)} dates\n"
@@ -994,6 +994,10 @@ class LudiHistorian:
                             away_score = excluded.away_score
                     """, (game_id, game_date_fmt, home_team, away_team, int(home_score), int(away_score)))
                     bridge_conn.commit()
+                    
+                    from database import sync_canonical_games
+                    sync_canonical_games(bridge_conn)
+                    
                     bridge_conn.close()
             except Exception as bridge_err:
                 print(f"   [Module H] Games bridge warning for {game_id}: {bridge_err}")
