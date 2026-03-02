@@ -43,8 +43,8 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
-- [ ] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: `avg_pace_impact` (fouls/12.5) + `style` thresholds. Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT. Safe anytime.
-- [ ] **Run `backfill_referee_bias.py`** — populate `referee_player_bias` from 363 game dates (all `games_officiated=1` now → backfill enables real PROTECTOR/STAR_KILLER signal).
+- [x] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: `avg_pace_impact` (fouls/12.5) + `style` thresholds. Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT. Safe anytime.
+- [x] **Run `backfill_referee_bias.py`** — populate `referee_player_bias` from 363 game dates (all `games_officiated=1` now → backfill enables real PROTECTOR/STAR_KILLER signal).
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
