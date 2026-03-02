@@ -168,8 +168,8 @@ class LudiRefEngine:
                     pace_impact = round(avg_fouls / self.LEAGUE_AVG_FOULS, 3) if avg_fouls else 1.0
 
                 # whistle_impact uses rolling window when available (short-term trend beats season avg)
-                # Falls back to season avg via COALESCE above
-                whistle_impact = round(rolling_21d_fouls / self.LEAGUE_AVG_FOULS, 3)
+                # Falls back to season avg via COALESCE above; guard against 0-game refs (neutral default)
+                whistle_impact = round(rolling_21d_fouls / self.LEAGUE_AVG_FOULS, 3) if rolling_21d_fouls else 1.0
 
                 return {
                     'name': result[0],
