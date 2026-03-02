@@ -66,7 +66,8 @@ def main():
             JOIN games g ON l.game_id = g.game_id
             JOIN players p ON l.player_id = p.player_id
             WHERE DATE(g.date) = ?
-            AND l.minutes >= 20
+            AND l.minutes >= 20          -- exclude garbage-time appearances
+            AND p.usg_pct >= 0.12        -- exclude low-touch role players (<12% USG)
             AND g.referee_crew IS NOT NULL
             AND g.referee_crew != ''
             AND p.base_ppg IS NOT NULL AND p.base_ppg > 0
