@@ -363,6 +363,110 @@ class TeamDefensiveClassifier:
         else:
             return "INSUFFICIENT"
     
+    def _load_tracking_stats_by_games(self, team_name: str, last_n_games: int, end_date: str) -> Dict:
+        """Load team defensive stats using game-count window (robust against schedule gaps)."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            WITH team_game_dates AS (
+                SELECT game_date,
+                       ROW_NUMBER() OVER (ORDER BY game_date DESC) as game_num
+                FROM (
+                    SELECT DISTINCT game_date
+                    FROM player_game_tracking
+                    WHERE team_abbr = ?
+                      AND game_date <= ?
+                )
+            )
+            SELECT
+                pg.game_date,
+                SUM(pg.catch_shoot_3pa) as opp_catch_shoot_3pa,
+                SUM(pg.catch_shoot_3pm) as opp_catch_shoot_3pm,
+                SUM(pg.drives_fga) as opp_drives_fga,
+                SUM(pg.drives_fgm) as opp_drives_fgm,
+                AVG(pg.avg_speed_off) as opp_speed,
+                AVG(pg.avg_defender_dist) as opp_avg_defender_dist
+            FROM player_game_tracking pg
+            JOIN team_game_dates tgd ON pg.game_date = tgd.game_date
+            WHERE tgd.game_num <= ?
+              AND pg.team_abbr != ?
+            GROUP BY pg.game_date
+            ORDER BY pg.game_date DESC
+        """, (team_name, end_date, last_n_games, team_name))
+
+        stats = cursor.fetchall()
+        conn.close()
+
+        if not stats:
+            return {}
+
+        total_games = len(stats)
+
+        def safe_avg(idx):
+            vals = [s[idx] for s in stats if s[idx] is not None]
+            return sum(vals) / len(vals) if vals else 0
+
+        avg_opp_cs_3pa = safe_avg(1)
+        avg_opp_cs_3pm = safe_avg(2)
+        avg_opp_drives_fga = safe_avg(3)
+        avg_opp_drives_fgm = safe_avg(4)
+        avg_opp_speed = safe_avg(5)
+        avg_opp_def_dist = safe_avg(6)
+
+        opp_drive_fg_pct = (avg_opp_drives_fgm / avg_opp_drives_fga) if avg_opp_drives_fga > 0 else 0
+        opp_cs_3p_pct = (avg_opp_cs_3pm / avg_opp_cs_3pa) if avg_opp_cs_3pa > 0 else 0
+
+        return {
+            'opp_catch_shoot_3pa': avg_opp_cs_3pa,
+            'opp_catch_shoot_3p_pct': opp_cs_3p_pct,
+            'opp_drives_fga': avg_opp_drives_fga,
+            'opp_drive_fg_pct': opp_drive_fg_pct,
+            'opp_speed': avg_opp_speed,
+            'opp_avg_defender_dist': avg_opp_def_dist,
+            'sample_size': total_games
+        }
+
+    def batch_classify_all_teams_by_games(self, last_n_games: int = 30, end_date: str = None,
+                                           min_games: int = 8, return_stats: bool = False):
+        """Classify all 30 teams using game-count windows (robust against schedule gaps).
+
+        Args:
+            last_n_games: Number of most recent games per team to include
+            end_date: Latest game date to consider
+            min_games: Minimum games for valid classification
+            return_stats: If True, return (classifications, stats_by_team) tuple
+        """
+        teams = [
+            "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DAL", "DEN", "DET",
+            "GSW", "HOU", "IND", "LAC", "LAL", "MEM", "MIA", "MIL",
+            "MIN", "NOP", "NYK", "OKC", "ORL", "PHI", "PHX", "POR",
+            "SAC", "SAS", "TOR", "UTA", "WAS"
+        ]
+
+        end_date = self._resolve_window_end(end_date)
+        raw_stats = {team: self._load_tracking_stats_by_games(team, last_n_games, end_date) for team in teams}
+
+        stats_by_team = {}
+        for team, stats in raw_stats.items():
+            if not stats or stats.get('sample_size', 0) < min_games:
+                stats_by_team[team] = {}
+            else:
+                stats_by_team[team] = stats
+        thresholds = self._compute_relative_thresholds(stats_by_team)
+
+        classifications = {}
+        for team in teams:
+            stats = stats_by_team.get(team, {})
+            if not stats:
+                classifications[team] = "NEUTRAL"
+            else:
+                classifications[team] = self._apply_relative_rules(stats, thresholds)
+
+        if return_stats:
+            return classifications, stats_by_team
+        return classifications
+
     def batch_classify_all_teams(self, start_date: str = None, end_date: str = None,
                                  min_games: int = 10, return_stats: bool = False) -> Dict[str, str]:
         """Classify all 30 NBA teams."""

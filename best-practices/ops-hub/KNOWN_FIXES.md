@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-03-02 — WOWY Sync Silent Failure: 345 Rows Scraped, 0 Written
+
+**Symptom:** `wowy_sync.yml` exits 0 (green check) but 0 lineup records actually persisted. Logs show 345 rows scraped by Ghost Protocol over 31 minutes, then every INSERT fails with `database is locked`.
+
+**Root cause:** Zombie `main.py --games LAL` process (PID 29623) held 134 open file descriptors on `ludi.db`. Default SQLite timeout = 5s, insufficient when another process holds WAL lock indefinitely. Per-row errors were caught and continued, so the script finished with exit code 0 despite writing nothing.
+
+**Fix (2 files):**
+1. `scripts/sync_wowy_backfill.py` + `scripts/sync_wowy_hybrid.py`: Added `PRAGMA busy_timeout = 30000` (retry for 30s on lock). Added fail-loud pattern: track `row_errors`, log first 3, `sys.exit(1)` if 100% of rows fail.
+2. Kill zombie process: `kill <PID>`, verify with `lsof ludi.db`.
+
+**Prevention:** Always check `lsof ludi.db` before investigating silent workflow failures. If FD count > 10, a zombie process is likely.
+
+---
+
+## 2026-03-02 — learn_daily_trends.py NameError: ROLLING_WINDOW_DAYS
+
+**Symptom:** Step 24 of data_sync fails with `NameError: name 'ROLLING_WINDOW_DAYS' is not defined`. Caught by try/except, reported as "non-critical" warning — rolling stats never update.
+
+**Root cause:** Game-count refactor (Feb 28) renamed constant from `ROLLING_WINDOW_DAYS` to `ROLLING_WINDOW_GAMES` and kwarg from `rolling_days=` to `rolling_games_n=`, but missed the call site at lines 507-509.
+
+**Fix:** `scripts/learn_daily_trends.py` L507-509: Change `ROLLING_WINDOW_DAYS` → `ROLLING_WINDOW_GAMES` and `rolling_days=` → `rolling_games_n=`.
+
+---
+
+## 2026-03-02 — Team Scheme Cache Calendar-Day Windows Break During Schedule Gaps
+
+**Symptom:** Team classifications show INSUFFICIENT during All-Star break or schedule gaps because `timedelta(days=7)` window may contain 0-2 games for some teams while others have 4+.
+
+**Root cause:** `update_team_scheme_cache.py` used `timedelta(days=59/20/6)` for 3-window voting. Calendar-day windows produce unequal sample sizes across teams.
+
+**Fix:** Replaced with game-count windows (30g/15g/7g). Added `classify_all_teams_by_games()` to offensive classifier and `batch_classify_all_teams_by_games()` to defensive classifier. Both use `ROW_NUMBER() OVER (PARTITION BY team ORDER BY game_date DESC)` CTE for equal-sized samples.
+
+---
+
 ## 2026-03-01 — Runner Stale Code: GH Actions Using Old module_a.py
 
 **Symptom:** Workflow fails with 422 on `markets=h2h,spreads,totals,team_totals` bulk endpoint even though local code removed team_totals. Runner's `capture_closing_lines.yml` also shows `TANK01_KEY not set` even though the secret exists.

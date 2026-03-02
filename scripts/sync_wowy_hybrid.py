@@ -46,7 +46,8 @@ HEADERS = {
 }
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")  # Retry for 30s on lock instead of failing immediately
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -104,6 +105,7 @@ def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
     conn = get_db_connection()
     c = conn.cursor()
     count = 0
+    row_errors = 0
 
     # Ensure columns exist in DataFrame (sometimes missing if no data)
     required_cols = ['GROUP_NAME', 'TEAM_ABBREVIATION', 'GP', 'MIN',
@@ -149,13 +151,20 @@ def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
             count += 1
             
         except Exception as e:
-            print(f"      ⚠️  Row error: {e}", flush=True)
+            row_errors += 1
+            if row_errors <= 3:
+                print(f"      ⚠️  Row error: {e}", flush=True)
             continue
 
     print(f"   [DEBUG] Committing {count} records to database...", flush=True)
     conn.commit()
-    print(f"   [DEBUG] Commit successful, closing connection...", flush=True)
     conn.close()
+    total_rows = count + row_errors
+    if row_errors > 0:
+        print(f"      ⚠️  {row_errors}/{total_rows} rows failed to write", flush=True)
+    if total_rows > 0 and row_errors == total_rows:
+        print(f"      ❌ ALL {total_rows} rows failed — database may be locked", flush=True)
+        sys.exit(1)
     print(f"   [DEBUG] Database operations complete for {game_date}", flush=True)
     return count
 

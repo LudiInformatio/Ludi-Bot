@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Update team_scheme_cache with season, 21d, and 14d offensive/defensive schemes.
+Update team_scheme_cache with 30g/15g/7g offensive/defensive schemes.
+Uses game-count windows (not calendar days) for robustness against schedule gaps.
 """
 
 import argparse
@@ -8,7 +9,7 @@ import sqlite3
 import os
 import sys
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,18 +55,9 @@ CREATE TABLE IF NOT EXISTS team_scheme_cache (
 def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) -> dict:
     """
     Compute relative defensive quality tiers using player_game_advanced.def_rating.
-
-    Why player_game_advanced instead of tracking data: Ghost Protocol tracking only syncs
-    weekly, so the 14d window rarely has enough game rows (min_games=5). BDL advanced stats
-    sync daily and have 35k+ rows with full season coverage.
+    Date-range version (kept for backward compatibility).
 
     Returns dict: {team_abbr: (tier, avg_dr_numeric)}
-      tier: 'STRONG' | 'AVERAGE' | 'WEAK'
-      avg_dr_numeric: raw float for def_rating_14d column (D3)
-    Tier cutoff: 1 standard deviation from league average (z-score threshold).
-    Lower def_rating = better defense (points allowed per 100 possessions).
-
-    Falls back to empty dict if fewer than 15 teams have data (can't compute relative tiers).
     """
     try:
         conn = sqlite3.connect(db_path)
@@ -85,41 +77,15 @@ def compute_team_def_quality_14d(db_path: str, d14_start: str, window_end: str) 
     except Exception:
         return {}
 
-    if len(rows) < 15:  # Need most teams to compute meaningful relative tiers
-        return {}
-
-    vals = [r[1] for r in rows]
-    league_avg = sum(vals) / len(vals)
-    std = math.sqrt(sum((v - league_avg) ** 2 for v in vals) / len(vals))
-
-    result = {}
-    for team_abbrev, avg_dr, _ in rows:
-        if avg_dr < league_avg - std:
-            tier = "STRONG"
-        elif avg_dr > league_avg + std:
-            tier = "WEAK"
-        else:
-            tier = "AVERAGE"
-        # F4: normalize BDL abbreviations so main() .get(team, ...) matches canonical TEAMS list
-        result[normalize_bdl_abbr(team_abbrev)] = (tier, round(avg_dr, 2))  # D3: store both tier + numeric
-
-    return result
+    return _compute_def_quality_from_rows(rows)
 
 
 def compute_team_off_quality_14d(db_path: str, d14_start: str, window_end: str) -> dict:
     """
     Compute relative offensive quality tiers using player_game_advanced.off_rating.
-
-    off_rating is the team's offensive rating when that player is on the court
-    (points scored per 100 possessions). Averaging across all players on a team
-    approximates the team's overall 14d offensive efficiency.
-
-    Higher off_rating = better offense (inverse of defensive rating).
-    STRONG = ≥1 std dev above league average (offense is hot).
-    WEAK   = ≥1 std dev below league average (offense is struggling).
+    Date-range version (kept for backward compatibility).
 
     Returns dict: {team_abbr: 'STRONG' | 'AVERAGE' | 'WEAK'}
-    Falls back to empty dict if fewer than 15 teams have data.
     """
     try:
         conn = sqlite3.connect(db_path)
@@ -139,6 +105,118 @@ def compute_team_off_quality_14d(db_path: str, d14_start: str, window_end: str) 
     except Exception:
         return {}
 
+    return _compute_off_quality_from_rows(rows)
+
+
+def compute_team_def_quality_by_games(db_path: str, last_n_games: int, window_end: str) -> dict:
+    """
+    Compute relative defensive quality tiers using game-count window.
+
+    Uses CTE with ROW_NUMBER to select last N games per team from player_game_advanced.
+    Robust against schedule gaps (All-Star break, off-days).
+
+    Returns dict: {team_abbr: (tier, avg_dr_numeric)}
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """
+            WITH team_games AS (
+                SELECT team_abbrev, game_date,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY team_abbrev ORDER BY game_date DESC
+                       ) as game_num
+                FROM (
+                    SELECT DISTINCT team_abbrev, game_date
+                    FROM player_game_advanced
+                    WHERE game_date <= ? AND def_rating IS NOT NULL
+                )
+            )
+            SELECT a.team_abbrev, AVG(a.def_rating) as avg_dr, COUNT(*) as n
+            FROM player_game_advanced a
+            JOIN team_games tg
+              ON a.team_abbrev = tg.team_abbrev AND a.game_date = tg.game_date
+            WHERE tg.game_num <= ?
+              AND a.def_rating IS NOT NULL
+            GROUP BY a.team_abbrev
+            HAVING COUNT(*) >= 10
+            ORDER BY avg_dr
+            """,
+            (window_end, last_n_games),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return {}
+
+    return _compute_def_quality_from_rows(rows)
+
+
+def compute_team_off_quality_by_games(db_path: str, last_n_games: int, window_end: str) -> dict:
+    """
+    Compute relative offensive quality tiers using game-count window.
+
+    Uses CTE with ROW_NUMBER to select last N games per team from player_game_advanced.
+
+    Returns dict: {team_abbr: 'STRONG' | 'AVERAGE' | 'WEAK'}
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """
+            WITH team_games AS (
+                SELECT team_abbrev, game_date,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY team_abbrev ORDER BY game_date DESC
+                       ) as game_num
+                FROM (
+                    SELECT DISTINCT team_abbrev, game_date
+                    FROM player_game_advanced
+                    WHERE game_date <= ? AND off_rating IS NOT NULL
+                )
+            )
+            SELECT a.team_abbrev, AVG(a.off_rating) as avg_or, COUNT(*) as n
+            FROM player_game_advanced a
+            JOIN team_games tg
+              ON a.team_abbrev = tg.team_abbrev AND a.game_date = tg.game_date
+            WHERE tg.game_num <= ?
+              AND a.off_rating IS NOT NULL
+            GROUP BY a.team_abbrev
+            HAVING COUNT(*) >= 10
+            ORDER BY avg_or DESC
+            """,
+            (window_end, last_n_games),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return {}
+
+    return _compute_off_quality_from_rows(rows)
+
+
+def _compute_def_quality_from_rows(rows) -> dict:
+    """Shared logic: convert def_rating rows into STRONG/AVERAGE/WEAK tiers."""
+    if len(rows) < 15:
+        return {}
+
+    vals = [r[1] for r in rows]
+    league_avg = sum(vals) / len(vals)
+    std = math.sqrt(sum((v - league_avg) ** 2 for v in vals) / len(vals))
+
+    result = {}
+    for team_abbrev, avg_dr, _ in rows:
+        if avg_dr < league_avg - std:
+            tier = "STRONG"
+        elif avg_dr > league_avg + std:
+            tier = "WEAK"
+        else:
+            tier = "AVERAGE"
+        result[normalize_bdl_abbr(team_abbrev)] = (tier, round(avg_dr, 2))
+
+    return result
+
+
+def _compute_off_quality_from_rows(rows) -> dict:
+    """Shared logic: convert off_rating rows into STRONG/AVERAGE/WEAK tiers."""
     if len(rows) < 15:
         return {}
 
@@ -148,9 +226,8 @@ def compute_team_off_quality_14d(db_path: str, d14_start: str, window_end: str) 
 
     result = {}
     for team_abbrev, avg_or, _ in rows:
-        # F4: normalize BDL abbreviations so main() .get(team, ...) matches canonical TEAMS list
         canonical = normalize_bdl_abbr(team_abbrev)
-        if avg_or > league_avg + std:     # Higher = better offense
+        if avg_or > league_avg + std:
             result[canonical] = "STRONG"
         elif avg_or < league_avg - std:
             result[canonical] = "WEAK"
@@ -212,48 +289,44 @@ def main():
 
     window_end = resolve_window_end(args.db_path, args.window_end)
 
-    end_dt = datetime.strptime(window_end, "%Y-%m-%d")
-    # 3-window voting: 60d (baseline trend) / 21d (medium-term) / 7d (hot/recent)
-    # Replaces [season, 21d, 14d] — 7d catches injury-driven shifts and scheme changes
-    # that a 14d window would smooth over. All three vote equally in pick_active().
-    d60_start = (end_dt - timedelta(days=59)).strftime("%Y-%m-%d")
-    d21_start = (end_dt - timedelta(days=20)).strftime("%Y-%m-%d")
-    d7_start  = (end_dt - timedelta(days=6)).strftime("%Y-%m-%d")
-
-    # Backwards-compatible: --season-start still accepted but 60d is now the baseline
-    season_start = d60_start  # override: use 60d rolling window, not fixed season start
+    # Game-count windows — robust against schedule gaps (All-Star break, off-days).
+    # Replaces calendar-day windows (60d/21d/7d) which produce noisy/empty results
+    # when teams have irregular schedules. Every team gets exactly N games (or fewer
+    # if early season), ensuring equal-sized samples for classification.
+    GAMES_BASELINE = 30   # ~2 months of play
+    GAMES_MEDIUM   = 15   # ~3-4 weeks
+    GAMES_RECENT   = 7    # ~2 weeks (recent form)
 
     off_classifier = TeamOffensiveClassifier(db_path=args.db_path)
     def_classifier = TeamDefensiveClassifier(db_path=args.db_path)
 
-    # BDL-based 7d quality tiers (STRONG / AVERAGE / WEAK) — short window shows recent form.
-    off_quality_14d = compute_team_off_quality_14d(args.db_path, d7_start, window_end)
+    # BDL-based quality tiers (STRONG / AVERAGE / WEAK) — recent window shows current form.
+    off_quality_14d = compute_team_off_quality_by_games(args.db_path, GAMES_RECENT, window_end)
     if args.verbose and off_quality_14d:
-        print(f"[OFF QUALITY 7d] computed for {len(off_quality_14d)} teams "
+        print(f"[OFF QUALITY {GAMES_RECENT}g] computed for {len(off_quality_14d)} teams "
               f"(STRONG={sum(1 for v in off_quality_14d.values() if v=='STRONG')}, "
               f"WEAK={sum(1 for v in off_quality_14d.values() if v=='WEAK')})")
 
-    def_quality_14d = compute_team_def_quality_14d(args.db_path, d7_start, window_end)
+    def_quality_14d = compute_team_def_quality_by_games(args.db_path, GAMES_RECENT, window_end)
     if args.verbose and def_quality_14d:
-        print(f"[DEF QUALITY 7d] computed for {len(def_quality_14d)} teams "
+        print(f"[DEF QUALITY {GAMES_RECENT}g] computed for {len(def_quality_14d)} teams "
               f"(STRONG={sum(1 for t, _ in def_quality_14d.values() if t=='STRONG')}, "
               f"WEAK={sum(1 for t, _ in def_quality_14d.values() if t=='WEAK')})")
 
-    # Offense: [60d, 21d, 7d] windows
-    off_season = off_classifier.classify_all_teams(start_date=d60_start, end_date=window_end, min_games=20)
-    off_21     = off_classifier.classify_all_teams(start_date=d21_start, end_date=window_end, min_games=5)
-    off_14     = off_classifier.classify_all_teams(start_date=d7_start,  end_date=window_end, min_games=2)
+    # Offense: [30g, 15g, 7g] game-count windows
+    off_season = off_classifier.classify_all_teams_by_games(last_n_games=GAMES_BASELINE, end_date=window_end, min_games=15)
+    off_21     = off_classifier.classify_all_teams_by_games(last_n_games=GAMES_MEDIUM,   end_date=window_end, min_games=8)
+    off_14     = off_classifier.classify_all_teams_by_games(last_n_games=GAMES_RECENT,   end_date=window_end, min_games=3)
 
-    # Defense: [60d, 21d, 7d] windows
-    def_season_raw, def_season_stats = def_classifier.batch_classify_all_teams(
-        start_date=d60_start, end_date=window_end, min_games=8, return_stats=True
+    # Defense: [30g, 15g, 7g] game-count windows
+    def_season_raw, def_season_stats = def_classifier.batch_classify_all_teams_by_games(
+        last_n_games=GAMES_BASELINE, end_date=window_end, min_games=8, return_stats=True
     )
-    def_21_raw, def_21_stats = def_classifier.batch_classify_all_teams(
-        start_date=d21_start, end_date=window_end, min_games=4, return_stats=True
+    def_21_raw, def_21_stats = def_classifier.batch_classify_all_teams_by_games(
+        last_n_games=GAMES_MEDIUM, end_date=window_end, min_games=4, return_stats=True
     )
-    # min_games=1 for 7d: as few as 2-3 games in a week; relative thresholds still valid
-    def_14_raw, def_14_stats = def_classifier.batch_classify_all_teams(
-        start_date=d7_start, end_date=window_end, min_games=1, return_stats=True
+    def_14_raw, def_14_stats = def_classifier.batch_classify_all_teams_by_games(
+        last_n_games=GAMES_RECENT, end_date=window_end, min_games=2, return_stats=True
     )
 
     if not args.dry_run:

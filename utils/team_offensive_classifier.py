@@ -169,6 +169,94 @@ class TeamOffensiveClassifier:
 
         return "BALANCED"
     
+    def classify_all_teams_by_games(self, last_n_games: int = 30, end_date: str = None,
+                                     min_games: int = 15) -> Dict[str, str]:
+        """
+        Classify all teams using last-N-games window (robust against schedule gaps).
+
+        Args:
+            last_n_games: Number of most recent games per team to include
+            end_date: Latest game date to consider (defaults to most recent in DB)
+            min_games: Minimum games required for classification (else excluded)
+
+        Returns:
+            Dict mapping team_abbr -> offensive_type
+        """
+        end_date = self._resolve_window_end(end_date)
+        team_stats = self._fetch_team_stats_by_games(last_n_games, end_date, min_games)
+
+        result = {}
+        for team_abbr, stats in team_stats.items():
+            normalized = normalize_bdl_abbr(team_abbr)
+            off_type = self._classify_team(normalized, stats)
+            result[normalized] = off_type
+
+        return result
+
+    def _fetch_team_stats_by_games(self, last_n_games: int, end_date: str, min_games: int) -> Dict:
+        """Fetch team stats using game-count window instead of date range."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+
+            c.execute('''
+                WITH team_games AS (
+                    SELECT team_abbreviation, game_date,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY team_abbreviation
+                               ORDER BY game_date DESC
+                           ) as game_num
+                    FROM (
+                        SELECT DISTINCT team_abbreviation, game_date
+                        FROM player_game_logs
+                        WHERE team_abbreviation IS NOT NULL
+                          AND game_date <= ?
+                    )
+                )
+                SELECT
+                    pgl.team_abbreviation as team,
+                    COUNT(DISTINCT pgl.game_id) as games,
+                    SUM(pgl.pts) * 1.0 / COUNT(DISTINCT pgl.game_id) as ppg,
+                    SUM(pgl.ast) * 1.0 / COUNT(DISTINCT pgl.game_id) as apg,
+                    SUM(pgl.fg3a) * 1.0 / COUNT(DISTINCT pgl.game_id) as t3pa,
+                    SUM(pgl.fg3m) * 1.0 / COUNT(DISTINCT pgl.game_id) as t3pm,
+                    SUM(pgl.fga) * 1.0 / COUNT(DISTINCT pgl.game_id) as fga,
+                    SUM(pgl.stl) * 1.0 / COUNT(DISTINCT pgl.game_id) as spg,
+                    CASE WHEN SUM(pgl.fgm) > 0 THEN 1.0 * SUM(pgl.ast) / SUM(pgl.fgm) ELSE 0.6 END as ast_per_fgm
+                FROM player_game_logs pgl
+                JOIN team_games tg
+                  ON pgl.team_abbreviation = tg.team_abbreviation
+                  AND pgl.game_date = tg.game_date
+                WHERE tg.game_num <= ?
+                GROUP BY pgl.team_abbreviation
+                HAVING COUNT(DISTINCT pgl.game_id) >= ?
+            ''', (end_date, last_n_games, min_games))
+
+            team_stats = {}
+            for row in c.fetchall():
+                team, games, ppg, apg, t3pa, t3pm, fga, spg, ast_per_fgm = row
+                normalized = normalize_bdl_abbr(team)
+                t3pa_rate = t3pa / fga if fga > 0 else 0.35
+                team_stats[normalized] = {
+                    'games': games,
+                    'ppg': ppg,
+                    'ast': apg,
+                    '3pa': t3pa,
+                    '3pm': t3pm,
+                    'fga': fga,
+                    'steals': spg,
+                    'ast_per_fgm': ast_per_fgm,
+                    '3pa_rate': t3pa_rate,
+                    'pace': 98 + (ppg - 110) * 0.15,
+                }
+
+            conn.close()
+            return team_stats
+
+        except Exception as e:
+            print(f"⚠️ Team stats fetch (by games) failed: {e}")
+            return self._get_fallback_stats()
+
     def get_offensive_type(self, team_abbr: str) -> str:
         """Get cached offensive type for team"""
         return self.TEAM_OFFENSIVE_TYPES.get(team_abbr, "BALANCED")

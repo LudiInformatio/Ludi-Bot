@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import DB_PATH
-from utils.browser_utils import simulate_human_interaction, close_popups, wait_for_selector_safe
+from utils.browser_utils import simulate_human_interaction, close_popups, wait_for_selector_safe, setup_page
 
 # Playwright check
 try:
@@ -43,7 +43,8 @@ except ImportError:
 # ============================================================
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")  # Retry for 30s on lock instead of failing immediately
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -217,10 +218,11 @@ def extract_id_from_href(href):
 def process_item(item_key, data, date_str):
     """Process scraped data into SQLite."""
     if not data or not data['rows']: return 0
-    
+
     manifest = WOWY_MANIFEST[item_key]
     col_map = manifest['col_map']
     table_name = manifest['table']
+    row_errors = 0
     
     headers = data['headers']
     rows = data['rows']
@@ -306,11 +308,19 @@ def process_item(item_key, data, date_str):
             count += 1
             
         except Exception as e:
-            print(f"       Row Error: {e}")  # Enable debugging
+            row_errors += 1
+            if row_errors <= 3:  # Only print first 3 to avoid log spam
+                print(f"       Row Error: {e}")
             continue
-            
+
     conn.commit()
     conn.close()
+    total_rows = count + row_errors
+    if row_errors > 0:
+        print(f"      ⚠️  {row_errors}/{total_rows} rows failed to write")
+    if total_rows > 0 and row_errors == total_rows:
+        print(f"      ❌ ALL {total_rows} rows failed — database may be locked")
+        sys.exit(1)
     return count
 
 # ============================================================
@@ -371,6 +381,7 @@ def run_wowy_backfill(start_date, end_date, headless=False):
         """)
 
         page = context.new_page()
+        setup_page(page)  # Auto-dismiss JS dialogs (alerts/confirms) on any page
 
         total_lineups = 0
         total_on_off = 0
@@ -387,9 +398,12 @@ def run_wowy_backfill(start_date, end_date, headless=False):
                 
                 try:
                     url = url_template.format(date=nba_date)
-                    # Go to page
-                    page.goto(url, timeout=45000)
-                    
+                    # Match Ghost Protocol: domcontentloaded + 90s (tolerates redirect chains)
+                    # 'commit' throws ERR_ABORTED on redirects; domcontentloaded follows them
+                    page.goto(url, wait_until='domcontentloaded', timeout=90000)
+                    # Dismiss NBA.com consent / OneTrust popups before scraping
+                    close_popups(page)
+
                     # Scrape
                     data = scrape_table(page, label)
                     

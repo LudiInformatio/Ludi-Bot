@@ -504,9 +504,9 @@ def run_daily_learning(target_date: str = None, dry_run: bool = False):
             print("\n   🔍 DRY RUN complete (no changes made)")
 
         # ── Rolling window + season stats (runs after per-game EMA loop) ──────
-        print(f"\n   📊 Updating {ROLLING_WINDOW_DAYS}-day rolling window + season stats...")
+        print(f"\n   📊 Updating last-{ROLLING_WINDOW_GAMES}-games rolling window + season stats...")
         try:
-            update_rolling_and_season_stats(conn, rolling_days=ROLLING_WINDOW_DAYS,
+            update_rolling_and_season_stats(conn, rolling_games_n=ROLLING_WINDOW_GAMES,
                                             dry_run=dry_run)
         except Exception as e:
             print(f"   ⚠️  Rolling window update failed (non-critical): {e}")
