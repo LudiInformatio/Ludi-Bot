@@ -22,7 +22,7 @@ WOWY_MEDIUM_CONFIDENCE_PENALTY = 0.10    # Additional reduction for medium-confi
 class ScenarioBuilder:
     def __init__(self):
         print(f"\n{'='*40}")
-        print(f"LUDI INFORMATIO: MODULE X (SCENARIO V3.7) ONLINE")
+        print(f"LUDI INFORMATIO: MODULE X (SCENARIO V3.9) ONLINE")
         print(f"   >>> DYNAMIC ROSTERS | LIVE SCHEMA ACTIVE")
         print(f"{'='*40}")
         
@@ -39,11 +39,123 @@ class ScenarioBuilder:
         self._ha_splits = self._load_ha_splits()         # Condition 1: home/away split
         self._starter_splits = self._load_starter_splits()  # Condition 4: starter/bench split
         self._scheme_map = self._load_scheme_map()       # Condition 3: scheme baseline
-        # Condition 2 (lineup-conditional) uses self.wowy_calc which is already loaded
+        self._player_presence = self._load_player_presence() # Condition 2: {player_id: frozenset(game_ids)}
+        self._player_game_stats = self._load_player_game_stats() # Condition 2: {player_id: {game_id: {stats+date}}}
+        self._player_meta = self._load_player_meta() # Condition 2: {player_id: {usg_pct, position}}
 
     def __del__(self):
         if self.conn:
             self.conn.close()
+
+    def _load_player_presence(self) -> dict:
+        """ {player_id: frozenset(game_ids where player had minutes >= 10)}
+        Used for fast set-difference detection: games where OUT player was absent.
+        """
+        if not self.conn:
+            return {}
+        try:
+            rows = self.conn.execute(
+                "SELECT player_id, game_id FROM player_game_logs WHERE minutes >= 10"
+            ).fetchall()
+            presence = {}
+            for pid, gid in rows:
+                presence.setdefault(str(pid), set()).add(gid)
+            return {pid: frozenset(gids) for pid, gids in presence.items()}
+        except sqlite3.Error as e:
+            print(f" [Module X] _load_player_presence failed: {e}")
+            return {}
+
+    def _load_player_game_stats(self) -> dict:
+        """ {player_id: {game_id: {pts, fta, ast, reb, game_date}}}
+        Includes game_date for recency trend detection (Module E speed_recent pattern).
+        Only games where player had minutes >= 10.
+        """
+        if not self.conn:
+            return {}
+        try:
+            rows = self.conn.execute('''
+                SELECT player_id, game_id, game_date, 
+                       COALESCE(pts, 0) as pts, 
+                       COALESCE(fta, 0) as fta, 
+                       COALESCE(ast, 0) as ast, 
+                       COALESCE(reb, 0) as reb
+                FROM player_game_logs WHERE minutes >= 10
+            ''').fetchall()
+            stats = {}
+            for pid, gid, gdate, pts, fta, ast, reb in rows:
+                stats.setdefault(str(pid), {})[gid] = {
+                    'pts': pts, 'fta': fta, 'ast': ast, 'reb': reb, 
+                    'game_date': gdate or ''
+                }
+            return stats
+        except sqlite3.Error as e:
+            print(f" [Module X] _load_player_game_stats failed: {e}")
+            return {}
+
+    def _load_player_meta(self) -> dict:
+        """ {player_id: {usg_pct, position}}
+        Used for USG filter (>= 0.12 project standard) and position affinity scoring.
+        """
+        if not self.conn:
+            return {}
+        try:
+            rows = self.conn.execute(
+                "SELECT player_id, COALESCE(usg_pct, 0.0), COALESCE(position, 'UNK') FROM players"
+            ).fetchall()
+            return {str(pid): {'usg_pct': usg, 'position': pos} for pid, usg, pos in rows}
+        except sqlite3.Error as e:
+            print(f" [Module X] _load_player_meta failed: {e}")
+            return {}
+
+    @staticmethod
+    def _normalize_position(pos: str) -> str:
+        """ Normalize raw position string to Module E canonical buckets.
+        Mirrors module_e.py L852-858 exactly — single source of truth for position grouping.
+        """
+        p = (pos or 'UNK').upper().strip()
+        if p in ('PG', 'SG', 'G'):
+            return 'G'
+        elif p in ('SF', 'PF', 'F'):
+            return 'F'
+        elif p == 'C':
+            return 'C'
+        elif p in ('G-F', 'F-G'):
+            return 'G-F'
+        elif p in ('F-C', 'C-F'):
+            return 'F-C'
+        return 'UNK'
+
+    @staticmethod
+    def _position_affinity(pos_out: str, pos_bene: str) -> float:
+        """ How likely is a beneficiary at pos_bene to absorb usage from an OUT player at pos_out?
+        Mirrors Module E's adjacency logic from POSITION_ELIGIBILITY groups.
+        Returns dampening weight (1.0 = same role, lower = cross-position, less likely to absorb).
+        This weight is multiplied into the confidence_weight before applying the modifier.
+        """
+        AFFINITY = {
+            ('G', 'G'): 1.00,  # Guard for guard — direct replacement
+            ('F', 'F'): 1.00,  # Forward for forward
+            ('C', 'C'): 1.00,  # Center for center
+            ('G', 'G-F'): 0.80, # Wing guard absorbs guard usage
+            ('G-F', 'G'): 0.80,
+            ('F', 'G-F'): 0.80,
+            ('G-F', 'F'): 0.80,
+            ('F', 'F-C'): 0.70, # Forward to big
+            ('F-C', 'F'): 0.70,
+            ('C', 'F-C'): 0.70,
+            ('F-C', 'C'): 0.70,
+            ('F', 'C'): 0.70,   # Direct Big-to-Big
+            ('C', 'F'): 0.70,
+            ('G', 'F'): 0.45,   # Guard-to-forward: moderate (ball-handler vacuum)
+            ('F', 'G'): 0.45,
+            ('G', 'F-C'): 0.20, # Guard-to-big: minimal cross-position absorption
+            ('F-C', 'G'): 0.20,
+            ('G', 'C'): 0.15,
+            ('C', 'G'): 0.15,
+        }
+        key = (ScenarioBuilder._normalize_position(pos_out), ScenarioBuilder._normalize_position(pos_bene))
+        # Symmetric lookup
+        return AFFINITY.get(key, AFFINITY.get((key[1], key[0]), 0.30))
 
     def _load_ha_splits(self) -> dict:
         """Pre-load home vs away avg PPG per player for conditional baseline."""
@@ -68,6 +180,7 @@ class ScenarioBuilder:
             result = {}
             for row in rows:
                 pid, ha, n, pts, fta, ast, reb = row['player_id'], row['home_or_away'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                pid = str(pid)
                 if pid not in result:
                     result[pid] = {}
                 result[pid][ha] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
@@ -99,6 +212,7 @@ class ScenarioBuilder:
             result = {}
             for row in rows:
                 pid, started, n, pts, fta, ast, reb = row['player_id'], row['started'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                pid = str(pid)
                 if pid not in result:
                     result[pid] = {}
                 key = 'starter' if started == 1 else 'bench'
@@ -123,6 +237,76 @@ class ScenarioBuilder:
             print(f"   [Module X] scheme_map load failed (non-fatal): {e}")
             return {}
 
+    def _get_lineup_conditional_modifier(self, beneficiary_pid, out_pid) -> dict | None:
+        """ Compute stat modifiers for beneficiary_pid in games where out_pid was absent.
+        Three-layer filter (project standards):
+        1. USG filter: beneficiary must have usg_pct >= 0.12 (Module G star bias standard)
+        2. Position affinity: dampens modifier for cross-position pairs (Module E bucket logic)
+        3. Trend detection: blend L5 recent 'without' avg with full avg (Module E speed_recent pattern)
+        Returns {'pts': modifier, 'fta': modifier, 'ast': modifier, 'reb': modifier, 'n': n_without} or None if insufficient data or filtered out.
+        """
+        # --- Layer 1: USG filter ---
+        bene_meta = self._player_meta.get(beneficiary_pid, {})
+        if bene_meta.get('usg_pct', 0) < 0.12:
+            return None # Too low-touch to show meaningful lineup signal
+
+        out_present = self._player_presence.get(out_pid, frozenset())
+        bene_stats = self._player_game_stats.get(beneficiary_pid, {})
+
+        if not bene_stats or not out_present:
+            return None
+
+        all_bene_games = frozenset(bene_stats.keys())
+        without_game_ids = all_bene_games - out_present # bene played, OUT player did not
+        with_game_ids = all_bene_games & out_present # both present
+
+        if len(without_game_ids) < 5 or len(with_game_ids) < 5:
+            return None # Need both sides for a meaningful ratio
+
+        # --- Layer 2: Position affinity weight ---
+        out_meta = self._player_meta.get(out_pid, {})
+        affinity = self._position_affinity(
+            out_meta.get('position', 'UNK'),
+            bene_meta.get('position', 'UNK')
+        )
+
+        # --- Layer 3: Trend detection (Module E speed_recent pattern) ---
+        # Sort "without" games by date descending to get most recent first
+        without_sorted = sorted(
+            without_game_ids,
+            key=lambda gid: bene_stats[gid].get('game_date', ''),
+            reverse=True
+        )
+        recent_without = without_sorted[:5] # L5 most recent "without" games
+        use_trend = len(recent_without) >= 5 # only blend if we have enough recent games
+
+        result = {'n': len(without_game_ids)}
+        for stat in ['pts', 'fta', 'ast', 'reb']:
+            # Full-history averages (stability anchor)
+            with_avg = sum(bene_stats[gid][stat] for gid in with_game_ids) / len(with_game_ids)
+            without_avg = sum(bene_stats[gid][stat] for gid in without_game_ids) / len(without_game_ids)
+
+            if with_avg <= 0:
+                result[stat] = 1.0
+                continue
+
+            full_ratio = without_avg / with_avg
+
+            if use_trend:
+                # L5 recent "without" avg (trend signal — mirrors Module E speed_recent)
+                recent_avg = sum(bene_stats[gid][stat] for gid in recent_without) / len(recent_without)
+                recent_ratio = recent_avg / with_avg if with_avg > 0 else 1.0
+                # Blend: 60% recent, 40% full (upweights recent trend, same as Module E approach)
+                blended_ratio = 0.60 * recent_ratio + 0.40 * full_ratio
+            else:
+                blended_ratio = full_ratio
+
+            # Apply position affinity as additional dampener on top of confidence_weight
+            # (affinity dampens the modifier toward 1.0 for cross-position pairs)
+            result[stat] = blended_ratio * affinity + 1.0 * (1.0 - affinity)
+        
+        return result
+
     def _build_conditional_baseline(self, player: dict, scenario_context: dict) -> dict:
         """
         Compute a combined conditional modifier for a player given tonight's context.
@@ -135,7 +319,7 @@ class ScenarioBuilder:
         - dampened = 1 + (modifier - 1) * confidence_weight
         - confidence_weight = clamp((n_qualifying - 5) / 15.0, 0.0, 1.0)
         """
-        pid = player.get('player_id')
+        pid = str(player.get('player_id') or '')  # normalize to str — all loader dicts use str keys
         modifiers = {}  # stat_key -> list of (modifier_value, n_games)
 
         # --- Condition 1: H/A Split ---
@@ -177,6 +361,20 @@ class ScenarioBuilder:
                         weight = min(1.0, max(0.0, (n - 3) / 12.0)) # Lower threshold for starter split
                         dampened = 1.0 + (raw_mod - 1.0) * weight
                         modifiers.setdefault(stat, []).append((dampened, n))
+
+        # --- Condition 2: Lineup-Conditional (with USG filter + position affinity + trend) ---
+        out_pid = scenario_context.get('out_player_id')
+        if out_pid and pid:
+            # Ensure pid is string for lookup
+            lineup_result = self._get_lineup_conditional_modifier(str(pid), str(out_pid))
+            if lineup_result:
+                n_without = lineup_result.pop('n', 0)
+                weight = min(1.0, max(0.0, (n_without - 5) / 15.0))
+                for stat in ['pts', 'fta', 'ast', 'reb']:
+                    # lineup_result[stat] already has position affinity baked in
+                    # Apply sample-size confidence dampening on top
+                    dampened = 1.0 + (lineup_result[stat] - 1.0) * weight
+                    modifiers.setdefault(stat, []).append((dampened, n_without))
 
         # --- Condition 3: Scheme-Conditional ---
         opponent_team = scenario_context.get('opponent_team')
@@ -433,6 +631,7 @@ class ScenarioBuilder:
             scenario_context = {
                 'home_or_away': 'home' if new_p.get('TEAM_ABBREVIATION') == game.get('home_team') else 'away',
                 'opponent_team': game.get('away_team') if new_p.get('TEAM_ABBREVIATION') == game.get('home_team') else game.get('home_team'),
+                'out_player_id': starter_out.get('PLAYER_ID') or starter_out.get('player_id'), # Condition 2
             }
 
             # Attach conditional baseline modifiers to player dict
@@ -790,4 +989,4 @@ class ScenarioBuilder:
 
 
 if __name__ == "__main__":
-    print("Module X (V3.8 - Conditional Baselines) Loaded.")
+    print("Module X (V3.9 - Conditional Baselines) Loaded.")

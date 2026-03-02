@@ -276,6 +276,51 @@ This triggers a drift alert in `weekly_validation.yml` and a Telegram notificati
 
 ---
 
+## Pattern 9 — Data Validation Smoke Tests (Sample Size Standard)
+
+Run when verifying any new conditional baseline, modifier engine, or data-driven signal in Module C/E/X.
+
+**Minimum sample:**
+| Layer | Count | Selection criteria |
+|-------|-------|--------------------|
+| Teams | 3–4 | Pick diverse defensive schemes — at least one PAINT_PACK, one BLITZ, one NEUTRAL |
+| Players | 7–9 | High-usage + high-minutes only: `usg_pct >= 0.18` AND `base_min >= 24` |
+
+**Why not fewer:** Low-touch players (`usg_pct < 0.12`) are filtered out at the modifier layer. Testing them returns `None` across the board — you learn nothing about whether the signal logic works.
+
+**What to verify in output:**
+- Modifier dict is not all `1.0` for every stat — flat 1.0 = no data found, not a passing test
+- `n_without` count ≥ 5 for Condition 2 to fire (set-difference minimum)
+- At least one stat has `abs(modifier - 1.0) > 0.05` — indicates real signal is coming through
+
+```python
+# Example verification output for each test player:
+# player_id=203999, n_without=12, mods={'pts': 1.14, 'fta': 1.08, 'ast': 1.02, 'reb': 0.97}
+# player_id=201939, n_without=7,  mods={'pts': 1.0,  'fta': 1.0,  'ast': 1.0,  'reb': 1.0}  ← sample too small, expected
+# player_id=1628384, n_without=0, mods=None  ← filtered by USG < 0.12, expected
+
+# Smoke test query to find qualifying test players:
+import sqlite3
+conn = sqlite3.connect('ludi.db')
+rows = conn.execute("""
+    SELECT p.player_id, p.name, p.team, p.usg_pct,
+           AVG(l.minutes) as avg_min
+    FROM players p
+    JOIN player_game_logs l ON p.player_id = l.player_id
+    WHERE p.usg_pct >= 0.18
+    AND l.game_date >= date('now', '-30 days')
+    GROUP BY p.player_id
+    HAVING AVG(l.minutes) >= 24
+    ORDER BY p.usg_pct DESC
+    LIMIT 9
+""").fetchall()
+for r in rows:
+    print(r)
+conn.close()
+```
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Risk | Fix |
