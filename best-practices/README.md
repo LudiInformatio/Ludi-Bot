@@ -61,8 +61,8 @@ best-practices/
 ---
 
 ### 🔧 Coding Patterns (`coding/`)
-**Status:** ✅ Complete (Feb 19, 2026)
-- `README.md` — 7 patterns: error handling, tuple unpacking, bash defaults, lazy imports, type hints, module-level constants
+**Status:** ✅ Complete (Mar 2, 2026)
+- `README.md` — 8 patterns: error handling, tuple unpacking, bash defaults, lazy imports, type hints, module-level constants, string normalization at load time
 
 ---
 
@@ -91,7 +91,7 @@ best-practices/
 ---
 
 ### ✅ Testing (`testing/`)
-**Status:** 📋 Initialized — topics outlined, patterns pending
+**Status:** ✅ Complete (Mar 2, 2026) — 9 patterns including team-first smoke test order, DB distinct values check, sample size standards, and conditional baseline verification
 
 ### 🤖 Ops Hub Knowledge Base (`ops-hub/`)
 **Status:** ✅ Active — auto-maintained by `claude-ops-hub.yml`
@@ -192,6 +192,6 @@ When you discover a new pattern or lesson:
 
 ---
 
-**Last Updated:** March 1, 2026 EST
-**Categories Complete:** 8 (api, ai, ai-prompting, coding, data, data-modeling, debugging, ops-hub)
-**Categories Initialized:** 2 (testing, deployment)
+**Last Updated:** March 2, 2026 EST
+**Categories Complete:** 9 (api, ai, ai-prompting, coding, data, data-modeling, debugging, testing, ops-hub)
+**Categories Initialized:** 1 (deployment)
