@@ -51,7 +51,10 @@ class DailyRefereeSync:
     
     def _ensure_todays_games(self):
         """Auto-populate today's games if missing. Delegates to the 4-source
-        fallback chain in populate_todays_games.py (Odds API → Tank01 → BDL → ESPN)."""
+        fallback chain in populate_todays_games.py (Odds API → Tank01 → BDL → ESPN).
+        
+        Returns True if games exist (either pre-existing or successfully populated),
+        False if no games found after populate attempt."""
         print("   🔍 Checking today's games in database...")
 
         if not self._check_todays_games_exist():
@@ -61,12 +64,16 @@ class DailyRefereeSync:
                 count = populate_main()
                 if count > 0:
                     print(f"   ✅ Games populated: {count}")
+                    return True
                 else:
-                    print("   ⚠️ populate_todays_games returned 0 games")
+                    print("   ⚠️ populate_todays_games returned 0 games — downstream will attempt Playwright without pre-populated games")
+                    return False
             except Exception as e:
                 print(f"   ⚠️ populate_todays_games failed: {e}")
+                return False
         else:
             print("   ✅ Today's games already exist")
+            return True
 
     def _check_todays_games_exist(self) -> bool:
         """Check if any games exist for today's date (EST-aware)"""

@@ -206,7 +206,8 @@ class LudiRefEngine:
             import sqlite3
             from datetime import date
             _conn = sqlite3.connect(self.db_path)
-            today_str = date.today().strftime('%Y-%m-%d')
+            _today = datetime.now(pytz.timezone('US/Eastern')).date()
+            today_str = _today.strftime('%Y-%m-%d')
             _rows = _conn.execute(
                 "SELECT home_team, crew FROM referee_game_assignments WHERE game_date = ?",
                 (today_str,)
@@ -266,8 +267,9 @@ class LudiRefEngine:
                     # 2. Set to Today -> Click GO
                     print("   [ZEBRAS] 🔄 Toggling date to force refresh...", end=" ")
                     
-                    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    eastern = pytz.timezone('US/Eastern')
+                    yesterday_str = (datetime.now(eastern) - timedelta(days=1)).strftime('%Y-%m-%d')
+                    today_str = datetime.now(eastern).strftime('%Y-%m-%d')
                     
                     # Step 1: Yesterday
                     # Ensure element is visible before filling. If hidden, re-open dropdown.
@@ -358,7 +360,8 @@ class LudiRefEngine:
             # Write to crosswalk table — decoupled from game_id format
             if count > 0:
                 try:
-                    _cw_today = datetime.now().strftime('%Y-%m-%d')
+                    eastern = pytz.timezone('US/Eastern')
+                    _cw_today = datetime.now(eastern).strftime('%Y-%m-%d')
                     _cw_conn = sqlite3.connect(self.db_path)
                     for _home, _crew in self.daily_assignments.items():
                         _cw_conn.execute(
@@ -378,7 +381,8 @@ class LudiRefEngine:
                 try:
                     from utils.perplexity_client import PerplexityClient
                     perp = PerplexityClient()
-                    today_str = datetime.now().strftime('%Y-%m-%d')
+                    eastern = pytz.timezone('US/Eastern')
+                    today_str = datetime.now(eastern).strftime('%Y-%m-%d')
 
                     # Load known referee roster for fuzzy matching
                     known_refs = []
