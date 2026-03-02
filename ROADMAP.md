@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 1, 2026 — 10:04 PM EST
+**Last Updated:** Sunday, March 1, 2026 — 10:24 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Module F (`module_f.py` `LudiReporter`) — confidence tier redesign + 8-signal `prop_confidence_score` + C1-C5 agent cleanup → Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` + Perplexity upgrade (~Mar 10)
 **Completed:** Module E audit (`module_e.py`) — hybrid off/def fix + shot_quality schema drift + 3 simplify fixes ✅ + Module F audit plan — F1 div/zero, F2 tier demotion, F3/F4 logging (4 fixes ready) ✅ + Module F confidence tier (`module_f.py`) — 8-signal `prop_confidence_score` + C1-C5 cleanup + `module_h_historian` Solomon fix ✅
