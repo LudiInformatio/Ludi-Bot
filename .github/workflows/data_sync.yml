@@ -35,6 +35,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
@@ -132,6 +133,7 @@ jobs:
         # Tries: The Odds API → Tank01 → BDL. Sends Slack alert + exits 1 if all fail.
         if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: false
+        timeout-minutes: 10
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -491,6 +493,8 @@ jobs:
           .venv/bin/python scripts/sync_player_news.py
 
       - name: Commit and push if changes
+        if: always()
+        timeout-minutes: 3
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
@@ -532,6 +536,7 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
-          curl -s -X POST "$SLACK_WEBHOOK_URL"             -H 'Content-type: application/json'             --data '{"text":"❌ WORKFLOW FAILED: Daily Data Sync - Check GitHub Actions"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Daily Data Sync')" || echo "Solomon notification failed"
