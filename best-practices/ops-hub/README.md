@@ -51,10 +51,12 @@ git push
 ## OAuth Token Refresh Procedure
 
 When refreshing the CLAUDE_CODE_OAUTH_TOKEN:
-1. Run `claude auth` on the self-hosted runner
-2. Copy the new token to GitHub Secrets: `CLAUDE_CODE_OAUTH_TOKEN`
-3. Update GitHub Variable: `CLAUDE_TOKEN_EXPIRES_AT` = new expiry date (YYYY-MM-DD)
+1. Go to claude.ai in Chrome → open DevTools (`Cmd+Option+I`) → Application → Cookies → `claude.ai`
+   - Look for `sessionKey` cookie → copy value (`sk-ant-sid01-...`)
+   - **Note:** `claude auth login` opens a browser flow but has no `token` print command — cookie grab is the reliable method
+2. Paste the `sk-ant-sid01-...` value into GitHub Secrets: `CLAUDE_CODE_OAUTH_TOKEN`
+3. Update GitHub **Variable** (not Secret): `CLAUDE_TOKEN_EXPIRES_AT` = new expiry date (YYYY-MM-DD)
    - New tokens are valid for ~30 days from issue date
-   - Example: token issued Feb 22, 2026 → expires ~Mar 24, 2026
+   - Example: token issued Mar 3, 2026 → expires ~Apr 3, 2026
 
 The daily expiry check in `claude-ops-hub.yml` will send Slack warnings 3 days before expiry.
