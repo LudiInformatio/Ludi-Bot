@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 10:02 AM EST
+**Last Updated:** Tuesday, March 3, 2026 — 1:56 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Workflow Audit Sprint 2 (`.github/workflows/`) — per-workflow deep audit, naming conventions, employee alignment → full pipeline hardening
+**Active Work:** Workflow Audit Sprint 2 (`.github/workflows/`) — 4/20 workflows hardened (simulation, data, briefing, evening lock) → `injury_refresh.yml` next
 **Completed:** Workflow Audit Sprint 0 (`.github/workflows/_archive/`) — archive convention, `tracking_sync.yml` archived, CLAUDE.md schedule (20 rows), Pattern 12 ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅ + Schema hotfix (`player_canonical_ids.team` DROP COLUMN cascade, `api_monitor` → Solomon) + WOWY gap detection (`sync_wowy_hybrid.py` `find_wowy_gap_dates()`, `wowy_sync.yml` gap-fill step, Pattern 13) + Solomon credentials wired ✅
 
 This is the single source of truth for project tasks and priorities.
@@ -89,14 +89,14 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 ## Medium Priority
 
 ### AI Employee Workforce (March 2026 — OpenClaw Sprint)
-**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 6 AI employees on OpenClaw runtime (~$4.60/mo)
-**Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist)
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 7 AI employees on OpenClaw runtime (~$4.60/mo)
+**Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist), **Lena (Data Analyst / Model Calibration)**
 
-> **Welcome aboard, team.** Soul files created Mar 1, 2026. Discord server + channels live. Telegram Bot 2 (Solomon) active. The crew is assembled and ready — Monday kickoff begins the first live sprint. 🏀
+> **Welcome aboard, team.** Soul files created Mar 1, 2026. Discord server + channels live. Telegram Bot 2 (Solomon) active. Lena added Mar 2, 2026 — owns model calibration, stat confidence grades, and backtest analysis. The crew is assembled and ready — Monday kickoff begins the first live sprint. 🏀
 
 **Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
 - [x] Sunday setup: Telegram + Discord + soul files + webhooks ✅
-- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 7 employees (6 Agent Teams + Gemini junior dev). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 6: project context + domain ownership + first task + red lines. Build before first Agent Teams session.
+- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees (6 Agent Teams + Gemini + Lena). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena requires live DB queries for examples** (see plan). Build before first Agent Teams session.
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
 - [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
 - [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live

@@ -189,9 +189,12 @@ concurrency:
 - Any workflow that sends Telegram messages (don't cancel mid-send)
 - Any long-running data sync (partial sync is worse than no sync)
 
-**Cancel-in-progress can be `true` for:**
+**Cancel-in-progress should be `true` for:**
+- Briefing workflows (`daily_briefing.yml`, `evening_slate_lock.yml`) — a new run supersedes a stale in-progress card
+- High-frequency pollers (`injury_refresh.yml`, 24 runs/day) — if a run falls behind the 20-min window, cancel it
 - Static site deployments (re-deploy supersedes previous)
-- Preview environments
+
+**Rule of thumb:** `false` = data integrity risk if cancelled. `true` = idempotent output, fresher is always better.
 
 ---
 
