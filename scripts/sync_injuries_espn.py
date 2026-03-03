@@ -106,7 +106,15 @@ def _normalize_name(name: str) -> str:
 def _load_canonical_lookup(conn: sqlite3.Connection) -> dict:
     """Load normalized_name → (full_name, team) from player_canonical_ids."""
     cursor = conn.cursor()
-    cursor.execute('SELECT normalized_name, full_name, team FROM player_canonical_ids WHERE is_active = 1')
+    cursor.execute('''
+        SELECT
+            pci.normalized_name,
+            pci.full_name,
+            p.team
+        FROM player_canonical_ids pci
+        LEFT JOIN players p ON pci.canonical_id = p.player_id
+        WHERE pci.is_active = 1
+    ''')
     return {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
 
 

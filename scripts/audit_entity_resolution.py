@@ -45,14 +45,7 @@ def main() -> int:
             findings.append(("missing_table", "player_canonical_ids", 1))
         else:
             if column_exists(conn, "player_canonical_ids", "team"):
-                # Note: player_canonical_ids.team uses full names not abbreviations
-                # Just count non-null values
-                non_null = conn.execute(
-                    "SELECT COUNT(*) FROM player_canonical_ids WHERE team IS NOT NULL"
-                ).fetchone()[0]
-                findings.append(("team_values_present", "player_canonical_ids", non_null))
-            else:
-                findings.append(("missing_required_column", "team", 1))
+                findings.append(("denormalized_team_column_present", "player_canonical_ids", 1))
 
             required = ["full_name", "canonical_id"]
             for col in required:

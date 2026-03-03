@@ -159,9 +159,10 @@ class PlayerIDResolver:
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
         c.execute('''
-            SELECT canonical_id, full_name, normalized_name, team, position
-            FROM player_canonical_ids
-            WHERE canonical_id = ?
+            SELECT pci.canonical_id, pci.full_name, pci.normalized_name, p.team, pci.position
+            FROM player_canonical_ids pci
+            LEFT JOIN players p ON pci.canonical_id = p.player_id
+            WHERE pci.canonical_id = ?
         ''', (canonical_id,))
         row = c.fetchone()
         conn.close()

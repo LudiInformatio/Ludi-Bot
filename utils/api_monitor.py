@@ -192,20 +192,12 @@ class APIMonitor:
         self._send_telegram_alert(alert_msg)
 
     def _send_telegram_alert(self, message: str):
-        """Send alert via Telegram bot."""
-        if not self.telegram_enabled:
-            return
-
+        """Send alert via Solomon (PM bot) Telegram channel."""
         try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
-            payload = {
-                'chat_id': self.telegram_chat_id,
-                'text': f"🤖 Ludi API Monitor\n\n{message}",
-                'parse_mode': 'HTML'
-            }
-            requests.post(url, data=payload, timeout=5)
+            from utils.telegram_notifier import send_solomon_message
+            send_solomon_message(f"🤖 *Ludi API Monitor*\n\n{message}")
         except Exception as e:
-            print(f"      ⚠️ Telegram alert failed: {e}")
+            print(f"      ⚠️ Solomon alert failed: {e}")
 
     def log_claude_usage(self, model: str, input_tokens: int, output_tokens: int, task: str = ""):
         """Log Claude API token usage to api_usage_log.json."""

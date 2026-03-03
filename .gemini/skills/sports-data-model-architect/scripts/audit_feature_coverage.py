@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple
 CHECK_SPEC: Dict[str, List[str]] = {
     "player_game_logs": ["player_id", "game_date", "team_abbreviation"],
     "players": ["player_id", "name", "team"],
-    "player_canonical_ids": ["full_name", "team"],
+    "player_canonical_ids": ["full_name"],
 }
 
 

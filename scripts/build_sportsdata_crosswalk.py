@@ -106,9 +106,14 @@ def build_crosswalk(dry_run: bool = False, verbose: bool = False):
     # -----------------------------------------------
     print("\n[2/4] Loading player_canonical_ids from DB")
     cursor = conn.execute("""
-        SELECT canonical_id, full_name, normalized_name, team
-        FROM player_canonical_ids
-        WHERE is_active = 1
+        SELECT
+            pci.canonical_id,
+            pci.full_name,
+            pci.normalized_name,
+            p.team
+        FROM player_canonical_ids pci
+        LEFT JOIN players p ON pci.canonical_id = p.player_id
+        WHERE pci.is_active = 1
     """)
     db_players = cursor.fetchall()
     print(f"  Found {len(db_players)} active players in player_canonical_ids")
