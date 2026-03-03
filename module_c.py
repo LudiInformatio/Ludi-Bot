@@ -1,3 +1,4 @@
+import copy
 import json
 import unicodedata
 
@@ -384,7 +385,11 @@ class LudiOracle:
             # overstated for those players. Acceptable: USG% is not a primary bet market.
             team_totals = self._sum_team_projections(players, base_pace)
 
-            for player in players:
+            for _p in players:
+                # Deep-copy before any modifier runs — prevents G3 ramp-up (and all other
+                # in-place mutations) from stacking across BASE + fork scenarios that share
+                # the same player dict reference. Without this: 0.70 × 0.70 = 0.49× baseline.
+                player = copy.deepcopy(_p)
                 status = player.get('injury_status', player.get('status', player.get('injury', 'Active')))
                 if status in ['Out', 'Doubtful', 'OUT', 'DOUBTFUL'] or player.get('MIN', 0) == 0:
                     continue
