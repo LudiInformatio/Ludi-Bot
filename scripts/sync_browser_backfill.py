@@ -270,19 +270,19 @@ def scrape_table(page, label):
     handle_pagination(page, label)
 
     # Headers - use LAST header row only (handles multi-row headers like Closest Defender page)
-    headers = page.evaluate('''() => {
-        const headerRows = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] thead tr'));
+    headers = page.evaluate("""() => {
+        const headerRows = Array.from(document.querySelectorAll("[class*='Crom_table'] thead tr"));
         if (headerRows.length === 0) return [];
         const lastRow = headerRows[headerRows.length - 1];
         const ths = Array.from(lastRow.querySelectorAll('th'));
         return ths.map(th => th.innerText.trim());
-    }''')
+    }""")
     headers = [h.replace('\xa0', ' ').replace('\n', ' ') for h in headers]
     # print(f"      [DEBUG] Headers: {headers}")
     
     # Rows with HREF extraction
-    rows = page.evaluate('''() => {
-        const trs = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] tbody tr'));
+    rows = page.evaluate("""() => {
+        const trs = Array.from(document.querySelectorAll("[class*='Crom_table'] tbody tr"));
         return trs.map(tr => {
             const tds = Array.from(tr.querySelectorAll('td'));
             const rowText = tds.map(td => td.innerText.trim());
@@ -290,7 +290,7 @@ def scrape_table(page, label):
             const href = anchor ? anchor.getAttribute('href') : '';
             return { 'data': rowText, 'href': href };
         });
-    }''')
+    }""")
     
     print(f"      [DEBUG] Found {len(rows)} rows for {label}")
     return {'headers': headers, 'rows': rows}

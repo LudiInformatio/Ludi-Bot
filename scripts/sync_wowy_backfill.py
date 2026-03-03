@@ -177,17 +177,17 @@ def scrape_table(page, label):
     handle_pagination(page, label)
 
     # Headers
-    headers = page.evaluate('''() => {
-        const ths = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] thead th'));
+    headers = page.evaluate("""() => {
+        const ths = Array.from(document.querySelectorAll("[class*='Crom_table'] thead th"));
         return ths.map(th => th.innerText.trim());
-    }''')
+    }""")
     # Normalize headers (remove non-breaking spaces, newlines)
     headers = [h.replace('\xa0', ' ').replace('\n', ' ') for h in headers]
     print(f"      [DEBUG] Headers: {headers[:10]}...")  # Debug: show first 10 headers
     
     # Rows with HREF extraction (for IDs)
-    rows = page.evaluate('''() => {
-        const trs = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] tbody tr'));
+    rows = page.evaluate("""() => {
+        const trs = Array.from(document.querySelectorAll("[class*='Crom_table'] tbody tr"));
         return trs.map(tr => {
             const tds = Array.from(tr.querySelectorAll('td'));
             const rowText = tds.map(td => td.innerText.trim());
@@ -196,7 +196,7 @@ def scrape_table(page, label):
             const href = anchor ? anchor.getAttribute('href') : '';
             return { 'data': rowText, 'href': href };
         });
-    }''')
+    }""")
     
     print(f"      [DEBUG] Found {len(rows)} rows for {label}")
     return {'headers': headers, 'rows': rows}

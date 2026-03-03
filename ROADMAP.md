@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 2, 2026 — 8:51 PM EST
+**Last Updated:** Tuesday, March 3, 2026 — 10:02 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Workflow Audit Sprint 2 (`.github/workflows/`) — per-workflow deep audit, naming conventions, employee alignment → full pipeline hardening
-**Completed:** Doc refresh sprint (`README.md`, `ROADMAP.md`, `best-practices/docs/README.md`) — bloat removed, Project Vision permanent section, doc maintenance framework ✅ + Workflow Audit Sprint 0 (`.github/workflows/_archive/`) — archive convention, `tracking_sync.yml` archived, CLAUDE.md schedule (20 rows), Pattern 12 ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅
+**Completed:** Workflow Audit Sprint 0 (`.github/workflows/_archive/`) — archive convention, `tracking_sync.yml` archived, CLAUDE.md schedule (20 rows), Pattern 12 ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅ + Schema hotfix (`player_canonical_ids.team` DROP COLUMN cascade, `api_monitor` → Solomon) + WOWY gap detection (`sync_wowy_hybrid.py` `find_wowy_gap_dates()`, `wowy_sync.yml` gap-fill step, Pattern 13) + Solomon credentials wired ✅
 
 This is the single source of truth for project tasks and priorities.
 

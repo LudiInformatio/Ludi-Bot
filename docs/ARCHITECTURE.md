@@ -138,7 +138,7 @@ from module_e import LudiEvaluator           # ImportError
 | `player_synergy_playtypes` | 1,326 | Synergy playtype data |
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
 | `team_lineups` | 10,669 | WOWY lineup data |
-| `player_canonical_ids` | 559+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `team`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); CREATE TABLE restored in `database.py` |
+| `player_canonical_ids` | 559+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); `team` column removed (Mar 3) — team always via LEFT JOIN `players`. CREATE TABLE in `database.py` |
 | `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
 | `canonical_games` | 902 | Game identity crosswalk: `canonical_game_id` PK (`{date}_{home}_{away}`), `nba_official_id` (002... format), `referee_crew`, `pace`. Deduplicates the 3-format games table (NBA official / shortened / date-team). `sync_canonical_games(conn)` importable from `database.py`. Use for Pattern-B JOINs (date+team pair) to prevent 3× row inflation. Added Feb 28. |
 | `player_news_staging` | Dynamic | RSS-discovered players not yet in `player_canonical_ids` (rookies, two-ways, call-ups). `UNIQUE(player_name, source)`. Auto-promotes after 3+ appearances. Added Feb 25. |
