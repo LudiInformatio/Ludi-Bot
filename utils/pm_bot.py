@@ -17,11 +17,10 @@ from pathlib import Path
 from google import genai
 
 try:
-    from config import GEMINI_API_KEY, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+    from config import GEMINI_API_KEY, TELEGRAM_TOKEN
 except ModuleNotFoundError:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-    TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 from utils.telegram_notifier import send_photo, send_message, send_solomon_photo
 from utils.slack_notifier import send_slack_message
@@ -206,6 +205,8 @@ class ProjectManagerBot:
 
             # Parse ROADMAP.md (single source of truth)
             roadmap = self._parse_roadmap()
+            if roadmap is None:
+                roadmap = {'pending': [], 'in_progress': [], 'completed': [], 'current_phase': 'Phase 8 — AI-Enhanced Pipeline', 'active_work': ''}
 
             if roadmap:
                 # Current Phase (The Vision)
@@ -243,13 +244,15 @@ class ProjectManagerBot:
             return False
 
         roadmap = self._parse_roadmap()
+        if roadmap is None:
+            roadmap = {'pending': [], 'in_progress': [], 'completed': [], 'current_phase': 'Phase 8 — AI-Enhanced Pipeline', 'active_work': ''}
         today_str = datetime.datetime.now().strftime('%b %d').upper()
 
         if mode == "morning":
             # Pre-format tasks to embed directly in prompt
             pending_tasks = roadmap['pending'][:3] if roadmap else []
             task_bullets = "\n".join([f"• {t}" for t in pending_tasks]) or "• No pending tasks found"
-            current_phase = roadmap['current_phase'] if roadmap else 'Phase 5 - Production Deployment & Automation'
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8 — AI-Enhanced Pipeline'
             active_items = roadmap['in_progress'][:2] if roadmap else []
             active_bullets = "\n".join([f"• {t}" for t in active_items]) or f"• {current_phase}"
 
@@ -273,8 +276,8 @@ Active sprint: {active_bullets}
             # Session debrief — end-of-work break, uses recharging break graphic
             completed_tasks = roadmap['completed'][:3] if roadmap else []
             wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
-            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
-            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8'
+            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue current sprint"
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8 — AI-Enhanced Pipeline'
             active_items = roadmap['in_progress'][:1] if roadmap else []
             todays_focus = active_items[0] if active_items else current_phase
 
@@ -298,8 +301,8 @@ Tomorrow: {next_task}
             # Automated nightly debrief — P&L / settlement summary, uses nightly graphic
             completed_tasks = roadmap['completed'][:3] if roadmap else []
             wins_bullets = "\n".join([f"• {t}" for t in completed_tasks]) or "• Making progress on current phase"
-            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue Phase 5 work"
-            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8'
+            next_task = roadmap['pending'][0] if roadmap and roadmap['pending'] else "Continue current sprint"
+            current_phase = roadmap['current_phase'] if roadmap else 'Phase 8 — AI-Enhanced Pipeline'
             active_items = roadmap['in_progress'][:1] if roadmap else []
             todays_focus = active_items[0] if active_items else current_phase
 
@@ -349,12 +352,14 @@ Tomorrow: {next_task}
             return False
 
         roadmap = self._parse_roadmap()
+        if roadmap is None:
+            roadmap = {'pending': [], 'in_progress': [], 'completed': [], 'current_phase': 'Phase 8 — AI-Enhanced Pipeline', 'active_work': ''}
         header_img = str(self.break_img)
         time_str = datetime.datetime.now().strftime('%I:%M %p')
 
         # Pre-format context - embed actual values
         in_progress = roadmap['in_progress'][0] if roadmap and roadmap['in_progress'] else None
-        current_phase = roadmap['current_phase'] if roadmap else "Phase 5 - Production Deployment"
+        current_phase = roadmap['current_phase'] if roadmap else "Phase 8 — AI-Enhanced Pipeline"
         recent_wins = roadmap['completed'][:2] if roadmap else []
         wins_text = "\n".join([f"• {t}" for t in recent_wins]) if recent_wins else "• Making progress"
 
@@ -395,8 +400,8 @@ No "go touch grass". Name the actual feature or file being built.
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Vibe Starters Assistant")
-    parser.add_argument("--mode", choices=["morning", "nightly", "break"], default="morning",
-                        help="Briefing mode: morning, nightly, or break")
+    parser.add_argument("--mode", choices=["morning", "nightly", "break", "session"], default="morning",
+                        help="Briefing mode: morning, nightly, break, or session")
     args = parser.parse_args()
 
     bot = ProjectManagerBot()

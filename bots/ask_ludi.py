@@ -92,7 +92,16 @@ def main() -> None:
         logger.error("TELEGRAM_TOKEN not configured in .env")
         print("Error: TELEGRAM_TOKEN not configured in .env")
         return
-    
+
+    # Quick DB connectivity check before starting
+    try:
+        from bots.ask_ludi_db import get_db_connection
+        get_db_connection().close()
+        logger.info("Database connection OK")
+    except Exception as e:
+        logger.error(f"Database connection failed at startup: {e}")
+        return
+
     logger.info("Starting Ask Ludi bot...")
 
     # Python 3.14 removed implicit event loop creation in asyncio.get_event_loop().

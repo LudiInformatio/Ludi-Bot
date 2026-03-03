@@ -1,5 +1,6 @@
 import logging
 import datetime
+import pytz
 import sqlite3
 import sys
 import config
@@ -47,7 +48,8 @@ def _format_injury_stamp(status, snapshot_time_str):
             return f"{status} (reported {snap_est.strftime('%-I:%M %p')})"
         else:
             return f"{status} (as of {snap_est.strftime('%b %-d')})"
-    except Exception:
+    except Exception as e:
+        print(f"[WARNING] _format_injury_stamp: {e}")
         return status
 
 
@@ -55,7 +57,6 @@ from utils.game_notes_cache import (
     load_game_cache, 
     write_game_cache, 
     check_cache_valid, 
-    mark_lineup_confirmed,
     get_cache_path
 )
 
@@ -116,13 +117,16 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
             WHERE team_abbreviation IN ({ph_t})
               AND resolved_at IS NULL AND status IN ('OUT', 'DOUBTFUL')
               AND snapshot_time >= datetime('now', '-14 days')
+              AND (days_out IS NULL OR days_out < 75)
             UNION
             SELECT DISTINCT pi.player_name FROM player_injuries pi
             JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
+            LEFT JOIN players p ON ci.canonical_id = p.player_id
             WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
-              AND ci.team IN ({ph_t2})
+              AND p.team IN ({ph_t2})
               AND pi.resolved_at IS NULL AND pi.status IN ('OUT', 'DOUBTFUL')
               AND pi.snapshot_time >= datetime('now', '-14 days')
+              AND (pi.days_out IS NULL OR pi.days_out < 75)
         """, tonight_teams + tonight_teams_list)
         excluded = {r[0] for r in cursor.fetchall()}
 
@@ -152,7 +156,8 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
         """, tonight_teams + list(KEY_STATS) + tonight_teams)
         rows = cursor.fetchall()
 
-    except Exception:
+    except Exception as e:
+        print(f"[ERROR] _build_slate_trends_header failed: {e}")
         return ""
 
     # Team form (show STRONG/WEAK offense for tonight's teams — up to 4)
@@ -268,7 +273,8 @@ def _build_teammates_context(player_name: str, team_abbr: str, out_names: list, 
         if not rows:
             return "Teammate data unavailable."
         return ", ".join(f"{r[0]} ({r[1]}min)" for r in rows)
-    except Exception:
+    except Exception as e:
+        print(f"[WARNING] _build_teammates_context: {e}")
         return "Teammate data unavailable."
 
 
@@ -295,7 +301,8 @@ def _get_key_advantage_callout(conn, home_team: str, away_team: str) -> str:
             f"⚡ KEY ANGLE: {archetype} vs {team} — "
             f"+{delta:.1f} pts above avg (rank {rank}/30 · {confidence} · {games}g)"
         )
-    except Exception:
+    except Exception as e:
+        print(f"[WARNING] DVP context query failed: {e}")
         return ""
 
 
@@ -468,8 +475,7 @@ class MorningBriefEngine:
 
         # --- AFTER-HOUR FILTER (west coast run: --after-hour 21 = 9 PM+ EST only) ---
         if self.after_hour is not None:
-            import pytz as _pytz_ah
-            _est = _pytz_ah.timezone('US/Eastern')
+            _est = pytz.timezone('US/Eastern')
             filtered_late = {}
             for gid, gdata in self.gate.games.items():
                 _s = gdata.get('start_time')
@@ -507,8 +513,7 @@ class MorningBriefEngine:
             # Skip games that tipped off >45 min ago (e.g. 5pm game at 6pm evening lock)
             _start_raw = game_data.get('start_time')
             if _start_raw:
-                import pytz as _pytz_skip
-                _est_now = datetime.datetime.now(_pytz_skip.timezone('US/Eastern'))
+                _est_now = datetime.datetime.now(pytz.timezone('US/Eastern'))
                 # start_time may be a string (from JSON cache) or datetime (from live fetch)
                 if isinstance(_start_raw, str):
                     try:
@@ -519,7 +524,7 @@ class MorningBriefEngine:
                     _start = _start_raw
                 if _start:
                     _start_aware = _start if _start.tzinfo else _start.replace(
-                        tzinfo=_pytz_skip.timezone('US/Eastern'))
+                        tzinfo=pytz.timezone('US/Eastern'))
                     if _start_aware < _est_now - datetime.timedelta(minutes=45):
                         print(f"   ⏭️  Skipping {game_data.get('matchup','?')} — tipped off >45min ago")
                         continue
@@ -662,11 +667,11 @@ class MorningBriefEngine:
                                 _hours_to_game = 12.0  # default
                                 if _game_start:
                                     try:
-                                        import pytz as _pytz_perp
-                                        _now_est = datetime.datetime.now(_pytz_perp.timezone('US/Eastern'))
-                                        _start_aware = _game_start if _game_start.tzinfo else _game_start.replace(tzinfo=_pytz_perp.timezone('US/Eastern'))
+                                        _now_est = datetime.datetime.now(pytz.timezone('US/Eastern'))
+                                        _start_aware = _game_start if _game_start.tzinfo else _game_start.replace(tzinfo=pytz.timezone('US/Eastern'))
                                         _hours_to_game = max(0.0, (_start_aware - _now_est).total_seconds() / 3600)
-                                    except Exception:
+                                    except Exception as e:
+                                        print(f"[WARNING] hours_to_game calculation failed, using default 12.0: {e}")
                                         pass
                                 game_news_cache[gid] = perp_client.search_game_context(
                                     home, away, out_names, hours_to_game=_hours_to_game)
@@ -769,8 +774,11 @@ Return JSON only."""
                     away_team = first.get('away_team', 'UNK')
                     spread = first.get('spread', 0)
                     total = first.get('total', 0)
-                    home_team_total = first.get('home_team_total', 'N/A')
-                    away_team_total = first.get('away_team_total', 'N/A')
+                    _gate_vegas = {}
+                    if hasattr(self, 'gate') and hasattr(self.gate, 'games'):
+                        _gate_vegas = self.gate.games.get(gid, {}).get('vegas', {})
+                    home_team_total = _gate_vegas.get('team_total_home', 'N/A')
+                    away_team_total = _gate_vegas.get('team_total_away', 'N/A')
                     matchup = first.get('matchup', gid)
                     
                     blowout_risk = "HIGH" if abs(spread) > 10 else "MODERATE"
@@ -791,12 +799,12 @@ Return JSON only."""
                           AND snapshot_time >= datetime('now', '-14 days')
                           AND (days_out IS NULL OR days_out < 75)
                         UNION
-                        SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type,
-                               ci.team as team_abbreviation, pi.snapshot_time
+                        SELECT pi.player_name, pi.status, pi.days_out, pi.injury_type, p.team as team_abbreviation, pi.snapshot_time
                         FROM player_injuries pi
                         JOIN player_canonical_ids ci ON LOWER(ci.full_name) = LOWER(pi.player_name)
+                        LEFT JOIN players p ON ci.canonical_id = p.player_id
                         WHERE (pi.team_abbreviation IS NULL OR pi.team_abbreviation = '')
-                          AND ci.team IN (?, ?)
+                          AND p.team IN (?, ?)
                           AND pi.resolved_at IS NULL
                           AND pi.status IN ('OUT', 'DOUBTFUL', 'GTD')
                           AND pi.snapshot_time >= datetime('now', '-14 days')
@@ -950,8 +958,9 @@ Return JSON only."""
                                 situational_context = ref_note
                             else:
                                 situational_context = f"{situational_context} | {ref_note}"
-                    except Exception:
-                        pass  # Ref data unavailable — continue without it
+                    except Exception as e:
+                        print(f"[WARNING] Ref data unavailable: {e}")
+                        pass
 
                     env = config.get_scoring_environment()
                     over_rate = env.get('over_hit_rate_14d', 0)
@@ -981,8 +990,7 @@ Return JSON only."""
                         home_rotation = f"Rotation data unavailable ({_re})"
 
                     # Build date label: "TONIGHT · Feb 19" or "TOMORROW · Feb 20"
-                    import pytz as _pytz_mb
-                    _est_now = datetime.datetime.now(_pytz_mb.timezone('US/Eastern'))
+                    _est_now = datetime.datetime.now(pytz.timezone('US/Eastern'))
                     _game_date_str = first.get('game_date', '')
                     try:
                         _gd = datetime.datetime.strptime(_game_date_str, '%Y-%m-%d').date() if _game_date_str else _est_now.date()
@@ -1240,7 +1248,7 @@ Return JSON only."""
                             # 2c. Get Opponent Scheme
                             cursor.execute("""
                                 SELECT active_style FROM team_scheme_cache
-                                WHERE team_abbr = ? AND scheme_type = 'DEFENSIVE'
+                                WHERE team_abbr = ? AND scheme_type = 'DEFENSE'
                             """, (opponent,))
                             scheme_row = cursor.fetchone()
                             opp_scheme = scheme_row[0] if scheme_row else "Standard"

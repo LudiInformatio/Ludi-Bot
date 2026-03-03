@@ -20,10 +20,12 @@ from utils.time_utils import get_est_yesterday
 def _calc_stats(row):
     """Shared helper: unpack a query row into a stats dict."""
     total, wins, losses, pushes, net_units, units_risked = row
+    net_units = net_units or 0
+    units_risked = units_risked or 0
     decided = wins + losses
     win_rate = (wins / decided * 100) if decided > 0 else 0
     # True ROI = net profit / total units risked (not per-bet average)
-    roi = (net_units / units_risked * 100) if units_risked and units_risked > 0 else 0
+    roi = (net_units / units_risked * 100) if units_risked > 0 else 0
     return {
         'total': total,
         'wins': wins,
@@ -91,7 +93,7 @@ def get_settlement_summary():
         print(f"ℹ️  All {daily['total']} bets from yesterday were voided — skipping Telegram")
         return None
 
-    if abs(daily['net_units']) > 50:
+    if daily and daily.get('net_units') is not None and abs(daily['net_units']) > 50:
         anomaly_msg = f"⚠️ P&L ANOMALY: {daily['net_units']:.1f}u exceeds ±50u threshold — verify before trusting"
         print(anomaly_msg)
         from utils.slack_notifier import send_slack_alert
@@ -209,7 +211,7 @@ def main():
     success = send_solomon_message(msg)
 
     if success:
-        print(f"✅ Sent: {d['wins']}-{d['losses']} ({d['net_units']:+.2f}u) | L10: {l10['net_units']:+.2f}u | Overall: {ov['net_units']:+.2f}u")
+        print(f"✅ Sent: {d['wins']}-{d['losses']} ({d['net_units']:+.2f}u) | L10: {(l10['net_units'] if l10 else 0.0):+.2f}u | Overall: {(ov['net_units'] if ov else 0.0):+.2f}u")
     else:
         print("❌ Failed to send settlement summary")
 

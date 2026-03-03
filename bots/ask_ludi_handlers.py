@@ -43,7 +43,7 @@ def classify_intent(user_message: str) -> str:
     )
     if result:
         result = result.strip().lower()
-        valid_intents = ["injuries", "edges", "trends", "schedule", "recap", "standings", "free_text"]
+        valid_intents = ["injuries", "standings", "schedule", "recap", "edges", "trends", "free_text"]
         for intent in valid_intents:
             if intent in result:
                 return intent
@@ -67,7 +67,8 @@ def _format_timestamp_est(ts_str: str | None) -> str | None:
             except ValueError:
                 continue
         return None
-    except Exception:
+    except Exception as e:
+        print(f"[WARNING] _format_timestamp_est failed: {e}")
         return None
 
 
@@ -139,7 +140,8 @@ def format_edges(edges: list[dict[str, Any]], meta: dict | None = None) -> str:
         lines.append("**Today's Edges (final):**")
         for edge in edges[:10]:
             pct = f"{edge['true_edge']:.1f}%"
-            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {edge['projection']}"
+            proj = f"{edge['projection']:.1f}" if edge.get('projection') is not None else 'N/A'
+            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {proj}"
             lines.append(line)
         # Tomorrow note — slate context will have tomorrow's games if available
         target = get_smart_target_date()
@@ -148,7 +150,8 @@ def format_edges(edges: list[dict[str, Any]], meta: dict | None = None) -> str:
         # Normal daytime view
         for edge in edges[:10]:
             pct = f"{edge['true_edge']:.1f}%"
-            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {edge['projection']}"
+            proj = f"{edge['projection']:.1f}" if edge.get('projection') is not None else 'N/A'
+            line = f"• {edge['player_name']} {edge['bet_side']} {edge['line']} {edge['stat_category']} @ {edge['matchup']}\n  Edge: {pct} | Proj: {proj}"
             lines.append(line)
 
     result = "**Today's Top Edges:**\n" + "\n".join(lines) if lines[0] != "**Today's Edges (final):**" else "\n".join(lines)
@@ -269,16 +272,19 @@ async def generate_narrative(
 === USER QUESTION ===
 {user_message}"""
 
-    result = get_claude_analysis(
-        prompt=prompt,
-        system_prompt=ASK_LUDI_NARRATIVE_SYSTEM,
-        model=SONNET_MODEL,
-        temperature=0.3,
-        max_tokens=600,
-        call_type="ask_ludi_narrative",
-    )
-    if result:
-        return result.strip()
+    try:
+        result = get_claude_analysis(
+            prompt=prompt,
+            system_prompt=ASK_LUDI_NARRATIVE_SYSTEM,
+            model=SONNET_MODEL,
+            temperature=0.3,
+            max_tokens=600,
+            call_type="ask_ludi_narrative",
+        )
+        if result:
+            return result.strip()
+    except Exception as e:
+        print(f"[WARNING] generate_narrative Sonnet call failed: {e}")
     return data
 
 
@@ -310,4 +316,9 @@ async def handle_message(update, context) -> None:
     except Exception:
         response = format_fallback_data(intent)
 
-    await update.message.reply_text(response)
+    MAX_TG = 4096
+    if len(response) <= MAX_TG:
+        await update.message.reply_text(response)
+    else:
+        for i in range(0, len(response), MAX_TG):
+            await update.message.reply_text(response[i:i + MAX_TG])

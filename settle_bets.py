@@ -234,7 +234,7 @@ class BetSettler:
 
         # Check if the team had a game on this date
         c.execute(
-            "SELECT COUNT(*) FROM games WHERE date = ? AND (home_team = ? OR away_team = ?)",
+            "SELECT COUNT(*) FROM canonical_games WHERE date = ? AND (home_team = ? OR away_team = ?)",
             (game_date, team, team)
         )
         team_had_game = c.fetchone()[0] > 0

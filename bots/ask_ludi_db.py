@@ -14,7 +14,9 @@ from utils.time_utils import (
 
 def get_db_connection() -> sqlite3.Connection:
     """Create a read-only connection to the ludi.db database."""
-    return sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +28,8 @@ def get_db_connection() -> sqlite3.Connection:
 _GHOST_INJURY_GUARD = """
   AND NOT EXISTS (
       SELECT 1 FROM player_game_logs pgl
-      WHERE LOWER(pgl.player_name) = LOWER(pi.player_name)
+      JOIN player_canonical_ids pci2 ON LOWER(pci2.full_name) = LOWER(pi.player_name)
+      WHERE pgl.player_id = pci2.canonical_id
         AND pgl.game_date >= date('now', '-3 days')
         AND pgl.minutes > 10
   )
@@ -198,6 +201,7 @@ def build_slate_context(target_date: str | None = None) -> str:
               AND pi.snapshot_time >= datetime('now', '-14 days')
               {_GHOST_INJURY_GUARD}
             GROUP BY pi.player_name, pi.team_abbreviation
+            ORDER BY MAX(pi.snapshot_time) DESC
         """, teams)
         injury_rows = cursor.fetchall()
 
