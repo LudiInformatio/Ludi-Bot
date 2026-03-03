@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 4:58 PM EST
+**Last Updated:** Tuesday, March 3, 2026 — 6:52 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Pipeline bug cleanup (`module_c.py` deepcopy, `module_f.py` status normalization, `module_d.py` silent exceptions) + Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`)
-**Completed:** Workflow Audit Sprint 2 (`.github/workflows/`) — 20/20 workflows hardened (concurrency, step timeouts, Solomon routing, pip cache) ✅ + Pipeline bug fixes (double ramp-up deepcopy, DOUBTFUL status normalization, silent exception surfacing) ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅
+**Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
+**Completed:** BERT prompt patterns audit (`ask_ludi_handlers.py`, `claude_prompts.py`, `curate_plays.py`) — Pattern 1–3 fixes + roster safety ✅ + `trend_engine.py` SMA audit — 11 fixes (days_out/staleness, accent-unsafe queries, busy_timeout) ✅ + Pipeline bug fixes (deepcopy, DOUBTFUL normalization, silent exceptions) ✅
 
 This is the single source of truth for project tasks and priorities.
 

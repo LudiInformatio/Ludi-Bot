@@ -86,12 +86,12 @@ GAME_NOTES_TEMPLATE = """📅 {game_label}
 {away_team}: {away_rotation}
 {home_team}: {home_rotation}
 
-=== MATCHUP ANALYSIS ===
+=== HISTORICAL CONTEXT (L10 trends · hit rates · scheme modifiers) ===
 **Scheme Edge:**
 - {away_team} ({away_archetype_summary}) vs {home_team} ({home_def_scheme}): {one_sentence}
 - {home_team} ({home_archetype_summary}) vs {away_team} ({away_def_scheme}): {one_sentence}
 
-**Key Edges Today:**
+=== TONIGHT'S EDGE SIGNALS ===
 {edges_block}
 [Format: "{player} {stat} — {edge_reason} ({edge_pct}% above line)"]
 
@@ -103,15 +103,17 @@ SPOTLIGHT_TEMPLATE = """## {player} | {team} vs {opponent}
 
 {player} {stat} ({line}) — {tier} tier play vs {opp_scheme} defense.
 
-**Context:**
+=== HISTORICAL CONTEXT (season trends) ===
 - Archetype: {archetype}
-- Opponent scheme: {opp_scheme}
-- Injury status: {injury_context}
-- Active teammates: {active_teammates}
 - Trend: {trend_line}
 - Minutes: {minutes_trend}
 - L10 avg: {l10_avg} ({hit_rate_l10} hit rate)
 - Streak: {streak_note}
+
+=== TONIGHT'S CONTEXT (game-specific) ===
+- Opponent scheme: {opp_scheme}
+- Injury status: {injury_context}
+- Active teammates: {active_teammates}
 - Edge: {edge_pct}% above line
 {stagger_note}
 
@@ -141,46 +143,48 @@ GAME_NOTES_EXAMPLE = """📅 Feb 22, 2026
 | Schedule | LAL on B2B (road) | LAL fatigue |
 
 **Situational Intel:**
-Luka (ankle) is GTD tonight. Lakers 3-2 in last 5. Celtics 8-2 in last 10 home games.
+[LAL STAR] (ankle) is GTD tonight. LAL 3-2 in last 5. BOS 8-2 in last 10 home games.
 
 === INJURY & PERSONNEL ===
 **Injury Impact:**
-OUT: Sam Hauser [BOS] (knee, 3d) → Baylor Scheierman +4 PTS proj
-GTD: Luka Doncic [LAL] (ankle) — 6:00 PM update critical
+OUT: [BOS WING] (knee, 3d) → [BOS BACKUP WING] +4 PTS proj
+GTD: [LAL HELIOCENTRIC STAR] (ankle) — 6:00 PM update critical
 
-=== MATCHUP ANALYSIS ===
+=== HISTORICAL CONTEXT (L10 trends · hit rates · scheme modifiers) ===
 **Scheme Edge:**
-- LAL (HELIOCENTRIC_MAESTRO) vs BOS (DROP): Luka drives vs drop coverage → kick3s
-- BOS (TWO_LEVEL_SCORER) vs LAL: Jaylen Brown attacks LAL wings off dribble → FTA
+- LAL (HELIOCENTRIC_MAESTRO) vs BOS (DROP): [LAL STAR] drives vs drop coverage → kick3s
+- BOS (TWO_LEVEL_SCORER) vs LAL: [BOS WING SCORER] attacks LAL wings off dribble → FTA
 
-**Key Edges Today:**
-Luka Doncic PTS OVER 24.5 — Luka vs drop coverage (64% hit rate L10) (+8.2% edge)
-Jaylen Brown PTS OVER 26.5 — Brown drives vs LAL wing defense (+5.1% edge)
+=== TONIGHT'S EDGE SIGNALS ===
+[BOS WING SCORER] PTS OVER 26.5 — drives vs LAL wing defense (67% L10 hit rate) (+5.1% edge)
+[BOS RIM BIG] BLK UNDER 0.5 — limited rim involvement vs LAL guard-heavy attack (+9.4% edge)
 
 ---
 *Analysis for research purposes only*
 """
 
-SPOTLIGHT_EXAMPLE = """## LeBron James | LAL @ BOS
+SPOTLIGHT_EXAMPLE = """## [HELIOCENTRIC STAR] | LAL @ BOS
 
-LeBron James PTS OVER 28.5 (+100) — DIAMOND tier play vs DROP defense.
+[HELIOCENTRIC STAR] PTS OVER 28.5 (+100) — DIAMOND tier play vs DROP defense.
 
-**Context:**
+=== HISTORICAL CONTEXT (season trends) ===
 - Archetype: HELIOCENTRIC_MAESTRO
-- Opponent scheme: DROP (allows rim pressure + kickout 3s)
-- Injury status: GTD (calf) — confirmed active
 - Trend: +4.2 PTS L5
 - Minutes: 32-36 (stable)
 - L10 avg: 29.8 (70% hit rate)
 - Streak: 3 consecutive OVER
+
+=== TONIGHT'S CONTEXT (game-specific) ===
+- Opponent scheme: DROP (allows rim pressure + kickout 3s)
+- Injury status: GTD (calf) — confirmed active
 - Edge: 8.2% above line
 
 **Why this play:**
-LeBron → vs BOS DROP defense → drives to rim, kicks out to shooters when doubled → high usage in return game.
+[PLAYER] → vs BOS DROP defense → drives to rim, kicks out to shooters when doubled → high usage in return game.
 
 [STOP HERE if player is OUT/DOUBTFUL — do not analyze further]
 
-LeBron returns from a 3-game calf injury absence with fresh legs. Against Boston's drop coverage, he can operate in the mid-post where he's most efficient. His L10 29.8 PPG on 70% hit rate vs the line shows strong form.
+[PLAYER] returns from a 3-game calf injury absence with fresh legs. Against Boston's drop coverage, [PLAYER] can operate in the mid-post where most efficient. [PLAYER]'s L10 29.8 PPG on 70% hit rate vs the line shows strong form.
 
 ---
 *Player spotlight - research only*

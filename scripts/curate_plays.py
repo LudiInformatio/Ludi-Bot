@@ -379,10 +379,32 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 
+    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "rank": 1, "reasoning": "one sentence"}]'
+
     env = config.get_scoring_environment()
     over_rate = env.get('over_hit_rate_14d', 0)
     env_label = env.get('environment', 'NEUTRAL')
     env_context = f"\nSCORING ENVIRONMENT TODAY: {env_label} ({over_rate:.0%} 14d OVER hit rate). When in doubt between two OVER plays, prefer the one with stronger UNDER characteristics.\n" if env else ""
+
+    curate_examples = """
+=== CURATION EXAMPLES ===
+[GOOD SELECTION — mix of OVER and UNDER]
+Input bets (3 of many):
+  [WING SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | injury_status=ACTIVE
+  [RIM BIG BLOCKER] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | injury_status=ACTIVE
+  [HELIOCENTRIC BIG] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | injury_status=ACTIVE
+Selection: [WING SCORER] (OVER, DIAMOND edge) + [RIM BIG BLOCKER] BLK UNDER (different game — BLK UNDER is the system's highest-WR signal) + [HELIOCENTRIC BIG] AST UNDER (third game).
+Diversified: 1 OVER + 2 UNDER, 3 games, 3 stat types.
+
+[BAD SELECTION — DO NOT DO THIS]
+Mistake 1 — GTD player:
+  [STAR GUARD] PTS OVER 30.5 | DIAMOND | edge=18.3% | game=TEAM7_TEAM8 | injury_status=GTD
+  Reject: GTD voids edge signal regardless of edge%. Never select unless ACTIVE or PROBABLE.
+Mistake 2 — same-game over-concentration:
+  Three picks from TEAM7_TEAM8 ([STAR GUARD] PTS OVER + [TEAM7 BIG] REB OVER + [TEAM7 GUARD] AST OVER)
+  Reject: Exceeds 2-bet-per-game rule. A blowout kills all three at once.
+=== END EXAMPLES ===
+"""
 
     user_prompt = f"""You are selecting the TOP 5 plays from today's NBA player prop slate.
 
@@ -391,11 +413,10 @@ HARD RULES:
 - Diversify across stat types (do not pick 5 PTS bets)
 - Rank by overall confidence — weight tier quality, injury clarity, and edge together
 - DO NOT recalculate, adjust, or question any edge/probability/projection values — they are authoritative outputs from a deterministic simulation model
-- Return ONLY a valid JSON array, no other text:
-  [{{"bet_id": 123, "rank": 1, "reasoning": "one sentence explaining the pick"}}]
+- Return JSON array only
 
 {env_context}
-
+{curate_examples}
 TODAY'S CLEAN BETS ({len(passing_bets)} total, already passed injury sanity gate):
 {bets_text}
 

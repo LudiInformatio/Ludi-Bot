@@ -40,8 +40,22 @@ def _resolve_canonical(conn, player_name: str) -> str:
     try:
         from utils.player_id_resolver import resolve_canonical_name
         return resolve_canonical_name(conn, player_name)
-    except Exception:
+    except Exception as e:
+        print(f"[trend_engine] _resolve_canonical failed for '{player_name}': {e}")
         return player_name
+
+
+def _strip_accents(name: str) -> str:
+    """Strip accent marks for tables that store non-accented names.
+
+    Used for Direction-2 lookups (canonical → stripped) when querying
+    player_synergy_playtypes, player_defense, rotation_profiles, and
+    beneficiary_minutes.out_player_name — all populated from BDL/Tank01
+    (non-accented sources). Pattern from CANONICAL_NAME_RESOLUTION.md §Direction 2.
+    """
+    import unicodedata
+    nfd = unicodedata.normalize('NFD', name)
+    return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
 
 # Stat column mapping — matches player_game_logs schema exactly
 STAT_COL = {
@@ -62,6 +76,7 @@ def _get_conn():
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")  # 30s lock-contention wait (distinct from connect timeout)
     return conn
 
 
@@ -242,12 +257,17 @@ def get_beneficiary_context(home_team: str, away_team: str) -> str:
     conn = _get_conn()
     try:
         # Find OUT players on both teams (no players table join — avoids dirty ID issues)
+        # days_out < 75: excludes season-ending absences (Steven Adams 220d) that consume
+        #   Claude's 600-char context budget with no game-edge signal.
+        # snapshot_time guard: prevents injuries from a stale DB init appearing as current.
         out_players = conn.execute("""
             SELECT player_name, team_abbreviation, days_out, injury_type
             FROM player_injuries
             WHERE team_abbreviation IN (?, ?)
               AND resolved_at IS NULL
               AND status = 'OUT'
+              AND (days_out IS NULL OR days_out < 75)
+              AND snapshot_time >= datetime('now', '-14 days')
             ORDER BY days_out DESC
         """, (home_team, away_team)).fetchall()
 
@@ -259,26 +279,38 @@ def get_beneficiary_context(home_team: str, away_team: str) -> str:
         for op in out_players:
             team = op['team_abbreviation']
 
-            # Get top beneficiaries (name-based join — sidesteps Tank01 dirty ID problem)
+            # Strip accents for beneficiary_minutes lookup: player_injuries stores canonical
+            # accented names (e.g. "Nikola Jokić") after Feb 24 fix, but beneficiary_minutes
+            # .out_player_name is populated from player_game_logs (BDL/Tank01 — non-accented).
+            # Must bridge via _strip_accents() or the join returns 0 rows silently.
+            out_name_lookup = _strip_accents(op['player_name'])
+
             bens = conn.execute("""
                 SELECT beneficiary_player_name, minutes_delta, games_without
                 FROM beneficiary_minutes
                 WHERE out_player_name = ? AND team_abbreviation = ?
                   AND minutes_delta > 2.0
                 ORDER BY minutes_delta DESC LIMIT 3
-            """, (op['player_name'], team)).fetchall()
+            """, (out_name_lookup, team)).fetchall()
 
             injury_desc = op['injury_type'] or 'injury'
             days = op['days_out'] or 0
 
+            # Signal to Claude: absences ≥30d mean the team has already structurally
+            # adapted its rotation — this is not a tonight's-game edge, it's the new normal.
+            if days >= 30:
+                extended_note = " [extended absence — team has structurally adapted; not a single-game edge signal]"
+            else:
+                extended_note = ""
+
             if bens:
                 ben_parts = [f"{b['beneficiary_player_name']} +{b['minutes_delta']:.1f} min" for b in bens]
                 lines.append(
-                    f"- {op['player_name']} OUT ({team}, {days}d {injury_desc}) -> {', '.join(ben_parts)}"
+                    f"- {op['player_name']} OUT ({team}, {days}d {injury_desc}){extended_note} -> {', '.join(ben_parts)}"
                 )
             else:
                 lines.append(
-                    f"- {op['player_name']} OUT ({team}, {days}d {injury_desc}) -> No beneficiary data"
+                    f"- {op['player_name']} OUT ({team}, {days}d {injury_desc}){extended_note} -> No beneficiary data"
                 )
 
         return "\n".join(lines) if len(lines) > 1 else ""
@@ -314,6 +346,31 @@ def get_stagger_context(player_name: str, team_abbr: str,
         pid = player_id or _resolve_player_id(conn, player_name, team_abbr)
         if not pid:
             return ""
+
+        # Guard: detect debut/new-team/returning-from-injury via game log count only.
+        # No hardcoded player names — purely data-driven from player_game_logs.
+        # Examples handled: Tatum (0 BOS games this season = debut), Trae Young
+        # (0 WSH games post-trade = trade debut), Booker (50+ PHX games, missed 3 = normal).
+        current_team_games = conn.execute(
+            "SELECT COUNT(*) FROM player_game_logs "
+            "WHERE player_id = ? AND team_abbreviation = ? AND minutes > 0",
+            (pid, team_abbr)
+        ).fetchone()[0]
+
+        if current_team_games == 0:
+            # Season debut or trade debut — zero game data for this team.
+            # Descriptive note (not "") lets Claude reason: weight Perplexity news heavily,
+            # don't fabricate stat projections from prior-team or prior-season history.
+            return (f"[DEBUT SITUATION — {player_name} has no recorded games for "
+                    f"{team_abbr} this season. Statistical stagger/WOWY projections "
+                    f"unavailable. Rely on news, reports, and prior-team context only.]")
+        elif current_team_games < 5:
+            # Very recent to team or just returned from injury — thin sample.
+            # Stagger data may reflect prior team or pre-injury stint.
+            return (f"[LIMITED DATA — {player_name} has only {current_team_games} game(s) "
+                    f"recorded for {team_abbr}. Lineup impact data may reflect prior team "
+                    f"or pre-return stint. Treat statistical projections with caution.]")
+        # 5+ games on current team → normal stagger processing continues
 
         # Query stagger stats where partner is one of the OUT players
         placeholders = ','.join(['?'] * len(out_players))
@@ -461,7 +518,8 @@ def get_matchup_analysis(player_name, opponent_abbr, cursor, stat_category='PTS'
         # Default fallback to offensive
         return _get_offensive_matchup(player_name, opponent_abbr, cursor, scheme)
 
-    except Exception:
+    except Exception as e:
+        print(f"[trend_engine] get_matchup_analysis error for '{player_name}': {e}")
         return ""
 
 
@@ -473,6 +531,18 @@ def _get_offensive_matchup(player_name, opponent_abbr, cursor, scheme):
         WHERE player_name = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
         ORDER BY freq_pct DESC LIMIT 2
     """, (player_name,)).fetchall()
+
+    # Fallback: player_synergy_playtypes stores non-accented names (BDL/Tank01 source).
+    # If canonical name (e.g. "Nikola Jokić") returned 0 rows, retry with stripped form.
+    if not playtypes:
+        stripped = _strip_accents(player_name)
+        if stripped != player_name:
+            playtypes = cursor.execute("""
+                SELECT playtype, ppp, freq_pct, percentile
+                FROM player_synergy_playtypes
+                WHERE player_name = ? AND ppp IS NOT NULL AND freq_pct IS NOT NULL
+                ORDER BY freq_pct DESC LIMIT 2
+            """, (stripped,)).fetchall()
 
     if not playtypes:
         return ""
@@ -512,6 +582,17 @@ def _get_defensive_matchup(player_name, opponent_abbr, cursor, scheme):
         ORDER BY updated_at DESC LIMIT 1
     """, (player_name, opponent_abbr,)).fetchone()
 
+    # Fallback: player_defense stores non-accented names (BDL/Tank01 source).
+    if not defense:
+        stripped = _strip_accents(player_name)
+        if stripped != player_name:
+            defense = cursor.execute("""
+                SELECT freq_pct, dfg_pct, diff_pct
+                FROM player_defense
+                WHERE player_name = ? AND opponent_team = ?
+                ORDER BY updated_at DESC LIMIT 1
+            """, (stripped, opponent_abbr,)).fetchone()
+
     if not defense:
         return ""
 
@@ -533,7 +614,18 @@ def _get_rebound_matchup(player_name, opponent_abbr, cursor, scheme):
         WHERE player_name = ? AND playtype LIKE '%Putback%'
         ORDER BY freq_pct DESC LIMIT 1
     """, (player_name,)).fetchone()
-    
+
+    # Fallback: player_synergy_playtypes stores non-accented names (BDL/Tank01 source).
+    if not putbacks:
+        stripped = _strip_accents(player_name)
+        if stripped != player_name:
+            putbacks = cursor.execute("""
+                SELECT ppp, freq_pct
+                FROM player_synergy_playtypes
+                WHERE player_name = ? AND playtype LIKE '%Putback%'
+                ORDER BY freq_pct DESC LIMIT 1
+            """, (stripped,)).fetchone()
+
     # Get defensive rebound context
     dreb = cursor.execute("""
         SELECT freq_pct
@@ -541,6 +633,17 @@ def _get_rebound_matchup(player_name, opponent_abbr, cursor, scheme):
         WHERE player_name = ? AND opponent_team = ?
         ORDER BY updated_at DESC LIMIT 1
     """, (player_name, opponent_abbr,)).fetchone()
+
+    # Fallback: player_defense stores non-accented names (BDL/Tank01 source).
+    if not dreb:
+        stripped = _strip_accents(player_name)
+        if stripped != player_name:
+            dreb = cursor.execute("""
+                SELECT freq_pct
+                FROM player_defense
+                WHERE player_name = ? AND opponent_team = ?
+                ORDER BY updated_at DESC LIMIT 1
+            """, (stripped, opponent_abbr,)).fetchone()
 
     parts = []
     if putbacks:

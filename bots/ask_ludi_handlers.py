@@ -8,6 +8,7 @@ from utils.claude_prompts import (
     ASK_LUDI_INTENT_SYSTEM,
     ASK_LUDI_INTENT_PROMPT,
     ASK_LUDI_NARRATIVE_SYSTEM,
+    ROSTER_RULES,
 )
 from utils.time_utils import get_est_now, format_time_context_note, get_smart_target_date
 from bots import ask_ludi_db
@@ -275,7 +276,7 @@ async def generate_narrative(
     try:
         result = get_claude_analysis(
             prompt=prompt,
-            system_prompt=ASK_LUDI_NARRATIVE_SYSTEM,
+            system_prompt=f"{ROSTER_RULES}\n\n{ASK_LUDI_NARRATIVE_SYSTEM}",
             model=SONNET_MODEL,
             temperature=0.3,
             max_tokens=600,
