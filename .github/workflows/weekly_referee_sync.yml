@@ -8,6 +8,10 @@ on:
 jobs:
   sync-referee-intelligence:
     runs-on: self-hosted
+    concurrency:
+      group: weekly-referee-sync
+      cancel-in-progress: false
+    timeout-minutes: 45
     env:
       IS_SELF_HOSTED: 'true'
       PYTHONPATH: ${{ github.workspace }}
@@ -30,6 +34,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
@@ -39,6 +44,7 @@ jobs:
         run: .venv/bin/python -m playwright install chromium
 
       - name: Scrape Covers + OddsShark
+        timeout-minutes: 30
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -57,6 +63,7 @@ jobs:
           caffeinate -i .venv/bin/python scripts/sync_wowy_hybrid.py --days 7
 
       - name: Commit and push if changes
+        timeout-minutes: 10
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
@@ -72,10 +79,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Weekly Referee Sync')" || echo "Solomon notification failed"

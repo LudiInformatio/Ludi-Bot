@@ -33,6 +33,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
@@ -74,8 +75,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"❌ WORKFLOW FAILED: PBP Stats WOWY Sync - Check GitHub Actions"}' || echo "Slack notification failed"
+          export PYTHONPATH=$PWD
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: PBP Stats WOWY Sync')" || echo "Solomon notification failed"

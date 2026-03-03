@@ -35,12 +35,14 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Install Playwright browsers
+        timeout-minutes: 10
         run: .venv/bin/python -m playwright install chromium
 
       - name: Run Ghost Protocol sync
@@ -48,6 +50,7 @@ jobs:
         # (BDL V2 advanced stats now via sync_bdl_advanced_stats.py in data_sync.yml)
         # Ghost Protocol still handles: drives, catch_and_shoot, pull_up, closest_defender, clutch
         # Sunday: full 7-day sweep | Thursday: smart gap-fill (only incomplete dates)
+        timeout-minutes: 300
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -67,6 +70,7 @@ jobs:
       # NBA.com browser scraping of synergy data is no longer needed.
 
       - name: Reclassify Player Archetypes
+        timeout-minutes: 30
         run: |
           export PYTHONPATH=$PWD
           .venv/bin/python scripts/reclassify_player_archetypes.py
@@ -82,10 +86,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Ghost Protocol Sync')" || echo "Solomon notification failed"

@@ -30,8 +30,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: false  # Preserve ludi.db between runs
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
         
       - name: Setup Python Environment
+        timeout-minutes: 10
         run: |
           if [ ! -d ".venv" ]; then
             python3.11 -m venv .venv
@@ -40,27 +49,32 @@ jobs:
           .venv/bin/pip install -r requirements.txt
           
       - name: Verify Environment
+        timeout-minutes: 10
         run: |
           .venv/bin/python -c "import config; print('✅ Environment validated')"
           
       - name: Create Validation Logs Directory
+        timeout-minutes: 10
         run: |
           mkdir -p logs/validation
           mkdir -p logs/backtest
           
       - name: Run 21-Day B2B Fatigue Backtest
         if: ${{ github.event.inputs.backtest_type == 'fatigue_21day' || github.event.inputs.backtest_type == 'both' || github.event.inputs.backtest_type == '' }}
+        timeout-minutes: 15
         run: |
           echo "🔥 Running 21-Day B2B Fatigue Backtest..."
           .venv/bin/python scripts/backtest_fatigue_21day.py --verbose 2>&1 | tee logs/backtest/fatigue_21day_$(date +%Y%m%d).log
           
       - name: Run 14-Day Playtype Trends Backtest
         if: ${{ github.event.inputs.backtest_type == 'playtype_trends_14day' || github.event.inputs.backtest_type == 'both' || github.event.inputs.backtest_type == '' }}
+        timeout-minutes: 15
         run: |
           echo "📊 Running 14-Day Playtype Trends Backtest..."
           .venv/bin/python scripts/backtest_playtype_trends_14day.py --verbose 2>&1 | tee logs/backtest/playtype_trends_14day_$(date +%Y%m%d).log
           
       - name: Check for Modifier Drift
+        timeout-minutes: 10
         run: |
           # Check B2B differential from results
           if [ -f "logs/backtest/fatigue_21day_$(date +%Y%m%d).log" ]; then
@@ -79,6 +93,7 @@ jobs:
           fi
           
       - name: Generate Weekly Validation Report
+        timeout-minutes: 10
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -123,6 +138,7 @@ jobs:
           .venv/bin/python -c "from utils.telegram_notifier import send_daily_briefing; send_daily_briefing('''$REPORT''')" || echo "Telegram notification failed"
           
       - name: Weekly Game Notes Retrospective
+        timeout-minutes: 10
         run: |
           echo "Running Weekly Game Notes Retrospective..."
           .venv/bin/python scripts/weekly_retrospective.py --verbose || echo "WARNING: Retrospective failed -- continuing"
@@ -130,6 +146,7 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       - name: Weekly Classification (Phase 8.4)
+        timeout-minutes: 10
         run: |
           echo "Running Weekly Archetype Classification..."
           .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
@@ -138,36 +155,42 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Build Player Type Profiles + Classification Profiles
+        timeout-minutes: 10
         run: |
           echo "Building player type profiles (archetype + synergy + position layer)..."
           .venv/bin/python scripts/build_classification_profiles.py || echo "WARNING: Profile build failed -- continuing"
         continue-on-error: true
 
       - name: Sync Matchup Intelligence Tables
+        timeout-minutes: 10
         run: |
           echo "Building archetype vs defense, team playtype allowed, player roster tables..."
           .venv/bin/python scripts/sync_matchup_intelligence.py --window-days 60 || echo "WARNING: Matchup intelligence build failed -- continuing"
         continue-on-error: true
 
       - name: Sync DVP Rankings by Archetype (Phase 8.25 foundation)
+        timeout-minutes: 10
         run: |
           echo "Computing team DVP rankings by offensive archetype from season game logs..."
           .venv/bin/python scripts/sync_team_dvp_by_archetype.py --min-games 10 || echo "WARNING: DVP rankings sync failed -- continuing"
         continue-on-error: true
 
       - name: Run Archetype Correction Pass
+        timeout-minutes: 10
         run: |
           echo "Checking for archetype classification drift (synergy-based rules)..."
           .venv/bin/python scripts/correct_archetype_classifications.py --apply --rebuild || echo "WARNING: Archetype correction failed -- continuing"
         continue-on-error: true
 
       - name: Verify Team Classifications (Sprint 3A)
+        timeout-minutes: 10
         run: |
           echo "Cross-checking team scheme labels vs def_rating + tracking data + offense stats..."
           .venv/bin/python scripts/verify_team_classifications.py --window-days 30 || echo "WARNING: Classification mismatches found — review logs"
         continue-on-error: true
 
       - name: Claude Smart Scheme Update
+        timeout-minutes: 10
         run: |
           echo "Calling Claude Haiku to review scheme labels and apply HIGH-confidence corrections..."
           .venv/bin/python scripts/claude_classify_schemes.py || echo "WARNING: Claude scheme update failed -- continuing"
@@ -176,12 +199,14 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Update Team Scheme Cache (60d/21d/7d windows)
+        timeout-minutes: 10
         run: |
           echo "Re-running scheme cache with [60d, 21d, 7d] voting windows..."
           .venv/bin/python scripts/update_team_scheme_cache.py --verbose || echo "WARNING: Scheme cache update failed"
         continue-on-error: true
 
       - name: Generate League Rankings (Phase 8.10)
+        timeout-minutes: 10
         run: |
           .venv/bin/python scripts/generate_rankings.py || echo "WARNING: Rankings generation failed -- continuing"
         continue-on-error: true
@@ -190,18 +215,21 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Build ESPN Athlete ID Crosswalk (Phase 8.21 foundation)
+        timeout-minutes: 10
         run: |
           echo "Building ESPN athlete ID crosswalk..."
           .venv/bin/python scripts/build_espn_crosswalk.py || echo "WARNING: ESPN crosswalk failed -- continuing"
         continue-on-error: true
 
       - name: Sync Stagger Stats (Phase 8.9-B)
+        timeout-minutes: 10
         run: |
           echo "Running Stagger Stats Sync..."
           .venv/bin/python scripts/sync_stagger_stats.py --days 60 || echo "WARNING: Stagger stats sync failed -- continuing"
         continue-on-error: true
 
       - name: Sync Stint Profiles (Phase 8.9-B)
+        timeout-minutes: 10
         run: |
           echo "Running Stint Profiles Sync..."
           # Use 60-day window: nba_game_id is only populated through early Feb 2026
@@ -221,6 +249,7 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
       - name: Archive Backtest Logs
+        timeout-minutes: 10
         run: |
           # Compress logs
           cd logs/backtest
@@ -230,6 +259,7 @@ jobs:
           find . -name "*.log.gz" -mtime +56 -delete || true
           
       - name: Update Production Documentation
+        timeout-minutes: 10
         if: ${{ github.ref == 'refs/heads/main' }}
         run: |
           # If on main branch, copy latest report to production docs
@@ -239,6 +269,7 @@ jobs:
           fi
           
       - name: Weekly Ops Digest
+        timeout-minutes: 10
         if: ${{ github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -306,19 +337,20 @@ jobs:
             -H 'Content-type: application/json' \
             --data "{\"text\":\"${MESSAGE}\"}" || echo "Ops digest Slack failed"
 
-      - name: Notify on failure
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data "{\"text\":\"❌ WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" || echo "Slack notification failed"
-
       - name: Cleanup Old Artifacts
+        timeout-minutes: 10
         run: |
           # Clean validation alerts older than 30 days
           find logs/validation -name "drift_alert_*.txt" -mtime +30 -delete || true
 
           # Clean weekly validation reports older than 90 days
           find docs -name "weekly_validation_*.md" -mtime +90 -delete || true
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
+        run: |
+          export PYTHONPATH=$PWD
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Weekly Validation')" || echo "Solomon notification failed"

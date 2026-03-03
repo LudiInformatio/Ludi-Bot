@@ -27,19 +27,28 @@ jobs:
         with:
           clean: false  # Preserve ludi.db between runs
 
-
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Run WOWY sync (yesterday's games)
+        timeout-minutes: 30
         run: .venv/bin/python scripts/sync_wowy_hybrid.py --days 1 --ghost
 
       - name: Run WOWY gap-fill (catch missed dates — last 30 days)
         continue-on-error: true
+        timeout-minutes: 15
         run: |
           .venv/bin/python scripts/sync_wowy_hybrid.py \
             --gap-fill \
@@ -57,10 +66,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: WOWY Sync')" || echo "Solomon notification failed"

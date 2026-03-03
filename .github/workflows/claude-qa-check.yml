@@ -28,6 +28,10 @@ jobs:
   pre-evening-check:
     if: github.event.schedule == '30 22 * * *'
     runs-on: self-hosted
+    concurrency:
+      group: claude-qa-pre-evening
+      cancel-in-progress: false
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,6 +78,10 @@ jobs:
   validate-schema:
     if: github.event.schedule != '30 22 * * *'
     runs-on: self-hosted
+    concurrency:
+      group: claude-qa-schema
+      cancel-in-progress: false
+    timeout-minutes: 30
     permissions:
       contents: read
     outputs:
@@ -129,6 +137,10 @@ jobs:
   claude-qa:
     needs: [validate-schema]
     runs-on: ubuntu-latest
+    concurrency:
+      group: claude-qa-report
+      cancel-in-progress: false
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read

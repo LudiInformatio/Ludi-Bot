@@ -37,6 +37,9 @@ jobs:
     needs: [check-slate]
     if: needs.check-slate.outputs.has_games == 'true'
     runs-on: self-hosted
+    concurrency:
+      group: lineup-sync
+      cancel-in-progress: false
     timeout-minutes: 10
     env:
       PYTHONPATH: ${{ github.workspace }}
@@ -46,13 +49,23 @@ jobs:
         with:
           clean: false
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install Dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Sync Starting Lineups
+        timeout-minutes: 5
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
@@ -63,9 +76,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          export PYTHONPATH=$PWD
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Lineup Sync')" || echo "Solomon notification failed"
