@@ -19,6 +19,7 @@ concurrency:
 jobs:
   backup:
     runs-on: self-hosted
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -26,7 +27,16 @@ jobs:
         with:
           clean: false  # Preserve ludi.db between runs
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
+        timeout-minutes: 10
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
@@ -52,11 +62,13 @@ jobs:
 
       - name: Create database backup
         if: steps.db.outputs.present == 'true'
+        timeout-minutes: 15
         run: |
           bash scripts/backup_database.sh
 
       - name: List recent backups
         if: steps.db.outputs.present == 'true'
+        continue-on-error: true
         run: |
           echo "Recent backups:"
           ls -lht archives/data/ludi.db.backup_*.gz 2>/dev/null | head -5 || echo "No compressed backups found"
@@ -71,6 +83,7 @@ jobs:
 
       - name: Backup summary
         if: steps.db.outputs.present == 'true'
+        continue-on-error: true
         run: |
           BACKUP_COUNT=$(ls -1 archives/data/ludi.db.backup_*.gz 2>/dev/null | wc -l | tr -d ' ')
           echo "✅ Backup complete"
@@ -87,6 +100,7 @@ jobs:
       - name: Check yesterday's slate (CLV gate)
         id: yesterday_slate
         if: steps.db.outputs.present == 'true'
+        timeout-minutes: 5
         run: |
           export PYTHONPATH=$PWD
           # macOS: date -v-1d | Linux: date -d yesterday (both present on self-hosted runner)
@@ -106,6 +120,7 @@ jobs:
 
       - name: Run overnight CLV backfill (sharp + P2P benchmark)
         if: steps.yesterday_slate.outputs.has_games == 'true'
+        timeout-minutes: 30
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_KEY_BACKFILL: ${{ secrets.ODDS_API_KEY_BACKFILL }}
@@ -119,10 +134,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: DB Backup')" || echo "Solomon notification failed"
