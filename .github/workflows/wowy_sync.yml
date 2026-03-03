@@ -38,6 +38,14 @@ jobs:
       - name: Run WOWY sync (yesterday's games)
         run: .venv/bin/python scripts/sync_wowy_hybrid.py --days 1 --ghost
 
+      - name: Run WOWY gap-fill (catch missed dates — last 30 days)
+        continue-on-error: true
+        run: |
+          .venv/bin/python scripts/sync_wowy_hybrid.py \
+            --gap-fill \
+            --gap-fill-days 30 \
+            --ghost
+
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
         if: always()

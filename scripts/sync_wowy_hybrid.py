@@ -16,6 +16,7 @@ import sys
 import os
 import argparse
 import time
+import random
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
@@ -50,6 +51,26 @@ def get_db_connection():
     conn.execute("PRAGMA busy_timeout = 30000")  # Retry for 30s on lock instead of failing immediately
     conn.row_factory = sqlite3.Row
     return conn
+
+def find_wowy_gap_dates(lookback_days=30):
+    """Find dates where canonical_games has games but team_lineups has no data.
+    Returns list of date strings (YYYY-MM-DD) that need backfilling."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT DISTINCT cg.date
+            FROM canonical_games cg
+            WHERE cg.date >= date('now', ? || ' days')
+              AND cg.date < date('now')
+              AND NOT EXISTS (
+                  SELECT 1 FROM team_lineups tl
+                  WHERE tl.game_date = cg.date
+              )
+            ORDER BY cg.date
+        """, (f"-{lookback_days}",)).fetchall()
+        return [row[0] for row in rows]
+    finally:
+        conn.close()
 
 def sync_via_api(target_date: datetime) -> int:
     """
@@ -264,10 +285,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", type=int, default=7, help="Days to look back")
     parser.add_argument("--ghost", action="store_true", help="Force Ghost Protocol (Browser Mode)")
+    parser.add_argument("--gap-fill", action="store_true",
+        help="Auto-detect and fill dates missing from team_lineups (last 30 days)")
+    parser.add_argument("--gap-fill-days", type=int, default=30,
+        help="Lookback window for gap detection (default: 30 days)")
     parser.add_argument("--start-date", help="YYYY-MM-DD")
     parser.add_argument("--end-date", help="YYYY-MM-DD")
     
     args = parser.parse_args()
+
+    if args.gap_fill:
+        gap_dates = find_wowy_gap_dates(lookback_days=args.gap_fill_days)
+        if not gap_dates:
+            print("✅ No WOWY gaps detected in last N days.")
+            sys.exit(0)
+        print(f"🔍 Found {len(gap_dates)} gap date(s): {gap_dates}")
+        for date_str in gap_dates:
+            target = datetime.strptime(date_str, "%Y-%m-%d")
+            run_wowy_backfill(target, target, headless=False)
+            time.sleep(random.uniform(3.0, 6.0))
+        print("✅ WOWY gap-fill complete.")
+        sys.exit(0)
     
     end = datetime.now() - timedelta(days=1)  # Yesterday (most recent completed games)
     if args.end_date:

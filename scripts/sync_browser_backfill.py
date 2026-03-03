@@ -193,7 +193,7 @@ def handle_pagination(page, category_label=None):
     try:
         close_popups(page)
 
-        select_selector = ".Pagination_pageDropdown__KgjBU select"
+        select_selector = "[class*='Pagination_pageDropdown'] select"
         max_retries = 3
 
         for attempt in range(max_retries):
@@ -253,7 +253,7 @@ def scrape_table(page, label):
     table_found = False
     for attempt in range(3):
         try:
-            page.wait_for_selector("table.Crom_table__p1iZz", timeout=timeout)
+            page.wait_for_selector("[class*='Crom_table']", timeout=timeout)
             table_found = True
             break
         except Exception:
@@ -271,7 +271,7 @@ def scrape_table(page, label):
 
     # Headers - use LAST header row only (handles multi-row headers like Closest Defender page)
     headers = page.evaluate('''() => {
-        const headerRows = Array.from(document.querySelectorAll('table.Crom_table__p1iZz thead tr'));
+        const headerRows = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] thead tr'));
         if (headerRows.length === 0) return [];
         const lastRow = headerRows[headerRows.length - 1];
         const ths = Array.from(lastRow.querySelectorAll('th'));
@@ -282,7 +282,7 @@ def scrape_table(page, label):
     
     # Rows with HREF extraction
     rows = page.evaluate('''() => {
-        const trs = Array.from(document.querySelectorAll('table.Crom_table__p1iZz tbody tr'));
+        const trs = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] tbody tr'));
         return trs.map(tr => {
             const tds = Array.from(tr.querySelectorAll('td'));
             const rowText = tds.map(td => td.innerText.trim());

@@ -485,6 +485,25 @@ on:
 
 ---
 
+### Pattern 13 — WOWY Gap Detection (Comparative Query Pattern)
+
+**Problem:** Daily scraper fails silently (0 records). No alert fires because script exits 0.
+Missed dates accumulate without any auto-recovery.
+
+**Solution:** After each daily sync, run a second gap-fill step that:
+1. Queries `canonical_games` (truth) vs `team_lineups` (actual) for the last 30 days
+2. Returns dates with games but no lineup data
+3. Re-runs the scraper only for those dates
+
+**Why `canonical_games` as truth:** It's the single source of truth for game identity.
+A date in `canonical_games` with no `team_lineups` records = confirmed gap.
+
+**Selector resilience:** Use `[class*='ComponentName']` (CSS substring match) instead of
+exact obfuscated class names like `.Crom_table__p1iZz`. The component name is stable
+across Next.js redeploys; the hash suffix changes with every deploy.
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Consequence | Fix |

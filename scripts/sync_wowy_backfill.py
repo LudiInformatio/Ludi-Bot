@@ -144,7 +144,7 @@ def handle_pagination(page, label=None):
     """Ensure all rows are visible by selecting 'All' in pagination dropdown."""
     try:
         close_popups(page)
-        select_selector = ".Pagination_pageDropdown__KgjBU select"
+        select_selector = "[class*='Pagination_pageDropdown'] select"
         if page.is_visible(select_selector):
             select_element = page.locator(select_selector)
             is_disabled = select_element.get_attribute("disabled")
@@ -168,7 +168,7 @@ def scrape_table(page, label):
     simulate_human_interaction(page)
 
     # Wait for table using existing utility function
-    table_selector = "table.Crom_table__p1iZz tbody tr"
+    table_selector = "[class*='Crom_table'] tbody tr"
     if not wait_for_selector_safe(page, table_selector, timeout=30000, message=label):
         print(f"      ⚠️  Table not found for {label} (or no data).")
         return []
@@ -178,7 +178,7 @@ def scrape_table(page, label):
 
     # Headers
     headers = page.evaluate('''() => {
-        const ths = Array.from(document.querySelectorAll('table.Crom_table__p1iZz thead th'));
+        const ths = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] thead th'));
         return ths.map(th => th.innerText.trim());
     }''')
     # Normalize headers (remove non-breaking spaces, newlines)
@@ -187,7 +187,7 @@ def scrape_table(page, label):
     
     # Rows with HREF extraction (for IDs)
     rows = page.evaluate('''() => {
-        const trs = Array.from(document.querySelectorAll('table.Crom_table__p1iZz tbody tr'));
+        const trs = Array.from(document.querySelectorAll('[class*=\'Crom_table\'] tbody tr'));
         return trs.map(tr => {
             const tds = Array.from(tr.querySelectorAll('td'));
             const rowText = tds.map(td => td.innerText.trim());
