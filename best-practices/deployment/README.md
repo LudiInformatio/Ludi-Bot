@@ -1,6 +1,6 @@
 # Deployment Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-19)
+**Status:** ✅ Complete (updated 2026-03-02)
 
 This guide covers GitHub Actions workflow patterns for the Ludi-Bot production pipeline. Every pattern below is derived from a real incident — not theory.
 
@@ -23,6 +23,7 @@ This guide covers GitHub Actions workflow patterns for the Ludi-Bot production p
 | Ghost Protocol `wait_until` | `sync_wowy_backfill.py`, `sync_browser_backfill.py` | Always `domcontentloaded` + 90s — `load` times out, `commit` aborts on redirects |
 | `close_popups()` before `scrape_table()` | All Ghost Protocol scrapers | Call explicitly after `page.goto()`, not just inside `scrape_table()` |
 | `IS_SELF_HOSTED=true` (exact string) | All `sync_*.py` scrapers | Empty string is falsy → `headless=None` → WAF blocks headless Chromium |
+| `_archive/` workflow convention | `.github/workflows/_archive/` | Move disabled workflows here — subdirectories are ignored by GitHub Actions |
 
 ---
 
@@ -430,6 +431,60 @@ for url in urls:
 
 ---
 
+### 12. Workflow Archive Convention — Disable Without Deleting
+
+**Problem:** Deleting a disabled workflow loses its git history, context, and the ability to recover it. Commenting out the `schedule:` trigger still leaves the file in the root of `.github/workflows/`, where it creates confusion about whether it's active.
+
+**Key fact:** GitHub Actions only processes `.yml` files in the **root** of `.github/workflows/`. Files in any subdirectory are completely ignored — they cannot be triggered by any event.
+
+```
+.github/workflows/
+├── data_sync.yml          ← ACTIVE — GitHub runs this
+├── ghost_protocol_sync.yml ← ACTIVE — GitHub runs this
+└── _archive/
+    └── tracking_sync.yml  ← INERT — GitHub ignores all subdirectories
+```
+
+**Archive convention (3 steps):**
+
+```yaml
+# Step 1: Add this header at the very top of the file before moving it
+# ARCHIVED: 2026-03-02 — Replaced by sync_bdl_tracking.py in data_sync.yml (BDL V2 sprint, Feb 15 2026)
+# Ghost Protocol (ghost_protocol_sync.yml) covers remaining tracking data.
+# Script still available for manual use: .venv/bin/python scripts/sync_browser_backfill.py --days 1
+name: Daily Tracking Sync (DISABLED - replaced by BDL API in data_sync.yml)
+# ... rest of file unchanged
+```
+
+```bash
+# Step 2: Move the file to the archive subdirectory
+mv .github/workflows/tracking_sync.yml .github/workflows/_archive/tracking_sync.yml
+```
+
+```
+# Step 3: Update CLAUDE.md automation schedule
+# Remove the workflow row, or mark it [ARCHIVED]
+```
+
+**For workflows that should exist but NOT run on a schedule** (manual-use only):
+
+```yaml
+# MANUAL ONLY — not scheduled. Run via: gh workflow run weekly_referee_sync.yml
+name: Weekly Referee Sync (Manual)
+on:
+  workflow_dispatch:  # Only trigger: manual dispatch — no schedule, no push
+```
+
+**Why not delete?**
+- Git history is preserved (the archived file is a timestamp + reason in the working tree)
+- Recovery is one `mv` command — no need to reconstruct the workflow from history
+- The archive header documents *why* it was disabled, which `git log` alone doesn't capture
+- `.github/workflows/_archive/README.md` explains the convention to future agents
+
+**Real example:** `tracking_sync.yml` — disabled Feb 15, 2026, archived Mar 2, 2026. BDL V2 integration replaced its function. Script (`sync_browser_backfill.py`) still available for manual use.
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Consequence | Fix |
@@ -443,6 +498,7 @@ for url in urls:
 | `wait_until='load'` on NBA.com stats | Page never fully loads → 45-90s timeout on every date | Use `wait_until='domcontentloaded'` (Ghost Protocol standard) |
 | `close_popups()` only inside `scrape_table()` | Consent modal fires during goto → domcontentloaded never fires | Call `close_popups(page)` explicitly after every `page.goto()` |
 | `IS_SELF_HOSTED` empty/unset | `headless=None` → Akamai WAF fingerprints and blocks the browser | Always set `IS_SELF_HOSTED=true` (exact value) on local runs |
+| Deleting a disabled workflow | Loses git history, context, and recovery path; creates confusion about what existed | Move to `.github/workflows/_archive/` with a dated comment header instead |
 
 ---
 

@@ -28,7 +28,7 @@ When invoked, perform ALL of the following steps before writing any output:
 
 ### Step 1 — Get current date/time
 
-Run `date '+%A, %B %-d, %Y — %-I:%M %p %Z'` to get the real current date and time. Use this in the brief header — do NOT use today's date from memory or training data.
+**Use the Bash tool** to run `date '+%A, %B %-d, %Y — %-I:%M %p %Z'` and capture the output. Use this in the brief header — do NOT use today's date from memory or training data.
 
 ### Step 2 — Parallel Reads (run simultaneously)
 
@@ -41,9 +41,9 @@ Run `date '+%A, %B %-d, %Y — %-I:%M %p %Z'` to get the real current date and t
    - The **first 3** `###` section headers and their bullet points (newest entries are prepended at the top)
    - Any lines that mention bugs, fixes, or "next step"
 
-3. **Run `git log --oneline -7`** — last 7 commit messages
+3. **Use the Bash tool to run `git log --oneline -7`** — last 7 commit messages
 
-4. **Run `git status --short`** — modified + untracked files
+4. **Use the Bash tool to run `git status --short`** — modified + untracked files
 
 ---
 

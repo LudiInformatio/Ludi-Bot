@@ -194,10 +194,12 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
 | 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
+| Mondays 9:00 AM | `weekly_referee_sync.yml` | Weekly referee intelligence sync via Playwright (OddsShark + Covers data) |
 | 9:30 AM | `referee_sync.yml` | Daily referee assignments |
 | 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
 | 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
+| Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | `injury_refresh.yml` | Intraday injury refresh — 9 daytime runs + 15 evening runs during game hours |
 | 6:35 PM + 8:25 PM | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM all games; 8:25 PM west coast 9 PM+ only) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
 | Manual only | `capture_closing_lines.yml` | CLV backfill re-runs (historical, on-demand; overnight handled by `db_backup.yml`) |
@@ -206,6 +208,8 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
 | 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
 | On failure/cancel | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
+| On PR open/push/sync | `claude-code-review.yml` | Automatic Claude code review on every pull request (Henrik's domain) |
+| On `@claude` mention in issue/PR | `claude.yml` | Interactive Claude assistant — responds to @claude comments on-demand |
 
 ---
 

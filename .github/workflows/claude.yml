@@ -1,3 +1,8 @@
+# INTERACTIVE ASSISTANT — responds to @claude mentions in issues + PR comments
+# This is ON-DEMAND only — Claude only runs when explicitly tagged with @claude
+# Different from claude-code-review.yml which AUTO-runs on every PR
+# Owner: Interactive AI assistant (not assigned to a specific employee)
+# Runs on: ubuntu-latest (no DB access needed)
 name: Claude Code
 
 on:

@@ -1,3 +1,6 @@
+# ARCHIVED: 2026-03-02 — Replaced by sync_bdl_tracking.py in data_sync.yml (BDL V2 sprint, Feb 15 2026)
+# Ghost Protocol (ghost_protocol_sync.yml) covers remaining tracking data.
+# Script still available for manual use: .venv/bin/python scripts/sync_browser_backfill.py --days 1
 name: Daily Tracking Sync (DISABLED - replaced by BDL API in data_sync.yml)
 
 # DISABLED Feb 15, 2026: sync_bdl_tracking.py in data_sync.yml now covers
@@ -59,6 +62,6 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" 
+            -H 'Content-type: application/json' 
             --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"

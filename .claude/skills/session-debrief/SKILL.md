@@ -24,6 +24,7 @@ Nine ordered steps that must run in sequence. Do NOT skip steps or reorder them.
 5. Review `best-practices/` for new patterns and bloat
 6. Update `memory/MEMORY.md` (enforce 200-line limit)
 7. Spot-check git status and `CLAUDE.md`
+7.5. Test & verify — agent work or long sessions (conditional — see below)
 8. Commit all changes
 9. Send PM bot break message (always last)
 
@@ -35,7 +36,7 @@ Perform ALL steps in order before writing any output.
 
 ### Step 1 — Get real date/time (always first)
 
-Run: `date '+%A, %B %-d, %Y — %-I:%M %p %Z'`
+**Use the Bash tool** to run: `date '+%A, %B %-d, %Y — %-I:%M %p %Z'` and capture the output.
 
 Use this timestamp everywhere. Do NOT use memory or training data for the date.
 
@@ -43,7 +44,7 @@ Use this timestamp everywhere. Do NOT use memory or training data for the date.
 
 ### Step 2 — Understand session scope (parallel reads)
 
-Run simultaneously:
+**Use the Bash tool** to run all three simultaneously (parallel tool calls):
 - `git log --oneline -10` — what was committed this session
 - `git status --short` — what is uncommitted right now
 - `git diff --stat HEAD~5` — which files were touched across recent commits
@@ -137,7 +138,7 @@ Check line count after edits: `wc -l memory/MEMORY.md`
 
 ### Step 7 — Check git status and CLAUDE.md
 
-Run `git status` to see all modified and untracked files.
+**Use the Bash tool** to run `git status` to see all modified and untracked files.
 
 Spot-check `CLAUDE.md` for accuracy — especially:
 - Automation schedule table (any new or changed workflow times?)
@@ -148,9 +149,46 @@ If today's changes made anything in `CLAUDE.md` stale → fix it now before comm
 
 ---
 
+### Step 7.5 — Test & verify (conditional — run before committing)
+
+**Run this step if ANY of the following are true:**
+- This session reviewed or continued another agent's work
+- 5+ files were changed this session
+- Any files were created, moved, or renamed by an agent
+
+**Use the Bash tool** to run each applicable check:
+
+1. **Files created by agent** → confirm they exist and have correct content:
+   ```bash
+   ls [path/to/expected/file]
+   head -5 [path/to/new/file]   # verify no --- YAML front matter artifact at line 1
+   ```
+
+2. **Files moved by agent** → confirm source is gone, destination present:
+   ```bash
+   ls .github/workflows/          # moved file should NOT appear here
+   ls .github/workflows/_archive/ # moved file SHOULD appear here
+   ```
+
+3. **Python files added or changed** → catch import errors before they reach main:
+   ```bash
+   source .venv/bin/activate && python -c "from [module] import [ClassName]"
+   ```
+
+4. **DB schema changes** → verify columns are as expected:
+   ```bash
+   sqlite3 ludi.db "PRAGMA table_info([table_name]);"
+   ```
+
+5. **`git diff --stat`** → review the full set of staged/unstaged changes one final time before commit.
+
+**If any check fails** → fix the issue now, before proceeding to Step 8. Do NOT commit broken state.
+
+---
+
 ### Step 8 — Commit all changes
 
-Stage all updated files and commit:
+**Use the Bash tool** to stage all updated files and commit. Execute these commands:
 
 ```bash
 git add [list of files changed in steps 3–7]
@@ -173,11 +211,13 @@ still commit with "no doc changes needed — working tree clean".
 The GH Actions runner checks out `origin/main` — if you commit but don't push, the runner
 runs stale code for every workflow until the next push. This is a silent failure mode.
 
+**Use the Bash tool** to push:
 ```bash
 git push origin main
 ```
 
-If push is rejected with "branches diverged" (GH Actions data-sync commits ran overnight):
+If push is rejected with "branches diverged" (GH Actions data-sync commits ran overnight),
+**use the Bash tool** to run:
 ```bash
 git diff main...origin/main --stat   # Verify only log files differ
 git merge origin/main --no-edit      # Safe merge — logs only, no conflicts
@@ -188,7 +228,7 @@ git push origin main
 
 ### Step 9 — Send PM bot break message (always last, always after commit)
 
-**Pre-flight — read back `**Active Work:**` from the committed ROADMAP.md and verify:**
+**Pre-flight — use the Bash tool to read back `**Active Work:**` from the committed ROADMAP.md:**
 
 ```bash
 grep "^\*\*Active Work:" ROADMAP.md
@@ -205,9 +245,9 @@ Check all three conditions before running pm_break:
 If any check fails → fix ROADMAP.md, re-run Step 8 (commit the fix), THEN run pm_session.
 **Never run pm_session with a vague Active Work line — the result will be generic every time.**
 
+**Use the Bash tool** to execute:
 ```bash
-source .venv/bin/activate
-python main.py --mode pm_session
+source .venv/bin/activate && python main.py --mode pm_session
 ```
 
 This sends the session debrief card to Telegram and Slack (uses `header_break.png` — recharging graphic):
