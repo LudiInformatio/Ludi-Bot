@@ -6,6 +6,11 @@ description: >
   "catch me up", "where did we leave off", "what was I working on", "start of day",
   "session brief", "what's the current state", "what's active", "orient me",
   "morning check-in", "coming back from a break", or simply "/session-brief".
+allowedTools:
+  - Bash
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Session Brief

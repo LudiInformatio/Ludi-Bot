@@ -6,6 +6,13 @@ description: >
   "wrap it up", "end of day", "taking a break", "commit and close", or simply
   "/session-debrief". This skill updates docs, commits changes, and sends the PM bot
   break message. It is the end-of-session counterpart to /session-brief.
+allowedTools:
+  - Bash
+  - Read
+  - Edit
+  - Write
+  - Glob
+  - Grep
 ---
 
 # Session Debrief
