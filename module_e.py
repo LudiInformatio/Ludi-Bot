@@ -817,6 +817,8 @@ class LudiCalibrator:
             }
             return stats
         except Exception as e:
+            if self.debug_log:
+                print(f"   [CAL] Shot difficulty stats error for {player_name_or_id}: {e}")
             return {}
 
     def _assign_secondary_playtypes(self, p, tracking_data, synergy_data):

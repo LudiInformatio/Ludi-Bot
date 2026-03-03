@@ -315,7 +315,8 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
             HAVING COUNT(*) >= 50
             ORDER BY wr DESC
         """).fetchall()
-    except Exception:
+    except Exception as e:
+        print(f"[WR CONTEXT] DB query failed — Sonnet will curate without win rate context: {e}")
         return ""
 
     z = 1.96  # 95% confidence

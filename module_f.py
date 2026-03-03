@@ -257,7 +257,7 @@ class LudiReporter:
             for p in game['players']:
                 # UPSTREAM GUARDRAIL: Skip players with zero projected minutes 
                 # or those explicitly ruled OUT by Module D (The Yak).
-                if p.get('proj_min', 0) <= 0 or p.get('status') == 'OUT':
+                if p.get('proj_min', 0) <= 0 or p.get('status', '').upper() in ('OUT', 'DOUBTFUL'):
                     continue
                 
                 # Calculate player-specific blowout tax

@@ -499,7 +499,8 @@ class LudiYak:
                 "SELECT normalized_name FROM player_canonical_ids WHERE is_active = 1"
             ).fetchall()}
             _conn.close()
-        except Exception:
+        except Exception as e:
+            print(f"   >>> [Yak] Canonical names load failed — name matching degraded: {e}")
             self._canonical_names = set()
         return self._canonical_names
 
@@ -992,7 +993,8 @@ class LudiYak:
                     if snapshot_dt.tzinfo:
                         snapshot_dt = snapshot_dt.replace(tzinfo=None)
                     age_hours = (datetime.now() - snapshot_dt).total_seconds() / 3600
-                except Exception:
+                except Exception as e:
+                    print(f"   >>> [Yak] Snapshot time parse failed, assuming fresh: {e}")
                     age_hours = 0
 
                 # get_category + self._taxonomy imported at module level / loaded at __init__
