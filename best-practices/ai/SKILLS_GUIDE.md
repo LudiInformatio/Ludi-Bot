@@ -23,7 +23,9 @@ A skill is a `SKILL.md` file that gives a Claude Code agent a **specialized work
 
 ## Anatomy of a Skill
 
-Every skill file lives at `.claude/skills/{skill-name}/SKILL.md` and follows this structure:
+Every skill file lives at `.claude/skills/{skill-name}/SKILL.md` and follows this structure.
+
+> **Gemini mirror:** Skills are duplicated in `.gemini/skills/{skill-name}/SKILL.md` for the Gemini CLI writer. Commands that invoke skills live in `.gemini/commands/{name}.toml` (TOML format with `{{args}}`) vs Claude's `.claude/commands/{name}.md` (Markdown with `$ARGUMENTS`). Keep both in sync.
 
 ```markdown
 ---
@@ -68,10 +70,13 @@ Exact format the skill returns. Always include a template.
 |-------|------|-------|---------|----------------|
 | `session-brief` | `.claude/skills/session-brief/SKILL.md` | Solomon | Start-of-session orientation | Every session start |
 | `session-debrief` | `.claude/skills/session-debrief/SKILL.md` | Solomon | End-of-session wrap-up + commit | Every session end |
-| `sports-data-model-architect` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik | Schema audit + data model design | Any DB schema change |
-| `ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik | Ludi-specific 10-point gotcha checklist | After any code review |
-| `backtest` | (project-registered) | Vera | Model validation suite | Weekly or after model changes |
-| `daily` | (project-registered) | Vera | Pipeline health check | Daily pre-pipeline |
+| `sports-data-model-architect` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik | Full schema audit + design + implementation | Any DB schema change |
+| ↳ `architect-audit` | `.claude/commands/architect-audit.md` | Henrik | Audit phase only — run scripts, return severity findings | Step 1 of schema work |
+| ↳ `architect-design` | `.claude/commands/architect-design.md` | Henrik | Design phase only — propose minimal additive changes | Step 2, after audit findings reviewed |
+| ↳ `architect-implement` | `.claude/commands/architect-implement.md` | Henrik | Implement phase only — migration-safe SQL/Python + validation | Step 3, after design approved |
+| `ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik | Ludi-specific 10-point gotcha checklist | After any `.py` code change |
+| `backtest` | `.claude/skills/backtest/SKILL.md` | Vera | Model validation suite | Weekly or after model changes |
+| `daily` | `.claude/skills/daily/SKILL.md` | Vera | Pipeline health check | Daily pre-pipeline |
 | `simplify` | (global plugin) | Henrik | Code quality + DRY review | After writing new code |
 | `research` | (global plugin) | Maren | Quick web research | On-demand competitive/API questions |
 | `ultrathink` | (global plugin) | Maren | Deep thinking protocol | Complex architectural decisions |
@@ -84,8 +89,9 @@ Exact format the skill returns. Always include a template.
 | Employee | Assigned Skills | Role |
 |----------|----------------|------|
 | Solomon (PM Lead) | `session-brief`, `session-debrief` | Coordinates all work, owns session lifecycle |
-| Henrik (Code Auditor) | `ludi-audit`, `sports-data-model-architect`, `simplify` | Reviews ALL code changes |
+| Henrik (Code Auditor) | `ludi-audit`, `sports-data-model-architect`, `architect-audit`, `architect-design`, `architect-implement`, `simplify` | Reviews ALL code changes |
 | Vera (Pipeline QA) | `daily`, `backtest` | Pre-flight checks, model validation |
+| Lena (Data Analyst) | `backtest`, `sports-data-model-architect` | Model calibration, stat confidence grades, backtest analysis |
 | Maren (Content/Ideas) | `ultrathink`, `research`, `design` | Brainstorming, BERT refinement, skill ideation |
 | Silas (Monitor) | N/A — runs via OpenClaw | Always-on monitoring, not skill-based |
 | Iris (Scout) | N/A — runs via OpenClaw | Always-on collection, not skill-based |
@@ -244,4 +250,4 @@ Retire a skill when:
 - `PM_BOT_NOTES_GUIDE.md` — ROADMAP grounding for Gemini PM messages
 - `AI_PROMPTING_BEST_PRACTICES.md` — Temperature rules, cost breakdown per model
 - `AGENTS.md` (project root) — Employee role definitions + skill assignments
-- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — Full PRD for the 6-employee workforce
+- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — Full PRD for the 7-employee workforce

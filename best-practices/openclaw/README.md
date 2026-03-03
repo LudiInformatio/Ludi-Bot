@@ -40,6 +40,53 @@ assert resp.status_code == 200, f"Telegram failed: {resp.text}"
 
 ---
 
+## Gemini CLI Slash Commands
+
+Gemini CLI supports slash commands via `.gemini/commands/*.toml`. This mirrors Claude Code's `.claude/commands/*.md` system but uses TOML format.
+
+### TOML Command Format
+
+```toml
+description = "Short description shown in /help"
+prompt = """
+Activate the {skill-name} skill.
+
+Specific instructions for this command's phase or focus.
+
+{{args}}
+"""
+```
+
+- `{{args}}` — injects whatever the user types after the command (e.g., `/architect:audit focus on entity resolution`)
+- One file = one command. File name = command name (colons are valid: `architect:audit.toml` → `/architect:audit`)
+
+### Sub-Command Pattern
+
+For multi-phase workflows, split one full skill into focused sub-commands. Users call only the phase they need:
+
+```
+architect.toml          →  /architect          (full skill, all phases)
+architect:audit.toml    →  /architect:audit    (audit only → stop, review)
+architect:design.toml   →  /architect:design   (design only → stop, review)
+architect:implement.toml → /architect:implement (implement only)
+```
+
+This prevents the model from over-running (e.g., generating SQL before the human has reviewed the audit findings).
+
+### Claude ↔ Gemini Parity
+
+Skills live in both places. Keep them in sync:
+
+| Claude Code | Gemini CLI |
+|-------------|------------|
+| `.claude/skills/{name}/SKILL.md` | `.gemini/skills/{name}/SKILL.md` |
+| `.claude/commands/{name}.md` | `.gemini/commands/{name}.toml` |
+| `$ARGUMENTS` placeholder | `{{args}}` placeholder |
+
+**Current shared skills:** `session-brief`, `session-debrief`, `sports-data-model-architect`, `ludi-audit`, `backtest`, `daily`
+
+---
+
 ## Architecture Decision
 
 **We use Gemini CLI (`gemini -p "..." -m gemini-2.5-pro --yolo`) as the writer model, not OpenClaw.**

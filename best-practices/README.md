@@ -24,15 +24,17 @@ best-practices/
 │   └── README.md
 ├── debugging/              # ✅ Troubleshooting strategies (COMPLETE)
 │   └── README.md
+├── deployment/             # ✅ CI/CD, GH Actions, production ops (COMPLETE)
+│   └── README.md
+├── docs/                   # ✅ Documentation maintenance rules (COMPLETE)
+│   └── README.md
+├── openclaw/               # ✅ Always-on agents + Gemini CLI writer (COMPLETE)
+│   └── README.md
 ├── ops-hub/                # ✅ Claude Ops Hub institutional memory (AUTO-MAINTAINED)
 │   ├── README.md
 │   ├── KNOWN_FIXES.md       ← auto-appended by claude-ops-hub.yml on every diagnosis
 │   └── DOMAIN_PATTERNS.md   ← few-shot examples per workflow domain
-├── docs/                   # ✅ Documentation maintenance rules (COMPLETE)
-│   └── README.md
-├── testing/                # ✅ Testing patterns and validation (COMPLETE)
-│   └── README.md
-└── deployment/             # 📋 CI/CD, production operations (INITIALIZED)
+└── testing/                # ✅ Testing patterns and validation (COMPLETE)
     └── README.md
 ```
 
@@ -121,7 +123,14 @@ Each time the ops-hub diagnoses a failure, it appends an entry to `KNOWN_FIXES.m
 ---
 
 ### 🚀 Deployment (`deployment/`)
-**Status:** 📋 Initialized — topics outlined, patterns pending
+**Status:** ✅ Complete (Mar 2, 2026)
+- `README.md` — 11 patterns: `clean: false` checkout, `--autostash` on rebase, secrets `env:` blocks, `continue-on-error` scope, concurrency groups, workflow gates, timeout-minutes, Telegram notification guards, Ghost Protocol popup handling
+- Real incidents documented: Feb workflow audit, database wipe prevention, self-hosted runner secret injection
+
+### 🤖 OpenClaw (`openclaw/`)
+**Status:** ✅ Complete (Mar 1, 2026)
+- `README.md` — Always-on agent patterns: launchd plist template, Discord webhook vs bot token, Telegram chat_id setup, Gemini CLI writer subprocess, agent output schema
+- Gemini CLI slash command format: `.gemini/commands/*.toml` + mirrored skill structure in `.gemini/skills/`
 
 ---
 
@@ -196,12 +205,12 @@ When you discover a new pattern or lesson:
 - **Ops Hub Patterns:** [ops-hub/DOMAIN_PATTERNS.md](ops-hub/DOMAIN_PATTERNS.md)
 - **Doc Maintenance:** [docs/README.md](docs/README.md)
 - **Skills Guide:** [ai/SKILLS_GUIDE.md](ai/SKILLS_GUIDE.md)
+- **OpenClaw Patterns:** [openclaw/README.md](openclaw/README.md)
 - **Project Documentation:** [../docs/](../docs/)
 - **Architecture Guide:** [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 - **Roadmap:** [../ROADMAP.md](../ROADMAP.md)
 
 ---
 
-**Last Updated:** March 2, 2026 EST
-**Categories Complete:** 10 (api, ai, ai-prompting, coding, data, data-modeling, debugging, docs, testing, ops-hub)
-**Categories Initialized:** 1 (deployment)
+**Last Updated:** March 3, 2026 EST
+**Categories Complete:** 12 (api, ai, ai-prompting, coding, data, data-modeling, debugging, deployment, docs, openclaw, testing, ops-hub)
