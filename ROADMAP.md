@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 2, 2026 — 6:38 PM EST
+**Last Updated:** Monday, March 2, 2026 — 7:21 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + midday refresh 2 PM/4:30 PM EST slots + Perplexity upgrade (~Mar 10)
 **Completed:** Ghost Protocol gap-fill (`sync_browser_backfill.py`) — `find_gap_dates()` + Thursday cron + settlement busy_timeout ✅ + Module H/X SMA audit (`module_x_scenario.py`, `module_c.py`) — conditional baseline Conditions 1–4 + H/A key fix + Module C injection ✅ + Smoke test verified (`_load_ha_splits` HOME→home normalization) — 6/7 players signal, best-practices updated ✅
