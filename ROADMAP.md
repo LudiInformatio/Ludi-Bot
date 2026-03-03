@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 1:56 PM EST
+**Last Updated:** Tuesday, March 3, 2026 — 4:44 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Workflow Audit Sprint 2 (`.github/workflows/`) — 4/20 workflows hardened (simulation, data, briefing, evening lock) → `injury_refresh.yml` next
-**Completed:** Workflow Audit Sprint 0 (`.github/workflows/_archive/`) — archive convention, `tracking_sync.yml` archived, CLAUDE.md schedule (20 rows), Pattern 12 ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅ + Schema hotfix (`player_canonical_ids.team` DROP COLUMN cascade, `api_monitor` → Solomon) + WOWY gap detection (`sync_wowy_hybrid.py` `find_wowy_gap_dates()`, `wowy_sync.yml` gap-fill step, Pattern 13) + Solomon credentials wired ✅
+**Active Work:** Pipeline bug cleanup (`module_c.py` deepcopy, `module_f.py` status normalization, `module_d.py` silent exceptions) + Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`)
+**Completed:** Workflow Audit Sprint 2 (`.github/workflows/`) — 20/20 workflows hardened (concurrency, step timeouts, Solomon routing, pip cache) ✅ + Pipeline bug fixes (double ramp-up deepcopy, DOUBTFUL status normalization, silent exception surfacing) ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅
 
 This is the single source of truth for project tasks and priorities.
 
