@@ -34,10 +34,9 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate 2>/dev/null || true
           export PYTHONPATH=$PWD
           set +e
-          python scripts/check_slate.py
+          .venv/bin/python scripts/check_slate.py
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
@@ -62,7 +61,10 @@ jobs:
           clean: false
 
       - name: Install dependencies
-        run: pip3 install -r requirements.txt
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Capture closing lines
         env:
@@ -79,7 +81,7 @@ jobs:
           else
             GAME_DATE=$(TZ='America/New_York' date +%Y-%m-%d)
           fi
-          python3 scripts/capture_closing_lines.py --verbose --game-date "$GAME_DATE"
+          .venv/bin/python scripts/capture_closing_lines.py --verbose --game-date "$GAME_DATE"
 
       - name: Sync Late Game Lineups (if needed)
         continue-on-error: true
@@ -89,7 +91,7 @@ jobs:
         run: |
           # Only sync for games where lineup_confirmed=False and tip_time > now + 90 min
           export PYTHONPATH=$PWD
-          python3 scripts/sync_lineup_starters.py --mode late_games || echo "ℹ️ No late games need lineup sync"
+          .venv/bin/python scripts/sync_lineup_starters.py --mode late_games || echo "ℹ️ No late games need lineup sync"
 
       - name: Report results
         if: success()

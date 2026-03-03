@@ -25,10 +25,9 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate 2>/dev/null || true
           export PYTHONPATH=$PWD
           set +e
-          python scripts/check_slate.py
+          .venv/bin/python scripts/check_slate.py
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
@@ -52,8 +51,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Sync Starting Lineups (Evening Refresh)
         env:
@@ -61,11 +61,11 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/sync_lineup_starters.py --mode evening || echo "⚠️ Lineup sync warning (non-fatal)"
+          .venv/bin/python scripts/sync_lineup_starters.py --mode evening || echo "⚠️ Lineup sync warning (non-fatal)"
 
       - name: Verify image pipeline dependencies
         run: |
-          python3 -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
+          .venv/bin/python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
 
 
 
@@ -74,7 +74,7 @@ jobs:
           # ESPN updates within 15-30 min of team announcements (free, no auth).
           # Catches same-day rulings (surgery, GTD) before BDL/Tank01 pick them up.
           export PYTHONPATH=$PWD
-          python3 scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
+          .venv/bin/python scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
 
       - name: Refresh Injuries (Late Scratches)
         env:
@@ -85,14 +85,13 @@ jobs:
           # Force refresh so any late scratches (4-6 PM window) are in DB
           # before evening cards generate. Non-fatal if it fails.
           export PYTHONPATH=$PWD
-          python3 scripts/sync_injuries.py --force || echo "⚠️ Injury refresh warning (non-fatal)"
+          .venv/bin/python scripts/sync_injuries.py --force || echo "⚠️ Injury refresh warning (non-fatal)"
 
       - name: Run News Agent (Automated News Catalyst Check)
         continue-on-error: true
         timeout-minutes: 3
         run: |
-          source .venv/bin/activate
-          python scripts/news_agent.py --mode automated
+          .venv/bin/python scripts/news_agent.py --mode automated
 
       - name: Run Evening Lock Briefing
         env:
@@ -115,10 +114,10 @@ jobs:
           CURRENT_HOUR_EST=$(TZ='America/New_York' date +%H)
           if [ "$CURRENT_HOUR_EST" -ge 20 ]; then
             echo "🌅 West coast run — showing only games tipping at 9 PM EST or later"
-            python3 -m morning_brief --mode evening --after-hour 21 --force-fresh
+            .venv/bin/python -m morning_brief --mode evening --after-hour 21 --force-fresh
           else
             echo "🏀 Evening lock run — showing all games"
-            python3 -m morning_brief --mode evening --force-fresh
+            .venv/bin/python -m morning_brief --mode evening --force-fresh
           fi
 
       - name: Notify on failure

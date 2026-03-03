@@ -43,8 +43,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Settle Pending Bets
         env:
@@ -56,7 +57,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 settle_bets.py
+          .venv/bin/python settle_bets.py
 
       - name: Send PM Bot Morning Brief (Work Notes)
         env:
@@ -69,7 +70,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 -m utils.pm_bot --mode morning
+          .venv/bin/python -m utils.pm_bot --mode morning
 
       - name: Commit and push if changes
         run: |
@@ -93,7 +94,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (work-notes) - Check GitHub Actions')" || echo "Telegram notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (work-notes) - Check GitHub Actions')" || echo "Telegram notification failed"
 
   bet-summary:
     runs-on: self-hosted
@@ -124,8 +125,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Send Settlement Summary to Telegram
         env:
@@ -137,7 +139,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/send_settlement_summary.py
+          .venv/bin/python scripts/send_settlement_summary.py
 
       - name: Notify on failure
         if: failure()
@@ -146,4 +148,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (bet-summary) - Check GitHub Actions')" || echo "Telegram notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (bet-summary) - Check GitHub Actions')" || echo "Telegram notification failed"

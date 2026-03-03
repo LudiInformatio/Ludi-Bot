@@ -34,8 +34,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Sync PBP Stats WOWY Data
         continue-on-error: true
@@ -46,7 +47,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_pbp_wowy.py --top 10 --verbose --resume
+          .venv/bin/python scripts/sync_pbp_wowy.py --top 10 --verbose --resume
 
       - name: Sync Four-Factor WOWY
         continue-on-error: true
@@ -57,7 +58,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_four_factor_wowy.py --resume
+          .venv/bin/python scripts/sync_four_factor_wowy.py --resume
 
       - name: Sync Team Leverage Profiles
         continue-on-error: true
@@ -68,7 +69,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_team_leverage_profiles.py --resume
+          .venv/bin/python scripts/sync_team_leverage_profiles.py --resume
 
       - name: Notify on failure
         if: failure()

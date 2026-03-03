@@ -43,13 +43,18 @@ jobs:
         with:
           clean: false
 
+      - name: Install Dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
       - name: ESPN Injury Sync (Fast Source)
         run: |
           # ESPN is the fastest injury source (15-30 min lag vs BDL/Tank01 2-6 hr).
           # Runs first so BDL/Tank01 sync can corroborate ESPN findings.
           export PYTHONPATH=$PWD
-          source .venv/bin/activate 2>/dev/null || true
-          python3 scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
+          .venv/bin/python scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
 
       - name: Sync Injuries
         env:
@@ -58,13 +63,12 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           export PYTHONPATH=$PWD
-          source .venv/bin/activate 2>/dev/null || true
           # Game-time runs (6 PM - 10:59 PM EST = 23:00-03:59 UTC) always use --force so
           # BDL/Tank01 corroborates ESPN even after ESPN wrote a fresh snapshot_time.
           # Daytime runs (11 AM - 5 PM EST) use the staleness check to save quota.
           HOUR=$(TZ='America/New_York' date +%H)
           if [ "$HOUR" -ge 18 ] || [ "${{ github.event.inputs.force }}" = "true" ]; then
-            python3 scripts/sync_injuries.py --force
+            .venv/bin/python scripts/sync_injuries.py --force
           else
-            python3 scripts/sync_injuries.py
+            .venv/bin/python scripts/sync_injuries.py
           fi

@@ -36,11 +36,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Install Playwright browsers
-        run: python3 -m playwright install chromium
+        run: .venv/bin/python -m playwright install chromium
 
       - name: Run Ghost Protocol sync
         # Phase 8.21 demotion: --skip-advanced skips player_game_advanced writes
@@ -55,10 +56,10 @@ jobs:
           DAY_OF_WEEK=$(date +%u)
           if [ "$DAY_OF_WEEK" = "4" ]; then
             echo "📋 Thursday — smart gap-fill mode"
-            caffeinate -i python3 scripts/sync_browser_backfill.py --gap-fill --skip-advanced
+            caffeinate -i .venv/bin/python scripts/sync_browser_backfill.py --gap-fill --skip-advanced
           else
             echo "📋 Sunday — full weekly sweep"
-            caffeinate -i python3 scripts/sync_browser_backfill.py --days 7 --skip-advanced
+            caffeinate -i .venv/bin/python scripts/sync_browser_backfill.py --days 7 --skip-advanced
           fi
 
       # Synergy playtypes (isolation PPP, transition, handoff, cut, etc.) now via BDL API:
@@ -68,7 +69,7 @@ jobs:
       - name: Reclassify Player Archetypes
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/reclassify_player_archetypes.py
+          .venv/bin/python scripts/reclassify_player_archetypes.py
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v4

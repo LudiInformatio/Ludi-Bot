@@ -32,10 +32,9 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate 2>/dev/null || true
           export PYTHONPATH=$PWD
           set +e
-          python scripts/check_slate.py
+          .venv/bin/python scripts/check_slate.py
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
@@ -49,27 +48,25 @@ jobs:
     if: needs.check-slate.outputs.has_games == 'true'
     runs-on: self-hosted
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           clean: false  # Preserve ludi.db between runs
-        
+
       - name: Setup Python Environment
         run: |
           if [ ! -d ".venv" ]; then
             python3.11 -m venv .venv
           fi
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Install Playwright browsers
         run: |
-          source .venv/bin/activate
-          python -m playwright install chromium
-          
+          .venv/bin/python -m playwright install chromium
+
       - name: Verify Environment
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -77,9 +74,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate
-          python -c "import config; print('Environment validated')"
-          
+          .venv/bin/python -c "import config; print('Environment validated')"
+
       - name: Create Production Logs Directory
         run: |
           mkdir -p logs/production
@@ -89,8 +85,7 @@ jobs:
       - name: Verify data freshness before simulation
         continue-on-error: true
         run: |
-          source .venv/bin/activate
-          python3 -c "
+          .venv/bin/python -c "
           import sqlite3
           from datetime import date, timedelta
 
@@ -128,7 +123,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 2
         run: |
-          python3 scripts/sync_scoring_environment.py
+          .venv/bin/python scripts/sync_scoring_environment.py
 
       - name: Run Daily Simulation Pipeline
         env:
@@ -144,9 +139,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          
+
           # Set production flag
           export IS_PRODUCTION=true
           export DEBUG_LOG=false
@@ -161,9 +155,9 @@ jobs:
 
           # Run main pipeline
           echo "Starting pipeline at $(date)"
-          
-          python main.py --send-telegram 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
-          
+
+          .venv/bin/python main.py --send-telegram 2>&1 | tee logs/production/pipeline_$(date +%Y%m%d).log
+
           # Check if pipeline completed successfully
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
             echo "Pipeline completed successfully"
@@ -179,9 +173,8 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          python scripts/validate_pipeline_output.py --mode post
+          .venv/bin/python scripts/validate_pipeline_output.py --mode post
 
       - name: Curate Top Plays (Claude AI Gate)
         # Phase 8.5: Two-stage AI curation — Haiku sanity gate + Sonnet Top 5 selection
@@ -192,9 +185,8 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          python scripts/curate_plays.py --run-date $(date +%Y-%m-%d)
+          .venv/bin/python scripts/curate_plays.py --run-date $(date +%Y-%m-%d)
 
       - name: Run System Health Monitor
         continue-on-error: true
@@ -209,9 +201,8 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          python scripts/monitor_system_health.py --production-mode
+          .venv/bin/python scripts/monitor_system_health.py --production-mode
 
       - name: Send Production Summary
         if: always()
@@ -220,27 +211,26 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -x
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          
+
           LOG_FILE="logs/production/pipeline_$(date +%Y%m%d).log"
           if [ -f "$LOG_FILE" ]; then
             # Use tr to ensure we only get digits (sanitize newline/whitespace)
             GAMES=$(grep -c "GAME" "$LOG_FILE" 2>/dev/null || true)
             GAMES=${GAMES:-0}
-            
+
             BETS=$(grep -c -E "DIAMOND|BLUE CHIP|CORE ASSET|THE STEAL" "$LOG_FILE" 2>/dev/null || true)
             BETS=${BETS:-0}
-            
+
             ERRS=$(grep -c -E "ERROR|Error" "$LOG_FILE" 2>/dev/null || true)
             ERRS=${ERRS:-0}
-            
+
             echo "DEBUG: Games: '${GAMES}', Bets: '${BETS}', Errors: '${ERRS}'"
-            python3 scripts/send_workflow_summary.py --games "$GAMES" --bets "$BETS" --errors "$ERRS" || echo "Summary notification skipped"
+            .venv/bin/python scripts/send_workflow_summary.py --games "$GAMES" --bets "$BETS" --errors "$ERRS" || echo "Summary notification skipped"
           else
             echo "Log file not found, skipping summary"
           fi
-          
+
       - name: Archive Production Logs
         run: |
           cd logs/production
@@ -257,4 +247,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          python3 -c "from utils.telegram_notifier import send_message; send_message('WORKFLOW FAILED: Daily Production Pipeline')" || echo "Telegram notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('WORKFLOW FAILED: Daily Production Pipeline')" || echo "Telegram notification failed"

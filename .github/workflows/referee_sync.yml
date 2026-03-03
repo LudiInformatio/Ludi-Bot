@@ -26,10 +26,9 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate 2>/dev/null || true
           export PYTHONPATH=$PWD
           set +e
-          python scripts/check_slate.py
+          .venv/bin/python scripts/check_slate.py
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
@@ -62,8 +61,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Sync Daily Referee Assignments
         env:
@@ -74,11 +74,11 @@ jobs:
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          python3 scripts/sync_daily_referees.py
+          .venv/bin/python scripts/sync_daily_referees.py
 
       - name: Verify sync completion
         run: |
-          REFEREE_COUNT=$(python3 -c "
+          REFEREE_COUNT=$(.venv/bin/python -c "
           import sqlite3, pytz
           from datetime import datetime
           today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')

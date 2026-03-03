@@ -36,21 +36,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - name: Initialize database if needed
         run: |
           if [ ! -f ludi.db ]; then
             echo "⚠️ Database not found, initializing..."
-            python3 database.py
+            .venv/bin/python database.py
             echo "✅ Database initialized"
           else
             INTEGRITY=$(sqlite3 ludi.db "PRAGMA integrity_check;" 2>&1)
             if [ "$INTEGRITY" != "ok" ]; then
               echo "⚠️ Database corrupted, reinitializing..."
               mv ludi.db ludi.db.corrupted.$(date +%Y%m%d_%H%M%S)
-              python3 database.py
+              .venv/bin/python database.py
               echo "✅ Database reinitialized"
             else
               echo "✅ Database exists and is healthy"
@@ -59,7 +60,7 @@ jobs:
 
       - name: Ensure database indexes and data integrity
         run: |
-          python3 -c "
+          .venv/bin/python -c "
           import sqlite3
           conn = sqlite3.connect('ludi.db')
           c = conn.cursor()
@@ -95,7 +96,7 @@ jobs:
 
       - name: Validate database schema
         run: |
-          python3 scripts/validate_schema.py --verbose
+          .venv/bin/python scripts/validate_schema.py --verbose
 
       - name: Sync Season Schedule (weekly, Sundays)
         # Keeps nba_calendar fresh for check_slate.py gate used by downstream workflows.
@@ -106,8 +107,7 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate
-          python scripts/sync_season_schedule.py --days 30
+          .venv/bin/python scripts/sync_season_schedule.py --days 30
 
       - name: Check slate for extended break
         # Sets is_extended_break output — heavy API steps are skipped during off-season / All-Star break.
@@ -115,10 +115,9 @@ jobs:
         id: slate_check
         continue-on-error: true
         run: |
-          source .venv/bin/activate 2>/dev/null || true
           export PYTHONPATH=$PWD
           set +e
-          python scripts/check_slate.py
+          .venv/bin/python scripts/check_slate.py
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
@@ -141,8 +140,7 @@ jobs:
           TANK01_TIER: paid
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          source .venv/bin/activate
-          python scripts/populate_todays_games.py
+          .venv/bin/python scripts/populate_todays_games.py
 
       - name: Run Module H (Fetch recent games)
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -156,8 +154,7 @@ jobs:
           HISTORIAN_MAX_RUNTIME_SEC: 540
           PYTHONUNBUFFERED: "1"
         run: |
-          source .venv/bin/activate
-          python3 module_h_historian.py --mode daily --force-daily
+          .venv/bin/python module_h_historian.py --mode daily --force-daily
 
       # NOTE: JSON migration step removed - Module H v2.0 writes directly to SQLite
 
@@ -170,9 +167,8 @@ jobs:
         env:
           SPORTSDATA_API_KEY: ${{ secrets.SPORTSDATA_API_KEY }}
         run: |
-          source .venv/bin/activate
-          python3 scripts/sync_sportsdata_enrichment.py || echo "SportsDataIO enrichment skipped (key not set or quota exceeded)"
-          python3 scripts/sync_sportsdata_enrichment.py --sync-positions || echo "SportsDataIO position sync skipped"
+          .venv/bin/python scripts/sync_sportsdata_enrichment.py || echo "SportsDataIO enrichment skipped (key not set or quota exceeded)"
+          .venv/bin/python scripts/sync_sportsdata_enrichment.py --sync-positions || echo "SportsDataIO position sync skipped"
 
       - name: Sync Player Foul Splits (Phase 8.17)
         # Phase 8.17: Rolling 21-day foul stats from player_game_logs.pf
@@ -180,7 +176,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          python3 scripts/sync_player_foul_splits.py
+          .venv/bin/python scripts/sync_player_foul_splits.py
 
       - name: BDL V2 Advanced Stats per game (off/def rating, usage, hustle, tracking)
         # Sprint B: Replaces Ghost Protocol daily advanced scraping
@@ -191,8 +187,7 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate
-          python3 scripts/sync_bdl_advanced_stats.py || echo "BDL advanced stats skipped"
+          .venv/bin/python scripts/sync_bdl_advanced_stats.py || echo "BDL advanced stats skipped"
 
       - name: BDL plus_minus Tier 2 fill (box scores — fills NULL rows only)
         # Sprint C: COALESCE-only, never overwrites Tank01 or SportsDataIO values
@@ -202,8 +197,7 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          source .venv/bin/activate
-          python3 scripts/sync_bdl_plus_minus.py || echo "BDL plus_minus fill skipped"
+          .venv/bin/python scripts/sync_bdl_plus_minus.py || echo "BDL plus_minus fill skipped"
 
       - name: Pre-Pipeline Data Check
         # Phase 3B: Canary check that Module H wrote fresh data before the 11 AM simulation
@@ -212,9 +206,8 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
-          python scripts/validate_pipeline_output.py --mode pre
+          .venv/bin/python scripts/validate_pipeline_output.py --mode pre
 
       - name: Sync PBP Stats Season Totals
         timeout-minutes: 15
@@ -224,7 +217,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_pbp_totals.py
+          .venv/bin/python scripts/sync_pbp_totals.py
 
       - name: Sync Depth Charts
         continue-on-error: true
@@ -233,7 +226,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_depth_charts.py
+          .venv/bin/python scripts/sync_depth_charts.py
 
       - name: Sync PBP Shot Quality
         continue-on-error: true
@@ -244,16 +237,15 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/sync_pbp_shot_quality.py
+          .venv/bin/python scripts/sync_pbp_shot_quality.py
 
       - name: Sync Injuries (Overnight Refresh)
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          source .venv/bin/activate
           # --force bypasses _is_db_fresh() so BDL/Tank01 runs even if ESPN wrote
           # a recent snapshot_time during last night's intraday cycles (< 8h old).
-          python scripts/sync_injuries.py --force
+          .venv/bin/python scripts/sync_injuries.py --force
         env:
           IS_GAME_DAY_REPORT: "false"
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -263,8 +255,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          source .venv/bin/activate
-          python scripts/sync_suspensions_espn.py
+          .venv/bin/python scripts/sync_suspensions_espn.py
 
       - name: Sync BDL Clutch Usage
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -273,14 +264,14 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          python3 scripts/sync_bdl_clutch_usage.py
+          .venv/bin/python scripts/sync_bdl_clutch_usage.py
 
       - name: Sync Assist Combos
         if: steps.slate_check.outputs.is_extended_break != 'true'
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          python3 scripts/sync_assist_combos.py
+          .venv/bin/python scripts/sync_assist_combos.py
 
       - name: Sync BDL Tracking Data
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -289,43 +280,43 @@ jobs:
         env:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
-          python3 scripts/sync_bdl_tracking.py --all
+          .venv/bin/python scripts/sync_bdl_tracking.py --all
 
       - name: Build Rotation Profiles (Phase 8.9)
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          python3 scripts/build_rotation_profiles.py --window-days 21 --min-games 3
+          .venv/bin/python scripts/build_rotation_profiles.py --window-days 21 --min-games 3
 
       - name: Build WOWY Observed (Phase 2B — starter-filtered beneficiary performance)
         continue-on-error: true
         timeout-minutes: 3
         run: |
-          python3 scripts/build_wowy_observed.py || echo "WOWY observed build skipped"
+          .venv/bin/python scripts/build_wowy_observed.py || echo "WOWY observed build skipped"
 
       - name: Build Player Trends (Phase 8.15)
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          python3 scripts/build_player_trends.py
+          .venv/bin/python scripts/build_player_trends.py
 
       - name: Build Stat Confidence Cache (Phase 8.20)
         continue-on-error: true
         timeout-minutes: 3
         run: |
-          python3 scripts/build_stat_confidence.py
+          .venv/bin/python scripts/build_stat_confidence.py
 
       - name: Update Team Scheme Cache
         continue-on-error: true
         timeout-minutes: 5
         run: |
-          python3 scripts/update_team_scheme_cache.py --db-path ludi.db --verbose
+          .venv/bin/python scripts/update_team_scheme_cache.py --db-path ludi.db --verbose
         env:
           PYTHONPATH: ${{ github.workspace }}
 
       - name: Validate data freshness
         run: |
-          python3 -c "
+          .venv/bin/python -c "
           import sqlite3
           from datetime import date, timedelta, datetime, timezone
 
@@ -415,7 +406,7 @@ jobs:
       - name: Deduplicate games table
         timeout-minutes: 5
         run: |
-          python3 -c "
+          .venv/bin/python -c "
           import sqlite3
           conn = sqlite3.connect('ludi.db')
           c = conn.cursor()
@@ -433,7 +424,7 @@ jobs:
       - name: Validate Canonical IDs
         timeout-minutes: 2
         run: |
-          python3 scripts/validate_canonical_ids.py --warn-threshold 100 -v
+          .venv/bin/python scripts/validate_canonical_ids.py --warn-threshold 100 -v
 
       - name: Learn Daily Referee Trends
         continue-on-error: true  # Non-critical: referee trends are supplementary
@@ -444,19 +435,19 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/learn_daily_trends.py
+          .venv/bin/python scripts/learn_daily_trends.py
 
       - name: Sync Team Betting Trends (H/A records + scoring + ATS)
         continue-on-error: true  # Non-critical: supplementary context for bet cards
         timeout-minutes: 3
         run: |
-          python3 scripts/sync_team_betting_trends.py
+          .venv/bin/python scripts/sync_team_betting_trends.py
 
       - name: Sync Scoring Environment (Phase 8.14)
         continue-on-error: true
         timeout-minutes: 2
         run: |
-          python3 scripts/sync_scoring_environment.py
+          .venv/bin/python scripts/sync_scoring_environment.py
 
       - name: Analyze Star Bias
         continue-on-error: true  # Non-critical: star bias is supplementary data
@@ -467,7 +458,7 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
         run: |
-          python3 scripts/analyze_star_bias.py
+          .venv/bin/python scripts/analyze_star_bias.py
 
       - name: Sync Team Current Info (Tank01)
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -477,8 +468,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
-          source .venv/bin/activate
-          python scripts/sync_team_current_info.py
+          .venv/bin/python scripts/sync_team_current_info.py
 
       - name: Sync Tank01 Projections (Benchmark)
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -488,8 +478,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
-          source .venv/bin/activate
-          python scripts/sync_tank01_projections.py
+          .venv/bin/python scripts/sync_tank01_projections.py
 
       - name: Sync Player News Cache (Tank01)
         if: steps.slate_check.outputs.is_extended_break != 'true'
@@ -499,8 +488,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
-          source .venv/bin/activate
-          python scripts/sync_player_news.py
+          .venv/bin/python scripts/sync_player_news.py
 
       - name: Commit and push if changes
         run: |
@@ -518,11 +506,11 @@ jobs:
       - name: Cleanup old logs
         if: github.event.schedule == '0 8 * * 0' || github.event_name == 'workflow_dispatch'
         run: |
-          python3 scripts/cleanup_old_logs.py --verbose
+          .venv/bin/python scripts/cleanup_old_logs.py --verbose
 
       - name: Cleanup old game intelligence caches
         run: |
-          python3 -c "
+          .venv/bin/python -c "
           from datetime import date, timedelta
           from pathlib import Path
           

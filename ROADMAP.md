@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 2, 2026 — 7:22 PM EST
+**Last Updated:** Monday, March 2, 2026 — 8:51 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + midday refresh 2 PM/4:30 PM EST slots + Perplexity upgrade (~Mar 10)
-**Completed:** Module H/X SMA audit (`module_x_scenario.py`, `module_c.py`) — conditional baseline Conditions 1–4 + H/A key fix + Module C injection ✅ + Smoke test verified (`_load_ha_splits` HOME→home normalization) — 6/7 players signal, best-practices updated ✅ + Doc refresh sprint (`README.md`, `ROADMAP.md`, `best-practices/docs/README.md`) — bloat removed + Project Vision permanent section + doc maintenance framework ✅
+**Active Work:** Workflow Audit Sprint 2 (`.github/workflows/`) — per-workflow deep audit, naming conventions, employee alignment → full pipeline hardening
+**Completed:** Doc refresh sprint (`README.md`, `ROADMAP.md`, `best-practices/docs/README.md`) — bloat removed, Project Vision permanent section, doc maintenance framework ✅ + Workflow Audit Sprint 0 (`.github/workflows/_archive/`) — archive convention, `tracking_sync.yml` archived, CLAUDE.md schedule (20 rows), Pattern 12 ✅ + Workflow Audit Sprint 1 (`.github/workflows/*.yml`) — venv absolute path sweep, all 17 self-hosted workflows patched ✅
 
 This is the single source of truth for project tasks and priorities.
 

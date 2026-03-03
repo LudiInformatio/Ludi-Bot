@@ -35,6 +35,11 @@ jobs:
           clean: false
           fetch-depth: 1
 
+      - name: Install dependencies
+        run: |
+          if [ ! -d ".venv" ]; then python3.11 -m venv .venv; fi
+          .venv/bin/pip install --quiet -r requirements.txt
+
       - name: Pre-evening-lock quota and freshness check
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -44,8 +49,8 @@ jobs:
           # 1. Odds API quota cache check
           QUOTA_FILE="cache/odds_api_quota.json"
           if [ -f "$QUOTA_FILE" ]; then
-            REMAINING=$(python3 -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('remaining','unknown'))" 2>/dev/null || echo "unknown")
-            AT=$(python3 -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('at','unknown'))" 2>/dev/null || echo "unknown")
+            REMAINING=$(.venv/bin/python -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('remaining','unknown'))" 2>/dev/null || echo "unknown")
+            AT=$(.venv/bin/python -c "import json; d=json.load(open('$QUOTA_FILE')); print(d.get('at','unknown'))" 2>/dev/null || echo "unknown")
             if [ "$REMAINING" = "0" ]; then
               ISSUES="${ISSUES}:warning: *Odds API quota EXHAUSTED* (as of $AT)\n  Evening lock will rely on BDL fallback only — props may be too sparse to generate bets.\n"
             elif echo "$REMAINING" | grep -qE '^[0-9]+$' && [ "$REMAINING" -lt 500 ]; then
@@ -85,22 +90,20 @@ jobs:
       - name: Setup Python
         run: |
           if [ ! -d ".venv" ]; then python3.11 -m venv .venv; fi
-          source .venv/bin/activate
-          pip install --quiet -r requirements.txt
+          .venv/bin/pip install --quiet -r requirements.txt
 
       - name: Validate Schema
         id: schema
         run: |
-          source .venv/bin/activate
           export PYTHONPATH=$PWD
 
           # Run schema validation — capture output and exit code separately
           set +e
-          SCHEMA_OUT=$(python scripts/validate_schema.py --verbose 2>&1)
+          SCHEMA_OUT=$(.venv/bin/python scripts/validate_schema.py --verbose 2>&1)
           SCHEMA_EXIT=$?
 
           # Run canonical ID validation
-          CANONICAL_OUT=$(python scripts/validate_canonical_ids.py -v 2>&1)
+          CANONICAL_OUT=$(.venv/bin/python scripts/validate_canonical_ids.py -v 2>&1)
           CANONICAL_EXIT=$?
           set -e
 
