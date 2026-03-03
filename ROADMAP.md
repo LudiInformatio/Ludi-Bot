@@ -5,10 +5,6 @@
 **Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` lifecycle + midday refresh 2 PM/4:30 PM EST slots + Perplexity upgrade (~Mar 10)
 **Completed:** Ghost Protocol gap-fill (`sync_browser_backfill.py`) — `find_gap_dates()` + Thursday cron + settlement busy_timeout ✅ + Module H/X SMA audit (`module_x_scenario.py`, `module_c.py`) — conditional baseline Conditions 1–4 + H/A key fix + Module C injection ✅ + Smoke test verified (`_load_ha_splits` HOME→home normalization) — 6/7 players signal, best-practices updated ✅
 
-> **Ops Note (Feb 27 AM):** Internet outage overnight caused ~14 GH Actions runs to queue. 12 stale runs cancelled. Nightly Debrief ran successfully. Queue clear.
-
-> **Ops Note (Feb 28 PM):** Sprint 4 alt lines SHIPPED. team_totals 422 fixed — `team_totals` not supported on bulk `/odds` endpoint; now fetched per-event (`/events/{id}/odds`, 1 credit/game). Sprint 4.5 attempt props INVALIDATED — FGA/FTA/3PA markets don't exist on Odds-API NBA. Odds-API new quota cycle: 19,756 credits remaining.
-
 This is the single source of truth for project tasks and priorities.
 
 > **Agent Template Contract** — When updating this file, preserve the header format exactly:
@@ -43,8 +39,6 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
-- [x] **Run `fix_referee_profiles_pace.py`** — one-time DB repair: `avg_pace_impact` (fouls/12.5) + `style` thresholds. Tony Brothers 0.413 → 1.387, NEUTRAL → STRICT. Safe anytime.
-- [x] **Run `backfill_referee_bias.py`** — populate `referee_player_bias` from 363 game dates (all `games_officiated=1` now → backfill enables real PROTECTOR/STAR_KILLER signal).
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
@@ -76,7 +70,7 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 
 **Phase 1: Consolidation** ✅ COMPLETE — Single source of truth, direct SQLite writes, no JSON staging
 
-**Phase 1.5: 2024-25 Historical Backfill** ← IN PROGRESS (~Mar 3 completion)
+**Phase 1.5: 2024-25 Historical Backfill** ← IN PROGRESS (backfill running nightly)
 - [-] Module H auto-backfill running — 174 dates, ~6 nights at 200 Tank01 req/day
 - [ ] BDL advanced stats + SportsDataIO enrichment fill new rows automatically
 - **Full plan:** `docs/projects/HISTORICAL_BACKFILL_2024_25.md`

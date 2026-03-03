@@ -28,7 +28,9 @@ best-practices/
 │   ├── README.md
 │   ├── KNOWN_FIXES.md       ← auto-appended by claude-ops-hub.yml on every diagnosis
 │   └── DOMAIN_PATTERNS.md   ← few-shot examples per workflow domain
-├── testing/                # 📋 Testing patterns and validation (INITIALIZED)
+├── docs/                   # ✅ Documentation maintenance rules (COMPLETE)
+│   └── README.md
+├── testing/                # ✅ Testing patterns and validation (COMPLETE)
 │   └── README.md
 └── deployment/             # 📋 CI/CD, production operations (INITIALIZED)
     └── README.md
@@ -111,6 +113,13 @@ Each time the ops-hub diagnoses a failure, it appends an entry to `KNOWN_FIXES.m
 
 ---
 
+### 📄 Documentation Maintenance (`docs/`)
+**Status:** ✅ Complete (Mar 2, 2026)
+- `README.md` — permanent sections table, auto-maintained sections, trim triggers, line limits, update frequency, 5 anti-bloat rules
+- Covers: ROADMAP.md, README.md, MEMORY.md, STATUS_HISTORY.md, CLAUDE.md maintenance contracts
+
+---
+
 ### 🚀 Deployment (`deployment/`)
 **Status:** 📋 Initialized — topics outlined, patterns pending
 
@@ -185,6 +194,7 @@ When you discover a new pattern or lesson:
 - **Debugging Playbook:** [debugging/README.md](debugging/README.md)
 - **Ops Hub Fixes:** [ops-hub/KNOWN_FIXES.md](ops-hub/KNOWN_FIXES.md)
 - **Ops Hub Patterns:** [ops-hub/DOMAIN_PATTERNS.md](ops-hub/DOMAIN_PATTERNS.md)
+- **Doc Maintenance:** [docs/README.md](docs/README.md)
 - **Skills Guide:** [ai/SKILLS_GUIDE.md](ai/SKILLS_GUIDE.md)
 - **Project Documentation:** [../docs/](../docs/)
 - **Architecture Guide:** [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
@@ -193,5 +203,5 @@ When you discover a new pattern or lesson:
 ---
 
 **Last Updated:** March 2, 2026 EST
-**Categories Complete:** 9 (api, ai, ai-prompting, coding, data, data-modeling, debugging, testing, ops-hub)
+**Categories Complete:** 10 (api, ai, ai-prompting, coding, data, data-modeling, debugging, docs, testing, ops-hub)
 **Categories Initialized:** 1 (deployment)

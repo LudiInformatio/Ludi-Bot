@@ -16,13 +16,13 @@ A production-grade autonomous analytics engine that generates player prop recomm
 | **Product** | Ludi Lens v2.0 — The Edge, Magnified |
 | **Engine** | S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim \| 10K Runs \| Usage Vacuum) |
 | **Stack** | Python 3.14 + SQLite + GitHub Actions |
-| **Status** | Production — Phase 8 AI-Enhanced Pipeline (March 1, 2026) |
+| **Status** | Production — Phase 8 AI-Enhanced Pipeline (March 2026) |
 
 ### Key Features
 
 - **Monte Carlo Simulations** — 10,000 iterations per player with Poisson/Normal hybrid distributions
 - **Usage Vacuum Theory** — Automatic usage redistribution when star players are OUT
-- **Hybrid Archetype System** — 15 offensive archetypes in `players.archetype`; deterministic `players.defensive_tag` (PERIMETER_HAWK/RIM_GUARDIAN/SWITCHABLE_ANCHOR/HUSTLE_DISRUPTOR/WEAK_LINK); weekly Haiku batch + Synergy validation gate
+- **Hybrid Archetype System** — 15 offensive archetypes (`players.archetype`) + deterministic defensive tags (`players.defensive_tag`); weekly Haiku batch + Synergy validation gate
 - **Rotation Intelligence** — 396 player rotation profiles + 789 beneficiary pairs (e.g. Embiid OUT → Drummond +18 min)
 - **Trend Engine** — Pre-computed L7/L10/L15 trends + live hit rate/streak for 4,500+ player-stat rows; stagger context
 - **Scoring Environment** — Dynamic 14-day OVER hit rate tracker; auto-adjusts projections + 4 data-proven OVER filters
@@ -31,12 +31,12 @@ A production-grade autonomous analytics engine that generates player prop recomm
 - **AI-Enhanced Pipeline** — Claude (Haiku/Sonnet) for play curation, S.A.V.A.G.E. game notes, and player spotlights
 - **Perplexity Integration** — Real-time news context injected into injury analysis, game notes, and curation
 - **Line Shopping** — NC Legal book integration with CLV tracking across 11 markets
-- **Real-time Injury Intelligence** — ESPN injuries (15-30min lag, primary fast source) + Tank01 + BDL + RotoWire/RealGM RSS; `player_canonical_ids.normalized_name` for accent-safe name resolution; source-scoped resolve (ESPN, BDL, suspension independently); status severity hierarchy (OUT > DOUBTFUL > GTD); 75-day filter excludes season-enders from Claude context
+- **Real-time Injury Intelligence** — ESPN (15–30 min lag) + Tank01 + BDL + RotoWire/RealGM RSS; accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy (OUT > DOUBTFUL > GTD)
 - **Referee Impact Modeling** — Pace, whistle tendency, and star bias factors
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
 - **Slate Trends Header** — `_build_slate_trends_header()` sends injury-filtered HOT/COOLING signals once per briefing before per-game notes
 - **Advanced Stats Pipeline** — BDL V2 advanced/hustle/tracking stats + SportsDataIO enrichment (`started`, fantasy pts, doubles); Ghost Protocol reserved for on-court only
-- **Foul Intelligence** — Rolling 21-day foul splits (`player_foul_splits`, 459 players); Module C pre-loads at init for zero-overhead per-simulation lookups; `min_dampener` dampens minutes for foul-trouble players
+- **Foul Intelligence** — Rolling 21-day foul splits (`player_foul_splits`, 459 players); pre-loaded at Module C init for zero-overhead per-simulation lookups
 
 ---
 
@@ -156,7 +156,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Sunday, March 1, 2026 — 10:04 PM EST
+**Last Updated:** Monday, March 2, 2026
 
 **Phase 8 Completions:**
 
@@ -187,30 +187,30 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Module Audit Sprint (A–F) — `LudiOracle` 8 pre-load dicts + zero-DB 10K sim loop; `LudiCalibrator` bulk pre-loads (DVP, B2B splits, archetype matrix); `LudiYak` news_agent + INJURY_RETURN edge type; `USG_PCT` key fix; `LudiReporter` avg_ev fix + `_STAT_COL_MAP` short-form aliases + L5/L10/L15 hit rates |
-| Infra | Module F Confidence Tier Redesign — 8-signal `prop_confidence_score` (hit_rate + streak + matchup + sharp_consensus + CLV track record + model + WOWY + referee); STRUCTURAL_LOSERS module-level filter; stat-specific edge floors (`STAT_EDGE_MINIMUMS`); tier floor thresholds fixed (DIAMOND ≥15%, BLUE CHIP ≥10%); `module_h_historian` Solomon notification routing fix |
-| Infra | canonical_games table — `database.py` + `sync_canonical_games(conn)` importable. 1,926 raw game rows → 902 deduplicated. Pattern-B JOINs fixed in `module_b.py`, `module_g.py`, `populate_todays_games.py`, `sync_matchup_intelligence.py` (4 JOINs), `team_defensive_classifier.py` (1 JOIN) |
-| Infra | Full Project Audit (Sprints 0-10) — 0 critical issues, 375+ dead files removed, 4 CVE patches |
-| Infra | Injury Pipeline Hardening — ESPN fast source (15-30min lag); accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy; 75-day staleness filter |
+| Infra | Module Audit Sprint (A–F) — pre-load pattern enforced across all modules; zero-DB sim loop; USG_PCT key fix; avg_ev + hit rate surfacing |
+| Infra | Module F Confidence Tier Redesign — 8-signal `prop_confidence_score`; STRUCTURAL_LOSERS filter; stat-specific edge floors; DIAMOND/BLUE CHIP tier floors fixed |
+| Infra | canonical_games table — 1,926 raw rows → 902 deduplicated; `sync_canonical_games(conn)` importable; Pattern-B JOIN inflation fixed in 5 files |
+| Infra | Full Project Audit (Sprints 0–10) — 0 critical issues; 375+ dead files removed; 4 CVE patches |
+| Infra | Injury Pipeline Hardening — ESPN fast source (15–30 min lag); accent-safe canonical name resolution; status severity hierarchy |
 | Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
-| Infra | Canonical Table Hardening — `player_canonical_ids` CREATE TABLE restored; `canonical_teams` (30 rows); `normalize_bdl_abbr()` centralized; `resolve_canonical_name()` wired into 4 injection points |
-| Infra | Settlement Pipeline Hardening — date-ceiling guard; canonical name fallback; three-section report (daily/L10/launch); all-void guard |
-| Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive only; `players.defensive_tag` deterministic |
+| Infra | Canonical Table Hardening — `player_canonical_ids` + `canonical_teams` (30 rows) + `resolve_canonical_name()` wired to 4 injection points |
+| Infra | Settlement Pipeline Hardening — date-ceiling guard; canonical name fallback; three-section report; all-void guard |
+| Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive; `players.defensive_tag` deterministic (5 tags) |
 | Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
-| Infra | Module E Audit (LudiCalibrator) — hybrid off/def 3-tuple return; `_load_shot_quality_bulk()` schema drift fix; `_canonical_key()` cache consistency; `_load_dvp_by_archetype()` dead-code removal |
-| Infra | Sharp+P2P CLV System — `backfill_historical_odds.py` (83.9% coverage, +4.43c avg CLV); `capture_closing_lines.py` PREFERRED_BOOKS sort + `closing_book` column; `morning_brief.py` cache-first + 55-65% credit reduction |
-| Infra | Module G Zebras Audit — ref thresholds calibrated to real 2025-26 data (STRICT 16.0/LENIENT 12.3); rolling L10-game window replaces calendar-day; `team_betting_trends` table (30 rows); `get_team_trends()` on `LudiRefEngine` |
-| Infra | AI Employee Workforce Setup — 6 soul files (`employees/`); Discord Ludi Lens server + 7 channels + webhooks; Solomon Telegram Bot 2 (`TELEGRAM_TOKEN_SOLOMON`); Gemini CLI writer confirmed working; hybrid Claude Agent Teams + OpenClaw architecture |
+| Infra | Module E Audit (LudiCalibrator) — hybrid off/def 3-tuple return; schema drift fix; `_canonical_key()` cache consistency |
+| Infra | Sharp+P2P CLV System — 83.9% CLV coverage, avg +4.43c; PREFERRED_BOOKS sort; cache-first brief (55–65% credit reduction) |
+| Infra | Module G Zebras Audit — thresholds calibrated to 2025-26 data; L10-game window; `team_betting_trends` (30 rows) |
+| Infra | AI Employee Workforce Setup — 6 soul files; Discord server + webhooks; Solomon Telegram Bot 2; hybrid Claude Agent Teams + OpenClaw |
+| Infra | Module H/X SMA Audit — H/A key normalization fix; conditional baseline Conditions 1–4; Module C injection point; smoke test best practice |
+| Infra | Referee DB Repairs — `fix_referee_profiles_pace.py` (84 rows, divisor corrected) + `backfill_referee_bias.py` (12,209 rows, PROTECTOR/STAR_KILLER signal live) |
 
 **Active / Planned Next:**
-- Module F confidence tier redesign — 8-signal `prop_confidence_score` + C1-C5 cleanup ✅ (Mar 1, 2026)
-- Run `fix_referee_profiles_pace.py` + `backfill_referee_bias.py` — one-time DB repairs (pace/bias columns)
-- Sprint 2: Dynamic Rec Lifecycle (`is_valid` column, `revalidate_recs.py`, `midday_refresh.py`) + Perplexity upgrade (~Mar 10)
-- Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + `odds_snapshots` + Prop Pulse Score (0–100)
+- Sprint 2: Dynamic Rec Lifecycle — `is_valid` column + `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM EST) + Perplexity upgrade (~Mar 10)
+- Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + Prop Pulse Score (0–100)
 - Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
-- AI Employee Workforce kickoff — employee onboarding docs + Monday Agent Teams live test (Solomon → Henrik first audit)
+- AI Employee Workforce kickoff — onboarding docs + Monday Agent Teams live test (Solomon → Henrik)
 
-**Performance (Jan 7 – Mar 1, 2026):**
+**Performance (Jan 7 – Mar 2, 2026):**
 - Settled Bets: 21,079 | Win Rate: 54.0% overall | ROI: tracking (model in BETA)
 - BLOCKS UNDER: 70.0% WR (2,315 bets) — strongest signal in system
 - UNDER bets: 57.1% | OVER bets: 47.2% (OVER filters actively suppressing weak categories)
@@ -262,6 +262,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 - **AI:** Claude Haiku / Sonnet (Anthropic) via OAuth
 - **Notifications:** Telegram (betting product) + Slack (ops alerts, `vibestarters` workspace)
 - **Browser Automation:** Playwright (Ghost Protocol scraping)
+
+---
+
+<!-- PERMANENT SECTION — DO NOT REMOVE OR MOVE. Update content periodically, never delete. -->
+## Project Vision
+
+**Started:** Summer 2025 — A solo NBA props model seeded from competitive research and a single thesis: *Poisson distributions can find exploitable value in player prop markets.*
+
+**Core thesis (validated):** Props are exploitable via scenario-conditional simulation. When stars sit, usage redistributes. Referee tendencies leave measurable signal. The math is real — but edge requires rigorous infrastructure to find and trust.
+
+**Where it is now (March 2026):** Phase 8 AI-Enhanced Pipeline — a 9-module production platform with 10,000-iteration Monte Carlo sims, 10+ redundant data sources, 40+ database tables, 21,000+ settled bets, and a 6-person AI employee team (Solomon, Silas, Vera, Iris, Henrik, Maren) managing pipeline health and content strategy.
+
+**Where it's headed:** Ludi Lens web dashboard (Streamlit, post-Phase 8), WNBA/NFL expansion (2026-27 season), and deeper CLV recalibration as the model crosses 30,000+ settled bets.
+
+*Last updated: March 2026*
 
 ---
 
