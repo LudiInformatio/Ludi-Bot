@@ -21,6 +21,10 @@ on:
 jobs:
   work-notes:
     runs-on: self-hosted
+    concurrency:
+      group: daily-reports-work-notes
+      cancel-in-progress: false
+    timeout-minutes: 20
     permissions:
       contents: write  # Required for git push of settlement logs
     # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
@@ -42,12 +46,14 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Settle Pending Bets
+        timeout-minutes: 10
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -60,6 +66,7 @@ jobs:
           .venv/bin/python settle_bets.py
 
       - name: Send PM Bot Morning Brief (Work Notes)
+        timeout-minutes: 10
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -75,6 +82,7 @@ jobs:
           .venv/bin/python -m utils.pm_bot --mode morning
 
       - name: Commit and push if changes
+        timeout-minutes: 5
         run: |
           git config user.name "Ludi Bot"
           git config user.email "noreply@ludibot.com"
@@ -92,14 +100,18 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (work-notes) - Check GitHub Actions')" || echo "Telegram notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Daily Reports (work-notes)')" || echo "Solomon notification failed"
 
   bet-summary:
     runs-on: self-hosted
+    concurrency:
+      group: daily-reports-bet-summary
+      cancel-in-progress: false
+    timeout-minutes: 15
     # When 'both' is dispatched, wait for work-notes (settle_bets.py) to finish
     # before reading settlement data. Prevents read-before-write on bet_recommendations.
     needs: [work-notes]
@@ -126,12 +138,14 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Send Settlement Summary to Telegram
+        timeout-minutes: 10
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
@@ -148,8 +162,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('❌ WORKFLOW FAILED: ${{ github.workflow }} (bet-summary) - Check GitHub Actions')" || echo "Telegram notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Daily Reports (bet-summary)')" || echo "Solomon notification failed"
