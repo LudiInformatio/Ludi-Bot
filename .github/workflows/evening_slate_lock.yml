@@ -9,9 +9,14 @@ on:
     - cron: '25 1 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: evening-slate-lock
+  cancel-in-progress: true
+
 jobs:
   check-slate:
     runs-on: self-hosted
+    timeout-minutes: 5
     outputs:
       has_games: ${{ steps.check.outputs.has_games }}
     steps:
@@ -50,33 +55,34 @@ jobs:
 
 
       - name: Install Dependencies
+        timeout-minutes: 5
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 
       - name: Sync Starting Lineups (Evening Refresh)
+        timeout-minutes: 5
+        continue-on-error: true
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           TANK01_TIER: paid
         run: |
           export PYTHONPATH=$PWD
-          .venv/bin/python scripts/sync_lineup_starters.py --mode evening || echo "⚠️ Lineup sync warning (non-fatal)"
-
-      - name: Verify image pipeline dependencies
-        run: |
-          .venv/bin/python -c "from pilmoji import Pilmoji; import PIL; print('img pipeline ok')"
-
-
+          .venv/bin/python scripts/sync_lineup_starters.py --mode evening
 
       - name: ESPN Injury Sync (Fast Source — 15-30min lag vs BDL/Tank01 2-6hr lag)
+        timeout-minutes: 5
+        continue-on-error: true
         run: |
           # ESPN updates within 15-30 min of team announcements (free, no auth).
           # Catches same-day rulings (surgery, GTD) before BDL/Tank01 pick them up.
           export PYTHONPATH=$PWD
-          .venv/bin/python scripts/sync_injuries_espn.py || echo "⚠️ ESPN injury sync warning (non-fatal)"
+          .venv/bin/python scripts/sync_injuries_espn.py
 
       - name: Refresh Injuries (Late Scratches)
+        timeout-minutes: 5
+        continue-on-error: true
         env:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
@@ -85,7 +91,7 @@ jobs:
           # Force refresh so any late scratches (4-6 PM window) are in DB
           # before evening cards generate. Non-fatal if it fails.
           export PYTHONPATH=$PWD
-          .venv/bin/python scripts/sync_injuries.py --force || echo "⚠️ Injury refresh warning (non-fatal)"
+          .venv/bin/python scripts/sync_injuries.py --force
 
       - name: Run News Agent (Automated News Catalyst Check)
         continue-on-error: true
@@ -94,6 +100,7 @@ jobs:
           .venv/bin/python scripts/news_agent.py --mode automated
 
       - name: Run Evening Lock Briefing
+        timeout-minutes: 20
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -123,10 +130,8 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
         run: |
           export PYTHONPATH=$PWD
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-type: application/json' \
-            --data '{"text":"\u274c WORKFLOW FAILED: ${{ github.workflow }} | Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' || echo "Slack notification failed"
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Evening Slate Lock')" || echo "Solomon notification failed"
