@@ -146,6 +146,14 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
             WHERE team_abbreviation IN ({ph_t})
               AND stat IN ({ph_s})
               AND season_avg IS NOT NULL AND season_avg > 0
+              AND games_found >= 10
+              AND (
+                  (stat = 'PTS' AND season_avg >= 6.0)
+                  OR (stat = 'REB' AND season_avg >= 2.5)
+                  OR (stat = 'AST' AND season_avg >= 1.5)
+                  OR (stat = '3PM' AND season_avg >= 0.5)
+                  OR (stat NOT IN ('PTS','REB','AST','3PM') AND season_avg >= 1.0)
+              )
               AND player_name NOT IN (
                   SELECT DISTINCT player_name FROM player_injuries
                   WHERE team_abbreviation IN ({ph_t})

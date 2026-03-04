@@ -126,13 +126,26 @@ jobs:
         timeout-minutes: 30
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          ODDS_API_KEY_BACKFILL: ${{ secrets.ODDS_API_KEY_BACKFILL }}
           ODDS_API_TIER: paid
         run: |
           export PYTHONPATH=$PWD
           # --yesterday resolves to yesterday EST (handles day games + evening)
           # --reserve 500 stops if < 500 credits remain (protects live pipeline quota)
           .venv/bin/python scripts/backfill_historical_odds.py --yesterday --reserve 500 --verbose
+
+      - name: Capture Closing Lines (CLV — yesterday's games)
+        if: steps.yesterday_slate.outputs.has_games == 'true'
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
+          ODDS_API_TIER: paid
+          TANK01_TIER: paid
+        run: |
+          export PYTHONPATH=$PWD
+          .venv/bin/python scripts/capture_closing_lines.py --game-date yesterday
 
       - name: Notify on failure
         if: failure()

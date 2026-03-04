@@ -438,7 +438,7 @@ class LudiEngine:
                             game_date,
                             player_name,
                             player_id,
-                            stat_key.upper(),
+                            stat_key.lower(),
                             line,
                             prop_data.get('odds_over'),
                             prop_data.get('odds_under'),

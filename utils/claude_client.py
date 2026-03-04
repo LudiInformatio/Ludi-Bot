@@ -115,13 +115,15 @@ def get_claude_analysis(
         # Phase 8.23 Layer 1 — log every Claude call for calibration feedback loop
         try:
             from utils.claude_logger import log_claude_call
+            from datetime import date as _date
+            _gd = game_date or _date.today().isoformat()
             log_claude_call(
                 call_type=call_type or 'unknown',
                 model=model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 response_text=response.content[0].text,
-                game_date=game_date,
+                game_date=_gd,
                 player_name=player_name,
             )
         except Exception:
