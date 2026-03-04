@@ -104,6 +104,10 @@ class PerplexityClient:
                 print(f"[Perplexity] Empty ref response. HTTP {resp.status_code}")
                 return {}
 
+            if resp.status_code != 200:
+                print(f"[Perplexity] HTTP {resp.status_code}: {resp.text[:200]}")
+                return {}
+
             text = resp.json()["choices"][0]["message"]["content"]
         except Exception as e:
             print(f"[Perplexity] ref query error: {e}")
@@ -196,6 +200,11 @@ class PerplexityClient:
             if not resp.text.strip():
                 print(f"[Perplexity] Empty response. HTTP {resp.status_code}")
                 return ""
+
+            if resp.status_code != 200:
+                print(f"[Perplexity] HTTP {resp.status_code}: {resp.text[:200]}")
+                return ""
+
             text = resp.json()["choices"][0]["message"]["content"]
             self._cache[key] = {"text": text, "ts": time.time()}
             self._save_cache()

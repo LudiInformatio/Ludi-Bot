@@ -90,7 +90,7 @@ def get_claude_analysis(
     try:
         from anthropic import Anthropic
         
-        client = Anthropic(api_key=auth_token)
+        client = Anthropic(api_key=auth_token, max_retries=2)
         
         response = client.messages.create(
             model=model,
