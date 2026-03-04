@@ -1,6 +1,6 @@
 # Deployment Best Practices
 
-**Status:** ✅ Complete (updated 2026-03-03)
+**Status:** ✅ Complete (updated 2026-03-04)
 
 This guide covers GitHub Actions workflow patterns for the Ludi-Bot production pipeline. Every pattern below is derived from a real incident — not theory.
 
@@ -24,6 +24,8 @@ This guide covers GitHub Actions workflow patterns for the Ludi-Bot production p
 | `close_popups()` before `scrape_table()` | All Ghost Protocol scrapers | Call explicitly after `page.goto()`, not just inside `scrape_table()` |
 | `IS_SELF_HOSTED=true` (exact string) | All `sync_*.py` scrapers | Empty string is falsy → `headless=None` → WAF blocks headless Chromium |
 | `_archive/` workflow convention | `.github/workflows/_archive/` | Move disabled workflows here — subdirectories are ignored by GitHub Actions |
+| Secret existence verification | All workflows using secrets | `gh secret list` shows names, not values — an empty/missing secret passes silently |
+| `@v1` floating tag risk | `claude-code-action` workflows | Floating tags auto-update; pin to SHA after verifying a release works |
 
 ---
 
@@ -527,6 +529,37 @@ if not _SOLOMON_CONFIGURED:
 
 ## Anti-Patterns
 
+### 15. Secret Verification — `gh secret list` Doesn't Show Values
+
+**Problem:** `gh secret list` shows secret **names** and update timestamps — but NOT values. A secret can exist by name with an empty/invalid value, and the workflow receives an empty string silently. No error at the GitHub Actions layer — the action just sees `""`.
+
+**Incident (Mar 4, 2026):** `CLAUDE_CODE_OAUTH_TOKEN` appeared in `gh secret list` output but the actual value was empty. All 4 Claude workflows failed for 12 hours. Diagnosis showed `"claude_code_oauth_token": ""` in action logs.
+
+```bash
+# ❌ This only confirms the name exists — NOT that it has a value
+gh secret list | grep CLAUDE_CODE_OAUTH_TOKEN
+
+# ✅ After setting a secret, trigger a test run and check logs
+gh secret set CLAUDE_CODE_OAUTH_TOKEN  # paste value when prompted
+gh workflow run claude-qa-check.yml --field scope=full
+# Watch for auth errors in the run logs
+```
+
+**Related:** Floating `@v1` tags on third-party actions can break silently when the maintainer releases a new version. Pin to a known-good SHA after verifying, and update deliberately:
+```yaml
+# ❌ Floating tag — auto-updates when Anthropic releases new SDK
+uses: anthropics/claude-code-action@v1
+
+# ✅ Pinned to verified-working release (v1.0.66)
+uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
+```
+
+*(Added: 2026-03-04)*
+
+---
+
+## Anti-Patterns
+
 | Anti-Pattern | Consequence | Fix |
 |-------------|-------------|-----|
 | `clean: true` (default) on checkout | Deletes `ludi.db` every run — permanent data loss | `clean: false` on ALL checkouts that run on self-hosted |
@@ -539,6 +572,8 @@ if not _SOLOMON_CONFIGURED:
 | `close_popups()` only inside `scrape_table()` | Consent modal fires during goto → domcontentloaded never fires | Call `close_popups(page)` explicitly after every `page.goto()` |
 | `IS_SELF_HOSTED` empty/unset | `headless=None` → Akamai WAF fingerprints and blocks the browser | Always set `IS_SELF_HOSTED=true` (exact value) on local runs |
 | Deleting a disabled workflow | Loses git history, context, and recovery path; creates confusion about what existed | Move to `.github/workflows/_archive/` with a dated comment header instead |
+| Assuming `gh secret list` = secret has a value | Empty secret passes silently — action receives `""`, auth fails at runtime | Always trigger a test run after setting a secret to confirm it works end-to-end |
+| `@v1` floating tag on third-party actions | Maintainer pushes breaking SDK bump, all workflows fail instantly | Pin to SHA; update deliberately after testing new releases |
 
 ---
 

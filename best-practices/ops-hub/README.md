@@ -50,13 +50,22 @@ git push
 
 ## OAuth Token Refresh Procedure
 
+**Token type:** OAT (OAuth Access Token) — prefix `sk-ant-oat01-...`. Valid for 1 year.
+
 When refreshing the CLAUDE_CODE_OAUTH_TOKEN:
-1. Go to claude.ai in Chrome → open DevTools (`Cmd+Option+I`) → Application → Cookies → `claude.ai`
-   - Look for `sessionKey` cookie → copy value (`sk-ant-sid01-...`)
-   - **Note:** `claude auth login` opens a browser flow but has no `token` print command — cookie grab is the reliable method
-2. Paste the `sk-ant-sid01-...` value into GitHub Secrets: `CLAUDE_CODE_OAUTH_TOKEN`
-3. Update GitHub **Variable** (not Secret): `CLAUDE_TOKEN_EXPIRES_AT` = new expiry date (YYYY-MM-DD)
-   - New tokens are valid for ~30 days from issue date
-   - Example: token issued Mar 3, 2026 → expires ~Apr 3, 2026
+1. Run `claude auth login` → follow browser prompts → token printed once at the end
+   - Store immediately — the token cannot be retrieved later
+   - Token format: `sk-ant-oat01-...` (1-year validity)
+2. Set in **two places:**
+   - **GitHub Secret:** `gh secret set CLAUDE_CODE_OAUTH_TOKEN` (paste value)
+   - **GitHub Variable** (not Secret): `CLAUDE_TOKEN_EXPIRES_AT` = expiry in `YYYY-MM-DD`
+3. **Verify the secret is actually populated** — `gh secret list` only shows names, not values:
+   ```bash
+   gh workflow run claude-qa-check.yml --field scope=full
+   # Watch the run — if it passes auth (runs >30s), the secret is good
+   ```
+4. Optionally set in local `.env` for development
+
+**Common mistake:** `CLAUDE_TOKEN_EXPIRES_AT` stored as a Secret (write-only) instead of a Variable (readable). The ops-hub expiry check needs to READ the date — it must be a Variable.
 
 The daily expiry check in `claude-ops-hub.yml` will send Slack warnings 3 days before expiry.

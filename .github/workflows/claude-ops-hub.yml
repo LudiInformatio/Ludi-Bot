@@ -115,7 +115,7 @@ jobs:
 
       - name: Claude Ops Diagnosis
         id: claude
-        uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -317,7 +317,7 @@ jobs:
             ### Validation Domain
             **Matches:** Weekly Validation
 
-            **Scripts:** `scripts/validate_schema.py`, `scripts/validate_canonical_ids.py`
+            **Scripts:** `scripts/validate_canonical_ids.py`
 
             **Common Failures:**
             - Schema drift → new columns added by sync scripts but not in expected schema (WARNING)

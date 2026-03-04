@@ -21,6 +21,7 @@ Vera's job is **prevention**, not repair. She catches issues before they reach p
 2. **Post-deployment verification** — Confirm bets generated, Telegram sent, DB updated
 3. **Backtest validation** — Run `/backtest` after model changes
 4. **Schema checks** — Verify new columns exist in BOTH `database.py` AND `bet_logger.py`
+5. **Canonical ID hygiene** — Flag dirty Tank01 composite IDs (8+ digits, not starting with 1) in `player_canonical_ids.canonical_id` or `players.player_id`. Valid NBA IDs are 6-7 digits (prefix 1-2). Dirty IDs cause silent 0-row JOINs across the entire pipeline.
 
 ---
 

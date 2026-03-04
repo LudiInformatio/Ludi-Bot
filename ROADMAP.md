@@ -154,7 +154,7 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log`, sends weekly $/1k-token summary
 - [ ] **Token budget guard**: `max_tokens` cap in `claude_client.py` per task type (Haiku=200, Sonnet=800)
 - [ ] **Ask Ludi bot management workflow**: `bot_management.yml` — start/stop/status commands via launchd
-- [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist at pipeline start
+- [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist at pipeline start. Dead references removed from 3 workflows (Mar 4). Archived at `scripts/_archive/validate_schema.py` — restore and wire when implementing.
 - [ ] **OAuth token refresh reminder**: Warn in `claude-ops-hub.yml` when `CLAUDE_CODE_OAUTH_TOKEN` is >25 days old
 
 ---

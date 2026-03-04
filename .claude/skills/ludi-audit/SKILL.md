@@ -9,12 +9,12 @@ description: >
 
 # Ludi Audit
 
-**Last Updated:** March 1, 2026
+**Last Updated:** March 4, 2026
 **Owner:** Henrik (Code Auditor)
 
 ## Overview
 
-This skill is a 10-point checklist of known Ludi-specific failure patterns — bugs and gotchas
+This skill is an 11-point checklist of known Ludi-specific failure patterns — bugs and gotchas
 that have caused real production issues in this codebase. It is NOT a generic code quality
 review (that is `/simplify`'s job). Every check maps to a documented real failure.
 
@@ -91,9 +91,27 @@ values or INSERT failures depending on which file ran first.*
 
 ---
 
+**Check 5 — Tank01 Composite ID Contamination**
+
+Scan for: any INSERT or UPDATE to `player_canonical_ids` where `canonical_id` has 8+ digits
+and does NOT start with `1` (valid NBA IDs are 6-7 digits starting with 1 or 2).
+
+- FAIL if: `canonical_id` is a Tank01 composite ID (e.g., `38017656`, `94184479027`, `942541715989`)
+- FAIL if: `players.player_id` matches a Tank01 composite format instead of NBA ID
+- PASS if: `canonical_id` is a valid NBA ID (e.g., `1630590`, `1641842`, `203915`)
+
+*Root cause: Tank01 API generates composite IDs (8-11 digits) that differ from real NBA IDs
+(6-7 digits, prefix 1-2). If a dirty ID enters `player_canonical_ids.canonical_id`, all
+downstream JOINs (game_logs → players → canonical) silently produce 0 rows for that player.
+The player becomes invisible to the pipeline — no bets generated, no injury resolution, no
+archetype assignment. Diagnosed Mar 4, 2026: Pippen Jr. (MEM) and 3 others had dirty IDs
+as canonical values, producing 0 module flow for active starters.*
+
+---
+
 ### P1 — Data Quality (any P1 failure = APPROVED_WITH_NOTES, must fix before next pipeline run)
 
-**Check 5 — Player Name Resolution Before Claude Prompts**
+**Check 6 — Player Name Resolution Before Claude Prompts**
 
 Scan for: any player name sourced from Odds API (raw string) passed directly into a DB
 query or Claude prompt without name resolution.
@@ -108,7 +126,7 @@ record" even when player is OUT.*
 
 ---
 
-**Check 6 — No AI Training Data for Roster/Trade Info**
+**Check 7 — No AI Training Data for Roster/Trade Info**
 
 Scan for: hardcoded player-team dicts in any new or modified file.
 
@@ -121,7 +139,7 @@ call-ups change weekly. Hardcoded rosters cause wrong team assignments in sim co
 
 ---
 
-**Check 7 — canonical_teams for ID Mappings**
+**Check 8 — canonical_teams for ID Mappings**
 
 Scan for: new `ESPN_TEAM_IDS = {...}` or `BDL_TEAM_IDS = {...}` style dicts in new code.
 
@@ -135,7 +153,7 @@ BDL/Tank01/ESPN team ID mappings. Local dicts go stale and diverge silently.*
 
 ### P2 — Technical Debt (P2 findings = APPROVED_WITH_NOTES, schedule for cleanup)
 
-**Check 8 — team_totals Endpoint**
+**Check 9 — team_totals Endpoint**
 
 Scan for: `markets=team_totals` in any bulk odds API call.
 
@@ -147,7 +165,7 @@ entire slate. Must be fetched per-event at 1 credit/game.*
 
 ---
 
-**Check 9 — Python 3.11 f-string Backslash Rule**
+**Check 10 — Python 3.11 f-string Backslash Rule**
 
 Scan for: backslash characters (`\"`, `\'`, `\n`) inside `{...}` expression blocks within f-strings.
 
@@ -159,7 +177,7 @@ blocks. Fixed in 3.12, but this project runs 3.11.*
 
 ---
 
-**Check 10 — Silent Exception Swallowing**
+**Check 11 — Silent Exception Swallowing**
 
 Scan for: bare `except` or `except Exception:` followed by `continue` or `pass` with no logging.
 
@@ -195,6 +213,7 @@ P0 — Pipeline Breakers
 ✅/🚨 canonical_games JOIN — [pass or finding]
 ✅/🚨 DB in sim loop — [pass or finding]
 ✅/🚨 bet_recommendations sync — [pass or finding]
+✅/🚨 Tank01 composite ID — [pass or finding]
 
 P1 — Data Quality
 ✅/⚠️ Player name resolution — [pass or finding]

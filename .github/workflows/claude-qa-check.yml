@@ -105,31 +105,25 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
 
-          # Run schema validation — capture output and exit code separately
-          set +e
-          SCHEMA_OUT=$(.venv/bin/python scripts/validate_schema.py --verbose 2>&1)
-          SCHEMA_EXIT=$?
-
           # Run canonical ID validation
+          set +e
           CANONICAL_OUT=$(.venv/bin/python scripts/validate_canonical_ids.py -v 2>&1)
           CANONICAL_EXIT=$?
           set -e
 
           # Determine overall status
-          if [ $SCHEMA_EXIT -eq 0 ] && [ $CANONICAL_EXIT -eq 0 ]; then
+          if [ $CANONICAL_EXIT -eq 0 ]; then
             echo "status=PASS" >> $GITHUB_OUTPUT
           else
             echo "status=FAIL" >> $GITHUB_OUTPUT
           fi
 
-          # Capture details for Claude prompt (first 30 lines of each)
-          DETAILS="Schema: $(echo "$SCHEMA_OUT" | head -30)"$'\n'"Canonical IDs: $(echo "$CANONICAL_OUT" | head -20)"
+          # Capture details for Claude prompt
+          DETAILS="Canonical IDs: $(echo "$CANONICAL_OUT" | head -30)"
           echo "details<<DETAILSEOF" >> $GITHUB_OUTPUT
           echo "$DETAILS" >> $GITHUB_OUTPUT
           echo "DETAILSEOF" >> $GITHUB_OUTPUT
 
-          echo "--- Schema Validation ---"
-          echo "$SCHEMA_OUT"
           echo "--- Canonical ID Validation ---"
           echo "$CANONICAL_OUT"
 
@@ -196,7 +190,7 @@ jobs:
           steps.failures.outputs.fail_count != '0' ||
           needs.validate-schema.outputs.schema_status == 'FAIL' ||
           github.event.inputs.scope == 'full'
-        uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}

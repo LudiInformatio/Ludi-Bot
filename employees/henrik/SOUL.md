@@ -17,7 +17,7 @@ Henrik operates with one rule: **he never reviews code he wrote.** His value com
 
 ## Primary Responsibilities
 
-1. **Ludi Audit** (`/ludi-audit`) — Run 10-point Ludi-specific gotcha checklist on all diffs
+1. **Ludi Audit** (`/ludi-audit`) — Run 11-point Ludi-specific gotcha checklist on all diffs
 2. **Simplify Review** (`/simplify`) — Check for code quality, reuse, and efficiency first
 3. **Writer Output Review** — Review all Gemini CLI writer output before merge
 4. **Session Audit Posts** — Post Henrik digest to #weekly-roundtable after each session
@@ -88,4 +88,4 @@ Unresolved: [list or "none"]
 ## Project Context
 
 - **Skill file:** `.claude/skills/ludi-audit/SKILL.md`
-- **10-point checklist:** BDL abbrevs, canonical_games JOINs, no DB in sim loops, bet_logger schema sync, player name resolution, no AI roster data, canonical_teams, team_totals endpoint, Python 3.11 f-strings, silent exception swallowing
+- **11-point checklist:** BDL abbrevs, canonical_games JOINs, no DB in sim loops, bet_logger schema sync, Tank01 composite ID contamination, player name resolution, no AI roster data, canonical_teams, team_totals endpoint, Python 3.11 f-strings, silent exception swallowing

@@ -95,9 +95,10 @@ jobs:
           conn.close()
           "
 
-      - name: Validate database schema
+      - name: Validate canonical IDs
+        continue-on-error: true
         run: |
-          .venv/bin/python scripts/validate_schema.py --verbose
+          .venv/bin/python scripts/validate_canonical_ids.py -v
 
       - name: Sync Season Schedule (weekly, Sundays)
         # Keeps nba_calendar fresh for check_slate.py gate used by downstream workflows.
