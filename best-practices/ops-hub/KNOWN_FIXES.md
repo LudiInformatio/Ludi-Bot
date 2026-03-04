@@ -17,7 +17,7 @@
 - UNIQUE constraint: DELETE overlapping dirty rows (same game_date + clean ID already exists) before UPDATE remaining.
 - Firewall: `resolve_player_id_for_insert()` in `database.py` (4-tier) prevents future contamination.
 
-**Result:** 43,930 → 1,867 dirty rows (95.7% cleaned). Remaining are historical/inactive players not in `player_canonical_ids`.
+**Result:** 43,930 → 257 dirty rows (99.79% clean). Phase 2 (same day): resolved 11 remaining dirty canonical IDs, batch-resolved 119 historical players (80 new canonical entries), fixed 25 corrupt `normalized_name` values. Remaining 257 are ~10 very recent rookies not yet in `nba_api` static list (Carlton Carrington, Grant Nelson, GG Jackson, etc.).
 
 ---
 
