@@ -53,6 +53,13 @@ Instead, ALWAYS use these sources for current-season truth:
 3. Compare API data vs database to detect changes
 4. Never fill gaps with AI assumptions
 
+**Database Firewall (4-Tier) - Mandatory for all ingestion:**
+To prevent ID contamination (e.g., Tank01 composite IDs like `28398804489` vs canonical `1629029`), all ingestion scripts MUST use the `LudiHistorian.resolve_player_id_for_insert(id, name)` firewall in `database.py`.
+1. **Tier 1 (Exact):** Pass through if ID is already canonical (1xxxxxx or 2xxxxxx, length <= 7).
+2. **Tier 2 (Alias):** Check `aliases` and `tank01_aliases` JSON columns in `player_canonical_ids`.
+3. **Tier 3 (Name):** Resolve via `PlayerIDResolver` (normalized name match) + **Auto-register** the dirty ID as a new alias.
+4. **Tier 4 (Fallback):** Log `logger.warning()` and return original ID (triggers manual review).
+
 **Current NBA season is 2025-26.** Never use AI training data for current rosters, trades,
 or injury status — it will be wrong. Players change teams, get injured, and return throughout
 the season. The AI's knowledge cutoff predates this season's moves. Always verify against
@@ -155,6 +162,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 | H: Historian | `module_h_historian.py` | `LudiHistorian` |
 | X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` |
 | I: Aggregator | `module_i_aggregator.py` | `LudiAggregator` (placeholder) |
+| DB Firewall | `database.py` | `LudiHistorian.resolve_player_id_for_insert` |
 
 ---
 

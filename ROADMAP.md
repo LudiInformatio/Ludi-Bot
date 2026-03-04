@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, March 4, 2026 — 12:02 PM EST
+**Last Updated:** Wednesday, March 4, 2026 — 1:17 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** QA report fix — 4 dirty canonical IDs (`player_canonical_ids`), dead `validate_schema.py` refs removed, `claude-code-action@v1` aligned ✅ + OAuth token restoration — `CLAUDE_CODE_OAUTH_TOKEN` secret + `CLAUDE_TOKEN_EXPIRES_AT` Variable fix ✅ + `/ludi-audit` Check 5 (Tank01 composite ID contamination) + Henrik/Vera BERT training update ✅
+**Completed:** `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX (`bet_logger.py`) ✅ + Push-phantom fix — 17 GH Actions workflows future-proofed against false failure notifications ✅ + Henrik `VERSION_MONITORING.md` — upstream release intelligence + session-start scan responsibility assigned ✅
 
 This is the single source of truth for project tasks and priorities.
 

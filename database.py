@@ -1,8 +1,12 @@
 import sqlite3
 import json
+import logging
 from datetime import datetime
 import os
 from utils.player_id_resolver import PlayerIDResolver
+
+# Setup logger for database operations
+logger = logging.getLogger(__name__)
 
 DB_PATH = "ludi.db"
 
@@ -102,6 +106,81 @@ class LudiHistorian:
         self._initialize_db()
         self._ensure_prop_line_snapshots()
         self.resolver = PlayerIDResolver(db_path=db_path)
+
+    def resolve_player_id_for_insert(self, input_id, player_name=None):
+        """
+        Database Firewall (4-Tier) to enforce canonical NBA ID integrity.
+        
+        Args:
+            input_id: Raw ID from API (might be dirty, e.g. "28118035349")
+            player_name: Player name for name-based fallback (e.g. "Luka Dončić")
+            
+        Returns:
+            Canonical NBA ID (e.g. "1629029")
+            
+        Rules (Firewall Tiers):
+            1. Exact canonical match: If input_id starts with '1' or '2' and is <= 7 chars, pass through.
+            2. Alias lookup: Check 'aliases' and 'tank01_aliases' JSON columns in player_canonical_ids.
+            3. Name resolution: Use PlayerIDResolver.normalize_name + auto-register input_id as alias.
+            4. Fallback: Return original input_id + logger.warning()
+        """
+        input_id = str(input_id).strip() if input_id else ""
+        if not input_id:
+            return input_id
+            
+        # Tier 1: Exact canonical match (pass through)
+        # Dirty ID Rule: len(str(id)) > 7 OR not str(id).startswith(('1','2'))
+        is_dirty = len(input_id) > 7 or not input_id.startswith(('1', '2'))
+        
+        if not is_dirty:
+            # Check if it actually exists in canonical table to be sure
+            conn = self._get_conn()
+            row = conn.execute("SELECT 1 FROM player_canonical_ids WHERE canonical_id = ?", (input_id,)).fetchone()
+            conn.close()
+            if row:
+                return input_id
+                
+        # Tier 2: Alias lookup (aliases or tank01_aliases)
+        conn = self._get_conn()
+        row = conn.execute("""
+            SELECT canonical_id FROM player_canonical_ids 
+            WHERE (aliases LIKE ? OR tank01_aliases LIKE ?)
+        """, (f'%"{input_id}"%', f'%"{input_id}"%')).fetchone()
+        
+        if row:
+            canonical_id = row[0]
+            conn.close()
+            return canonical_id
+            
+        # Tier 3: Name-based resolution + Auto-register alias
+        if player_name:
+            try:
+                canonical_id = self.resolver.resolve_to_canonical_id(player_name)
+                
+                # Auto-register this input_id as an alias for future-proofing
+                # But only if it's dirty (we don't want to alias clean IDs to other clean IDs)
+                if is_dirty:
+                    row = conn.execute("SELECT aliases FROM player_canonical_ids WHERE canonical_id = ?", (canonical_id,)).fetchone()
+                    if row:
+                        aliases = json.loads(row[0]) if row[0] else []
+                        if input_id not in aliases:
+                            aliases.append(input_id)
+                            conn.execute("UPDATE player_canonical_ids SET aliases = ?, updated_at = CURRENT_TIMESTAMP WHERE canonical_id = ?", 
+                                        (json.dumps(aliases), canonical_id))
+                            conn.commit()
+                            logger.info(f"Auto-registered alias: {input_id} -> {canonical_id} ({player_name})")
+                
+                conn.close()
+                return canonical_id
+            except (ValueError, Exception) as e:
+                pass # Continue to fallback
+
+        # Tier 4: Fallback with warning
+        if is_dirty:
+            logger.warning(f"Database Firewall: ID '{input_id}' ({player_name}) is dirty and could not be resolved.")
+        
+        conn.close()
+        return input_id
 
     def _get_conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30)
@@ -1533,6 +1612,12 @@ class LudiHistorian:
         # Migration guard: add tank01_player_id for Tank01 crosswalk (A6)
         try:
             c.execute("ALTER TABLE player_canonical_ids ADD COLUMN tank01_player_id TEXT")
+        except Exception:
+            pass  # Column already exists — safe to ignore
+
+        # Migration guard: add aliases JSON column for generic ID/name mapping (A7)
+        try:
+            c.execute("ALTER TABLE player_canonical_ids ADD COLUMN aliases TEXT DEFAULT '[]'")
         except Exception:
             pass  # Column already exists — safe to ignore
 

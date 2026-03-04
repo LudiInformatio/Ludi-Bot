@@ -21,8 +21,10 @@ from datetime import datetime, date, timedelta
 # Allow running from repo root or scripts/
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'ludi.db')
+from database import DB_PATH, LudiHistorian
 
+# Initialize LudiHistorian for ID resolution firewall
+ludi = LudiHistorian(db_path=DB_PATH)
 
 def _get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -31,31 +33,11 @@ def _get_conn():
     return conn
 
 
-def _resolve_canonical_id(conn, player_id) -> str:
+def _resolve_canonical_id(conn, player_id, player_name=None) -> str:
     """
-    Resolve Tank01 composite IDs (12-digit) to canonical NBA IDs (7-digit).
-    Uses players table as the source of truth.
+    Resolve IDs using the LudiHistorian Database Firewall.
     """
-    if not player_id:
-        return str(player_id)
-    
-    player_id_str = str(player_id)
-    
-    row = conn.execute("SELECT player_id FROM players WHERE player_id = ?", (player_id_str,)).fetchone()
-    if row:
-        return row['player_id']
-    
-    if len(player_id_str) >= 10:
-        row = conn.execute("""
-            SELECT p.player_id FROM players p
-            JOIN player_game_logs pgl ON pgl.player_name = p.name
-            WHERE pgl.player_id = ? AND p.is_active = 1
-            LIMIT 1
-        """, (player_id_str,)).fetchone()
-        if row:
-            return row['player_id']
-    
-    return player_id_str
+    return ludi.resolve_player_id_for_insert(player_id, player_name)
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +88,7 @@ def build_rotation_profiles(conn, window_days: int, situational_window_days: int
     # Resolve IDs at row level before grouping
     resolved_rows = []
     for r in rows:
-        resolved_id = _resolve_canonical_id(conn, r['player_id'])
+        resolved_id = _resolve_canonical_id(conn, r['player_id'], r['player_name'])
         row_dict = dict(r)
         row_dict['player_id'] = resolved_id
         resolved_rows.append(row_dict)
@@ -370,7 +352,8 @@ def build_beneficiary_minutes(conn, window_days: int, situational_window_days: i
     beneficiary_rows = []
 
     for (out_player_id, team_abbr), played_dates in player_presence.items():
-        resolved_out_player_id = _resolve_canonical_id(conn, out_player_id)
+        out_player_name = player_name_map.get(out_player_id)
+        resolved_out_player_id = _resolve_canonical_id(conn, out_player_id, out_player_name)
         
         team_dates = team_game_dates.get(team_abbr, [])
         if not team_dates:
@@ -397,10 +380,11 @@ def build_beneficiary_minutes(conn, window_days: int, situational_window_days: i
             """, (absent_date, team_abbr, out_player_id)).fetchall()
             for r in rows:
                 raw_beneficiary_id = str(r['player_id'])
-                resolved_beneficiary_id = _resolve_canonical_id(conn, raw_beneficiary_id)
+                player_name = r['player_name']
+                resolved_beneficiary_id = _resolve_canonical_id(conn, raw_beneficiary_id, player_name)
                 teammate_without[resolved_beneficiary_id].append(r['minutes'])
-                player_name_map[raw_beneficiary_id] = r['player_name']
-                player_name_map[resolved_beneficiary_id] = r['player_name']
+                player_name_map[raw_beneficiary_id] = player_name
+                player_name_map[resolved_beneficiary_id] = player_name
 
         if not teammate_without:
             continue
@@ -410,7 +394,7 @@ def build_beneficiary_minutes(conn, window_days: int, situational_window_days: i
         placeholders = ','.join(['?'] * len(played_dates_list))
         teammate_with = {}
         rows = conn.execute(f"""
-            SELECT player_id, AVG(minutes) as avg_with
+            SELECT player_id, player_name, AVG(minutes) as avg_with
             FROM player_game_logs
             WHERE game_date IN ({placeholders})
               AND team_abbreviation = ?
@@ -420,9 +404,10 @@ def build_beneficiary_minutes(conn, window_days: int, situational_window_days: i
         """, (*played_dates_list, team_abbr, out_player_id)).fetchall()
         for r in rows:
             raw_id = str(r['player_id'])
-            resolved_id = _resolve_canonical_id(conn, raw_id)
+            player_name = r['player_name']
+            resolved_id = _resolve_canonical_id(conn, raw_id, player_name)
             teammate_with[resolved_id] = r['avg_with']
-            player_name_map[resolved_id] = player_name_map.get(raw_id, raw_id)
+            player_name_map[resolved_id] = player_name
 
         # Step 4 — compute delta, filter noise
         out_player_name = player_name_map.get(out_player_id, out_player_id)

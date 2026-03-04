@@ -27,8 +27,11 @@ from datetime import datetime, timedelta
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import DB_PATH
+from database import DB_PATH, LudiHistorian
 from utils.browser_utils import simulate_human_interaction, close_popups
+
+# Initialize LudiHistorian for ID resolution firewall
+ludi = LudiHistorian(db_path=DB_PATH)
 
 # Playwright check
 try:
@@ -355,11 +358,13 @@ def process_tracking_row(data, date_str, col_map):
             player_name = row_data[header_idx['PLAYER']]
             team_val = row_data[header_idx.get('TEAM', 1)] 
             
-            # ID Extraction
-            pid = extract_id_from_href(href)
-            if not pid:
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            raw_pid = extract_id_from_href(href)
+            if not raw_pid:
                 # Fallback to slug if no ID found (unlikely)
-                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
             # Build updates
             updates = []
@@ -425,9 +430,12 @@ def process_advanced_row(data, date_str, col_map):
             player_name = row_data[header_idx['PLAYER']]
             team_val = row_data[header_idx.get('TEAM', 1)]
             
-            pid = extract_id_from_href(href)
-            if not pid:
-                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            raw_pid = extract_id_from_href(href)
+            if not raw_pid:
+                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
             values = []
             cols = []
@@ -479,9 +487,12 @@ def process_clutch_row(data, date_str, col_map):
             player_name = row_data[header_idx['PLAYER']]
             team_val = row_data[header_idx.get('TEAM', 1)]
             
-            pid = extract_id_from_href(href)
-            if not pid:
-                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            raw_pid = extract_id_from_href(href)
+            if not raw_pid:
+                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
             values = []
             cols = []
@@ -536,9 +547,12 @@ def process_opponent_row(data, date_str, col_map):
             player_name = row_data[header_idx[name_col]]
             team_val = row_data[header_idx.get('TEAM', 1)]
             
-            pid = extract_id_from_href(href)
-            if not pid:
-                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            raw_pid = extract_id_from_href(href)
+            if not raw_pid:
+                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
             values = []
             cols = []
@@ -590,9 +604,12 @@ def process_hustle_row(data, date_str, col_map):
             player_name = row_data[header_idx['PLAYER']]
             team_val = row_data[header_idx.get('TEAM', 1)]
             
-            pid = extract_id_from_href(href)
-            if not pid:
-                pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            raw_pid = extract_id_from_href(href)
+            if not raw_pid:
+                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+            
+            pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
             values = []
             cols = []
@@ -678,9 +695,12 @@ def process_closest_defender(page, date_str, nba_date):
                     team_val = row_data[header_idx.get('TEAM', 1)]
                     fga_str = row_data[header_idx['FGA']]
 
-                    pid = extract_id_from_href(href)
-                    if not pid:
-                        pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                    # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+                    raw_pid = extract_id_from_href(href)
+                    if not raw_pid:
+                        raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                    
+                    pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
 
                     fga = 0
                     if fga_str and fga_str != '-':

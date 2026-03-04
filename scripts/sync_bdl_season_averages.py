@@ -41,6 +41,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
+from database import LudiHistorian
 from utils.bdl_client import BDLClient
 from utils.mappings import normalize_bdl_abbr
 
@@ -242,6 +243,7 @@ def upsert_player_averages(
 
     upserted = 0
     cursor = conn.cursor()
+    ludi = LudiHistorian()
 
     for record in records:
         try:
@@ -257,6 +259,9 @@ def upsert_player_averages(
             first  = player_node.get("first_name", "")
             last   = player_node.get("last_name", "")
             player_name = (f"{first} {last}").strip() or record.get("player_name", "Unknown")
+
+            # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
+            player_id = ludi.resolve_player_id_for_insert(player_id, player_name)
 
             # --- Extract team abbreviation ---
             team_node   = record.get("team") or {}

@@ -55,6 +55,7 @@ archives/data/
 
 # Database files (local only, use backups for recovery)
 ludi.db
+ludi.db.pre_dedup_*
 *.db
 *.db-journal
 *.db-wal

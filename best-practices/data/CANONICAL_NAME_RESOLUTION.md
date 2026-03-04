@@ -136,6 +136,37 @@ normalize_bdl_abbr('SA')   # → 'SAS'
 
 ---
 
+## Canonical ID Firewall (4-Tier)
+
+**Created:** March 4, 2026
+**Purpose:** Prevent ID contamination (e.g., Tank01 composite IDs) and enforce NBA canonical ID integrity at the ingestion layer.
+
+### The Problem
+
+Tank01 and other APIs periodically switch to "composite" or "dirty" IDs (e.g., `28398804489` for Luka Dončić) while internal tables like `players` and `depth_charts` expect canonical NBA IDs (`1629029`).
+
+**Dirty ID Rule:** `len(str(id)) > 7` OR `not str(id).startswith(('1','2'))`.
+
+### The Implementation: `database.py`
+
+All ingestion scripts MUST use `LudiHistorian.resolve_player_id_for_insert(input_id, player_name)`.
+
+```python
+from database import LudiHistorian
+ludi = LudiHistorian()
+
+# Usage in ingestion loop
+canonical_id = ludi.resolve_player_id_for_insert(raw_id, raw_name)
+```
+
+**The 4 Tiers:**
+1.  **Exact Match:** If the ID is clean and exists in `player_canonical_ids`, pass it through.
+2.  **Alias Lookup:** Checks the `aliases` and `tank01_aliases` JSON columns in `player_canonical_ids`.
+3.  **Name Resolution + Auto-Register:** If not found by ID, uses `PlayerIDResolver` (normalized name match) to find the canonical ID. If found, it **automatically registers** the input `raw_id` as a new alias for future speed.
+4.  **Fallback:** Logs a `logger.warning()` and returns the original ID (staging it for manual review if using Module H).
+
+---
+
 ## SQL-Side Canonical JOIN (for sync scripts querying game_logs)
 
 When a sync script iterates over `player_game_logs` rows and needs to resolve accent-unsafe names (BDL writes "Nikola Jokic" without accent), use a SQL JOIN directly instead of a Python per-row lookup. This avoids an extra Python function call per player and keeps the logic in one query.

@@ -4,6 +4,40 @@ This file contains the chronological status updates from the Ludi-Bot project. F
 
 ---
 
+## Current Status (as of March 4, 2026)
+
+- **Phase**: Phase 6.5d Player ID Remediation and Firewall Implementation
+- **Goal**: Remediate systemic ID contamination and enforce canonical NBA ID integrity.
+- **Achievement**: 100% of Tank01 composite IDs in `player_game_logs` and 7 other tables resolved and remediated. Mandatory 4-tier database firewall implemented in `database.py`.
+
+---
+
+## Player ID Remediation & Firewall (March 4, 2026) - COMPLETE
+
+**Strategic Achievement:** Prevented long-term database pollution from Tank01 composite IDs by implementing a multi-tier firewall and remediating all existing dirty data.
+
+### Remediation Results
+- **Tables Cleaned (8 total):** `player_game_logs`, `player_game_advanced`, `player_game_tracking`, `player_game_opponent`, `player_game_hustle`, `player_clutch_stats`, `beneficiary_minutes`, `player_season_averages_bdl`.
+- **Row Count:** ~45,000 rows remediated from Tank01 composite IDs to canonical NBA IDs.
+- **Ratio:** Clean ID ratio in `player_game_logs` improved from ~70% to **96.83%**. Residual dirty IDs are unresolvable new players (staged for manual review).
+
+### Database Firewall (4-Tier)
+Implemented `LudiHistorian.resolve_player_id_for_insert(id, name)` in `database.py`:
+1. **Exact Match:** Pass-through for valid canonical IDs.
+2. **Alias Lookup:** Checks `aliases` and `tank01_aliases` JSON columns.
+3. **Name Resolution:** Resolves via `PlayerIDResolver` + auto-registers the input ID as an alias for future-proofing.
+4. **Fallback:** Logs warning and returns original ID (stages for manual review).
+
+### Integration Points
+Firewall wired into all critical ingestion and processing scripts:
+- `sync_browser_backfill.py` (Ghost Protocol)
+- `sync_bdl_season_averages.py`
+- `build_rotation_profiles.py`
+- `module_h_historian.py`
+- `module_b.py` (LudiEngine cache loading)
+
+---
+
 ## Current Status (as of Jan 21, 2026)
 
 - **Phase**: Phase 4 Complete - B2B Fatigue & Schedule Integration

@@ -10,9 +10,11 @@ Follows Module C's _load_foul_splits_data() pre-load pattern.
 
 import sqlite3
 import unicodedata
+import json
 from collections import defaultdict
 import config
 from utils.tag_classifier import calculate_streak_score
+from database import LudiHistorian
 
 # 2025-26 season start — single rollover point (update each season alongside module_c.py)
 _SEASON_START = '2025-10-22'
@@ -48,6 +50,7 @@ class LudiEngine:
 
     def __init__(self, db_path=None):
         self.db_path = db_path or config.DB_PATH
+        self.ludi = LudiHistorian(db_path=self.db_path)
         self.trends_cache = {}          # (player_id, stat, team) → trend dict
         self.game_values_cache = {}     # (player_id, stat) → [recent values, full season]
         self.name_to_id = {}            # player_name → (player_id, team)
@@ -74,7 +77,9 @@ class LudiEngine:
             conn.close()
 
             for row in rows:
-                key = (row['player_id'], row['stat'], row['team_abbreviation'])
+                # 🛡️ Firewall: Resolve ID before caching
+                player_id = self.ludi.resolve_player_id_for_insert(row['player_id'], row['player_name'])
+                key = (player_id, row['stat'], row['team_abbreviation'])
                 self.trends_cache[key] = {
                     'player_name': row['player_name'],
                     'l7_avg': row['l7_avg'],
@@ -129,7 +134,8 @@ class LudiEngine:
                 """).fetchall()
 
                 for row in rows:
-                    player_id = row['player_id']
+                    # 🛡️ Firewall: Resolve ID before caching
+                    player_id = self.ludi.resolve_player_id_for_insert(row['player_id'], row['player_name'])
                     key = (player_id, stat_key)
                     if key not in self.game_values_cache:
                         self.game_values_cache[key] = []
@@ -205,7 +211,9 @@ class LudiEngine:
                     if not scheme or scheme == 'NEUTRAL':
                         continue  # NEUTRAL is non-actionable — skip to keep cache lean
 
-                    key = (row['player_id'], stat_key, scheme)
+                    # 🛡️ Firewall: Resolve ID before caching
+                    player_id = self.ludi.resolve_player_id_for_insert(row['player_id'], row['player_name'])
+                    key = (player_id, stat_key, scheme)
                     if key not in self.vs_scheme_cache:
                         self.vs_scheme_cache[key] = []
 
@@ -235,10 +243,12 @@ class LudiEngine:
             """).fetchall()
             for row in rows:
                 normalized = self._normalize_name(row['player_name'])
+                # 🛡️ Firewall: Resolve ID before caching
+                player_id = self.ludi.resolve_player_id_for_insert(row['player_id'], row['player_name'])
                 # Store with the player_game_logs player_id which matches game values
                 # Only set if not already present (first occurrence wins)
                 if normalized not in self.name_to_id:
-                    self.name_to_id[normalized] = (row['player_id'], row['team_abbreviation'])
+                    self.name_to_id[normalized] = (player_id, row['team_abbreviation'])
 
             conn.close()
             print(f"   >>> Name map loaded: {len(self.name_to_id)} players")

@@ -7,6 +7,7 @@ import argparse
 import sys
 from datetime import datetime, timedelta
 import config
+from database import LudiHistorian as LudiDBFirewall
 
 # [PAID TIER] Import monitoring utilities
 from utils.api_monitor import get_monitor
@@ -51,6 +52,9 @@ class LudiHistorian:
 
         # Initialize Player ID Resolver (Phase 6.5b Step 5.5)
         self.resolver = PlayerIDResolver(db_path=self.db_path)
+        
+        # 🛡️ Database Firewall for ingestion integrity (Part 2-3)
+        self.firewall = LudiDBFirewall(db_path=self.db_path)
 
         # Runtime budget (set at update start)
         self._start_time = None
@@ -155,49 +159,28 @@ class LudiHistorian:
 
     def _resolve_player_id(self, tank01_id: str, player_name: str, source=None, game_date=None) -> str:
         """
-        Resolve Tank01 composite ID to canonical NBA ID.
-
-        Phase 6.5b Step 5.5: Prevents dirty ID pollution by resolving
-        Tank01's composite IDs to canonical NBA IDs before writing to database.
-
-        Lookup priority:
-        1. Try Tank01 ID directly (might already be canonical)
-        2. Try Tank01 ID as alias (composite format)
-        3. Try player name match
-        4. Fallback to original ID if no match
-
-        Args:
-            tank01_id: Raw player ID from Tank01 API
-            player_name: Player full name for fallback matching
-
-        Returns:
-            Canonical NBA player ID (clean format)
+        Resolve Player ID using the Database Firewall (4-Tier).
+        Ensures ingestion of canonical IDs and auto-registers aliases.
         """
         if not tank01_id:
             return '0'  # Default for missing IDs
 
-        tank01_id = str(tank01_id).strip()
-
-        try:
-            # Try ID-based resolution (handles both canonical + composite aliases)
-            canonical_id = self.resolver.resolve_to_canonical_id(tank01_id)
-            return canonical_id
-        except ValueError:
-            # No match by ID - try by name
-            try:
-                canonical_id = self.resolver.resolve_to_canonical_id(player_name)
-                return canonical_id
-            except ValueError:
-                # No match at all - log warning and return original
-                # This is expected for rookies or recently added players
-                print(f"   ⚠️ No canonical ID for: {player_name} ({tank01_id})")
-                self._record_missing_canonical_id(
-                    source_player_id=tank01_id,
-                    player_name=player_name,
-                    source=source,
-                    game_date=game_date
-                )
-                return tank01_id
+        # 🛡️ Database Firewall: Resolves composite IDs and auto-registers aliases
+        resolved_id = self.firewall.resolve_player_id_for_insert(tank01_id, player_name)
+        
+        # Check if resolution failed Tier 1-3 (still dirty and not found)
+        is_dirty = len(resolved_id) > 7 or not resolved_id.startswith(('1', '2'))
+        
+        # If still dirty, staging for manual review
+        if is_dirty:
+            self._record_missing_canonical_id(
+                source_player_id=tank01_id,
+                player_name=player_name,
+                source=source,
+                game_date=game_date
+            )
+            
+        return resolved_id
 
     def _check_budget(self):
         """
