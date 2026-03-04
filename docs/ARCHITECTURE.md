@@ -131,7 +131,7 @@ from module_e import LudiEvaluator           # ImportError
 | `games` | 496+ | Game results with pace and referee crews |
 | `odds` | Dynamic | Live market data from bookmakers |
 | `simulations` | Archive | Model output archive for backtesting |
-| `bet_recommendations` | Dynamic | Logged bets with tags |
+| `bet_recommendations` | Dynamic | Logged bets with tags. `curation_grade` (STRONG/LEAN/FADE) added Mar 4 — Curation v2 full-slate AI grading. `is_curated=1` + `curated_rank` set for STRONG bets only. Shared game dossier via `cache/game_dossier_{date}.json` (written by `curate_plays.py`, read by `morning_brief.py`). |
 | `referee_profiles` | 85 | 81 NBA officials + 4 retired. `avg_fouls_per_game` (OddsShark per-ref: (home+away)/3), `rolling_21d_fouls` (internal L10), `games_worked`, `ou_percentage`, `home_ats_bias`, `badge_number`, `style` (STRICT/NEUTRAL/LENIENT). Sources: Covers.com (O/U, total), OddsShark (ATS, Home/Away Fouls), NBA Staff PDF (badge#). Weekly: `sync_external_intelligence.py`. (Mar 2) |
 | `referee_player_bias` | 1,810+ | Per-player bias vs each referee: `avg_pf_called`, `avg_fta_awarded`, `points_impact_vs_avg`, `games_officiated`. Written daily by `scripts/analyze_star_bias.py`. Queried by `LudiRefEngine.get_player_crew_bias()` → consumed in `module_f.py` note field (STAR_KILLER / PROTECTOR labels, ≥3.5 PPG delta, ≥5 games threshold). Backfill pending: `scripts/backfill_referee_bias.py` (Feb 28) |
 | `team_betting_trends` | 30 | H/A records, scoring avgs, ATS splits — computed from canonical_games + player_game_logs + bet_recommendations. Synced by `scripts/sync_team_betting_trends.py`. (Feb 28) |

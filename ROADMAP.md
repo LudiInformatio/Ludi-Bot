@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, March 4, 2026 — 4:15 PM EST
+**Last Updated:** Wednesday, March 4, 2026 — 5:25 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** V5.5 edge calibration — `STAT_EDGE_MINIMUMS` directional splits, display score boost, defensive scheme refresh ✅ + `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX ✅ + CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅
+**Active Work:** Curation Engine v2 (`curate_plays.py`, `utils/game_dossier.py`) — full-slate STRONG/LEAN/FADE grading + BetIQ-style game dossier + shared Perplexity cache + employee onboarding prep
+**Completed:** `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX ✅ + CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -92,12 +92,13 @@ This is the single source of truth for project tasks and priorities.
 
 **Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 6 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
 
-- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees (6 Agent Teams + Gemini + Lena). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena requires live DB queries for examples** (see plan). Build before first Agent Teams session.
+- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees (6 Agent Teams + Gemini + Lena). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena requires live DB queries for examples** (see plan). Build before first Agent Teams session. **Lena-specific:** consolidated glossary cheat sheet — archetypes (15 offensive + 5 defensive tags), team schemes (4 types + interaction rules), matchup matrix (why STRETCH_BIG vs PAINT_PACK is favorable), scenario tags (USAGE_VACUUM, BENEFICIARY, HOT_STREAK), synergy playtypes. Sources: `module_e.py`, `docs/ARCHITECTURE.md`, `utils/tag_classifier.py`, `team_scheme_cache`. Also inject into Claude curation system prompt (Pattern 6 domain pre-training).
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
 - [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
 - [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon (sprint status, next actions, team health). Pattern: `bots/ask_ludi.py`. Week 1 build.
 - [ ] **Discord two-way** — command handlers in employee channels so you can message Silas/Iris/Henrik in Discord and they respond/act (e.g. `/run-check` in #silas, `/audit file.py` in #henrik). Requires Discord bot polling loop.
+- [ ] **Lena: Season Pattern Mining** — proprietary trend analysis across full 2025-26 dataset. Mine `player_game_logs` (10.8K), `canonical_games` (902), `referee_player_bias` (12.5K), `player_game_tracking`, `player_game_advanced`, `team_lineups` (10.6K), `player_synergy_playtypes`, `player_shot_quality`, `prop_line_snapshots`. Focus areas: ref stat-category tendencies (beyond fouls), archetype B2B resilience, hot/cold streak persistence, WOWY beneficiary accuracy, shot quality regression candidates, line movement → outcome correlation, scheme × archetype win rates. Output: actionable findings that can feed back into curation dossier + Module E modifiers. Plan details after Lena onboarding.
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint

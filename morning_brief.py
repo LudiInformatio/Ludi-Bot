@@ -28,6 +28,7 @@ from utils.trend_engine import get_player_trends, get_beneficiary_context, get_s
 from utils.time_utils import get_time_context, format_time_context_note
 from utils.player_id_resolver import resolve_canonical_name
 from utils.tag_classifier import calculate_streak_score  # C2: unified streak scorer
+from utils.game_dossier import load_dossier_cache
 
 
 def _format_injury_stamp(status, snapshot_time_str):
@@ -671,7 +672,17 @@ class MorningBriefEngine:
                 if getattr(config, 'PERPLEXITY_API_KEY', None):
                     try:
                         perp_client = PerplexityClient()
+                        run_date = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
+                        
+                        # Shared dossier cache — morning only (evening fetches fresh)
+                        is_evening = getattr(self, 'mode', 'morning') == 'evening'
+                        dossier = None if is_evening else load_dossier_cache(run_date)
+
                         for gid, bets in game_groups.items():
+                            if dossier and gid in dossier:
+                                game_news_cache[gid] = dossier[gid].get('game_context', '')
+                                continue
+
                             first = bets[0] if bets else {}
                             home = first.get('home_team', '')
                             away = first.get('away_team', '')

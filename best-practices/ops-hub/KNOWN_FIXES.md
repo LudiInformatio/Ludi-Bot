@@ -715,3 +715,13 @@ git push origin main                   # Runner now gets correct code
 **Root cause:** `TELEGRAM_TOKEN_SOLOMON` / `TELEGRAM_CHAT_ID_SOLOMON` absent from workflow env block. `send_solomon_message()` returns False silently — no module-level check at import time.
 
 **Fix:** Add startup guard at module level: print warning if Solomon credentials are absent. Also verify workflow env block includes both secrets.
+
+---
+
+## 2026-03-04 — Perplexity silently skipped in curate_plays.py since day one
+
+**Symptom:** `_haiku_sanity_check()` in `curate_plays.py` calls `PerplexityClient.search_player_news()` for short-term injury verification, but the call always silently skips in CI. No error, no log.
+
+**Root cause:** `daily_simulation_pipeline.yml` curate step (line ~188) only had `ANTHROPIC_API_KEY` in its env block — `PERPLEXITY_API_KEY` was never added. The `getattr(config, 'PERPLEXITY_API_KEY', None)` guard returns None → all Perplexity calls skip.
+
+**Fix:** Add `PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}` to the curate step env block. Pattern: always verify ALL required API keys are in a workflow step's env, not just the primary one.

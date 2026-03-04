@@ -41,6 +41,7 @@ from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
 from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
 from utils.telegram_notifier import send_message, send_solomon_message
 from utils.player_id_resolver import resolve_canonical_name
+from utils.game_dossier import build_game_dossier
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
@@ -67,6 +68,7 @@ MIGRATIONS = [
     "ALTER TABLE bet_recommendations ADD COLUMN curated_rank INTEGER",
     "ALTER TABLE bet_recommendations ADD COLUMN sanity_flagged BOOLEAN DEFAULT 0",
     "ALTER TABLE bet_recommendations ADD COLUMN sanity_flag_reason TEXT",
+    "ALTER TABLE bet_recommendations ADD COLUMN curation_grade TEXT",
 ]
 
 
@@ -295,7 +297,7 @@ Otherwise PASS. When in doubt, PASS."""
 
 
 # ─── Stage 2: Sonnet Top 5 Curation ──────────────────────────────────────────
-def _format_bets_for_prompt(bets: list[dict]) -> str:
+def _format_bets_for_prompt(bets: list[dict], dossier: dict) -> str:
     """Format bet list as readable text block for Sonnet's context."""
     lines = []
     for bet in bets:
@@ -308,6 +310,12 @@ def _format_bets_for_prompt(bets: list[dict]) -> str:
             odds = bet.get('odds_under')
         odds_str = f"@ {odds}" if odds else ""
 
+        gid = bet.get('game_id')
+        pname = bet.get('player_name')
+        signals = ""
+        if gid in dossier and pname in dossier[gid]['players']:
+            signals = f"\n      {dossier[gid]['players'][pname]}"
+
         lines.append(
             f"[{bet['id']}] {bet['player_name']} | "
             f"{bet['stat_category']} {bet['bet_side']} {bet['line']} {odds_str}\n"
@@ -318,7 +326,7 @@ def _format_bets_for_prompt(bets: list[dict]) -> str:
             f"(game_id: {bet.get('game_id', 'N/A')}) | "
             f"Spread: {bet.get('spread', 'N/A')} | "
             f"Total: {bet.get('total', 'N/A')}\n"
-            f"      Injury: {injury_note}"
+            f"      Injury: {injury_note}{signals}"
         )
     return '\n\n'.join(lines)
 
@@ -380,20 +388,24 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
-def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict] | None:
+def _sonnet_curate(passing_bets: list[dict], dossier: dict, verbose: bool = False) -> list[dict] | None:
     """
-    Ask Sonnet to select and rank top 5 bets from passing bets.
+    Ask Sonnet to grade EVERY bet as STRONG/LEAN/FADE.
 
     Claude reasons about portfolio quality — correlation, diversity, tier.
     It does NOT recalculate edges. true_edge is authoritative.
 
-    Returns list of {'bet_id', 'rank', 'reasoning'} dicts, or None on failure.
+    Returns list of {'bet_id', 'grade', 'reasoning'} dicts, or None on failure.
     None triggers the deterministic fallback in the caller.
     """
     if not passing_bets:
         return None
 
-    bets_text = _format_bets_for_prompt(passing_bets)
+    bets_text = _format_bets_for_prompt(passing_bets, dossier)
+
+    dossier_text = ""
+    for gid, data in dossier.items():
+        dossier_text += data['game_context'] + "\n\n"
 
     # Build domain WR context from live DB (Pattern 6: domain pre-training proxy)
     # Wilson-adjusted WR grades auto-update as bets settle each night.
@@ -411,7 +423,7 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 
-    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "rank": 1, "reasoning": "one sentence"}]'
+    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "grade": "STRONG|LEAN|FADE", "reasoning": "one sentence"}]'
 
     env = config.get_scoring_environment()
     over_rate = env.get('over_hit_rate_14d', 0)
@@ -420,49 +432,56 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
 
     curate_examples = """
 === CURATION EXAMPLES ===
-[GOOD SELECTION — mix of OVER and UNDER]
-Input bets (3 of many):
-  [WING SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | injury_status=ACTIVE
-  [RIM BIG BLOCKER] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | injury_status=ACTIVE
-  [HELIOCENTRIC BIG] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | injury_status=ACTIVE
-Selection: [WING SCORER] (OVER, DIAMOND edge) + [RIM BIG BLOCKER] BLK UNDER (different game — BLK UNDER is the system's highest-WR signal) + [HELIOCENTRIC BIG] AST UNDER (third game).
-Diversified: 1 OVER + 2 UNDER, 3 games, 3 stat types.
+[STRONG]
+Input: [WING SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | injury_status=ACTIVE
+Reasoning: Diamond edge combined with favorable defensive matchup and strong L5 form makes this a top priority.
+Grade: STRONG
 
-[BAD SELECTION — DO NOT DO THIS]
-Mistake 1 — GTD player:
-  [STAR GUARD] PTS OVER 30.5 | DIAMOND | edge=18.3% | game=TEAM7_TEAM8 | injury_status=GTD
-  Reject: GTD voids edge signal regardless of edge%. Never select unless ACTIVE or PROBABLE.
-Mistake 2 — same-game over-concentration:
-  Three picks from TEAM7_TEAM8 ([STAR GUARD] PTS OVER + [TEAM7 BIG] REB OVER + [TEAM7 GUARD] AST OVER)
-  Reject: Exceeds 2-bet-per-game rule. A blowout kills all three at once.
+[LEAN]
+Input: [RIM BIG BLOCKER] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | injury_status=ACTIVE
+Reasoning: Strong system signal for BLK UNDER, but opponent has high rim frequency which limits confidence to a LEAN.
+Grade: LEAN
+
+[FADE]
+Input: [HELIOCENTRIC BIG] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | injury_status=ACTIVE
+Reasoning: Low edge on a high-variance stat with a ref crew that tends to let teams play; better options available.
+Grade: FADE
 === END EXAMPLES ===
 """
 
-    user_prompt = f"""You are selecting the TOP 5 plays from today's NBA player prop slate.
+    user_prompt = f"""You are grading EVERY bet on today's NBA player prop slate as STRONG, LEAN, or FADE.
+
+DECISION TREE INSTRUCTIONS:
+1. STRONG: High edge (>= 5%), clear injury status, favorable matchup/trends, and no correlation conflicts.
+2. LEAN: Decent edge, but has one minor yellow flag (e.g., tough matchup, cold streak, or ref bias).
+3. FADE: Low edge, major injury uncertainty, high-risk correlation, or statistically "noisy" stat type.
 
 HARD RULES:
-- Maximum 2 bets from the same game_id (avoid correlated losses in one game)
-- Diversify across stat types (do not pick 5 PTS bets)
-- Rank by overall confidence — weight tier quality, injury clarity, and edge together
+- Maximum 2 STRONG bets from the same game_id (avoid correlated losses in one game)
+- Diversify STRONG picks across stat types (do not pick 5 PTS bets)
 - DO NOT recalculate, adjust, or question any edge/probability/projection values — they are authoritative outputs from a deterministic simulation model
 - Return JSON array only
 
 {env_context}
 {curate_examples}
+
+=== GAME DOSSIER ===
+{dossier_text}
+
 TODAY'S CLEAN BETS ({len(passing_bets)} total, already passed injury sanity gate):
 {bets_text}
 
-Select the best 5 (or all available if fewer than 5 passed the gate). Return JSON array only."""
+Grade every bet listed above. Return JSON array only."""
 
     if verbose:
-        print(f"  [SONNET] Sending {len(passing_bets)} bets for curation...")
+        print(f"  [SONNET] Sending {len(passing_bets)} bets for curation with dossier context...")
 
     response = get_claude_analysis(
         prompt=user_prompt,
         system_prompt=system_prompt,
         model=SONNET_MODEL,
         temperature=0.1,
-        max_tokens=800,
+        max_tokens=8192,
         call_type='curation',
     )
 
@@ -482,36 +501,46 @@ Select the best 5 (or all available if fewer than 5 passed the gate). Return JSO
         if not isinstance(data, list):
             raise ValueError("Expected JSON array")
 
-        # Parse and validate max-2-per-game constraint
+        # Parse and validate max-2-per-game constraint for STRONG bets
         result = []
         game_counts: dict[str, int] = {}
         bet_id_to_game_map = {b['id']: b.get('game_id', '') for b in passing_bets}
 
         for item in data:
-            if 'bet_id' in item and 'rank' in item:
+            if 'bet_id' in item and 'grade' in item:
                 bet_id = int(item['bet_id'])
+                grade = str(item['grade']).upper()
                 game_id = bet_id_to_game_map.get(bet_id, '')
 
-                # Enforce max-2-per-game in code (not just prompt)
-                if game_counts.get(game_id, 0) >= 2:
-                    if verbose:
-                        print(f"  [SONNET] Skipping bet_id {bet_id} - already 2 bets from game {game_id}")
-                    continue
+                # Enforce max-2-per-game for STRONG in code
+                if grade == 'STRONG':
+                    if game_counts.get(game_id, 0) >= 2:
+                        if verbose:
+                            print(f"  [SONNET] Downgrading {bet_id} to LEAN - already 2 STRONG from game {game_id}")
+                        grade = 'LEAN'
+                    else:
+                        game_counts[game_id] = game_counts.get(game_id, 0) + 1
 
                 result.append({
                     'bet_id': bet_id,
-                    'rank': int(item['rank']),
+                    'grade': grade,
                     'reasoning': str(item.get('reasoning', '')),
                 })
-                game_counts[game_id] = game_counts.get(game_id, 0) + 1
-
-                if len(result) >= 5:
-                    break
 
         if not result:
             raise ValueError("No valid picks parsed from response")
+        
+        # Assign rank post-hoc: STRONG bets sorted by edge DESC -> rank 1-N
+        strong_bets = [r for r in result if r['grade'] == 'STRONG']
+        # Map edge back for sorting
+        id_to_edge = {b['id']: b.get('true_edge', 0) for b in passing_bets}
+        strong_bets.sort(key=lambda x: id_to_edge.get(x['bet_id'], 0), reverse=True)
+        
+        for i, bet in enumerate(strong_bets):
+            bet['rank'] = i + 1
+
         if verbose:
-            print(f"  [SONNET] Successfully selected {len(result)} bets (max-2-per-game enforced)")
+            print(f"  [SONNET] Successfully graded {len(result)} bets ({len(strong_bets)} STRONG)")
         return result
     except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
         raw_preview = response[:200] if response else "empty"
@@ -522,16 +551,17 @@ Select the best 5 (or all available if fewer than 5 passed the gate). Return JSO
 
 
 # ─── Deterministic Fallback ───────────────────────────────────────────────────
-def _deterministic_top5(passing_bets: list[dict]) -> list[dict]:
+def _deterministic_top(passing_bets: list[dict]) -> list[dict]:
     """
     Fallback curation when Claude is unavailable or fails to parse.
     Sorts by true_edge DESC, enforces max-2-per-game constraint.
+    Returns top 10 by edge.
     """
     selected = []
     game_counts: dict[str, int] = {}
 
     for bet in sorted(passing_bets, key=lambda b: b.get('true_edge') or 0, reverse=True):
-        if len(selected) >= 5:
+        if len(selected) >= 10:
             break
         game_id = bet.get('game_id', '')
         if game_counts.get(game_id, 0) < 2:
@@ -539,7 +569,7 @@ def _deterministic_top5(passing_bets: list[dict]) -> list[dict]:
             game_counts[game_id] = game_counts.get(game_id, 0) + 1
 
     return [
-        {'bet_id': b['id'], 'rank': i + 1, 'reasoning': ''}
+        {'bet_id': b['id'], 'grade': 'STRONG', 'rank': i + 1, 'reasoning': ''}
         for i, b in enumerate(selected)
     ]
 
@@ -547,19 +577,26 @@ def _deterministic_top5(passing_bets: list[dict]) -> list[dict]:
 # ─── DB Writes ────────────────────────────────────────────────────────────────
 def _write_curation_results(
     conn: sqlite3.Connection,
-    top5_picks: list[dict],
+    graded_picks: list[dict],
     flagged_bets: list[dict],
     verbose: bool = False,
 ) -> None:
-    """Write curated rankings and sanity flags back to bet_recommendations."""
-    for pick in top5_picks:
+    """Write curated grades and rankings back to bet_recommendations."""
+    for pick in graded_picks:
         conn.execute("""
             UPDATE bet_recommendations
-            SET is_curated = 1, curated_rank = ?
+            SET curation_grade = ?,
+                is_curated = ?,
+                curated_rank = ?
             WHERE id = ?
-        """, (pick['rank'], pick['bet_id']))
+        """, (
+            pick['grade'],
+            1 if pick['grade'] == 'STRONG' else 0,
+            pick.get('rank') if pick['grade'] == 'STRONG' else None,
+            pick['bet_id']
+        ))
         if verbose:
-            print(f"  [DB] Marked bet {pick['bet_id']} as curated rank {pick['rank']}")
+            print(f"  [DB] Marked bet {pick['bet_id']} as {pick['grade']} rank {pick.get('rank', 'N/A')}")
 
     for bet in flagged_bets:
         conn.execute("""
@@ -582,14 +619,13 @@ CORRELATED_STAT_PAIRS = {
 }
 
 
-def _detect_same_game_pairs(top5_picks: list[dict], bet_map: dict) -> list[dict]:
+def _detect_same_game_pairs(strong_picks: list[dict], bet_map: dict) -> list[dict]:
     """
-    Phase 8.26 — Scan Top 5 for same-game pairs and assess SGP correlation risk.
-    Returns list of flagged pair dicts: {players, matchup, risk, reason}
+    Scan STRONG picks for same-game pairs and assess SGP correlation risk.
     """
     from collections import defaultdict
     game_groups: dict[str, list] = defaultdict(list)
-    for pick in top5_picks:
+    for pick in strong_picks:
         bet = bet_map.get(pick['bet_id'])
         if not bet:
             continue
@@ -648,98 +684,104 @@ def _escape_markdown_v2(text: str) -> str:
 
 
 def _send_telegram_card(
-    top5_picks: list[dict],
+    graded_picks: list[dict],
     bet_map: dict[int, dict],
+    dossier: dict,
     run_date: str,
     flagged_count: int,
     claude_available: bool,
     sgp_flags: list[dict] | None = None,
 ) -> None:
-    """Send formatted Top 5 card to Telegram via send_message()."""
+    """Send formatted Top Plays card to Telegram."""
     date_str = datetime.strptime(run_date, '%Y-%m-%d').strftime('%b %d, %Y')
     mode_tag = 'AI-Curated' if claude_available else 'Edge-Sorted (AI unavailable)'
 
-    lines = [
-        f"🎯 *TOP 5 PLAYS — {_escape_markdown_v2(date_str)}*",
-        f"_{_escape_markdown_v2(mode_tag)} \\| S\\.A\\.V\\.A\\.G\\.E\\. Protocol_",
-        "",
-    ]
+    # Filter to STRONG only for the main card, limit to top 10
+    strong_picks = [p for p in graded_picks if p['grade'] == 'STRONG']
+    strong_picks.sort(key=lambda p: p.get('rank', 999))
+    strong_picks = strong_picks[:10]
 
-    rank_emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
+    header = f"🎯 *TOP PLAYS — {_escape_markdown_v2(date_str)}*"
+    subheader = f"_{_escape_markdown_v2(mode_tag)} \\| S\\.A\\.V\\.A\\.G\\.E\\. Protocol_"
+    
+    rank_emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
-    for pick in sorted(top5_picks, key=lambda p: p['rank']):
-        bet = bet_map.get(pick['bet_id'])
-        if not bet:
-            continue
+    def _build_card(picks_slice):
+        lines = [header, subheader, ""]
+        for pick in picks_slice:
+            bet = bet_map.get(pick['bet_id'])
+            if not bet: continue
+            
+            rank = pick.get('rank', 0)
+            rank_emoji = rank_emojis[rank - 1] if 1 <= rank <= 10 else f"{rank}\\."
+            tier = bet.get('confidence_tier', 'N/A')
+            tier_emoji = TIER_EMOJI.get(tier, '📌')
 
-        rank_emoji = rank_emojis[pick['rank'] - 1] if 1 <= pick['rank'] <= 5 else f"{pick['rank']}\\."
-        tier = bet.get('confidence_tier', 'N/A')
-        tier_emoji = TIER_EMOJI.get(tier, '📌')
+            if bet.get('bet_side', '').upper() == 'OVER':
+                odds = bet.get('odds_over')
+            else:
+                odds = bet.get('odds_under')
+            odds_str = f" @ {odds}" if odds else ""
 
-        if bet.get('bet_side', '').upper() == 'OVER':
-            odds = bet.get('odds_over')
-        else:
-            odds = bet.get('odds_under')
-        odds_str = f" @ {odds}" if odds else ""
+            # Escape strings
+            pname_esc = _escape_markdown_v2(bet['player_name'])
+            stat_esc = _escape_markdown_v2(bet['stat_category'])
+            side_esc = _escape_markdown_v2(str(bet['bet_side']))
+            line_esc = _escape_markdown_v2(str(bet['line']))
+            odds_esc = _escape_markdown_v2(odds_str)
+            matchup_esc = _escape_markdown_v2(bet.get('matchup', 'Unknown'))
+            edge_esc = _escape_markdown_v2(f"{bet.get('true_edge', 0):.1f}")
+            proj_esc = _escape_markdown_v2(str(bet.get('projection', 'N/A')))
+            tier_esc = _escape_markdown_v2(tier)
 
-        # Escape all user-content strings
-        player_name_escaped = _escape_markdown_v2(bet['player_name'])
-        stat_escaped = _escape_markdown_v2(bet['stat_category'])
-        bet_side_escaped = _escape_markdown_v2(str(bet['bet_side']))
-        line_escaped = _escape_markdown_v2(str(bet['line']))
-        odds_str_escaped = _escape_markdown_v2(odds_str) if odds_str else ""
+            lines.append(f"{rank_emoji} *{pname_esc}* — {stat_esc} {side_esc} {line_esc}{odds_esc}")
+            lines.append(f"{tier_emoji} {tier_esc} \\| Edge: \\+{edge_esc}% \\| Proj: {proj_esc} \\| {matchup_esc}")
+            
+            # Game context from dossier
+            gid = bet.get('game_id')
+            if gid in dossier:
+                ctx = dossier[gid]['game_context'].split('\n')[1] # Get the NEWS line or first relevant line
+                if 'NEWS:' in ctx:
+                    ctx = ctx.replace('NEWS:', '').strip()
+                lines.append(f"📋 _{_escape_markdown_v2(ctx[:100])}\\.\\.\\._")
 
-        matchup = bet.get('matchup') or (
-            f"{bet.get('away_team', '?')} @ {bet.get('home_team', '?')}"
-        )
-        matchup_escaped = _escape_markdown_v2(matchup)
+            if pick.get('reasoning'):
+                reason_esc = _escape_markdown_v2(pick['reasoning'])
+                lines.append(f"💬 _{reason_esc}_")
+            lines.append("")
+        
+        return "\n".join(lines)
 
-        edge = bet.get('true_edge') or 0
-        tier_escaped = _escape_markdown_v2(tier)
-        proj_escaped = _escape_markdown_v2(str(bet.get('projection', 'N/A')))
+    # Split into multiple sends if more than 5
+    if len(strong_picks) > 5:
+        cards = [_build_card(strong_picks[:5]), _build_card(strong_picks[5:])]
+    else:
+        cards = [_build_card(strong_picks)]
 
-        lines.append(
-            f"{rank_emoji} *{player_name_escaped}* — "
-            f"{stat_escaped} {bet_side_escaped} {line_escaped}{odds_str_escaped}"
-        )
-        lines.append(
-            f"{tier_emoji} {tier_escaped} \\| Edge: \\+{_escape_markdown_v2(f'{edge:.1f}')}% \\| "
-            f"Proj: {proj_escaped} \\| {matchup_escaped}"
-        )
-        if pick.get('reasoning'):
-            reasoning_escaped = _escape_markdown_v2(pick['reasoning'])
-            lines.append(f"💬 _{reasoning_escaped}_")
-        lines.append("")
+    for i, message in enumerate(cards):
+        # Add footer only to last card
+        if i == len(cards) - 1:
+            footer = []
+            if sgp_flags:
+                risk_emoji = {'HIGH': '🔴', 'MODERATE': '🟡', 'LOW': '🟢'}
+                footer.append("🔗 *SGP RISK:*")
+                for flag in sgp_flags:
+                    emoji = risk_emoji.get(flag['risk'], '⚠️')
+                    p_esc = _escape_markdown_v2(flag['players'])
+                    m_esc = _escape_markdown_v2(flag['matchup'])
+                    r_esc = _escape_markdown_v2(flag['reason'])
+                    footer.append(f"{emoji} {p_esc} \\({m_esc}\\)")
+                    footer.append(f"   _{r_esc}_")
+                footer.append("")
 
-    # Phase 8.26 — Same-game pair correlation flags
-    if sgp_flags:
-        risk_emoji = {'HIGH': '🔴', 'MODERATE': '🟡', 'LOW': '🟢'}
-        lines.append("🔗 *SGP RISK:*")
-        for flag in sgp_flags:
-            emoji = risk_emoji.get(flag['risk'], '⚠️')
-            players_esc = _escape_markdown_v2(flag['players'])
-            matchup_esc = _escape_markdown_v2(flag['matchup'])
-            reason_esc = _escape_markdown_v2(flag['reason'])
-            lines.append(f"{emoji} {players_esc} \\({matchup_esc}\\)")
-            lines.append(f"   _{reason_esc}_")
-        lines.append("")
+            if flagged_count > 0:
+                footer.append(f"⚠️ *Flagged:* {flagged_count} bet\\(s\\) removed by injury sanity gate")
+            footer.append("_Edge is model output\\. Not financial advice\\._")
+            message += "\n" + "\n".join(footer)
 
-    if flagged_count > 0:
-        lines.append(
-            f"⚠️ *Flagged \\(not in top 5\\):* {flagged_count} bet\\(s\\) removed by injury sanity gate"
-        )
-    lines.append("_Edge is model output\\. Not financial advice\\._")
-
-    message = '\n'.join(lines)
-    success = send_message(message, parse_mode="MarkdownV2")
-    if not success:
-        print("[WARNING] MarkdownV2 Telegram card failed to send — retrying as plain text")
-        success = send_message(message, parse_mode=None)
+        success = send_message(message, parse_mode="MarkdownV2")
         if not success:
-            err_msg = "[CRITICAL] Final attempt to send Top 5 card failed. Telegram notifications may be down."
-            print(err_msg)
-            send_solomon_message(f"🚨 *Curation Alert* 🚨\n\n{_escape_markdown_v2(err_msg)}")
-            # The workflow can continue, no sys.exit(1) needed as this is a notification failure, not a data failure.
+            send_message(message, parse_mode=None)
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -788,6 +830,9 @@ def main() -> None:
 
         print(f"[INFO] Found {len(bets)} bets to process\n")
 
+        # ── Build game dossier (NEW)
+        dossier = build_game_dossier(conn, run_date, bets)
+
         # ─────────────────────────────────────────────────────────
         # STAGE 1: Haiku Sanity Gate
         # ─────────────────────────────────────────────────────────
@@ -835,25 +880,26 @@ def main() -> None:
             return
 
         # ─────────────────────────────────────────────────────────
-        # STAGE 2: Sonnet Top 5 Curation
+        # STAGE 2: Sonnet Curation
         # ─────────────────────────────────────────────────────────
-        print(f"[STAGE 2] Sonnet Top 5 — curating from {len(passing_bets)} passing bets...")
+        print(f"[STAGE 2] Sonnet Curation — grading {len(passing_bets)} passing bets...")
 
-        sonnet_result = _sonnet_curate(passing_bets, verbose=verbose)
+        sonnet_result = _sonnet_curate(passing_bets, dossier, verbose=verbose)
         claude_available = sonnet_result is not None
 
         if not claude_available:
             print("[WARNING] Claude unavailable — using edge-sorted deterministic fallback")
-            top5_picks = _deterministic_top5(passing_bets)
+            graded_picks = _deterministic_top(passing_bets)
         else:
-            top5_picks = sonnet_result
+            graded_picks = sonnet_result
 
         # Build ID → bet lookup for output and Telegram
         bet_map: dict[int, dict] = {b['id']: b for b in bets}
 
         # ── Print summary
-        print(f"\n[RESULT] Top {len(top5_picks)} curated plays:")
-        for pick in sorted(top5_picks, key=lambda p: p['rank']):
+        strong_picks = [p for p in graded_picks if p['grade'] == 'STRONG']
+        print(f"\n[RESULT] {len(strong_picks)} STRONG plays found:")
+        for pick in sorted(strong_picks, key=lambda p: p.get('rank', 999)):
             bet = bet_map.get(pick['bet_id'], {})
             tier = bet.get('confidence_tier', 'N/A')
             edge = bet.get('true_edge') or 0
@@ -871,16 +917,18 @@ def main() -> None:
             print("\n[DRY RUN] Skipping DB writes and Telegram send")
         else:
             print("\n[INFO] Writing curation results to DB...")
-            _write_curation_results(conn, top5_picks, flagged_bets, verbose=verbose)
+            _write_curation_results(conn, graded_picks, flagged_bets, verbose=verbose)
 
-            print("[INFO] Sending Top 5 card to Telegram...")
-            # Phase 8.26 — Detect same-game correlation pairs
-            sgp_flags = _detect_same_game_pairs(top5_picks, bet_map)
+            print("[INFO] Sending curation card to Telegram...")
+            # Detect same-game correlation pairs for STRONG picks
+            sgp_flags = _detect_same_game_pairs(strong_picks, bet_map)
             if sgp_flags:
-                print(f"[PHASE 8.26] {len(sgp_flags)} same-game pair(s) detected for SGP warning")
+                print(f"[SGP] {len(sgp_flags)} same-game pair(s) detected for warning")
+            
             _send_telegram_card(
-                top5_picks=top5_picks,
+                graded_picks=graded_picks,
                 bet_map=bet_map,
+                dossier=dossier,
                 run_date=run_date,
                 flagged_count=len(flagged_bets),
                 claude_available=claude_available,
@@ -892,13 +940,13 @@ def main() -> None:
             # Attempt to get token usage from api_monitor if available
             from utils.api_monitor import get_monitor  # noqa: F401 (imported for side-effects/future use)
 
-            # Get current session's Claude usage (if any)
-            haiku_calls = len([b for b in bets if b.get('_injury_note', 'No injury') != 'No injury on record'])
+            # Get current session's Claude usage
+            haiku_calls = len(bets)
             sonnet_calls = 1 if claude_available else 0
 
             # Rough estimates based on typical usage
-            haiku_tokens_est = haiku_calls * 150  # ~100 in, ~50 out per call
-            sonnet_tokens_est = sonnet_calls * 1200  # ~800 in, ~400 out
+            haiku_tokens_est = haiku_calls * 1200  # ~1100 in, ~100 out per call
+            sonnet_tokens_est = sonnet_calls * 35000  # Input is large now
 
             # Cost estimates (Haiku: $0.80/$4 per 1M, Sonnet: $3/$15 per 1M)
             haiku_cost_est = (haiku_tokens_est * 0.80 / 1_000_000) + (haiku_tokens_est * 4 / 1_000_000)
@@ -908,14 +956,14 @@ def main() -> None:
             print(f"\n[TOKEN COST] Estimated usage this run:")
             print(f"  Haiku: {haiku_calls} calls, ~{haiku_tokens_est:,} tokens, ~${haiku_cost_est:.4f}")
             print(f"  Sonnet: {sonnet_calls} calls, ~{sonnet_tokens_est:,} tokens, ~${sonnet_cost_est:.4f}")
-            print(f"  Total: ~${total_cost_est:.4f} (target: $0.08/day)")
+            print(f"  Total: ~${total_cost_est:.4f}")
         except Exception:
             # If api_monitor not available, skip token reporting
             pass
 
         print(
             f"\n[DONE] Phase 8.5 complete — "
-            f"{len(top5_picks)} curated, {len(flagged_bets)} flagged"
+            f"{len(strong_picks)} curated, {len(flagged_bets)} flagged"
         )
 
     finally:
