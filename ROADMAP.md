@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 9:53 PM EST
+**Last Updated:** Wednesday, March 4, 2026 — 12:02 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** Full scripts audit — P0/P1/P2 fixes (13 files) + 25 dead scripts archived/deleted → 100% audit coverage ✅ + Utils audit — P0/P1/P2 fixes (10 files, `claude_logger`, `wowy_calculator`, `game_notes_cache`, etc.) + 3 dead files archived → 100% codebase coverage ✅ + Employee onboarding sprint — soul files + Discord + Solomon Bot 2 + Gemini SOUL/ONBOARDING ✅
+**Completed:** QA report fix — 4 dirty canonical IDs (`player_canonical_ids`), dead `validate_schema.py` refs removed, `claude-code-action@v1` aligned ✅ + OAuth token restoration — `CLAUDE_CODE_OAUTH_TOKEN` secret + `CLAUDE_TOKEN_EXPIRES_AT` Variable fix ✅ + `/ludi-audit` Check 5 (Tank01 composite ID contamination) + Henrik/Vera BERT training update ✅
 
 This is the single source of truth for project tasks and priorities.
 
