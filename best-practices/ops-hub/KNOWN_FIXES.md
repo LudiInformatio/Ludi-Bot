@@ -15,7 +15,7 @@
 
 **Fix:** Pin all 4 action workflows to last known good SHA:
 ```yaml
-uses: anthropics/claude-code-action@733672087e04818a00b5ff8ba13d1360
+uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
 # March 2, 2026 16:38 UTC — before breaking bumps
 ```
 Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`, `claude.yml`.

@@ -115,7 +115,7 @@ jobs:
 
       - name: Claude Ops Diagnosis
         id: claude
-        uses: anthropics/claude-code-action@733672087e04818a00b5ff8ba13d1360
+        uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
