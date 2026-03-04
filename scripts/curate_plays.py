@@ -405,6 +405,9 @@ def _sonnet_curate(passing_bets: list[dict], verbose: bool = False) -> list[dict
         wr_context = ""
 
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+    # Part 6B: Performance-Weighted Selection Guidance
+    system_prompt += "\n\nPrefer UNDER bets on BLK, 3PM, and STL — these have historically outperformed. Be conservative selecting OVER bets on PTS, AST, and 3PM unless the edge and injury context are compelling."
+    
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 

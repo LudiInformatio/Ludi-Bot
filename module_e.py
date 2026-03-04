@@ -104,38 +104,38 @@ class LudiCalibrator:
         }
         
         # 2025-26 VERIFIED DEFENSIVE STYLES
-        # Season-long dynamic alignment (2025-10-01 to 2026-02-12), mapped to Module E categories
+        # Season-long dynamic alignment (2025-10-01 to 2026-03-04), updated pre-Sprint 2
         self.DEFENSIVE_STYLES = {
-            "ATL": "FUNNEL",
-            "BOS": "NEUTRAL",
+            "ATL": "BLITZ",
+            "BOS": "PAINT_PACK",
             "BKN": "PERIMETER",
-            "CHA": "PAINT_PACK",
+            "CHA": "PERIMETER",
             "CHI": "PAINT_PACK",
             "CLE": "PAINT_PACK",
             "DAL": "NEUTRAL",
-            "DEN": "NEUTRAL",
+            "DEN": "PAINT_PACK",
             "DET": "NEUTRAL",
             "GSW": "PERIMETER",
-            "HOU": "BLITZ",
-            "IND": "FUNNEL",
-            "LAC": "FUNNEL",
-            "LAL": "PAINT_PACK",
+            "HOU": "NEUTRAL",
+            "IND": "PAINT_PACK",
+            "LAC": "PAINT_PACK",
+            "LAL": "NEUTRAL",
             "MEM": "PAINT_PACK",
-            "MIA": "NEUTRAL",
-            "MIL": "PERIMETER",
+            "MIA": "PAINT_PACK",
+            "MIL": "NEUTRAL",
             "MIN": "PAINT_PACK",
-            "NOP": "PAINT_PACK",
-            "NYK": "PERIMETER",
-            "OKC": "PAINT_PACK",
-            "ORL": "NEUTRAL",
-            "PHI": "BLITZ",
+            "NOP": "NEUTRAL",
+            "NYK": "PAINT_PACK",
+            "OKC": "NEUTRAL",
+            "ORL": "PERIMETER",
+            "PHI": "PAINT_PACK",
             "PHX": "PERIMETER",
             "POR": "NEUTRAL",
-            "SAC": "NEUTRAL",
-            "SAS": "PERIMETER",
-            "TOR": "PAINT_PACK",
+            "SAC": "PERIMETER",
+            "SAS": "PAINT_PACK",
+            "TOR": "PERIMETER",
             "UTA": "NEUTRAL",
-            "WAS": "NEUTRAL"
+            "WAS": "PERIMETER"
         }
         cache_loaded = self._load_cached_defensive_styles()
         if not cache_loaded:

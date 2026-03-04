@@ -247,6 +247,11 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 - **`games` table column is `date`** — NOT `game_date`. `bet_recommendations` uses `game_date`, but `games` uses `date`. Querying `games.game_date` returns "no such column". Common mistake in new scripts.
 - **`start_time` from JSON cache is a string** — `save_games_cache()` serializes `datetime` → string. After `load_games_cache()`, always parse with `datetime.fromisoformat(start_time)` before accessing `.tzinfo` or comparing with `datetime.now()`.
 - **Tank01 `getNBADepthCharts` format change (2026-03)** — Tank01 changed response from `{"ATL": {...}}` (dict keyed by team) to `[{"teamAbv": "ATL", ...}]` (list of 30 objects). `utils/tank01_client.get_depth_charts()` normalizes both → always returns dict. Also: Tank01 depth charts use BDL-style abbreviations (NY/GS/NO/PHO/SA) — `normalize_bdl_abbr()` is applied automatically inside `get_depth_charts()`. Do NOT call it again at the call site.
+- **Team Defensive Schemes (2025-26)** — Sync'd with `team_scheme_cache` (Mar 4):
+  - **PAINT_PACK**: BOS, CHI, CLE, DEN, IND, LAC, MEM, MIA, MIN, NYK, PHI, SAS
+  - **BLITZ**: ATL
+  - **PERIMETER**: BKN, CHA, GSW, ORL, PHX, SAC, TOR, WAS
+  - **NEUTRAL**: DAL, DET, HOU, LAL, MIL, NOP, OKC, POR, UTA
 - **ROADMAP.md Template Contract** — When any agent updates `ROADMAP.md`, preserve these patterns so `utils/pm_bot.py` parses correctly:
   - `**Active Work:**` — short phrase(s) separated by ` + `. First segment = current sprint focus (shown in break messages).
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).

@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-03-04 — Canonical ID Remediation: 43,930 dirty rows across 11 tables
+
+**Symptom:** Tank01 changed player ID format Jan 2026 (6-7 digit NBA IDs → 8-11 digit composites). 40 entries in `player_canonical_ids` had dirty PKs, poisoning 7+ downstream tables. `validate_canonical_ids.py -v` showed 96.83% clean, 2,568 orphans.
+
+**Root cause:** No database-layer firewall existed (documented in `STATUS_HISTORY.md` Jan 20 but never built). Ghost Protocol, BDL Season Averages, and Module H wrote IDs with zero validation.
+
+**Fix:** `scripts/fix_canonical_ids.py` — one-time remediation. Key patterns:
+- Name-based resolution: each table has different dirty IDs for the same player. Resolve by `normalize_for_lookup(player_name)` → `player_canonical_ids.normalized_name`, not by ID map.
+- "Last, First" reversal: `player_game_opponent` uses PBP Stats format. `normalize_for_lookup()` detects comma → reverses.
+- UNIQUE constraint: DELETE overlapping dirty rows (same game_date + clean ID already exists) before UPDATE remaining.
+- Firewall: `resolve_player_id_for_insert()` in `database.py` (4-tier) prevents future contamination.
+
+**Result:** 43,930 → 1,867 dirty rows (95.7% cleaned). Remaining are historical/inactive players not in `player_canonical_ids`.
+
+---
+
 ## 2026-03-04 — bet_recommendations: 17,202 duplicate rows from pipeline re-runs
 
 **Symptom:** L10 P&L shows extreme unit totals (-198u when true figure is ~-55u). Bet count for a 10-game slate shows 2,439 rows instead of expected ~600. `void_dnp` rate appears elevated but win rate % looks correct.

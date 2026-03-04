@@ -385,6 +385,18 @@ def _get_news_catalysts(conn, date: str) -> str:
 import argparse
 
 
+# --- DISPLAY BOOSTS ---
+# Display score boosts for top-3 selection — based on historical WR (post-audit)
+CATEGORY_DISPLAY_BOOST = {
+    ('blk', 'under'):  8.0,   # 69.1% WR (best category)
+    ('3pm', 'under'):  5.0,   # 60.4% WR
+    ('stl', 'under'):  3.0,   # 57.7% WR
+    ('pts', 'over'):  -5.0,   # 49.9% WR
+    ('ast', 'over'):  -5.0,   # 49.5% WR
+    ('3pm', 'over'):  -8.0,   # 45.1% WR
+    ('reb', 'over'):  -8.0,   # 43.6% WR (hard-filtered at generation, safety net here)
+}
+
 class MorningBriefEngine:
     def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None, force_fresh=False):
         print("\n" + "="*50)
@@ -642,6 +654,7 @@ class MorningBriefEngine:
                 # BENEFICIARY tag bonus=1.0 (usage vacuum games have high narrative value)
                 # Top 5 plays (curate_plays.py) are independent and board-wide — not tied to game selection
                 _tier_weights = {'DIAMOND': 4.0, 'BLUE CHIP': 2.5, 'CORE ASSET': 1.0, 'THE STEAL': 0.5}
+                
                 _INJURY_KWS = ["out", "ruled out", "scratch", "game-time", "gtd", "doubtful"]
                 _NARRATIVE_KWS = ["revenge", "rivalry", "return", "milestone", "debut"]
 
@@ -906,8 +919,16 @@ Return JSON only."""
                             )
 
                     # 5. Edges Block (Top 3 bets)
-                    # Sort by edge descending
-                    sorted_bets = sorted(bets, key=lambda x: x.get('edge', 0), reverse=True)[:3]
+                    # Sort by display score (historical WR weight)
+                    def _display_score(b):
+                        base = b.get('edge', 0)
+                        stat = b.get('stat', '').lower()
+                        # Normalize stat to blk, 3pm, stl, pts, ast, reb
+                        stat_map = {'blocks': 'blk', 'steals': 'stl', '3pt made': '3pm', 'points': 'pts', 'assists': 'ast', 'rebounds': 'reb'}
+                        canonical_stat = stat_map.get(stat, stat)
+                        key = (canonical_stat, b.get('bet_on', '').lower())
+                        return base + CATEGORY_DISPLAY_BOOST.get(key, 0.0)
+                    sorted_bets = sorted(bets, key=_display_score, reverse=True)[:3]
                     edges_lines = []
                     for b in sorted_bets:
                         edges_lines.append(

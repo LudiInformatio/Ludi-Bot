@@ -209,15 +209,14 @@ if spread > 7.0:
 
 **Example Matchups**:
 - STRETCH_BIG vs PAINT_PACK defense -> +15% 3PM/3PA
-- SLASHER vs HACKERS defense -> +20% FTA
+- SLASHER vs BLITZ defense -> +12% FTA
 - RIM_RUNNER vs PERIMETER defense -> +30% OREB
 
-**Team Defense Schemes (2025-26)**:
-- PAINT_PACK: OKC, BOS, DET, MIN, SAS, ORL
-- BLITZ: HOU, TOR, MIA, PHX
-- PERIMETER: GSW, DAL, NYK
-- FUNNEL: WAS, ATL, CHI, UTA, SAC
-- HACKERS: IND, CHA, POR
+**Team Defense Schemes (2025-26)** — Updated Mar 4 (Sprint 2):
+- **PAINT_PACK**: BOS, CHI, CLE, DEN, IND, LAC, MEM, MIA, MIN, NYK, PHI, SAS
+- **BLITZ**: ATL
+- **PERIMETER**: BKN, CHA, GSW, ORL, PHX, SAC, TOR, WAS
+- **NEUTRAL**: DAL, DET, HOU, LAL, MIL, NOP, OKC, POR, UTA
 
 ### 5. Tag Classification System
 **What it does**: Assigns searchable tags to betting recommendations for filtering, analysis, and pattern recognition.
@@ -225,7 +224,7 @@ if spread > 7.0:
 **Tag Categories:**
 1. **ARCHETYPE TAGS** (1 per player): STRETCH_BIG, SLASHER, SNIPER, RIM_RUNNER, HELIOCENTRIC, GENERALIST
 2. **SCENARIO TAGS** (0-4 per player): BENEFICIARY, USAGE_VACUUM, MINUTES_LIMIT, HOT_STREAK
-3. **MATCHUP TAGS** (1 per game): vs_PAINT_PACK, vs_BLITZ, vs_PERIMETER, vs_FUNNEL, vs_HACKERS, vs_NEUTRAL
+3. **MATCHUP TAGS** (1 per game): vs_PAINT_PACK, vs_BLITZ, vs_PERIMETER, vs_NEUTRAL
 4. **MARKET TAGS** (0-n per bet): CORRELATED_SGP, CONTRARIAN, STEAM_MOVE, CLOSING_VALUE
 
 ---

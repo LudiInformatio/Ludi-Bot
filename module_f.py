@@ -69,14 +69,16 @@ _STAT_RMSE = {
     'pa':  4.80,  'pr': 4.96,  'pra': 5.51,
 }
 #
-# --- STAT EDGE MINIMUMS (V5.4) ---
+# --- STAT EDGE MINIMUMS (V5.5 Calibration) ---
 STAT_EDGE_MINIMUMS = {
     'blk':   3.0,   # Blocks UNDER — structural edge, even 3% wins 70.7%
     'blocks': 3.0,
-    'pts':   {'over': 8.0, 'under': 7.0},   # 19.5% overconfident both sides
-    'reb':   {'over': 9.0, 'under': 6.0},   # REB OVER degrading (39.7% WR)
-    'ast':   6.0,                             # 13% overconfident
-    'pra':   {'over': 999.0, 'under': 6.0},  # PRA OVER = skip (STRUCTURAL_LOSERS covers this)
+    'pts':   {'over': 12.0, 'under': 7.0},  # raised: 8→12 (49.9% OVER WR, 33% avg edge)
+    'reb':   {'over': 999.0, 'under': 6.0}, # safety net — already hard-filtered
+    'ast':   {'over': 10.0, 'under': 5.0},  # directional split (was flat 6.0)
+    'stl':   {'over': 8.0, 'under': 4.0},   # added: STL OVER 49% WR, avg_edge only 4.8%
+    '3pm':   {'over': 8.0, 'under': 4.0},   # added: 3PM OVER 45% WR (supplements volume filter)
+    'pra':   {'over': 999.0, 'under': 6.0}, # PRA OVER = skip (STRUCTURAL_LOSERS covers this)
     'pa':    {'over': 999.0, 'under': 6.0},
 }
 DEFAULT_EDGE_MIN = 5.0
@@ -1087,9 +1089,9 @@ class LudiReporter:
           + 0.05 * ref_sig
         )
 
-        if prop_confidence_score >= 0.68:
+        if prop_confidence_score >= 0.65:      # Same signal required for promotion (V5.5)
             tier_score += 1
-        elif prop_confidence_score <= 0.38:
+        elif prop_confidence_score <= 0.45:    # Demote more mid-range bets (was 0.38)
             tier_score -= 1
 
         # Clamp to valid range [0, 3]
