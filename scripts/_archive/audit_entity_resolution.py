@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Replaced by validate_canonical_ids.py in data_sync.yml
 #!/usr/bin/env python3
 """Audit canonical ID and team-abbreviation consistency."""
 
@@ -34,6 +35,7 @@ def main() -> int:
 
     try:
         conn = sqlite3.connect(args.db)
+        conn.execute("PRAGMA busy_timeout=30000")
     except sqlite3.Error as exc:
         print(f"[error] could not open database '{args.db}': {exc}")
         return 2

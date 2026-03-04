@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Pipeline output validation — not scheduled
 #!/usr/bin/env python3
 """
 Post-pipeline canary checks for Ludi-Bot.

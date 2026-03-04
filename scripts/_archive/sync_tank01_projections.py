@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Read-only benchmark — never used in pipeline
 #!/usr/bin/env python3
 """
 Sync Tank01 fantasy projections → tank01_projections table.

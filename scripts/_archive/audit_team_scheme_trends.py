@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Replaced by update_team_scheme_cache.py in data_sync.yml
 #!/usr/bin/env python3
 """
 Audit team offensive/defensive scheme classifications over multiple windows.

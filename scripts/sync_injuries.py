@@ -583,7 +583,8 @@ class InjurySync:
                         espn_time = datetime.fromisoformat(espn_time_str.replace('Z', '+00:00'))
                         if espn_time.tzinfo: espn_time = espn_time.replace(tzinfo=None)
                         espn_age_hours = (datetime.now() - espn_time).total_seconds() / 3600
-                    except:
+                    except (ValueError, TypeError, AttributeError) as e:
+                        print(f"[sync_injuries] Failed to parse ESPN timestamp {espn_time_str!r}: {e}")
                         espn_age_hours = 0
 
                     espn_cat = get_category(espn_status)

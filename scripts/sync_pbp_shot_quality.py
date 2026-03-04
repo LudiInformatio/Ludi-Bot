@@ -24,6 +24,7 @@ from utils.pbp_stats_client import get_totals, get_all_players
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.row_factory = sqlite3.Row
     return conn
 

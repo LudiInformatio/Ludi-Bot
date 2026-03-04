@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — YAML validation — not scheduled
 #!/usr/bin/env python3
 """
 Workflow Validation Script

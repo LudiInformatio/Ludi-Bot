@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Useful template but not automated — no workflow
 #!/usr/bin/env python3
 """
 LUDI INFORMATIO | WEEKLY ZEBRA REPORT

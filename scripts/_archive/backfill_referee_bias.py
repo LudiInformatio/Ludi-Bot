@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — One-time backfill completed Feb 28 2026 — keep for emergency data rollback
 #!/usr/bin/env python3
 """
 Historical backfill for referee_player_bias table.

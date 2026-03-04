@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Replaced by sync_bdl_season_averages.py (BDL V2, Feb 22 2026)
 #!/usr/bin/env python3
 """
 Synergy Playtype Scraper (Ghost Protocol)

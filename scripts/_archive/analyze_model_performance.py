@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Backtest rolled into build_stat_confidence.py (weekly_validation.yml)
 #!/usr/bin/env python3
 """
 Model Performance Analysis Script (Enhanced V2.0)
@@ -41,6 +42,7 @@ class ModelPerformanceAnalyzer:
     def __init__(self, db_path='ludi.db'):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
+        self.conn.execute("PRAGMA busy_timeout=30000")
         self.conn.row_factory = sqlite3.Row
 
         # Data containers

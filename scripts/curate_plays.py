@@ -39,7 +39,7 @@ import config
 # ─── Reused Infrastructure (do NOT rewrite these) ─────────────────────────────
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
 from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
-from utils.telegram_notifier import send_message
+from utils.telegram_notifier import send_message, send_solomon_message
 from utils.player_id_resolver import resolve_canonical_name
 
 # ─── Constants ────────────────────────────────────────────────────────────────
@@ -733,9 +733,10 @@ def _send_telegram_card(
         print("[WARNING] MarkdownV2 Telegram card failed to send — retrying as plain text")
         success = send_message(message, parse_mode=None)
         if not success:
-            print("[CRITICAL] Plain text retry failed. Telegram notifications are down. Exiting to trigger Ops Hub.")
-            import sys
-            sys.exit(1)
+            err_msg = "[CRITICAL] Final attempt to send Top 5 card failed. Telegram notifications may be down."
+            print(err_msg)
+            send_solomon_message(f"🚨 *Curation Alert* 🚨\n\n{_escape_markdown_v2(err_msg)}")
+            # The workflow can continue, no sys.exit(1) needed as this is a notification failure, not a data failure.
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────

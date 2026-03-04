@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Schema validation — consider wiring into claude-qa-check.yml in future
 #!/usr/bin/env python3
 """
 Database Schema Validation Script (Phase 8.12)

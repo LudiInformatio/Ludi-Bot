@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — One-off audit — not operational
 #!/usr/bin/env python3
 """
 Audit Synergy data quality and scale consistency.

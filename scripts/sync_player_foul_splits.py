@@ -200,6 +200,7 @@ def sync_foul_splits(dry_run: bool = False, window_days: int = 60):
     print("=" * 60)
     
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA busy_timeout=30000")
     
     try:
         cursor = conn.cursor()

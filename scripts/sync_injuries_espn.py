@@ -235,6 +235,9 @@ def sync_to_db(injuries: list, conn: sqlite3.Connection,
                     "WHERE normalized_name = ?",
                     (espn_athlete_id, normalized)
                 )
+        else:
+            print(f"[sync_injuries_espn] SKIPPED {player_name!r}: not in canonical lookup")
+            continue
 
         # Dedup guard: skip if identical (player, status, date) already exists today
         existing_today = cursor.execute('''

@@ -155,6 +155,7 @@ class DailyRefereeSync:
                     # The page loads today's assignments by default at 9 AM
                     today_str = date.today().strftime('%Y-%m-%d')
                     target_date = datetime.now().strftime('%Y-%m-%d')
+                    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
                     
                     if target_date and target_date != today_str:
                         # Only toggle date when fetching a non-today date

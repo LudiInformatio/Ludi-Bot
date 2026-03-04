@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — 2024-25 validation reference only
 """
 SportsDataIO Historical Data Validator
 Compares SportsDataIO 2024-25 box scores against our player_game_logs.

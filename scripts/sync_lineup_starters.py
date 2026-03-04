@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 from utils.tank01_client import get_client
+from utils.player_id_resolver import PlayerIDResolver
 
 
 logging.basicConfig(
@@ -210,11 +211,16 @@ class LineupSync:
             cursor.execute('UPDATE players SET is_starter = 0 WHERE team = ?', (team_abbr,))
             
             for starter_name in starters:
+                normalized_name = PlayerIDResolver.normalize_name(starter_name)
+                if not normalized_name:
+                    continue
                 cursor.execute('''
-                    UPDATE players 
-                    SET is_starter = 1 
-                    WHERE LOWER(name) = LOWER(?) AND team = ?
-                ''', (starter_name, team_abbr))
+                    UPDATE players SET is_starter = 1 
+                    WHERE player_id = (
+                        SELECT canonical_id FROM player_canonical_ids
+                        WHERE normalized_name = ?
+                    ) AND team = ?
+                ''', (normalized_name, team_abbr))
             
             conn.commit()
             

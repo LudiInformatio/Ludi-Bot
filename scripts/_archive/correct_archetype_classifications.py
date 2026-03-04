@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Superseded by classify_archetypes.py
 #!/usr/bin/env python3
 """
 Archetype Classification Corrector
@@ -105,7 +106,7 @@ def _apply_rules(row: dict) -> tuple[str | None, str]:
 
     # ── Rule 6: SLASHING_CREATOR without TRANSITION/drive primary → ISO_ASSASSIN
     # SLASHING_CREATOR = attacks off the dribble, transition, drives
-    # If their top synergy is SPOT_UP or ISO (not TRANSITION), they're isolation-focused
+    # If their top synergy is SPOT_UP or ISO (not TRANSITION), they're an isolation-focused
     if (arch == 'SLASHING_CREATOR'
             and s1 in ('SPOT_UP', 'ISO')
             and t2 in ('ISO_SCORER', 'SPOT_UP', 'P&R_HANDLER')

@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Replaced by build_espn_crosswalk.py in weekly_validation.yml
 #!/usr/bin/env python3
 """
 Audit Missing Canonical IDs
@@ -198,6 +199,7 @@ def main():
     args = parser.parse_args()
 
     conn = sqlite3.connect(args.db)
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.row_factory = sqlite3.Row
 
     entries = []

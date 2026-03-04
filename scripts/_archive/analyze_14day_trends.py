@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Exploratory drift analysis — no workflow, superseded by weekly_validation.yml
 #!/usr/bin/env python3
 """
 14-Day Trend Analysis Script
@@ -32,6 +33,7 @@ def _resolve_window_end(db_path: str, end_date: str = None) -> str:
         return end_date
     try:
         conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         cursor = conn.cursor()
         cursor.execute("SELECT MAX(date) FROM games")
         row = cursor.fetchone()
@@ -45,7 +47,9 @@ def _resolve_window_end(db_path: str, end_date: str = None) -> str:
 
 def get_db_connection():
     """Create database connection."""
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
 
 
 def analyze_player_drift():

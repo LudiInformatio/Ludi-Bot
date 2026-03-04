@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — One-off exploratory audit
 #!/usr/bin/env python3
 """Run temporal integrity checks for common sports analytics tables in SQLite."""
 

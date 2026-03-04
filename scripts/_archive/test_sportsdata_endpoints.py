@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Endpoint discovery tool — keep for API debugging reference
 """
 SportsDataIO Discovery Lab — Endpoint Discovery Tester
 Tests all confirmed endpoints and probes locked paths to document tier access.
