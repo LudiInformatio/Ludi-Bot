@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-03-04 — claude-code-action@v1: Breaking SDK bump → AJV crash (SHA pin workaround)
+
+**Symptom:** All `claude-code-action` runs fail immediately: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: ~300-700ms`. No API calls made. AJV schema validation stacktrace in minified JS output.
+
+**Root cause:** Anthropic pushed `@anthropic-ai/claude-agent-sdk@0.2.66` (Claude Code 2.1.66) to the `@v1` floating tag on March 4, 2026 01:17 UTC (8:17 PM EST March 3). A "fix" commit pushing SDK 0.2.68 (commit `e763fe78`) was also broken. AJV JSON schema validation crash during SDK initialization. Recurring pattern across multiple SDK versions — GitHub issues #914, #947, #853, #852, #892 all show identical `$0 cost, exit 1` signature.
+
+**Note:** Swapping `claude_code_oauth_token` → `anthropic_api_key` (commit `ce579b0`) was correct for CI/CD reliability but was not the root cause of these failures.
+
+**Fix:** Pin all 4 action workflows to last known good SHA:
+```yaml
+uses: anthropics/claude-code-action@733672087e04818a00b5ff8ba13d1360
+# March 2, 2026 16:38 UTC — before breaking bumps
+```
+Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`, `claude.yml`.
+
+**Unpin when:** Anthropic releases a stable versioned tag (`v1.1` or similar). Monitor: https://github.com/anthropics/claude-code-action/releases
+
+---
+
 ## 2026-03-03 — sync_lineup_starters: 'list' object has no attribute 'get' (Tank01 Format Change)
 
 **Symptom:** `lineup_sync.yml` reports `continue-on-error` warning. Logs show `'list' object has no attribute 'get'` for all 20 teams. Zero starters synced.
