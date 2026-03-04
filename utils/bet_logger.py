@@ -278,7 +278,7 @@ class BetLogger:
         placeholders = ','.join(['?' for _ in fields])
 
         query = f'''
-            INSERT INTO bet_recommendations ({','.join(fields)})
+            INSERT OR IGNORE INTO bet_recommendations ({','.join(fields)})
             VALUES ({placeholders})
         '''
 
@@ -346,7 +346,7 @@ class BetLogger:
 
             placeholders = ','.join(['?' for _ in fields])
             query = f'''
-                INSERT INTO bet_recommendations ({','.join(fields)})
+                INSERT OR IGNORE INTO bet_recommendations ({','.join(fields)})
                 VALUES ({placeholders})
             '''
 
