@@ -82,6 +82,7 @@ if not result:
 | `morning_brief.py` | Hit rate query + spotlight | Morning/evening brief player cards |
 | `scripts/trend_engine.py` | `get_matchup_analysis()` | All 5 matchup analysis helpers |
 | `scripts/classify_archetypes.py` | `get_player_synergy()` + `get_player_season_advanced()` | Archetype classification batch |
+| `utils/game_notes_cache.py` | L150 | player_injuries | check_cache_valid() — LOWER() not NFD-safe |
 
 ---
 

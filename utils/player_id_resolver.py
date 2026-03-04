@@ -105,6 +105,7 @@ class PlayerIDResolver:
             return self._cache[input_value]
         
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         c = conn.cursor()
         
         # Try exact canonical ID match
@@ -157,6 +158,7 @@ class PlayerIDResolver:
         canonical_id = self.resolve_to_canonical_id(input_value)
         
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         c = conn.cursor()
         c.execute('''
             SELECT pci.canonical_id, pci.full_name, pci.normalized_name, p.team, pci.position
@@ -181,6 +183,7 @@ class PlayerIDResolver:
     def add_alias(self, canonical_id: str, new_alias: str):
         """Add a new Tank01 alias to existing player."""
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         c = conn.cursor()
         
         c.execute('SELECT tank01_aliases FROM player_canonical_ids WHERE canonical_id = ?', (canonical_id,))
@@ -209,6 +212,7 @@ class PlayerIDResolver:
     def get_all_canonical_ids(self) -> list:
         """Get list of all canonical player IDs."""
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         c = conn.cursor()
         c.execute('SELECT canonical_id FROM player_canonical_ids WHERE is_active = 1')
         ids = [row[0] for row in c.fetchall()]

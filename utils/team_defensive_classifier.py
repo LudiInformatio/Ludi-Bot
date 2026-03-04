@@ -45,6 +45,7 @@ class TeamDefensiveClassifier:
             return end_date
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA busy_timeout=30000")
             cursor = conn.cursor()
             cursor.execute("SELECT MAX(date) FROM games")
             row = cursor.fetchone()
@@ -122,6 +123,7 @@ class TeamDefensiveClassifier:
     def _load_tracking_stats(self, team_name: str, games_back: int = 40) -> Dict:
         """Load team defensive stats from player_game_tracking table."""
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         cursor = conn.cursor()
         
         # Calculate defensive stats from opponent tracking data
@@ -187,6 +189,7 @@ class TeamDefensiveClassifier:
         (e.g. after the All-Star break or when recent entries haven't synced yet).
         """
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -366,6 +369,7 @@ class TeamDefensiveClassifier:
     def _load_tracking_stats_by_games(self, team_name: str, last_n_games: int, end_date: str) -> Dict:
         """Load team defensive stats using game-count window (robust against schedule gaps)."""
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
         cursor = conn.cursor()
 
         cursor.execute("""

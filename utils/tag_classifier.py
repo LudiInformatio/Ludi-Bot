@@ -129,6 +129,7 @@ class TagClassifier:
     def _load_defensive_schemes_from_cache(self) -> None:
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA busy_timeout=30000")
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='team_scheme_cache'"
@@ -182,6 +183,7 @@ class TagClassifier:
         if player_id or player_name:
             try:
                 conn = sqlite3.connect(self.db_path)
+                conn.execute("PRAGMA busy_timeout=30000")
                 cursor = conn.cursor()
                 if player_id:
                     cursor.execute("SELECT archetype FROM players WHERE player_id = ? LIMIT 1", (player_id,))

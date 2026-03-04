@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Manual test harness — not imported anywhere
 import sys
 import os
 

@@ -62,6 +62,7 @@ def log_claude_call(
         truncated = (response_text or '')[:2000]
 
         conn = sqlite3.connect(_DB_PATH)
+        conn.execute("PRAGMA busy_timeout=30000")
         conn.execute(
             """
             INSERT INTO claude_analysis_log

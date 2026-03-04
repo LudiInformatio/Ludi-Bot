@@ -109,6 +109,7 @@ class WOWYCalculator:
         """Establish database connection."""
         try:
             self.conn = sqlite3.connect(self.db_path)
+            self.conn.execute("PRAGMA busy_timeout=30000")
             self.conn.row_factory = sqlite3.Row  # Access columns by name
         except sqlite3.Error as e:
             print(f"Error connecting to database: {e}")

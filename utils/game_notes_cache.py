@@ -22,6 +22,7 @@ Cache Schema per game_key (e.g. "IND@WAS"):
 
 import json
 import sqlite3
+import unicodedata
 import os
 from pathlib import Path
 from datetime import datetime, date
@@ -30,6 +31,11 @@ from pathlib import Path as _Path
 
 
 CACHE_DIR = _Path(__file__).parent.parent / "cache"
+
+
+def _normalize_for_lookup(name: str) -> str:
+    nfkd = unicodedata.normalize('NFKD', name)
+    return ''.join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
 
 
 def get_cache_path(date_str: Optional[str] = None) -> str:
@@ -149,11 +155,11 @@ def check_cache_valid(game_key: str, conn: sqlite3.Connection, date_str: Optiona
     for player, cached_status in cached_snapshots.items():
         cursor.execute("""
             SELECT status FROM player_injuries
-            WHERE LOWER(player_name) = LOWER(?)
+            WHERE LOWER(player_name) = ?
               AND resolved_at IS NULL
             ORDER BY snapshot_time DESC
             LIMIT 1
-        """, (player,))
+        """, (_normalize_for_lookup(player),))
         
         row = cursor.fetchone()
         

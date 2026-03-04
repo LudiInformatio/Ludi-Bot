@@ -119,6 +119,7 @@ def get_notable_refs():
         
     try:
         conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA busy_timeout=30000")
         c = conn.cursor()
         
         c.execute("SELECT referee_name, avg_fouls_per_game FROM referee_profiles WHERE style='STRICT' ORDER BY avg_fouls_per_game DESC LIMIT 3")

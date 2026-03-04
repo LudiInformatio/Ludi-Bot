@@ -603,3 +603,33 @@ git push origin main                   # Runner now gets correct code
   5. **Duplicate cleanup**: `_cleanup_duplicate_rows()` deletes `(#N)` suffixed rows where bare-name exists
 - **Result**: 42 duplicates cleaned, NULL ou_percentage 48%→12%, NULL home_ats_bias 50%→8%, style distribution corrected (59 NEUTRAL + 26 STRICT vs mostly-STRICT before)
 - **Pattern 11 compliance**: `setup_page()` after `context.new_page()`, `close_popups()` after `page.goto()`, `wait_until='domcontentloaded'`
+
+---
+
+## 2026-03-03 — utils/claude_logger.py: Missing busy_timeout on Phase 8.23 log writes
+
+**Symptom:** Intermittent `database is locked` errors during concurrent pipeline runs. Claude analysis log entries silently dropped.
+
+**Root cause:** `sqlite3.connect(_DB_PATH)` at L64 has no `PRAGMA busy_timeout=30000`. Phase 8.23 fires on every Claude call — multiple concurrent writers guaranteed.
+
+**Fix:** Add `conn.execute("PRAGMA busy_timeout=30000")` after connect. Keep the `except Exception: pass` — intentional design to never let logging crash the pipeline.
+
+---
+
+## 2026-03-03 — utils/game_notes_cache.py: player_injuries query accent-unsafe
+
+**Symptom:** Game notes cache validation returns wrong result for accented players (Jokić, Nurkić). Cache records exist but query finds 0 rows.
+
+**Root cause:** L150 `WHERE LOWER(player_name) = LOWER(?)` — LOWER() doesn't strip Unicode diacritics. `player_injuries.player_name` stores canonical accented names after Feb 24 fix. Non-accented lookup misses.
+
+**Fix:** NFD-normalize input before query: `unicodedata.normalize('NFKD', name)` + strip combining chars.
+
+---
+
+## 2026-03-03 — utils/telegram_notifier.py: No startup warning for missing Solomon credentials
+
+**Symptom:** `daily_reports.yml` bet-summary shows green but zero Telegram ops alerts delivered. No error in logs.
+
+**Root cause:** `TELEGRAM_TOKEN_SOLOMON` / `TELEGRAM_CHAT_ID_SOLOMON` absent from workflow env block. `send_solomon_message()` returns False silently — no module-level check at import time.
+
+**Fix:** Add startup guard at module level: print warning if Solomon credentials are absent. Also verify workflow env block includes both secrets.

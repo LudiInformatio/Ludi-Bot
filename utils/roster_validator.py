@@ -49,7 +49,9 @@ class RosterValidator:
 
     def _get_conn(self) -> sqlite3.Connection:
         """Create a new database connection."""
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA busy_timeout=30000")
+        return conn
 
     def fetch_all_nba_teams(self) -> List[Dict]:
         """

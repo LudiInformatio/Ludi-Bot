@@ -1,6 +1,7 @@
+# ARCHIVED: 2026-03-03 — Replaced by Ghost Protocol (module_h_historian.py) — not imported anywhere
 """
 LUDI INFORMATIO | NBA API CLIENT WRAPPER
-=========================================
+========================================
 Wraps nba_api library with caching, rate limiting, and error handling.
 
 Features:

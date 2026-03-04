@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-03 — Test fixture — not imported anywhere in codebase
 from utils.render_full_report import create_briefing_card
 
 # Mock Data representing a "Morning Brief" (Aggregated Top Plays)

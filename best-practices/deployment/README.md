@@ -507,6 +507,24 @@ across Next.js redeploys; the hash suffix changes with every deploy.
 
 ---
 
+### Pattern 14 — Always-On Agent Credential Guards
+
+**Problem:** Modules that send to optional channels (Solomon bot, Slack) silently return False when credentials are missing — no startup warning, no log output. Ops alerts disappear invisibly.
+
+**Rule:** Every module that reads optional credentials must validate at import time.
+
+**Pattern:**
+```python
+# After loading env vars at module top:
+_SOLOMON_CONFIGURED = bool(TELEGRAM_TOKEN_SOLOMON) and bool(TELEGRAM_CHAT_ID_SOLOMON)
+if not _SOLOMON_CONFIGURED:
+    print("[module_name] WARNING: Solomon credentials not configured — send_solomon_message() will return False silently")
+```
+
+**Historical case:** `daily_reports.yml` bet-summary silently skipped Telegram for multiple days (Mar 1, 2026). `TELEGRAM_TOKEN_SOLOMON` absent from workflow env. Module initialized with no error. `send_solomon_message()` returned False 100% of the time.
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Consequence | Fix |

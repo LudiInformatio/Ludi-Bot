@@ -1,6 +1,6 @@
 """
 LUDI INFORMATIO | TELEGRAM NOTIFIER
-====================================
+===================================
 Utility for sending messages via Telegram Bot API
 
 Created: January 7, 2026
@@ -9,6 +9,9 @@ Purpose: Enable Telegram notifications for daily briefings, alerts, and updates
 
 import requests
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_TOKEN_SOLOMON, TELEGRAM_CHAT_ID_SOLOMON
+
+if not (TELEGRAM_TOKEN_SOLOMON and TELEGRAM_CHAT_ID_SOLOMON):
+    print("[telegram_notifier] WARNING: Solomon credentials not configured — send_solomon_message() will return False silently")
 
 
 def send_message(text: str, parse_mode: str = "Markdown") -> bool:

@@ -24,6 +24,7 @@ class TeamOffensiveClassifier:
             return end_date
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA busy_timeout=30000")
             c = conn.cursor()
             c.execute("SELECT MAX(date) FROM games")
             row = c.fetchone()
@@ -62,6 +63,7 @@ class TeamOffensiveClassifier:
         """Fetch team stats from ludi.db box scores"""
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA busy_timeout=30000")
             c = conn.cursor()
 
             # Aggregate team stats from player game logs
@@ -197,6 +199,7 @@ class TeamOffensiveClassifier:
         """Fetch team stats using game-count window instead of date range."""
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA busy_timeout=30000")
             c = conn.cursor()
 
             c.execute('''
