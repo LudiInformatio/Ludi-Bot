@@ -27,16 +27,13 @@ A production-grade autonomous analytics engine that generates player prop recomm
 - **Trend Engine** — Pre-computed L7/L10/L15 trends + live hit rate/streak for 4,500+ player-stat rows; stagger context
 - **Scoring Environment** — Dynamic 14-day OVER hit rate tracker; auto-adjusts projections + 4 data-proven OVER filters
 - **Matchup Analysis** — Archetype-vs-scheme context (`get_matchup_analysis`) injected into every Spotlight card
-- **League Rankings** — Weekly PPP rankings (P&R/ISO/Spot-Up), defensive scheme distribution, pace leaders via Telegram
 - **AI-Enhanced Pipeline** — Claude (Haiku/Sonnet) for play curation, S.A.V.A.G.E. game notes, and player spotlights
 - **Perplexity Integration** — Real-time news context injected into injury analysis, game notes, and curation
 - **Line Shopping** — NC Legal book integration with CLV tracking across 11 markets
 - **Real-time Injury Intelligence** — ESPN (15–30 min lag) + Tank01 + BDL + RotoWire/RealGM RSS; accent-safe canonical name resolution; source-scoped resolve; status severity hierarchy (OUT > DOUBTFUL > GTD)
 - **Referee Impact Modeling** — Pace, whistle tendency, and star bias factors
+- **Advanced Stats Pipeline** — BDL V2 advanced/hustle/tracking stats + SportsDataIO enrichment (`started`, fantasy pts, doubles)
 - **Dual Notification Routing** — Telegram for betting product; Slack (`vibestarters`) for ops alerts and diagnostics
-- **Slate Trends Header** — `_build_slate_trends_header()` sends injury-filtered HOT/COOLING signals once per briefing before per-game notes
-- **Advanced Stats Pipeline** — BDL V2 advanced/hustle/tracking stats + SportsDataIO enrichment (`started`, fantasy pts, doubles); Ghost Protocol reserved for on-court only
-- **Foul Intelligence** — Rolling 21-day foul splits (`player_foul_splits`, 459 players); pre-loaded at Module C init for zero-overhead per-simulation lookups
 
 ---
 
@@ -137,21 +134,20 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 
 | Workflow | Schedule (EST) | Purpose |
 |----------|---------------|---------|
-| DB Backup | 1:00 AM | Automated database backup (7-day rotation) |
+| DB Backup | 1:00 AM | Database backup (7-day rotation) + CLV closing line capture for yesterday's games |
 | Daily Data Sync | 3:00 AM | Game logs, injuries, rotation profiles, scoring environment, enrichment |
 | PBP Stats WOWY Sync | 5:00 AM Mon/Wed/Fri | PBP Stats WOWY + four-factor + team leverage profiles |
 | Daily Reports | 6:00 AM | Work notes + bet summary |
 | WOWY Sync | 7:00 AM | Daily WOWY sync |
-| Morning Briefing | 11:00 AM | AI game notes + player spotlights → Telegram (moved from 9 AM; refs+pipeline run first) |
+| Weekly Referee Sync | Mondays 9:00 AM | Weekly referee intelligence — OddsShark + Covers data via Playwright |
 | Daily Referee Sync | 9:30 AM | Scrape referee assignments |
 | Production Pipeline | 10:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
-| Evening Slate Lock | 6:00 PM | Final pre-game Telegram cards |
+| Morning Briefing | 11:00 AM | AI game notes + player spotlights → Telegram |
+| Injury Refresh | Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | Intraday injury refresh (24 runs/game day) |
+| Evening Slate Lock | 6:35 PM + 8:25 PM (west coast) | Pre-game Telegram cards; second run covers 9 PM+ tips only |
 | Nightly Debrief | 8:30 PM | Bet settlement + daily P&L |
-| Closing Line Capture | 7:30-11:30 PM | CLV capture (5 runs/night) |
-| Weekly Referee Sync | Mondays 9:00 AM | Weekly referee intelligence — OddsShark + Covers data via Playwright |
-| Injury Refresh | Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | Intraday injury refresh (9 daytime + 15 evening runs during game hours) |
 | Weekly Validation | Tuesdays | Backtest + archetype classifier + league rankings + ops digest → Slack |
-| Claude Code Review | On PR open/push | Automatic Claude code review on every pull request (Henrik's domain) |
+| Claude Code Review | On PR open/push | Automatic code review on every pull request |
 | Claude Ops Hub | On failure/cancel | Auto-diagnosis → Slack; GitHub issue creation |
 
 ---
@@ -159,7 +155,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Tuesday, March 3, 2026
+**Last Updated:** Wednesday, March 4, 2026
 
 **Phase 8 Completions:**
 
@@ -190,32 +186,14 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Module Audit Sprint (A–F) — pre-load pattern enforced across all modules; zero-DB sim loop; USG_PCT key fix; avg_ev + hit rate surfacing |
-| Infra | Module F Confidence Tier Redesign — 8-signal `prop_confidence_score`; STRUCTURAL_LOSERS filter; stat-specific edge floors; DIAMOND/BLUE CHIP tier floors fixed |
-| Infra | canonical_games table — 1,926 raw rows → 902 deduplicated; `sync_canonical_games(conn)` importable; Pattern-B JOIN inflation fixed in 5 files |
-| Infra | Full Project Audit (Sprints 0–10) — 0 critical issues; 375+ dead files removed; 4 CVE patches |
-| Infra | Injury Pipeline Hardening — ESPN fast source (15–30 min lag); accent-safe canonical name resolution; status severity hierarchy |
-| Infra | BDL V2 + SportsDataIO Enrichment — 4 sync scripts; 100K+ rows (advanced/hustle/tracking/fantasy pts/started); Ghost Protocol `--skip-advanced` |
-| Infra | Canonical Table Hardening — `player_canonical_ids` + `canonical_teams` (30 rows) + `resolve_canonical_name()` wired to 4 injection points |
-| Infra | Settlement Pipeline Hardening — date-ceiling guard; canonical name fallback; three-section report; all-void guard |
-| Infra | Hybrid Off/Def Tagging — `players.archetype` = 15 offensive; `players.defensive_tag` deterministic (5 tags) |
-| Infra | DVP Rankings — `team_dvp_by_archetype` (250 rows, 10 archetypes × 30 teams, per-100 normalized) |
-| Infra | Module E Audit (LudiCalibrator) — hybrid off/def 3-tuple return; schema drift fix; `_canonical_key()` cache consistency |
-| Infra | Sharp+P2P CLV System — 83.9% CLV coverage, avg +4.43c; PREFERRED_BOOKS sort; cache-first brief (55–65% credit reduction) |
-| Infra | Module G Zebras Audit — thresholds calibrated to 2025-26 data; L10-game window; `team_betting_trends` (30 rows) |
-| Infra | AI Employee Workforce Setup — 6 soul files; Discord server + webhooks; Solomon Telegram Bot 2; hybrid Claude Agent Teams + OpenClaw |
-| Infra | Module H/X SMA Audit — H/A key normalization fix; conditional baseline Conditions 1–4; Module C injection point; smoke test best practice |
-| Infra | Referee DB Repairs — `fix_referee_profiles_pace.py` (84 rows, divisor corrected) + `backfill_referee_bias.py` (12,209 rows, PROTECTOR/STAR_KILLER signal live) |
-| Infra | Workflow Audit Sprints 0–1 — archive convention (`_archive/` subdirectory, Pattern 12); venv absolute path sweep across all 17 self-hosted workflows (0 bare `python3`/`pip3`/`source .venv` remaining) |
-| Infra | Workflow Audit Sprint 2 — 20/20 workflows hardened: concurrency groups, step-level timeouts, Solomon failure routing, cancel-in-progress logic |
-| Infra | Full Codebase Audit (Mar 3, 2026) — scripts (13 files fixed, 25 dead archived) + utils (10 files fixed, 3 dead archived) → 100% coverage; Pattern 14 (credential guards) |
+| Infra | Infrastructure Sprints (Feb–Mar 2026) — module audit (A–F zero-DB sim loop, 8-signal confidence tier, STRUCTURAL_LOSERS filter); BDL V2 + SportsDataIO enrichment (100K+ rows); canonical ID system (`player_canonical_ids`, `canonical_teams`, `canonical_games`); CLV hardening (`prop_line_snapshots`, closing lines, stat_category case fix, game_date logger); full codebase audit (375+ dead files removed, 20/20 workflows hardened, 100% script+utils coverage); AI Employee Workforce setup; Sharp+P2P CLV (83.9% coverage, avg +4.43c) |
 
 **Active / Planned Next:**
 - Sprint 2: Dynamic Rec Lifecycle — `is_valid` column + `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM EST) + Perplexity upgrade (~Mar 10)
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + Prop Pulse Score (0–100)
-- Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)
+- Phase 8.23: CLV + Claude Feedback Loop — closing lines now nightly via `db_backup.yml`; Wilson calibration at ~Mar 10 (14-day window)
 
-**Performance (Jan 7 – Mar 2, 2026):**
+**Performance (Jan 7 – Mar 4, 2026):**
 - Settled Bets: 21,079 | Win Rate: 54.0% overall | ROI: tracking (model in BETA)
 - BLOCKS UNDER: 70.0% WR (2,315 bets) — strongest signal in system
 - UNDER bets: 57.1% | OVER bets: 47.2% (OVER filters actively suppressing weak categories)

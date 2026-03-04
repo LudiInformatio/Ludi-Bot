@@ -136,9 +136,9 @@ This is the single source of truth for project tasks and priorities.
 
 ### Historical Odds Backfill (March 2026)
 ~5,593 bets lost Jan 8–Feb 1 due to `clean: true` bug. Recoverable via The-Odds-API `/v4/historical/`.
-- [ ] Backfill historical odds (~10 credits/query)
+- [ ] Backfill historical odds (~10 credits/query, ~150 credits total for 15 dates)
 - [ ] Re-run pipeline for 15 missing dates and settle bets
-- **Blocked until:** March 2026 (Feb Odds API quota exhausted)
+- **Ready to run** — primary key has ~17K credits. `ODDS_API_KEY_BACKFILL` reserved for April season-archive run only. Use `scripts/backfill_historical_odds.py --date YYYY-MM-DD --verbose`.
 
 ### Data Pipeline Improvements
 - [ ] **Trade-aware sim context**: When a traded player returns from injury, verify Module C/E use correct team for matchup modifiers and L5/L10 stats split by pre/post-trade. `players.team` is correct (roster sync), but `player_game_logs` history is all on old team — could skew projections.
