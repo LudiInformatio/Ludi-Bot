@@ -114,7 +114,6 @@ jobs:
           ODDS_API_TIER: paid
           TANK01_TIER: paid
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
           export PYTHONPATH=$PWD

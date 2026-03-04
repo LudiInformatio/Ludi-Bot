@@ -155,7 +155,6 @@ jobs:
           .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Build Player Type Profiles + Classification Profiles
         timeout-minutes: 10
