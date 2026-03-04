@@ -147,9 +147,20 @@ class Tank01Client:
 
         Useful for: starter/bench classification, minutes projection priors.
         Returns dict keyed by team abbreviation, each with ordered player lists.
+
+        Note: Tank01 changed their response format (2026-03) from
+        {"ATL": {...}, ...} to [{"teamAbv": "ATL", ...}, ...].
+        This method normalizes both formats to always return a dict.
         """
         data = self._get("getNBADepthCharts")
-        return data.get("body", {})
+        body = data.get("body", {})
+        # Normalize list → dict if Tank01 changed response format (2026-03).
+        # Also normalize abbreviations: Tank01 uses BDL-style short forms
+        # (NY, GS, NO, PHO, SA) — convert to our standard forms (NYK, GSW, etc.)
+        if isinstance(body, list):
+            from utils.mappings import normalize_bdl_abbr
+            body = {normalize_bdl_abbr(item["teamAbv"]): item for item in body if "teamAbv" in item}
+        return body
 
     # ------------------------------------------------------------------
     # NEW ENDPOINTS (Phase 0 expansion)

@@ -112,6 +112,8 @@ def _fetch_player_injury(conn: sqlite3.Connection, player_name: str) -> dict | N
             FROM player_injuries
             WHERE player_name = ?
               AND resolved_at IS NULL
+              AND snapshot_time >= datetime('now', '-14 days')
+              AND (days_out IS NULL OR days_out < 75)
             ORDER BY snapshot_time DESC
             LIMIT 1
         """, (canonical_name,))
@@ -166,21 +168,48 @@ def _haiku_sanity_check(bet: dict, injury: dict | None, verbose: bool = False) -
 
     Strategy:
     - Deterministic check first (no API cost)
+    - Deterministic FLAG + days_out ≤ 3 → verify with Perplexity before hard-flagging
+      (short-term ESPN OUT may be stale — player might be active tonight)
+    - Deterministic FLAG + days_out > 3 → hard FLAG (no override)
     - If injury exists → ask Haiku for nuanced assessment
     - If no injury → auto-PASS (saves tokens)
     - On any parse failure → conservative PASS (never drop a bet on parse error)
     """
+    perp_news = ""
+
     # Fast path: deterministic check first
     result, reason = _deterministic_sanity_check(bet, injury)
     if result == 'FLAG':
+        # For short-term injuries (days_out ≤ 3), consult Perplexity before hard-flagging.
+        # A 1-day ESPN OUT might be stale — Perplexity can confirm if the player is active tonight.
+        short_term = (
+            injury
+            and injury.get('days_out') is not None
+            and injury['days_out'] <= 3
+        )
+        if short_term and getattr(config, 'PERPLEXITY_API_KEY', None):
+            try:
+                from utils.perplexity_client import PerplexityClient
+                perp_news = PerplexityClient().search_player_news(
+                    bet['player_name'], bet['team']
+                )
+            except Exception:
+                pass
+        if not perp_news:
+            # Hard FLAG: no real-time override available
+            if verbose:
+                print(f"  [HAIKU-SKIP] Deterministic FLAG: {reason}")
+            return result, reason
+        # Perplexity found news — escalate to Haiku with real-time context instead of hard-flagging
         if verbose:
-            print(f"  [HAIKU-SKIP] Deterministic FLAG: {reason}")
-        return result, reason
+            print(
+                f"  [HAIKU] Short-term FLAG: escalating to Haiku review "
+                f"(days_out={injury['days_out']}, perp_news found)"
+            )
 
     # No injury record → try Perplexity for soft-scratch detection
-    perp_news = ""
     if not injury:
-        if getattr(config, 'PERPLEXITY_API_KEY', None):
+        if not perp_news and getattr(config, 'PERPLEXITY_API_KEY', None):
             try:
                 from utils.perplexity_client import PerplexityClient
                 perp_news = PerplexityClient().search_player_news(
