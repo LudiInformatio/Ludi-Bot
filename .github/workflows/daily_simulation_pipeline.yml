@@ -11,6 +11,8 @@ on:
         required: false
         default: 'false'
         type: string
+  push:
+    branches: [main]  # Prevents phantom failure notifications on push
 
 concurrency:
   group: production-pipeline
@@ -19,6 +21,7 @@ concurrency:
 jobs:
   check-slate:
     runs-on: self-hosted
+    if: github.event_name != 'push'
     timeout-minutes: 5
     outputs:
       has_games: ${{ steps.check.outputs.has_games }}

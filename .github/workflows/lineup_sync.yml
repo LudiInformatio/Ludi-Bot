@@ -5,10 +5,13 @@ on:
     # 9:45 AM EST = 14:45 UTC
     - cron: '45 14 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]  # Prevents phantom failure notifications on push
 
 jobs:
   check-slate:
     runs-on: self-hosted
+    if: github.event_name != 'push'
     outputs:
       has_games: ${{ steps.check.outputs.has_games }}
     steps:

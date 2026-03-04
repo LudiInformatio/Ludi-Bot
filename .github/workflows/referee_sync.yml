@@ -5,6 +5,8 @@ on:
     # 9:30 AM ET = 14:30 UTC (Standard Time)
     - cron: '30 14 * * *'
   workflow_dispatch:  # Allow manual trigger for testing
+  push:
+    branches: [main]  # Prevents phantom failure notifications on push
 
 concurrency:
   group: referee-sync
@@ -13,6 +15,7 @@ concurrency:
 jobs:
   check-slate:
     runs-on: self-hosted
+    if: github.event_name != 'push'
     outputs:
       has_games: ${{ steps.check.outputs.has_games }}
     steps:

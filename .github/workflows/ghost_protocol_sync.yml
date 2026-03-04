@@ -7,6 +7,8 @@ on:
     # Thursday 11:00 UTC (6 AM EST) — smart gap-fill (re-scrape incomplete dates)
     - cron: '0 11 * * 4'
   workflow_dispatch:
+  push:
+    branches: [main]  # Prevents phantom failure notifications on push
 
 permissions:
   contents: read
@@ -18,8 +20,9 @@ concurrency:
 jobs:
   sync-tracking:
     runs-on: self-hosted
+    if: github.event_name != 'push'
     timeout-minutes: 360
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

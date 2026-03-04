@@ -13,6 +13,8 @@ on:
         description: 'Game date to process (YYYY-MM-DD)'
         required: false
         type: string
+  push:
+    branches: [main]  # Prevents phantom failure notifications on push
 
 concurrency:
   group: capture-closing-lines
@@ -21,6 +23,7 @@ concurrency:
 jobs:
   check-slate:
     runs-on: self-hosted
+    if: github.event_name != 'push'
     outputs:
       has_games: ${{ steps.check.outputs.has_games }}
     steps:
