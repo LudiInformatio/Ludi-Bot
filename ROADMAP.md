@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, March 4, 2026 — 3:36 PM EST
+**Last Updated:** Wednesday, March 4, 2026 — 3:58 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** Canonical ID full remediation (`scripts/fix_canonical_ids.py`, `database.py`) — 43,930→257 dirty rows (99.79% clean), 80 new canonical entries, 25 corrupt normalized_names fixed, firewall verified at 5 ingestion points ✅ + V5.5 edge calibration — `STAT_EDGE_MINIMUMS` directional splits, display score boost, defensive scheme refresh ✅ + `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX ✅
+**Completed:** V5.5 edge calibration — `STAT_EDGE_MINIMUMS` directional splits, display score boost, defensive scheme refresh ✅ + `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX ✅ + CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅
 
 This is the single source of truth for project tasks and priorities.
 

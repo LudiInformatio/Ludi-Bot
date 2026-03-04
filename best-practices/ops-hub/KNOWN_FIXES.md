@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-03-04 — CLV JOIN always 29%: prop_line_snapshots stat_category uppercase vs lowercase
+
+**Symptom:** `LEFT JOIN prop_line_snapshots ON ... stat_category = stat_category` returns only 29% of expected rows even after case normalization on the query side.
+
+**Root cause:** `module_b.py snapshot_opening_lines()` wrote `stat_key.upper()` → stored `'PTS'`, `'REB'`, `'AST'`. `bet_recommendations` stores lowercase `'pts'`, `'reb'`, `'ast'`. Case-sensitive UNIQUE index prevents merging.
+
+**Fix:** Change `stat_key.upper()` → `stat_key.lower()` in `module_b.py` (~line 441). Run one-time migration: `UPDATE prop_line_snapshots SET stat_category = LOWER(stat_category);`
+
+**Always JOIN with:** `LOWER(br.stat_category) = pls.stat_category` until all historical rows confirmed lowercase.
+
+---
+
 ## 2026-03-04 — Canonical ID Remediation: 43,930 dirty rows across 11 tables
 
 **Symptom:** Tank01 changed player ID format Jan 2026 (6-7 digit NBA IDs → 8-11 digit composites). 40 entries in `player_canonical_ids` had dirty PKs, poisoning 7+ downstream tables. `validate_canonical_ids.py -v` showed 96.83% clean, 2,568 orphans.
