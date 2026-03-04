@@ -143,7 +143,7 @@ jobs:
           echo "Running Weekly Game Notes Retrospective..."
           .venv/bin/python scripts/weekly_retrospective.py --verbose || echo "WARNING: Retrospective failed -- continuing"
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Weekly Classification (Phase 8.4)
         timeout-minutes: 10
@@ -151,7 +151,7 @@ jobs:
           echo "Running Weekly Archetype Classification..."
           .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Build Player Type Profiles + Classification Profiles
