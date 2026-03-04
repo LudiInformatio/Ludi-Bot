@@ -64,7 +64,7 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 
 ## AI Employee Workforce
 
-As of March 2026, the Ludi system is staffed by a 6-person AI team running on a hybrid architecture (Claude Agent Teams + Gemini CLI writer + OpenClaw always-on daemons). Each employee has a dedicated soul file in `employees/` that defines their role, communication style, and operating constraints.
+As of March 2026, the Ludi system is staffed by a 7-person AI team running on a hybrid architecture (Claude Agent Teams + Gemini CLI writer + OpenClaw always-on daemons). Each employee has a dedicated soul file in `employees/` that defines their role, communication style, and operating constraints.
 
 | Employee | Role | Runtime | Soul File |
 |----------|------|---------|-----------|
@@ -74,6 +74,7 @@ As of March 2026, the Ludi system is staffed by a 6-person AI team running on a 
 | **Iris** | Social Scout — public sentiment, competitive intel, audience demand signals | OpenClaw (launchd daemon) | `employees/iris/` |
 | **Henrik** | Code Auditor — independent code review (uses Gemini CLI for genuine writer/auditor split) | Claude Agent Teams (teammate) | `employees/henrik/` |
 | **Maren** | Content Strategist — Telegram card copy, weekly report narrative, brand voice | Claude Agent Teams (teammate) | `employees/maren/` |
+| **Lena** | Data Analyst / Model Calibration — CLV analysis, win rate audits, edge recalibration | Claude Agent Teams (teammate) | `employees/lena/` *(onboarding pending)* |
 
 **Architecture:** Claude calls `gemini -p "..." --yolo -m gemini-2.5-pro` as a Bash subprocess for writing tasks. Henrik (Claude) reviews Gemini's output. Different model + different company = genuine independent audit. Silas and Iris run as persistent macOS launchd daemons via OpenClaw.
 
@@ -141,12 +142,15 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | WOWY Sync | 7:00 AM | Daily WOWY sync |
 | Weekly Referee Sync | Mondays 9:00 AM | Weekly referee intelligence — OddsShark + Covers data via Playwright |
 | Daily Referee Sync | 9:30 AM | Scrape referee assignments |
+| Lineup Sync | 9:45 AM | Pre-game starting lineups via Tank01 depth charts |
 | Production Pipeline | 10:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
 | Morning Briefing | 11:00 AM | AI game notes + player spotlights → Telegram |
 | Injury Refresh | Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | Intraday injury refresh (24 runs/game day) |
 | Evening Slate Lock | 6:35 PM + 8:25 PM (west coast) | Pre-game Telegram cards; second run covers 9 PM+ tips only |
 | Nightly Debrief | 8:30 PM | Bet settlement + daily P&L |
+| Ghost Protocol Sync | Sundays (7-day sweep) + Thursdays (gap-fill) | NBA.com tracking data — drives, C&S, pull-ups, clutch stats via Playwright |
 | Weekly Validation | Tuesdays | Backtest + archetype classifier + league rankings + ops digest → Slack |
+| Claude QA Check | 6 AM + 5:30 PM + 8 PM | Workflow failure review + schema validation + pre-evening quota check |
 | Claude Code Review | On PR open/push | Automatic code review on every pull request |
 | Claude Ops Hub | On failure/cancel | Auto-diagnosis → Slack; GitHub issue creation |
 
@@ -193,12 +197,12 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + Prop Pulse Score (0–100)
 - Phase 8.23: CLV + Claude Feedback Loop — closing lines now nightly via `db_backup.yml`; Wilson calibration at ~Mar 10 (14-day window)
 
-**Performance (Jan 7 – Mar 4, 2026):**
-- Settled Bets: 21,079 | Win Rate: 54.0% overall | ROI: tracking (model in BETA)
-- BLOCKS UNDER: 70.0% WR (2,315 bets) — strongest signal in system
-- UNDER bets: 57.1% | OVER bets: 47.2% (OVER filters actively suppressing weak categories)
-- CLV: Positive across all edge buckets
-- All paper bet tracking in beta
+**Performance (Jan 7 – Mar 3, 2026):**
+- Settled Bets: 9,246 | Win Rate: 53.5% (excl. push) | Net Units: +251.1u | ROI: +3.1%
+- BLOCKS UNDER: 69.1% WR (847 bets) — strongest signal in system
+- UNDER bets: 56.3% | OVER bets: 48.3% (OVER filters actively suppressing weak categories)
+- CLV: Positive across all edge buckets (83.9% coverage, avg +4.43c)
+- All paper bet tracking in beta — model under live calibration
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
@@ -255,7 +259,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
 **Core thesis (validated):** Props are exploitable via scenario-conditional simulation. When stars sit, usage redistributes. Referee tendencies leave measurable signal. The math is real — but edge requires rigorous infrastructure to find and trust.
 
-**Where it is now (March 2026):** Phase 8 AI-Enhanced Pipeline — a 9-module production platform with 10,000-iteration Monte Carlo sims, 10+ redundant data sources, 40+ database tables, 21,000+ settled bets, and a 6-person AI employee team (Solomon, Silas, Vera, Iris, Henrik, Maren) managing pipeline health and content strategy.
+**Where it is now (March 2026):** Phase 8 AI-Enhanced Pipeline — a 9-module production platform with 10,000-iteration Monte Carlo sims, 10+ redundant data sources, 40+ database tables, 9,200+ settled bets, and a 7-person AI employee team (Solomon, Silas, Vera, Iris, Henrik, Maren, Lena) managing pipeline health and content strategy.
 
 **Where it's headed:** Ludi Lens web dashboard (Streamlit, post-Phase 8), WNBA/NFL expansion (2026-27 season), and deeper CLV recalibration as the model crosses 30,000+ settled bets.
 
