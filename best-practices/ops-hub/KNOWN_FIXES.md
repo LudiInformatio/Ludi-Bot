@@ -5,22 +5,31 @@
 
 ---
 
-## 2026-03-04 — claude-code-action@v1: Breaking SDK bump → AJV crash (SHA pin workaround)
+## 2026-03-04 — claude-code-action: AJV crash = misleading error for auth/billing failures
 
-**Symptom:** All `claude-code-action` runs fail immediately: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: ~300-700ms`. No API calls made. AJV schema validation stacktrace in minified JS output.
+**Symptom:** All `claude-code-action` runs fail: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: ~300-700ms`. Logs show AJV minified JS dump (`depsCount`, `dependencies` keyword code). No API calls made.
 
-**Root cause:** Anthropic pushed `@anthropic-ai/claude-agent-sdk@0.2.66` (Claude Code 2.1.66) to the `@v1` floating tag on March 4, 2026 01:17 UTC (8:17 PM EST March 3). A "fix" commit pushing SDK 0.2.68 (commit `e763fe78`) was also broken. AJV JSON schema validation crash during SDK initialization. Recurring pattern across multiple SDK versions — GitHub issues #914, #947, #853, #852, #892 all show identical `$0 cost, exit 1` signature.
+**Real root cause (confirmed via `show_full_output: true`):** The AJV dump is the SDK's error-wrapping code, NOT an AJV bug. The actual error was hidden behind `show_full_output: false` (default). Full output revealed: `"error": "authentication_failed", "text": "Invalid API key · Fix external API key"`. The `ANTHROPIC_API_KEY` GitHub Secret had an invalid/wrong value.
 
-**Note:** Swapping `claude_code_oauth_token` → `anthropic_api_key` (commit `ce579b0`) was correct for CI/CD reliability but was not the root cause of these failures.
+**Two separate issues that looked identical:**
+1. `@v1` floating tag broke (SDK 0.2.66/0.2.68 bump, March 4 01:17 UTC) → fix: SHA pin
+2. Auth token was `anthropic_api_key` pointing to invalid secret → fix: revert to `claude_code_oauth_token`
 
-**Fix:** Pin all 4 action workflows to last known good SHA:
+**Full fix:**
 ```yaml
+# 1. Pin to last known good SHA (March 2, 2026 — before breaking SDK bumps)
 uses: anthropics/claude-code-action@73367208d0bc0c529b8b3fb223cbd4a8f63586e4
-# March 2, 2026 16:38 UTC — before breaking bumps
+
+# 2. Use OAuth token (1-year expiry, tied to Claude Pro/Max — no API credits needed)
+claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`, `claude.yml`.
 
-**Unpin when:** Anthropic releases a stable versioned tag (`v1.1` or similar). Monitor: https://github.com/anthropics/claude-code-action/releases
+**OAuth token refresh:** Get from `claude auth login` or Chrome cookies at claude.ai (`sk-ant-sid01-...`). Update `CLAUDE_CODE_OAUTH_TOKEN` GitHub Secret. Token valid ~1 year. Update `CLAUDE_TOKEN_EXPIRES_AT` variable when refreshed.
+
+**Diagnosing future crashes:** Add `show_full_output: true` to any failing `claude-code-action` step — the real error message will appear above the AJV dump. Remove after diagnosis.
+
+**Unpin SHA when:** Anthropic releases a stable versioned tag (`v1.1` or similar). Monitor: https://github.com/anthropics/claude-code-action/releases
 
 ---
 
