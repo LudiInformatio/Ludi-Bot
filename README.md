@@ -159,7 +159,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Monday, March 2, 2026
+**Last Updated:** Tuesday, March 3, 2026
 
 **Phase 8 Completions:**
 
@@ -207,10 +207,10 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Module H/X SMA Audit — H/A key normalization fix; conditional baseline Conditions 1–4; Module C injection point; smoke test best practice |
 | Infra | Referee DB Repairs — `fix_referee_profiles_pace.py` (84 rows, divisor corrected) + `backfill_referee_bias.py` (12,209 rows, PROTECTOR/STAR_KILLER signal live) |
 | Infra | Workflow Audit Sprints 0–1 — archive convention (`_archive/` subdirectory, Pattern 12); venv absolute path sweep across all 17 self-hosted workflows (0 bare `python3`/`pip3`/`source .venv` remaining) |
-| Infra | Workflow Audit Sprint 2 (in progress, 4/20 done) — per-workflow deep audit: concurrency groups, step-level timeouts, Solomon failure routing, vestigial PIL step removal, `continue-on-error` vs `\|\| echo` cleanup |
+| Infra | Workflow Audit Sprint 2 — 20/20 workflows hardened: concurrency groups, step-level timeouts, Solomon failure routing, cancel-in-progress logic |
+| Infra | Full Codebase Audit (Mar 3, 2026) — scripts (13 files fixed, 25 dead archived) + utils (10 files fixed, 3 dead archived) → 100% coverage; Pattern 14 (credential guards) |
 
 **Active / Planned Next:**
-- Workflow Audit Sprint 2 (4/20 done) — `injury_refresh.yml` → `nightly_debrief.yml` → data feeds → weekly → Claude AI workers
 - Sprint 2: Dynamic Rec Lifecycle — `is_valid` column + `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM EST) + Perplexity upgrade (~Mar 10)
 - Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + Prop Pulse Score (0–100)
 - Phase 8.23: Claude/Perplexity Feedback Loop — Layer 1 collecting; Wilson calibration at 14-day mark (~Mar 10)

@@ -1,6 +1,6 @@
 # Deployment Best Practices
 
-**Status:** ✅ Complete (updated 2026-03-02)
+**Status:** ✅ Complete (updated 2026-03-03)
 
 This guide covers GitHub Actions workflow patterns for the Ludi-Bot production pipeline. Every pattern below is derived from a real incident — not theory.
 
@@ -488,7 +488,7 @@ on:
 
 ---
 
-### Pattern 13 — WOWY Gap Detection (Comparative Query Pattern)
+### Pattern 13 — WOWY Gap Detection (Comparative Query Pattern) *(Added: 2026-03-02)*
 
 **Problem:** Daily scraper fails silently (0 records). No alert fires because script exits 0.
 Missed dates accumulate without any auto-recovery.
@@ -507,7 +507,7 @@ across Next.js redeploys; the hash suffix changes with every deploy.
 
 ---
 
-### Pattern 14 — Always-On Agent Credential Guards
+### Pattern 14 — Always-On Agent Credential Guards *(Added: 2026-03-03)*
 
 **Problem:** Modules that send to optional channels (Solomon bot, Slack) silently return False when credentials are missing — no startup warning, no log output. Ops alerts disappear invisibly.
 

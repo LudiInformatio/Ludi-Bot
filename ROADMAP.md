@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 9:30 PM EST
+**Last Updated:** Tuesday, March 3, 2026 — 9:53 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** BERT prompt patterns audit (`ask_ludi_handlers.py`, `claude_prompts.py`, `curate_plays.py`) — Pattern 1–3 fixes + roster safety ✅ + `trend_engine.py` SMA audit — 11 fixes (days_out/staleness, accent-unsafe queries, busy_timeout) ✅ + Full scripts audit — P0/P1/P2 fixes (13 files) + 25 dead scripts archived/deleted → 100% audit coverage ✅
+**Completed:** Full scripts audit — P0/P1/P2 fixes (13 files) + 25 dead scripts archived/deleted → 100% audit coverage ✅ + Utils audit — P0/P1/P2 fixes (10 files, `claude_logger`, `wowy_calculator`, `game_notes_cache`, etc.) + 3 dead files archived → 100% codebase coverage ✅ + Employee onboarding sprint — soul files + Discord + Solomon Bot 2 + Gemini SOUL/ONBOARDING ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -44,8 +44,6 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
 - [ ] **Game notes team totals fix** (`morning_brief.py` ~L758) — `{home_team_total}` / `{away_team_total}` always 'N/A'. Load from `cache/daily_games_{date}.json` instead of `bet_recommendations`. Data exists, just not wired.
-
-_Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audit A–F + canonical_games ✅ | Sprint 4 alt lines + team_totals fix ✅ | Sprint 4.5 INVALIDATED (attempt markets don't exist on Odds-API)_
 
 ---
 
@@ -92,10 +90,8 @@ _Completed this sprint (Feb 28): Ask Ludi v1 + freshness layer ✅ | Module audi
 **PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 7 AI employees on OpenClaw runtime (~$4.60/mo)
 **Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist), **Lena (Data Analyst / Model Calibration)**
 
-> **Welcome aboard, team.** Soul files created Mar 1, 2026. Discord server + channels live. Telegram Bot 2 (Solomon) active. Lena added Mar 2, 2026 — owns model calibration, stat confidence grades, and backtest analysis. The crew is assembled and ready — Monday kickoff begins the first live sprint. 🏀
+**Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 6 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
 
-**Weekend Setup (Mar 1):** Telegram Bot 2 (Solomon), Discord server + bot, clone OpenClaw, create `best-practices/openclaw/` folder
-- [x] Sunday setup: Telegram + Discord + soul files + webhooks ✅
 - [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees (6 Agent Teams + Gemini + Lena). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena requires live DB queries for examples** (see plan). Build before first Agent Teams session.
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
 - [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live

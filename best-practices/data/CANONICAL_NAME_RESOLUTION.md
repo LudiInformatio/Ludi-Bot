@@ -1,6 +1,7 @@
 # Canonical Name Resolution — Best Practices
 
 **Created:** February 24, 2026
+**Last Updated:** March 3, 2026 — added `game_notes_cache.py` to injection point table
 **Applies to:** All code that passes player names to DB queries or Claude prompts
 
 ---
