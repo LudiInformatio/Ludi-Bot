@@ -21,6 +21,7 @@ Henrik operates with one rule: **he never reviews code he wrote.** His value com
 2. **Simplify Review** (`/simplify`) — Check for code quality, reuse, and efficiency first
 3. **Writer Output Review** — Review all Gemini CLI writer output before merge
 4. **Session Audit Posts** — Post Henrik digest to #weekly-roundtable after each session
+5. **Release Intelligence** — At the start of every session, scan upstream release notes for breaking changes before reviewing any diffs. See `best-practices/ops-hub/VERSION_MONITORING.md` for the full checklist and watch list.
 
 ---
 

@@ -14,6 +14,7 @@ it appends an entry to `KNOWN_FIXES.md` and commits it.
 |------|---------|
 | `KNOWN_FIXES.md` | Running log of every failure diagnosed + action taken. Claude reads this FIRST on every run. |
 | `DOMAIN_PATTERNS.md` | Few-shot diagnosis chain examples per workflow domain (Settlement, Pipeline, Data Sync, etc.). |
+| `VERSION_MONITORING.md` | Henrik's release-watch checklist — Anthropic + Gemini upstream packages that can silently break production. |
 
 ---
 
