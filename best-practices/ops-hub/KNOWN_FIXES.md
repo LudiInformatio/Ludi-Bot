@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-03-03 — sync_lineup_starters: 'list' object has no attribute 'get' (Tank01 Format Change)
+
+**Symptom:** `lineup_sync.yml` reports `continue-on-error` warning. Logs show `'list' object has no attribute 'get'` for all 20 teams. Zero starters synced.
+
+**Root cause:** Tank01 silently changed `/getNBADepthCharts` response format (2026-03) from `{"ATL": {...}, ...}` (dict keyed by team) to `[{"teamAbv": "ATL", ...}, ...]` (list of 30 objects). `sync_lineup_starters.py` calls `depth_data.get(team_abbr)` — fails on list. Secondary: Tank01 uses BDL-style abbreviations (NY, GS, NO, PHO, SA) not standard (NYK, GSW, NOP, PHX, SAS).
+
+**Fix:** `utils/tank01_client.py` `get_depth_charts()` — detect list, convert to dict with `normalize_bdl_abbr()` on keys. All callers receive dict transparently.
+
+---
+
+## 2026-03-03 — curate_plays: Active Player False-Flagged as OUT (Stale ESPN Record)
+
+**Symptom:** Morning brief shows player as OUT in Claude analysis but still generates a bet rec. Player was active all day (e.g. Devin Booker, PHX). Race condition: ESPN sync wrote OUT at 6:58 PM March 2; `resolved_at` set at 12:27 PM March 3 (after 11 AM brief).
+
+**Root cause 1:** `_fetch_player_injury()` in `curate_plays.py` lacked staleness guard (`snapshot_time >= datetime('now', '-14 days')`) and days_out filter (`days_out IS NULL OR days_out < 75`). `morning_brief.py` had both; `curate_plays.py` did not.
+
+**Root cause 2:** `_haiku_sanity_check()` hard-returned FLAG on deterministic check without consulting Perplexity. Perplexity was only called when `injury is None` — so 1-day-old ESPN OUT records bypassed real-time verification entirely.
+
+**Fix:** (1) Added both staleness filters to `_fetch_player_injury()`. (2) In `_haiku_sanity_check()`, deterministic FLAG with `days_out ≤ 3` now fetches Perplexity first — if news found, escalates to Haiku with real-time context; if no news, hard-flags. days_out > 3 still hard-flags (no regression on clear long-term cases).
+
+---
+
 ## 2026-03-02 — Morning Briefing: start_time String AttributeError (Cache Deserialization)
 
 **Symptom:** `daily_briefing.yml` crashes with `AttributeError: 'str' object has no attribute 'tzinfo'` at `morning_brief.py` line 512. Ops Hub issue #27.

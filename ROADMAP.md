@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 3, 2026 — 6:52 PM EST
+**Last Updated:** Tuesday, March 3, 2026 — 7:33 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2: Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`) — `is_valid` column + Perplexity upgrade + Ask Ludi 8.13 testing
-**Completed:** BERT prompt patterns audit (`ask_ludi_handlers.py`, `claude_prompts.py`, `curate_plays.py`) — Pattern 1–3 fixes + roster safety ✅ + `trend_engine.py` SMA audit — 11 fixes (days_out/staleness, accent-unsafe queries, busy_timeout) ✅ + Pipeline bug fixes (deepcopy, DOUBTFUL normalization, silent exceptions) ✅
+**Completed:** Evening slate lock bug fixes (`utils/tank01_client.py` depth chart format, `curate_plays.py` staleness guard + Perplexity FLAG override) ✅ + BERT prompt patterns audit (`ask_ludi_handlers.py`, `claude_prompts.py`, `curate_plays.py`) — Pattern 1–3 fixes + roster safety ✅ + `trend_engine.py` SMA audit — 11 fixes (days_out/staleness, accent-unsafe queries, busy_timeout) ✅
 
 This is the single source of truth for project tasks and priorities.
 
