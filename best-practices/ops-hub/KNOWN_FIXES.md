@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-03-04 — bet_recommendations: 17,202 duplicate rows from pipeline re-runs
+
+**Symptom:** L10 P&L shows extreme unit totals (-198u when true figure is ~-55u). Bet count for a 10-game slate shows 2,439 rows instead of expected ~600. `void_dnp` rate appears elevated but win rate % looks correct.
+
+**Root cause:** `utils/bet_logger.py` used plain `INSERT INTO bet_recommendations` with no dedup guard and no UNIQUE constraint on the table. Every pipeline re-run (manual triggers, GH Actions retries, multiple scheduled runs in a day) appended fresh rows. Peak duplication: Jan 12 at **10.17×** (3,680 rows for 362 real bets). Sustained average: **2.5–3.0×** across all dates since Jan 12.
+
+**Diagnosis query:**
+```sql
+SELECT game_date, COUNT(*) as total,
+       COUNT(DISTINCT player_name || '|' || stat_category || '|' || bet_side) as unique_combos,
+       ROUND(CAST(COUNT(*) AS REAL) / COUNT(DISTINCT player_name || '|' || stat_category || '|' || bet_side), 2) as dupe_factor
+FROM bet_recommendations
+WHERE game_date >= '2026-01-07'
+GROUP BY game_date ORDER BY game_date DESC;
+```
+Any `dupe_factor > 1.0` = duplicates present.
+
+**Fix applied (2026-03-04):**
+1. Deleted 17,202 duplicate rows — kept `MIN(id)` per `(game_date, player_name, stat_category, bet_side)`
+2. Created `idx_bet_recs_no_dupes` UNIQUE INDEX on those 4 columns
+3. Changed both INSERT statements in `bet_logger.py` to `INSERT OR IGNORE INTO`
+
+**P&L impact:** Win rate % was always correct (duplicates settle identically). Unit totals were inflated 2–10×. All dates now show 1.0× — P&L figures are accurate from this point forward. Pre-fix historical data should be divided by the date's prior dupe_factor to approximate true unit totals.
+
+---
+
 ## 2026-03-04 — claude-code-action: AJV crash = misleading error for auth/billing failures
 
 **Symptom:** All `claude-code-action` runs fail: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: ~300-700ms`. Logs show AJV minified JS dump (`depsCount`, `dependencies` keyword code). No API calls made.

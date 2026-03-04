@@ -1,6 +1,6 @@
 # Coding Best Practices
 
-**Status:** ✅ Complete (updated 2026-02-26)
+**Status:** ✅ Complete (updated 2026-03-04)
 
 This guide covers Python and bash coding patterns for the Ludi-Bot codebase. Every pattern is backed by a real incident or confirmed working pattern from the production system.
 
@@ -16,6 +16,7 @@ This guide covers Python and bash coding patterns for the Ludi-Bot codebase. Eve
 | Lazy imports for optional dependencies | `import anthropic` inside function, not module level |
 | Grep callers before changing return signature | Prevent silent crashes at call sites |
 | `|| true` vs `|| echo "default"` | `|| echo` only fires on non-zero exit, not empty output |
+| `INSERT OR IGNORE` + UNIQUE INDEX for pipeline loggers | Any table a pipeline writes to repeatedly needs a dedup guard — plain `INSERT` causes 2–10× row inflation |
 
 ---
 
@@ -308,6 +309,65 @@ conn.execute("SELECT DISTINCT col FROM table WHERE col IS NOT NULL LIMIT 5").fet
 | Unpacking tuple without `_` for extras | Crashes when return count grows | Always use `_` for unused values |
 | Not grepping callers before return change | Silent crashes at call sites | `grep -rn "function_name(" --include="*.py" .` first |
 | Hardcoded `DB_PATH = "ludi.db"` (relative) | Fails when bot/web app runs from `bots/` or another directory | Use `os.path.join(os.path.dirname(os.path.abspath(__file__)), "ludi.db")` in `config.py` — anchors to file location, not CWD |
+
+---
+
+---
+
+## Pattern — `INSERT OR IGNORE` + UNIQUE INDEX for Pipeline Loggers *(Added: 2026-03-04)*
+
+**Problem:** Any table that a scheduled pipeline writes to repeatedly will silently accumulate duplicate rows if it uses plain `INSERT INTO`. Pipeline re-runs, manual triggers, GH Actions retries, and concurrency races all create duplicate entries. With no UNIQUE constraint, the DB never rejects them. This inflates P&L unit totals, bet counts, and any aggregate metric — while win rate % stays correct (duplicates settle identically).
+
+**Real incident:** `bet_recommendations` accumulated 17,202 duplicate rows (65% of the table) over 7 weeks. Peak was 10.17× duplication on a single date. P&L totals were inflated 2–10× throughout.
+
+**The fix has two layers — both required:**
+
+**Layer 1 — UNIQUE INDEX (DB enforcement):**
+```sql
+-- SQLite does not support ADD CONSTRAINT after table creation.
+-- Use a unique index instead — INSERT OR IGNORE will respect it.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bet_recs_no_dupes
+ON bet_recommendations(game_date, player_name, stat_category, bet_side);
+```
+
+**Layer 2 — INSERT OR IGNORE (application layer):**
+```python
+# ❌ Plain INSERT — silently adds duplicates on every pipeline re-run
+query = f"INSERT INTO bet_recommendations ({fields}) VALUES ({placeholders})"
+
+# ✅ INSERT OR IGNORE — first insertion wins; re-runs skip existing rows
+query = f"INSERT OR IGNORE INTO bet_recommendations ({fields}) VALUES ({placeholders})"
+```
+
+**Dedup recovery query (if duplicates already exist):**
+```sql
+-- Step 1: Delete duplicates, keeping MIN(id) per unique combo
+DELETE FROM table_name
+WHERE id NOT IN (
+    SELECT MIN(id) FROM table_name
+    GROUP BY game_date, player_name, stat_category, bet_side
+);
+
+-- Step 2: Create the index AFTER dedup (will fail if dupes remain)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON table_name(col1, col2, col3, col4);
+```
+
+**Diagnosis query — run on any pipeline output table to check for duplication:**
+```sql
+SELECT date_col, COUNT(*) as total,
+       COUNT(DISTINCT key_col1 || '|' || key_col2) as unique_combos,
+       ROUND(CAST(COUNT(*) AS REAL) / COUNT(DISTINCT key_col1 || '|' || key_col2), 2) as dupe_factor
+FROM table_name
+GROUP BY date_col
+ORDER BY date_col DESC;
+```
+Any `dupe_factor > 1.0` = duplicates present. Target: 1.0 on all dates.
+
+**`INSERT OR REPLACE` vs `INSERT OR IGNORE`:**
+- `OR IGNORE` — first insertion wins; re-runs are no-ops. Best for immutable records (bets, log entries).
+- `OR REPLACE` — latest insertion wins (deletes + re-inserts). Wipes `outcome`/`actual_result` if settlement data exists. **Do NOT use for settled records.**
+
+**Other tables to audit in this codebase:** `claude_analysis_log`, `prop_line_snapshots`, `player_news_staging` — all written by pipelines that re-run daily.
 
 ---
 
