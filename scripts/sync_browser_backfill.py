@@ -336,6 +336,14 @@ def extract_id_from_href(href):
     except Exception:
         return None
 
+def _normalize_name_for_firewall(name):
+    """ Flip 'Lastname, Firstname' → 'Firstname Lastname' for firewall name resolution.
+    The PlayerIDResolver handles ALL CAPS natively — no change needed for that case. """
+    if ',' in name:
+        parts = name.split(',', 1)
+        return f"{parts[1].strip()} {parts[0].strip()}"
+    return name
+
 def process_tracking_row(data, date_str, col_map):
     headers = data['headers']
     rows = data['rows']
@@ -360,9 +368,9 @@ def process_tracking_row(data, date_str, col_map):
             
             # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
             raw_pid = extract_id_from_href(href)
+            player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
             if not raw_pid:
-                # Fallback to slug if no ID found (unlikely)
-                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = "" # empty → firewall resolves by name only (no slug)
             
             pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
@@ -432,8 +440,9 @@ def process_advanced_row(data, date_str, col_map):
             
             # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
             raw_pid = extract_id_from_href(href)
+            player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
             if not raw_pid:
-                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = "" # empty → firewall resolves by name only (no slug)
             
             pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
@@ -489,8 +498,9 @@ def process_clutch_row(data, date_str, col_map):
             
             # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
             raw_pid = extract_id_from_href(href)
+            player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
             if not raw_pid:
-                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = "" # empty → firewall resolves by name only (no slug)
             
             pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
@@ -549,8 +559,9 @@ def process_opponent_row(data, date_str, col_map):
             
             # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
             raw_pid = extract_id_from_href(href)
+            player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
             if not raw_pid:
-                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = "" # empty → firewall resolves by name only (no slug)
             
             pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
@@ -606,8 +617,9 @@ def process_hustle_row(data, date_str, col_map):
             
             # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
             raw_pid = extract_id_from_href(href)
+            player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
             if not raw_pid:
-                raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                raw_pid = "" # empty → firewall resolves by name only (no slug)
             
             pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
             
@@ -697,8 +709,9 @@ def process_closest_defender(page, date_str, nba_date):
 
                     # 🛡️ Database Firewall: Resolve ID before writing (Heal on Ingestion)
                     raw_pid = extract_id_from_href(href)
+                    player_name = _normalize_name_for_firewall(player_name) # flip Lastname, Firstname
                     if not raw_pid:
-                        raw_pid = player_name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+                        raw_pid = "" # empty → firewall resolves by name only (no slug)
                     
                     pid = ludi.resolve_player_id_for_insert(raw_pid, player_name)
 
