@@ -27,7 +27,8 @@ When instructions conflict, use this order:
 See @ROADMAP.md for current tasks and priorities.
 See @docs/ARCHITECTURE.md for system design and module reference.
 See @docs/METHODOLOGY.md for betting edge calculations.
-See @docs/STATUS_HISTORY.md for historical updates.
+See @docs/STATUS_CURRENT.md for current system state.
+See docs/STATUS_HISTORY.md for full sprint history (not auto-loaded).
 See @docs/TOOLS_GUIDE.md for task automation scripts and helpers.
 See @best-practices/ for reusable patterns and lessons learned.
 
@@ -208,9 +209,9 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
 | 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
 | Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | `injury_refresh.yml` | Intraday injury refresh — 9 daytime runs + 15 evening runs during game hours |
-| 6:35 PM + 8:25 PM | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM all games; 8:25 PM west coast 9 PM+ only) |
+| 6:35 PM + 7:55 PM | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM all games; 7:55 PM west coast 9 PM+ only) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
-| Manual only | `capture_closing_lines.yml` | CLV backfill re-runs (historical, on-demand; overnight handled by `db_backup.yml`) |
+| Hourly 6:25–11:25 PM | `capture_closing_lines.yml` | Pre-tipoff CLV capture (6 hourly runs); overnight batch in `db_backup.yml` as fallback |
 | Sundays + Thursdays | `ghost_protocol_sync.yml` | NBA.com tracking data (Sunday: 7-day sweep, Thursday: gap-fill only) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
@@ -278,7 +279,8 @@ This project has custom skills available:
 - **Roadmap**: @ROADMAP.md (tasks & priorities)
 - **Architecture**: @docs/ARCHITECTURE.md (pipeline, schema, modules)
 - **Methodology**: @docs/METHODOLOGY.md (edge calc, line shopping, CLV)
-- **Status History**: @docs/STATUS_HISTORY.md (archived updates)
+- **Current State**: @docs/STATUS_CURRENT.md (active sprint + DB state)
+- **Status History**: docs/STATUS_HISTORY.md (full sprint archive — not auto-loaded)
 - **Production Handbook**: @docs/PRODUCTION_HANDBOOK.md
 - **Best Practices**: `best-practices/` (API patterns, lessons learned, reusable templates)
   - **API Best Practices**: `best-practices/api/API_BEST_PRACTICES.md` (comprehensive guide)

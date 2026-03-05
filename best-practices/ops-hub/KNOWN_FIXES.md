@@ -727,3 +727,21 @@ git push origin main                   # Runner now gets correct code
 **Fix:** Add `PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}` to the curate step env block. Pattern: always verify ALL required API keys are in a workflow step's env, not just the primary one.
 
 **Same bug in 2 more workflows (found same day):** `evening_slate_lock.yml` news agent step had ZERO env vars (no ANTHROPIC_API_KEY, no PERPLEXITY_API_KEY, no PYTHONPATH) → Claude auth fails, Perplexity falls back to DuckDuckGo. Injury refresh step also missing PERPLEXITY_API_KEY. `daily_briefing.yml` news agent step had same gap. Also: `claude-ops-hub.yml` monitored `"Evening Slate Lock (6PM EST)"` but actual workflow name is `"Evening Slate Lock (6:35 PM EST)"` → evening slate failures were invisible to Ops Hub. All fixed in commit `63885c5`.
+
+## 2026-03-04 — GitHub Actions 01:xx UTC cron delay (~2 hours)
+
+**Symptom:** Evening slate 8:25 PM cron (`25 1 * * *`) and nightly debrief 8:30 PM cron (`30 1 * * *`) consistently fire ~2 hours late (03:34-04:04 UTC). The 6:35 PM cron (`35 23 * * *`) fires within 15-20 min.
+
+**Root cause:** GitHub Actions cron scheduler has higher delay in the 01:xx UTC window (8 PM EST = peak global usage). Documented GH limitation — not a self-hosted runner issue.
+
+**Fix:** Shifted evening slate 2nd cron from `25 1 * * *` → `55 0 * * *` (7:55 PM EST). The 00:xx UTC window fires within ~15 min. Nightly debrief left at `30 1` because its 2-hour delay accidentally benefits settlement (runs ~10:30 PM when more games finished). Commit `6ceb447`.
+
+**Rule:** Avoid scheduling crons in the 01:xx-04:xx UTC range on GitHub Actions. Use 23:xx or 00:xx UTC for time-sensitive evening workflows.
+
+## 2026-03-04 — CLV pre-tipoff crons removed then restored
+
+**Symptom:** `capture_closing_lines.yml` only ran on manual trigger. No pre-tipoff CLV capture since Feb 28.
+
+**Root cause:** Commit `13ae048` (Feb 28) moved CLV to overnight-only batch in `db_backup.yml`. The original 12-run/night schedule (`25,55 23,0,1,2,3,4 * * *`) was replaced with "MANUAL TRIGGER ONLY" comment. Overnight batch captures post-game lines, not true pre-tipoff closing lines.
+
+**Fix:** Restored 6 hourly crons (`25 23,0,1,2,3,4 * * *`). Overnight batch kept as fallback. Commit `6ceb447`.
