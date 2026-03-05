@@ -72,9 +72,11 @@ class PlayerIDResolver:
         # Remove hyphens and other punctuation
         name = name.replace('-', '').replace('.', '').replace("'", "")
         
-        # Remove suffixes
+        # Remove suffixes — endswith only, not replace() which strips mid-name matches
+        # e.g. ' v' in 'gabe vincent' or ' ii' in a hypothetical name with 'ii' mid-word
         for suffix in [' jr.', ' jr', ' sr.', ' sr', ' iii', ' ii', ' iv', ' v']:
-            name = name.replace(suffix, '')
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
         
         # Remove extra whitespace
         name = ' '.join(name.split())
