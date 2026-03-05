@@ -17,8 +17,6 @@ on:
           - work_notes
           - bet_summary
           - both
-  push:
-    branches: [main]  # Prevents phantom failure notifications on push
 
 jobs:
   work-notes:
@@ -30,7 +28,7 @@ jobs:
     permissions:
       contents: write  # Required for git push of settlement logs
     # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
-    if: github.event_name != 'push' && (github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both')
+    if: github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
     
     steps:
       - name: Checkout repository
@@ -118,7 +116,7 @@ jobs:
     # before reading settlement data. Prevents read-before-write on bet_recommendations.
     needs: [work-notes]
     if: |
-      always() && github.event_name != 'push' && (
+      always() && (
         github.event.schedule == '0 11 * * *' ||
         github.event.inputs.report_type == 'bet_summary' ||
         (github.event.inputs.report_type == 'both' && needs.work-notes.result != 'skipped')

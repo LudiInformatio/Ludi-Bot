@@ -8,8 +8,6 @@ on:
       description:
         description: 'Manual backup trigger'
         required: false
-  push:
-    branches: [main]  # Prevents phantom failure notifications on push
 
 permissions:
   contents: read
@@ -21,7 +19,6 @@ concurrency:
 jobs:
   backup:
     runs-on: self-hosted
-    if: github.event_name != 'push'
     timeout-minutes: 60
 
     steps:

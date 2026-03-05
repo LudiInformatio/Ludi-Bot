@@ -15,8 +15,6 @@ on:
           - fatigue_21day
           - playtype_trends_14day
           - both
-  push:
-    branches: [main]  # Prevents phantom failure notifications on push
 
 concurrency:
   group: weekly-validation
@@ -25,7 +23,6 @@ concurrency:
 jobs:
   run-weekly-validation:
     runs-on: self-hosted
-    if: github.event_name != 'push'
     timeout-minutes: 45
 
     steps:

@@ -32,8 +32,6 @@ on:
         description: 'Force refresh even if data is already fresh'
         type: boolean
         default: false
-  push:
-    branches: [main]  # Prevents phantom failure notifications on push
 
 concurrency:
   group: injury-refresh
@@ -42,7 +40,6 @@ concurrency:
 jobs:
   refresh-injuries:
     runs-on: self-hosted
-    if: github.event_name != 'push'
     timeout-minutes: 10
     steps:
       - name: Checkout Code

@@ -37,7 +37,9 @@ on:
 jobs:
   diagnose-failure:
     # Only run when a workflow FAILS or is CANCELLED
-    if: github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled'
+    if: >-
+      (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled')
+      && github.event.workflow_run.event != 'push'
     runs-on: ubuntu-latest
     concurrency:
       group: claude-ops-hub
