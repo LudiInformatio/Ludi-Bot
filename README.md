@@ -159,7 +159,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Wednesday, March 4, 2026
+**Last Updated:** Thursday, March 5, 2026
 
 **Phase 8 Completions:**
 
@@ -190,12 +190,12 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | 8.27 | Pre-Game Lineup Sync — Tank01 depth charts → `players.is_starter`; 9:45 AM + 6:35 PM workflows |
 | 8.28 | Game Intelligence Cache — Claude game notes cached; validates before evening re-runs; $0 cost |
 | 8.13 | Ask Ludi Telegram Bot — `bots/ask_ludi.py` + db + handlers; Haiku intent → Sonnet narrative; 7 intents live; data freshness layer + ghost injury guard |
-| Infra | Infrastructure Sprints (Feb–Mar 2026) — module audit (A–F zero-DB sim loop, 8-signal confidence tier, STRUCTURAL_LOSERS filter); BDL V2 + SportsDataIO enrichment (100K+ rows); canonical ID system (`player_canonical_ids`, `canonical_teams`, `canonical_games`); CLV hardening (`prop_line_snapshots`, closing lines, stat_category case fix, game_date logger); full codebase audit (375+ dead files removed, 20/20 workflows hardened, 100% script+utils coverage); AI Employee Workforce setup; Sharp+P2P CLV (83.9% coverage, avg +4.43c) |
+| Infra | Infrastructure Sprints (Feb–Mar 2026) — module audit (8-signal confidence tier, STRUCTURAL_LOSERS filter); BDL V2 + SportsDataIO enrichment (100K+ rows); canonical ID system (99.79% clean, 638 entries); CLV hardening (closing lines nightly, stat_category fix); full codebase audit (20/20 workflows hardened, 100% coverage); AI Employee Workforce setup; Pipeline Reliability (Ghost Protocol 136→2 warnings, DB lock fix, curate max_tokens 8192→32000) |
 
 **Active / Planned Next:**
-- Sprint 2: Dynamic Rec Lifecycle — `is_valid` column + `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM EST) + Perplexity upgrade (~Mar 10)
-- Phase 8.22: Social Intelligence System — architecture complete; Phase 1 = `social_signals` + Prop Pulse Score (0–100)
-- Phase 8.23: CLV + Claude Feedback Loop — closing lines now nightly via `db_backup.yml`; Wilson calibration at ~Mar 10 (14-day window)
+- Sprint 2: Dynamic Rec Lifecycle — `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM) + `is_valid` column + Perplexity upgrade; employee onboarding docs (~Mar 10)
+- Phase 8.22: Social Intelligence System — architecture complete; `social_signals` table + Prop Pulse Score (0–100) into `curate_plays.py`
+- Phase 8.23: CLV + Claude Feedback Loop — Wilson calibration at ~Mar 10 (14-day window); `_get_system_wr_context()` injection
 
 **Performance (Jan 7 – Mar 3, 2026):**
 - Settled Bets: 9,246 | Win Rate: 53.5% (excl. push) | Net Units: +251.1u | ROI: +3.1%

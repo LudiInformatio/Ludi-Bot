@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Thursday, March 5, 2026 — 10:42 AM EST
+**Last Updated:** Thursday, March 5, 2026 — 11:53 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade (`is_valid` column, 2PM+4:30PM midday refresh, `perplexity_client.py` upgrades) + employee onboarding docs
 **Completed:** CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅
@@ -92,13 +92,13 @@ This is the single source of truth for project tasks and priorities.
 
 **Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 6 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
 
-- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees (6 Agent Teams + Gemini + Lena). Gemini `SOUL.md` + `ONBOARDING.md` done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena requires live DB queries for examples** (see plan). Build before first Agent Teams session. **Lena-specific:** consolidated glossary cheat sheet — archetypes (15 offensive + 5 defensive tags), team schemes (4 types + interaction rules), matchup matrix (why STRETCH_BIG vs PAINT_PACK is favorable), scenario tags (USAGE_VACUUM, BENEFICIARY, HOT_STREAK), synergy playtypes. Sources: `module_e.py`, `docs/ARCHITECTURE.md`, `utils/tag_classifier.py`, `team_scheme_cache`. Also inject into Claude curation system prompt (Pattern 6 domain pre-training).
+- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees. Gemini done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena-specific:** glossary cheat sheet — archetypes (15 offensive + 5 defensive), team schemes (4 types), matchup matrix, scenario tags. Sources: `module_e.py`, `utils/tag_classifier.py`, `team_scheme_cache`. Also inject into curation system prompt (Pattern 6).
 - [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
 - [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
 - [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon (sprint status, next actions, team health). Pattern: `bots/ask_ludi.py`. Week 1 build.
 - [ ] **Discord two-way** — command handlers in employee channels so you can message Silas/Iris/Henrik in Discord and they respond/act (e.g. `/run-check` in #silas, `/audit file.py` in #henrik). Requires Discord bot polling loop.
-- [ ] **Lena: Season Pattern Mining** — proprietary trend analysis across full 2025-26 dataset. Mine `player_game_logs` (10.8K), `canonical_games` (902), `referee_player_bias` (12.5K), `player_game_tracking`, `player_game_advanced`, `team_lineups` (10.6K), `player_synergy_playtypes`, `player_shot_quality`, `prop_line_snapshots`. Focus areas: ref stat-category tendencies (beyond fouls), archetype B2B resilience, hot/cold streak persistence, WOWY beneficiary accuracy, shot quality regression candidates, line movement → outcome correlation, scheme × archetype win rates. Output: actionable findings that can feed back into curation dossier + Module E modifiers. Plan details after Lena onboarding.
+- [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `player_shot_quality`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, WOWY accuracy, line movement → outcome correlation, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers. Plan details after Lena onboarding.
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
@@ -112,24 +112,14 @@ This is the single source of truth for project tasks and priorities.
 **Blocked until:** Phase 8 backend cleanup complete
 **Full plan:** `docs/projects/INFOGRAPHIC_VISUALIZATION_SYSTEM.md`
 **PaperBanana pattern adopted:** LLM writes matplotlib code → `exec()` in subprocess → base64 JPEG (see research Feb 25)
-- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 6 MVP charts:
-  - Hit Streak Tracker (Player Cards)
-  - Archetype Leaderboard Top 10 / Bottom 10 (Game Notes + Weekly Update)
-  - Matchup Edge Heatmap compact/full (Game Notes + Weekly Update)
-  - Hot / Cool Players — L7 delta vs season avg (Weekly Update + Morning Brief)
-  - Stat Confidence Grade Matrix (Morning Brief)
-  - Daily P&L Waterfall (Nightly Debrief)
-- [ ] Phase V2: Edge vs WR scatter, player trend sparklines, tier performance
-- [ ] Phase V3: Full catalog + `scripts/generate_all_charts.py`
-- [ ] Phase V4: Streamlit integration + PaperBanana AI-assisted ad-hoc chart generation
+- [ ] Phase V1: `utils/chart_engine.py` (Plotly + Kaleido) + 6 MVP charts — Hit Streak, Archetype Leaderboard, Matchup Edge Heatmap, Hot/Cool Players L7, Stat Confidence Grade, P&L Waterfall
+- [ ] Phase V2–V4: Edge/WR scatter, sparklines, full catalog, Streamlit + PaperBanana AI charts — see `docs/projects/INFOGRAPHIC_VISUALIZATION_SYSTEM.md`
 
 ### Prop Card & Odds Widget (Post-Phase 8 — Frontend Sprint)
 **Research:** `docs/research/PROP_CARD_WIDGET_RESEARCH.md` — full design + data source map
 **Data:** All in `ludi.db` — zero new APIs needed
-- [ ] **Phase 1 — PIL PNG for Telegram**: `utils/card_engine.py` → `generate_player_prop_card(bet_dict, conn)` → 800×500px dark card. Wire into `morning_brief.py` (DIAMOND/BLUE CHIP) + `bots/ask_ludi_handlers.py` (edges intent). 1-session build.
-- [ ] **Phase 2 — Streamlit HTML component**: `app/components/prop_card.py` — right panel of two-column layout (Odds Widget iframe left, prop cards right).
-- [ ] **Phase 3 — Prop Pulse Score** (optional): `_prop_pulse_score()` → 0–100 composite: Edge% 40% + L10 hit rate 25% + DVP rank 20% + alt line EV delta 15%.
-- [ ] **Odds Widget**: Free Starter plan active (500 req/month). `ODDS_WIDGET_KEY` in `.env` — add to `.env.template`. Explore widget implementation at builder URL. **Telegram only**: iframe not supported — widget for Streamlit game lines sidebar only.
+- [ ] **Phase 1 — PIL PNG for Telegram**: `utils/card_engine.py` → 800×500px dark card. Wire into `morning_brief.py` + `bots/ask_ludi_handlers.py`. 1-session build.
+- [ ] **Phase 2–3 + Odds Widget**: Streamlit component (`app/components/prop_card.py`) + Prop Pulse Score (0–100 composite). `ODDS_WIDGET_KEY` in `.env` — Streamlit sidebar only (no Telegram iframe). See `docs/research/PROP_CARD_WIDGET_RESEARCH.md`.
 
 ### CLV Tracking Enhancement
 - [ ] CLV reporting in PM Bot daily summary
