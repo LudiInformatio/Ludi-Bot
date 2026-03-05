@@ -197,12 +197,13 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 - Phase 8.22: Social Intelligence System — architecture complete; `social_signals` table + Prop Pulse Score (0–100) into `curate_plays.py`
 - Phase 8.23: CLV + Claude Feedback Loop — Wilson calibration at ~Mar 10 (14-day window); `_get_system_wr_context()` injection
 
-**Performance (Jan 7 – Mar 3, 2026):**
-- Settled Bets: 9,246 | Win Rate: 53.5% (excl. push) | Net Units: +251.1u | ROI: +3.1%
-- BLOCKS UNDER: 69.1% WR (847 bets) — strongest signal in system
-- UNDER bets: 56.3% | OVER bets: 48.3% (OVER filters actively suppressing weak categories)
+**Performance (Jan 7 – Mar 4, 2026, post-dedup):**
+- Settled Bets: 8,655 | Win Rate: 53.6% (excl. push/void) | Net Units: -147.54u | ROI: -1.9%
+- UNDER bets: 56.4% WR (+84.88u) | OVER bets: 48.5% WR (-232.42u)
+- BLK UNDER: 69.6% WR (790 bets) — strongest signal | 3PM UNDER: 60.5% WR (+55.92u)
+- BLUE CHIP / STEAL / CORE tiers all net positive; DIAMOND tier (51% WR) under recalibration
 - CLV: Positive across all edge buckets (83.9% coverage, avg +4.43c)
-- All paper bet tracking in beta — model under live calibration
+- All paper bet tracking — model under live calibration, OVER structural losers filter pending
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
