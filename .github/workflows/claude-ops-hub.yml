@@ -19,7 +19,7 @@ on:
       - "Daily WOWY Sync"
       - "Daily Morning Briefing"
       - "Nightly Debrief"
-      - "Evening Slate Lock (6PM EST)"
+      - "Evening Slate Lock (6:35 PM EST)"
       - "Daily Referee Sync"
       - "Ghost Protocol Tracking Sync"
       - "Daily Database Backup"
@@ -276,7 +276,7 @@ jobs:
             - `continue-on-error: true` steps won't cause workflow failure — look at non-optional steps
 
             ### Pipeline Domain
-            **Matches:** Daily Production Pipeline, Daily Morning Briefing, Evening Slate Lock (6PM EST), Nightly Debrief, Daily Reports
+            **Matches:** Daily Production Pipeline, Daily Morning Briefing, Evening Slate Lock (6:35 PM EST), Nightly Debrief, Daily Reports
 
             **Pipeline Flow:** Module A (odds) → B (history) → C (simulation) → D (injuries) → E (calibration) → F (edge calc) → Telegram
             **Module Classes:** Gatekeeper, print_sharp_box_score, LudiOracle, LudiYak, LudiCalibrator, LudiReporter, LudiRefEngine, LudiHistorian, ScenarioBuilder

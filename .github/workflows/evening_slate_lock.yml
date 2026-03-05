@@ -90,6 +90,7 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
           # Force refresh so any late scratches (4-6 PM window) are in DB
           # before evening cards generate. Non-fatal if it fails.
@@ -99,7 +100,11 @@ jobs:
       - name: Run News Agent (Automated News Catalyst Check)
         continue-on-error: true
         timeout-minutes: 3
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
+          export PYTHONPATH=$PWD
           .venv/bin/python scripts/news_agent.py --mode automated
 
       - name: Run Evening Lock Briefing
