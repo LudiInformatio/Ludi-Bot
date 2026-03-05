@@ -725,3 +725,5 @@ git push origin main                   # Runner now gets correct code
 **Root cause:** `daily_simulation_pipeline.yml` curate step (line ~188) only had `ANTHROPIC_API_KEY` in its env block — `PERPLEXITY_API_KEY` was never added. The `getattr(config, 'PERPLEXITY_API_KEY', None)` guard returns None → all Perplexity calls skip.
 
 **Fix:** Add `PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}` to the curate step env block. Pattern: always verify ALL required API keys are in a workflow step's env, not just the primary one.
+
+**Same bug in 2 more workflows (found same day):** `evening_slate_lock.yml` news agent step had ZERO env vars (no ANTHROPIC_API_KEY, no PERPLEXITY_API_KEY, no PYTHONPATH) → Claude auth fails, Perplexity falls back to DuckDuckGo. Injury refresh step also missing PERPLEXITY_API_KEY. `daily_briefing.yml` news agent step had same gap. Also: `claude-ops-hub.yml` monitored `"Evening Slate Lock (6PM EST)"` but actual workflow name is `"Evening Slate Lock (6:35 PM EST)"` → evening slate failures were invisible to Ops Hub. All fixed in commit `63885c5`.

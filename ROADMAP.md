@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, March 4, 2026 — 5:25 PM EST
+**Last Updated:** Wednesday, March 4, 2026 — 7:08 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Curation Engine v2 (`curate_plays.py`, `utils/game_dossier.py`) — full-slate STRONG/LEAN/FADE grading + BetIQ-style game dossier + shared Perplexity cache + employee onboarding prep
 **Completed:** `bet_recommendations` dedup — 17,202 duplicates removed + INSERT OR IGNORE + UNIQUE INDEX ✅ + CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅
