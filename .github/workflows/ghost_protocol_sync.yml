@@ -72,12 +72,6 @@ jobs:
       # sync_bdl_season_averages.py --category playtype runs weekly in weekly_validation.yml
       # NBA.com browser scraping of synergy data is no longer needed.
 
-      - name: Reclassify Player Archetypes
-        timeout-minutes: 30
-        run: |
-          export PYTHONPATH=$PWD
-          .venv/bin/python scripts/reclassify_player_archetypes.py
-
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
         if: always()

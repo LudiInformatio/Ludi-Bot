@@ -54,7 +54,7 @@ These sections must survive all future sessions — agents should never trim the
 | `ROADMAP.md` `[x]` Next Actions | Task verified complete + appears in `**Completed:**` header |
 | `README.md` Phase 8 completions table `Infra` rows | Any single row has >1 sentence of prose detail |
 | `memory/MEMORY.md` | Any entry that would push the file past 200 lines |
-| `docs/STATUS_HISTORY.md` | Never — it's the archive; append only, never trim |
+| `docs/STATUS_HISTORY.md` | Append only. Content >90 days old moves to `docs/archive/`. Not auto-loaded in CLAUDE.md (`@` omitted — use `STATUS_CURRENT.md` instead). |
 
 ---
 
@@ -77,7 +77,8 @@ These sections must survive all future sessions — agents should never trim the
 | `README.md` Project Vision | Quarterly or major evolution | Manually when direction changes |
 | `CLAUDE.md` Known Gotchas | When new gotcha discovered | During or after debugging |
 | `best-practices/` category docs | When new pattern confirmed | After second occurrence of the pattern |
-| `docs/STATUS_HISTORY.md` | Append only | End of major sprints |
+| `docs/STATUS_HISTORY.md` | Append only; content >90 days old moves to `docs/archive/` | End of major sprints |
+| `docs/STATUS_CURRENT.md` | Every session — update active sprint + last 3 completions | `/session-debrief` Step 3 alongside ROADMAP.md |
 
 ---
 

@@ -152,34 +152,46 @@ class LudiHistorian:
             conn.close()
             return canonical_id
             
-        # Tier 3: Name-based resolution + Auto-register alias
+        # Tier 3: Name-based resolution + best-effort alias registration
         if player_name:
             try:
                 canonical_id = self.resolver.resolve_to_canonical_id(player_name)
-                
-                # Auto-register this input_id as an alias for future-proofing
-                # But only if it's dirty (we don't want to alias clean IDs to other clean IDs)
+            except (ValueError, Exception):
+                canonical_id = None
+
+            if canonical_id:
+                # Best-effort alias registration — fail fast (1s), never block caller
                 if is_dirty:
-                    row = conn.execute("SELECT aliases FROM player_canonical_ids WHERE canonical_id = ?", (canonical_id,)).fetchone()
-                    if row:
-                        aliases = json.loads(row[0]) if row[0] else []
-                        if input_id not in aliases:
-                            aliases.append(input_id)
-                            conn.execute("UPDATE player_canonical_ids SET aliases = ?, updated_at = CURRENT_TIMESTAMP WHERE canonical_id = ?", 
-                                        (json.dumps(aliases), canonical_id))
-                            conn.commit()
-                            logger.info(f"Auto-registered alias: {input_id} -> {canonical_id} ({player_name})")
-                
+                    try:
+                        alias_conn = sqlite3.connect(self.db_path, timeout=1)
+                        alias_conn.execute("PRAGMA busy_timeout=1000")
+                        row = alias_conn.execute(
+                            "SELECT tank01_aliases FROM player_canonical_ids WHERE canonical_id = ?",
+                            (canonical_id,)
+                        ).fetchone()
+                        if row:
+                            aliases = json.loads(row[0]) if row[0] else []
+                            if input_id not in aliases:
+                                aliases.append(input_id)
+                                alias_conn.execute(
+                                    "UPDATE player_canonical_ids SET tank01_aliases = ?, updated_at = CURRENT_TIMESTAMP WHERE canonical_id = ?",
+                                    (json.dumps(aliases), canonical_id)
+                                )
+                                alias_conn.commit()
+                                logger.info(f"Auto-registered Tank01 alias: {input_id} -> {canonical_id} ({player_name})")
+                        alias_conn.close()
+                    except Exception:
+                        pass  # Non-blocking — alias will be registered on next successful run
                 conn.close()
-                return canonical_id
-            except (ValueError, Exception) as e:
-                pass # Continue to fallback
+                return canonical_id  # ALWAYS return canonical ID when Tier 3 succeeds
 
         # Tier 4: Fallback with warning
         if is_dirty:
             logger.warning(f"Database Firewall: ID '{input_id}' ({player_name}) is dirty and could not be resolved.")
-        
-        conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
         return input_id
 
     def _get_conn(self):
