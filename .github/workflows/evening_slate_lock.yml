@@ -4,9 +4,8 @@ on:
   schedule:
     # Run 1 — 6:35 PM EST (23:35 UTC): all games (7 PM–8:30 PM tips)
     - cron: '35 23 * * *'
-    # Run 2 — 8:25 PM EST (01:25 UTC next day): west coast only (9 PM+ tips)
-    # Scheduled 5 min before nightly_debrief.yml (8:30 PM) to avoid SQLite overlap
-    - cron: '25 1 * * *'
+    # Run 2 — 7:55 PM EST (00:55 UTC): west coast games (9 PM+ tips)
+    - cron: '55 0 * * *'
   workflow_dispatch:
   push:
     branches: [main]  # Prevents phantom failure notifications on push

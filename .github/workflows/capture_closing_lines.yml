@@ -1,12 +1,17 @@
 name: Capture Closing Lines
 
-# CLV capture is now handled by the overnight historical run in db_backup.yml (1 AM EST).
-# That run covers ALL game times (day games + evening) via date=commence_time, using
-# Pinnacle + Novig/ProphetX as sharp benchmarks at flat 10c/game credit cost.
-#
-# This workflow is kept for MANUAL TRIGGER ONLY (e.g. re-running a specific date).
-# Remove the schedule block entirely — overnight is the primary CLV path.
+# Hourly pre-tipoff CLV capture (6:25 PM – 11:25 PM EST).
+# check-slate gate skips non-game nights. Overnight batch in db_backup.yml is fallback.
 on:
+  schedule:
+    # Hourly pre-tipoff CLV capture: 6:25 PM – 11:25 PM EST
+    # check-slate gate skips non-game nights (cheap — just BDL slate check)
+    - cron: '25 23 * * *'   # 6:25 PM EST
+    - cron: '25 0 * * *'    # 7:25 PM EST
+    - cron: '25 1 * * *'    # 8:25 PM EST
+    - cron: '25 2 * * *'    # 9:25 PM EST
+    - cron: '25 3 * * *'    # 10:25 PM EST
+    - cron: '25 4 * * *'    # 11:25 PM EST
   workflow_dispatch:
     inputs:
       game_date:
