@@ -167,6 +167,34 @@ canonical_id = ludi.resolve_player_id_for_insert(raw_id, raw_name)
 
 ---
 
+## The 'Lastname, Firstname' Problem
+
+**Introduced:** March 5, 2026
+**Source:** `scripts/sync_browser_backfill.py` (Ghost Protocol)
+
+**Problem:** Some data sources, particularly web scrapers reading from NBA.com stats tables, provide player names in "Lastname, Firstname" format (e.g., "Brunson, Jalen"). This format is incompatible with our canonical name storage ("Jalen Brunson") and the `PlayerIDResolver`, causing silent resolution failures.
+
+**The Fix:** Always pre-normalize the name format *before* passing it to the database firewall or resolver.
+
+```python
+# In scripts/sync_browser_backfill.py
+
+def _normalize_name_for_firewall(name):
+    """ Flip 'Lastname, Firstname' → 'Firstname Lastname' for firewall name resolution. """
+    if ',' in name:
+        parts = name.split(',', 1)
+        return f"{parts[1].strip()} {parts[0].strip()}"
+    return name
+
+# Usage before calling the resolver:
+player_name = _normalize_name_for_firewall(player_name)
+canonical_id = ludi.resolve_player_id_for_insert(raw_pid, player_name)
+```
+
+**Rule:** Any data source that provides names in a non-standard format must have a dedicated pre-normalization step at the ingestion point. Do not rely on the central resolver to handle every possible format permutation.
+
+---
+
 ## SQL-Side Canonical JOIN (for sync scripts querying game_logs)
 
 When a sync script iterates over `player_game_logs` rows and needs to resolve accent-unsafe names (BDL writes "Nikola Jokic" without accent), use a SQL JOIN directly instead of a Python per-row lookup. This avoids an extra Python function call per player and keeps the logic in one query.
@@ -216,6 +244,50 @@ def _get_canonical_lookup_from_db(conn) -> dict:
 
 ---
 
+## PlayerIDResolver Normalization (`utils/player_id_resolver.py`)
+
+**Updated:** March 5, 2026
+
+The `PlayerIDResolver.normalize_name` static method is the core of name-based lookups. It ensures that variations in name formatting resolve to a single, consistent key.
+
+**How it works:**
+1.  **Unicode Normalization:** Strips accents and diacritics (e.g., `Dončić` → `Doncic`).
+2.  **Lowercase:** Converts all characters to lowercase.
+3.  **Punctuation Removal:** Removes hyphens, periods, and apostrophes (e.g., `Gilgeous-Alexander` → `gilgeousalexander`).
+4.  **Suffix Removal:** Strips common suffixes like 'Jr.', 'Sr.', 'III'.
+5.  **Whitespace Cleanup:** Normalizes all whitespace characters and collapses multiple spaces into one.
+
+```python
+# In utils/player_id_resolver.py
+@staticmethod
+def normalize_name(name: str) -> str:
+    """ Normalizes player name for matching across APIs. """
+    if not name:
+        return ''
+    
+    # Unicode (accent) normalization
+    name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode('ASCII')
+    
+    # Lowercase and strip
+    name = name.lower().strip()
+    
+    # Remove hyphens and other punctuation
+    name = name.replace('-', '').replace('.', '').replace("'", "")
+    
+    # Remove suffixes
+    for suffix in [' jr', ' sr', ' iii', ' ii', ' iv', ' v']:
+        name = name.replace(suffix, '')
+    
+    # Remove extra whitespace
+    name = ' '.join(name.split())
+    
+    return name
+```
+
+This standardized `normalized_name` is then used to query the `player_canonical_ids` table, providing a robust bridge between inconsistent source data and our canonical records.
+
+---
+
 ## Common Failure Modes
 
 | Symptom | Cause | Fix |
@@ -223,6 +295,7 @@ def _get_canonical_lookup_from_db(conn) -> dict:
 | Claude receives "No injury on record" for OUT player | Accent mismatch in injury query | Call `resolve_canonical_name()` before query |
 | Player gets GENERALIST archetype despite having synergy data | `get_player_synergy()` exact match failed | Use `_strip_accents()` fallback in synergy lookup |
 | `team_abbreviation = ''` in `player_injuries` | BDL/RSS returned non-accented name, `players.name` lookup failed | Use canonical lookup in `sync_to_database()` |
+| Silent resolution failure for scraper | Name in "Lastname, Firstname" format | Pre-normalize name before calling resolver |
 | Trend engine returns no data for player | `_resolve_player_id()` failed all 3 tiers | Tier 4 canonical fallback in `trend_engine.py` |
 | 7 duplicate rows for same player in `player_injuries` | Missing dedup guard | `INSERT ... WHERE NOT EXISTS (same player/status/date)` |
 

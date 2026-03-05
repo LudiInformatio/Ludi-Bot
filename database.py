@@ -125,8 +125,10 @@ class LudiHistorian:
             4. Fallback: Return original input_id + logger.warning()
         """
         input_id = str(input_id).strip() if input_id else ""
-        if not input_id:
-            return input_id
+        if not input_id and not player_name:
+            return input_id # nothing to work with — bail
+        
+        # If input_id is empty but player_name exists, fall through to Tier 3 name resolution
             
         # Tier 1: Exact canonical match (pass through)
         # Dirty ID Rule: len(str(id)) > 7 OR not str(id).startswith(('1','2'))
@@ -142,15 +144,16 @@ class LudiHistorian:
                 
         # Tier 2: Alias lookup (aliases or tank01_aliases)
         conn = self._get_conn()
-        row = conn.execute("""
-            SELECT canonical_id FROM player_canonical_ids 
-            WHERE (aliases LIKE ? OR tank01_aliases LIKE ?)
-        """, (f'%"{input_id}"%', f'%"{input_id}"%')).fetchone()
-        
-        if row:
-            canonical_id = row[0]
-            conn.close()
-            return canonical_id
+        if input_id:
+            row = conn.execute("""
+                SELECT canonical_id FROM player_canonical_ids 
+                WHERE (aliases LIKE ? OR tank01_aliases LIKE ?)
+            """, (f'%"{input_id}"%', f'%"{input_id}"%')).fetchone()
+            
+            if row:
+                canonical_id = row[0]
+                conn.close()
+                return canonical_id
             
         # Tier 3: Name-based resolution + best-effort alias registration
         if player_name:

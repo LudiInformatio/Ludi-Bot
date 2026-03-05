@@ -69,6 +69,9 @@ class PlayerIDResolver:
         # Lowercase and strip
         name = name.lower().strip()
         
+        # Remove hyphens and other punctuation
+        name = name.replace('-', '').replace('.', '').replace("'", "")
+        
         # Remove suffixes
         for suffix in [' jr.', ' jr', ' sr.', ' sr', ' iii', ' ii', ' iv', ' v']:
             name = name.replace(suffix, '')
@@ -101,7 +104,7 @@ class PlayerIDResolver:
         input_value = str(input_value).strip()
         
         # Check cache first
-        if input_value in self._cache:
+        if input_value and input_value in self._cache:
             return self._cache[input_value]
         
         conn = sqlite3.connect(self.db_path)
@@ -113,7 +116,8 @@ class PlayerIDResolver:
         row = c.fetchone()
         if row:
             conn.close()
-            self._cache[input_value] = row[0]
+            if input_value:
+                self._cache[input_value] = row[0]
             return row[0]
         
         # Try normalized name match
@@ -122,7 +126,8 @@ class PlayerIDResolver:
         row = c.fetchone()
         if row:
             conn.close()
-            self._cache[input_value] = row[0]
+            if input_value:
+                self._cache[input_value] = row[0]
             return row[0]
         
         # Try Tank01 alias match

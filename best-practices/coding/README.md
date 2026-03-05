@@ -276,8 +276,9 @@ def get_matchup_analysis(stat_category):
 
 ## Pattern 8 — Normalize String Values at Load Time, Not Lookup Time
 
-**Problem:** DB columns written by external APIs often use different casing or format than the code expects. If you normalize at lookup time, you have to remember it everywhere. Normalize once at load — at the `_load_*()` method — and the rest of the codebase sees a clean value.
+**Problem:** DB columns and external data sources often use different casing, formats, or punctuation for the same logical value. If you normalize at lookup time, you have to remember to do it everywhere. The robust pattern is to normalize once at the ingestion point — at the `_load_*()` method or in the client itself — so the rest of the codebase sees a clean, consistent value.
 
+**Example 1: Case Sensitivity**
 ```python
 # ❌ DB stores 'HOME'/'AWAY', lookup expects 'home'/'away' — silently returns None everywhere
 ha_stats = ha_data.get(scenario_context['home_or_away'])  # 'home' → never matches 'HOME'
@@ -286,6 +287,31 @@ ha_stats = ha_data.get(scenario_context['home_or_away'])  # 'home' → never mat
 for row in rows:
     ha = row['home_or_away'].lower() if row['home_or_away'] else row['home_or_away']
     result[pid][ha] = {...}  # stored as 'home'/'away' — matches all lookups
+```
+
+**Example 2: Name Format Mismatches**
+```python
+# ❌ Name formats from different sources cause silent lookup failures
+# NBA.com scraper: "Brunson, Jalen"
+# DB canonical: "Jalen Brunson"
+# DB normalized: "jalen brunson"
+# Another DB table: "shai gilgeousalexander" (no hyphen)
+
+# ✅ Normalize at the source, before the resolver ever sees it.
+# In the scraper:
+def _normalize_name_for_firewall(name):
+    if ',' in name:
+        parts = name.split(',', 1)
+        return f"{parts[1].strip()} {parts[0].strip()}"
+    return name
+
+# In the central resolver (utils/player_id_resolver.py):
+def normalize_name(name: str) -> str:
+    # ...
+    # Lowercase, strip accents, and REMOVE punctuation
+    name = name.lower().strip().replace('-', '').replace('.', '').replace("'", "")
+    # ...
+    return ' '.join(name.split())
 ```
 
 **Rule:** Before writing any dict keyed by a DB string column, verify the exact stored values first:

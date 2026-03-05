@@ -460,6 +460,38 @@ WHERE h.home_score >= 60 AND a.away_score >= 60  -- sanity gate: filters DNP-onl
 
 ---
 
+## Pattern 12 — Guarding Alias Lookups Against Empty Inputs
+
+**Context:** The `resolve_player_id_for_insert` function in `database.py` uses a 4-tier firewall to resolve player IDs. Tier 2 performs an alias lookup in the `player_canonical_ids` table.
+
+**Problem:** When the `input_id` is an empty string (`''`), the alias lookup query `WHERE (aliases LIKE '%""%' OR tank01_aliases LIKE '%""%')` is too broad. It can incorrectly match the first player that has any alias defined, leading to all subsequent name-only lookups in the same session resolving to the wrong player.
+
+**The Fix:** Add a conditional guard to skip the Tier 2 alias lookup entirely if the `input_id` is empty. This forces the function to fall through to the more robust Tier 3 name-based resolution.
+
+```python
+# In database.py resolve_player_id_for_insert()
+
+# ...
+# Tier 2: Alias lookup (aliases or tank01_aliases)
+conn = self._get_conn()
+if input_id:  # ✅ Guard condition
+    row = conn.execute("""
+        SELECT canonical_id FROM player_canonical_ids 
+        WHERE (aliases LIKE ? OR tank01_aliases LIKE ?)
+    """, (f'%"{input_id}"%', f'%"{input_id}"%')).fetchone()
+    
+    if row:
+        canonical_id = row[0]
+        conn.close()
+        return canonical_id
+# Tier 3 will use the still-open connection if input_id was empty
+# ...
+```
+
+**Rule:** Database queries that use `LIKE` with user-provided or API-provided input must be carefully guarded against empty or overly broad values that could lead to false-positive matches.
+
+---
+
 ## Future Skill
 
 **`/schema-audit`** — Database design review
