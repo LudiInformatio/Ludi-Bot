@@ -481,7 +481,7 @@ Grade every bet listed above. Return JSON array only."""
         system_prompt=system_prompt,
         model=SONNET_MODEL,
         temperature=0.1,
-        max_tokens=8192,
+        max_tokens=32000,  # ~443 bets x ~50 tokens each = ~22K needed; 8192 was truncating mid-JSON
         call_type='curation',
     )
 
