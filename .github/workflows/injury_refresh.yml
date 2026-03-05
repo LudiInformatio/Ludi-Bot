@@ -37,7 +37,7 @@ on:
 
 concurrency:
   group: injury-refresh
-  cancel-in-progress: true
+  cancel-in-progress: false # false — pushes were cancelling scheduled runs (cancel: true + push guard = destructive)
 
 jobs:
   refresh-injuries:
