@@ -1859,6 +1859,20 @@ class LudiHistorian:
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_game_date ON claude_analysis_log(game_date)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_model ON claude_analysis_log(model)")
 
+        # News catalyst columns — written by scripts/news_agent.py, read by morning_brief.py
+        for _col_def in [
+            "ALTER TABLE claude_analysis_log ADD COLUMN analysis_date TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN analysis_type TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN has_catalyst INTEGER DEFAULT 0",
+            "ALTER TABLE claude_analysis_log ADD COLUMN catalyst_type TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN catalyst_signal TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN catalyst_confidence REAL",
+        ]:
+            try:
+                c.execute(_col_def)
+            except Exception:
+                pass  # Column already exists
+
         # Phase 8.24 — Edge type label migration guard (bet_recommendations is an orphan table
         # owned by utils/bet_logger.py; guards here ensure live DBs pick up new columns too).
         try:

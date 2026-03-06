@@ -189,6 +189,7 @@ class LudiEngine:
                 # normalizes abbreviations via canonical_teams.standard_abbr at write time.
                 rows = conn.execute(f"""
                     SELECT pgl.player_id,
+                           pgl.player_name,
                            pgl.{col} AS stat_val,
                            pgl.game_date,
                            CASE WHEN pgl.team_abbreviation = cg.home_team

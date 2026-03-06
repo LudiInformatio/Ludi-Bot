@@ -493,7 +493,7 @@ def get_matchup_analysis(player_name, opponent_abbr, cursor, stat_category='PTS'
         scheme_row = cursor.execute("""
             SELECT active_style
             FROM team_scheme_cache
-            WHERE team_abbreviation = ?
+            WHERE team_abbr = ?
             ORDER BY updated_at DESC LIMIT 1
         """, (opponent_abbr,)).fetchone()
 
