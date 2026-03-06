@@ -407,7 +407,7 @@ CATEGORY_DISPLAY_BOOST = {
 }
 
 class MorningBriefEngine:
-    def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None, force_fresh=False):
+    def __init__(self, target_teams=None, mode="morning", dry_run=False, after_hour=None, before_hour=None, force_fresh=False):
         print("\n" + "="*50)
         print(f"   🌅 LUDI {mode.upper()} BRIEF ENGINE")
         print(f"   Status: Production | Visual: V1.0 | Dry Run: {dry_run}")
@@ -417,6 +417,7 @@ class MorningBriefEngine:
         self.mode = mode
         self.dry_run = dry_run
         self.after_hour = after_hour  # If set, skip games starting before this hour (EST, 24h)
+        self.before_hour = before_hour  # If set, skip games starting at or after this hour (EST, 24h)
         self.force_fresh = force_fresh  # If set, skip cache and fetch fresh data
         
         # Orchestrator helper (The Central Brain)
@@ -509,6 +510,23 @@ class MorningBriefEngine:
             self.gate.games = filtered_late
             if not self.gate.games:
                 print(f"📅 No games tipping at {self.after_hour}:00+ EST — skipping west coast brief.")
+                return
+
+        # --- BEFORE-HOUR FILTER (early slate run: --before-hour 21 = 7 PM–8:30 PM games only) ---
+        if self.before_hour is not None:
+            _est_bh = pytz.timezone('US/Eastern')
+            filtered_early = {}
+            for gid, gdata in self.gate.games.items():
+                _s = gdata.get('start_time')
+                if _s:
+                    _s_est = _s if _s.tzinfo else _s.replace(tzinfo=_est_bh)
+                    if _s_est.hour >= self.before_hour:
+                        print(f"   ⏭️  Skipping {gdata.get('matchup','?')} — tips at {self.before_hour}:00+ EST (late slate run will cover)")
+                        continue
+                filtered_early[gid] = gdata
+            self.gate.games = filtered_early
+            if not self.gate.games:
+                print(f"📅 No games tipping before {self.before_hour}:00 EST — nothing for early brief.")
                 return
 
         print(f"✅ Processing {len(self.gate.games)} games.")
@@ -1391,11 +1409,13 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Skip Telegram sends")
     parser.add_argument("--after-hour", type=int, default=None,
                         help="Skip games starting before this hour EST (24h). E.g. 21 = 9 PM+ only (west coast run).")
+    parser.add_argument("--before-hour", type=int, default=None,
+                        help="Skip games starting at or after this hour EST (24h). E.g. 21 = early slate only (7-8:30 PM games).")
     parser.add_argument("--force-fresh", action="store_true",
                         help="Skip cache and fetch fresh data from API (used by evening runs).")
     args = parser.parse_args()
 
     # Process all games on the slate (no hardcoded team filter)
     engine = MorningBriefEngine(target_teams=None, mode=args.mode, dry_run=args.dry_run,
-                                after_hour=args.after_hour, force_fresh=args.force_fresh)
+                                after_hour=args.after_hour, before_hour=args.before_hour, force_fresh=args.force_fresh)
     engine.run()

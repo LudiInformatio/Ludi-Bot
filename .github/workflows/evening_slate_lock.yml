@@ -2,10 +2,10 @@ name: Evening Slate Lock (6:35 PM EST)
 
 on:
   schedule:
-    # Run 1 — 6:35 PM EST (23:35 UTC): all games (7 PM–8:30 PM tips)
+    # Run 1 — 6:35 PM EST (23:35 UTC): early games only (7 PM–8:30 PM tips, --before-hour 21)
     - cron: '35 23 * * *'
-    # Run 2 — 7:55 PM EST (00:55 UTC): west coast games (9 PM+ tips)
-    - cron: '55 0 * * *'
+    # Run 2 — 7:50 PM EST (00:50 UTC): late games only (9 PM+ tips, --after-hour 21)
+    - cron: '50 0 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -119,15 +119,16 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
           # Detect which run this is by EST hour:
-          #   6:35 PM run (23:35 UTC) → show all games (no filter)
-          #   8:25 PM run (01:25 UTC) → west coast only: --after-hour 21 (9 PM+ EST)
+          #   6:35 PM run (23:35 UTC) → early slate only: --before-hour 21 (7 PM–8:30 PM tips)
+          #   7:50 PM run (00:50 UTC) → late slate only: --after-hour 21 (9 PM+ tips)
+          # This ensures each game is processed exactly once — no duplicate credits.
           CURRENT_HOUR_EST=$(TZ='America/New_York' date +%H)
-          if [ "$CURRENT_HOUR_EST" -ge 20 ]; then
-            echo "🌅 West coast run — showing only games tipping at 9 PM EST or later"
+          if [ "$CURRENT_HOUR_EST" -ge 19 ]; then
+            echo "🌅 Late slate run — showing only games tipping at 9 PM EST or later"
             .venv/bin/python -m morning_brief --mode evening --after-hour 21 --force-fresh
           else
-            echo "🏀 Evening lock run — showing all games"
-            .venv/bin/python -m morning_brief --mode evening --force-fresh
+            echo "🏀 Early slate run — showing only games tipping before 9 PM EST"
+            .venv/bin/python -m morning_brief --mode evening --before-hour 21 --force-fresh
           fi
 
       - name: Notify on failure
