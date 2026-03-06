@@ -64,21 +64,22 @@ A: Gatekeeper ─→ B: Engine ─→ C: Oracle ─→ D: Yak ─→ E: Calibrat
 
 ## AI Employee Workforce
 
-As of March 2026, the Ludi system is staffed by a 7-person AI team running on a hybrid architecture (Claude Agent Teams + Gemini CLI writer + OpenClaw always-on daemons). Each employee has a dedicated soul file in `employees/` that defines their role, communication style, and operating constraints.
+As of March 2026, the Ludi system is staffed by an 8-person AI team running on a hybrid architecture: Claude Code Skills 2.0 subagents (`.claude/agents/`) for interactive work + external stack (Telegram bots, GH Actions, launchd) for scheduled/always-on tasks.
 
-| Employee | Role | Runtime | Soul File |
-|----------|------|---------|-----------|
-| **Solomon** | PM Agent — sprint status, next actions, team health | Claude Agent Teams (lead) | `employees/solomon/` |
-| **Silas** | System Monitor — daily health checks, quota alerts, drift detection | OpenClaw (launchd daemon) | `employees/silas/` |
-| **Vera** | Pipeline QA — bet logic validation, settlement verification, edge sanity | Claude Agent Teams (teammate) | `employees/vera/` |
-| **Iris** | Social Scout — public sentiment, competitive intel, audience demand signals | OpenClaw (launchd daemon) | `employees/iris/` |
-| **Henrik** | Code Auditor — independent code review (uses Gemini CLI for genuine writer/auditor split) | Claude Agent Teams (teammate) | `employees/henrik/` |
-| **Maren** | Content Strategist — Telegram card copy, weekly report narrative, brand voice | Claude Agent Teams (teammate) | `employees/maren/` |
-| **Lena** | Data Analyst / Model Calibration — CLV analysis, win rate audits, edge recalibration | Claude Agent Teams (teammate) | `employees/lena/` *(onboarding pending)* |
+| Employee | Role | Runtime | Location |
+|----------|------|---------|----------|
+| **Solomon** | PM — sprint status, next actions, team health | Subagent (sonnet) + Telegram bot | `.claude/agents/solomon.md` |
+| **Silas** | SRE — health checks, quota alerts, drift detection | Subagent (haiku, read-only) | `.claude/agents/silas.md` |
+| **Vera** | Pipeline QA — settlement verification, pre-flight checks | Subagent (haiku, read-only) | `.claude/agents/vera.md` |
+| **Iris** | Social Scout — sentiment, competitive intel, demand signals | Skill (zero-LLM) + launchd | `.claude/skills/iris-collect/` |
+| **Henrik** | Code Auditor — Ludi-specific gotcha checklist, cross-file deps | Subagent (sonnet, worktree) | `.claude/agents/henrik.md` |
+| **Maren** | Strategist — content, BERT refinement, roadmap ideas | Subagent (sonnet) | `.claude/agents/maren.md` |
+| **Lena** | Data Analyst — pattern mining, CLV analysis, calibration | Subagent (sonnet) | `.claude/agents/lena.md` |
+| **Kai** | Repo Custodian — file staleness, archives, gitignore, remote sync | Subagent (haiku, read-only) | `.claude/agents/kai.md` |
 
-**Architecture:** Claude calls `gemini -p "..." --yolo -m gemini-2.5-pro` as a Bash subprocess for writing tasks. Henrik (Claude) reviews Gemini's output. Different model + different company = genuine independent audit. Silas and Iris run as persistent macOS launchd daemons via OpenClaw.
+**Architecture:** Subagents auto-delegate based on description (e.g., "check pipeline health" → Silas). Persistent memory (`memory: project`) lets employees learn across sessions. Tool restrictions enforce read-only for monitoring agents. Solomon Telegram bot (`bots/solomon_bot.py`) stays always-on externally.
 
-**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — full spec (~$4.60/mo total runtime cost)
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` | **Implementation plan:** `.claude/plans/crystalline-petting-reef.md`
 
 ---
 
@@ -159,7 +160,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 ## Project Status
 
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Last Updated:** Thursday, March 5, 2026
+**Last Updated:** Friday, March 6, 2026
 
 **Phase 8 Completions:**
 
@@ -193,16 +194,15 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | Infra | Infrastructure Sprints (Feb–Mar 2026) — module audit (8-signal confidence tier, STRUCTURAL_LOSERS filter); BDL V2 + SportsDataIO enrichment (100K+ rows); canonical ID system (99.79% clean, 638 entries); CLV hardening (closing lines nightly, stat_category fix); full codebase audit (20/20 workflows hardened, 100% coverage); AI Employee Workforce setup; Pipeline Reliability (Ghost Protocol 136→2 warnings, DB lock fix, curate max_tokens 8192→32000) |
 
 **Active / Planned Next:**
-- Sprint 2: Dynamic Rec Lifecycle — `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM) + `is_valid` column + Perplexity upgrade; employee onboarding docs (~Mar 10)
-- Phase 8.22: Social Intelligence System — architecture complete; `social_signals` table + Prop Pulse Score (0–100) into `curate_plays.py`
-- Phase 8.23: CLV + Claude Feedback Loop — Wilson calibration at ~Mar 10 (14-day window); `_get_system_wr_context()` injection
+- Employee onboarding: Skills 2.0 subagents (`.claude/agents/*.md`) for 8 employees — Henrik, Silas, Lena first; ONBOARDING.md + SOUL.md for Lena/Kai
+- Sprint 2: Dynamic Rec Lifecycle — `revalidate_recs.py` + `midday_refresh.py` (2 PM/4:30 PM) + `is_valid` column + Perplexity upgrade
+- Phase 8.23: CLV + Claude Feedback Loop — Wilson calibration at ~Mar 10 (14-day window)
 
-**Performance (Jan 7 – Mar 4, 2026, post-dedup):**
-- Settled Bets: 8,655 | Win Rate: 53.6% (excl. push/void) | Net Units: -147.54u | ROI: -1.9%
-- UNDER bets: 56.4% WR (+84.88u) | OVER bets: 48.5% WR (-232.42u)
-- BLK UNDER: 69.6% WR (790 bets) — strongest signal | 3PM UNDER: 60.5% WR (+55.92u)
-- BLUE CHIP / STEAL / CORE tiers all net positive; DIAMOND tier (51% WR) under recalibration
-- CLV: Positive across all edge buckets (83.9% coverage, avg +4.43c)
+**Performance (Jan 7 – Mar 5, 2026, post-dedup):**
+- Settled Bets: 9,203 | Win Rate: 53.4% (excl. push/void) | Net Units: -188.00u | ROI: -2.0%
+- UNDER bets: 56.2% WR (+52.56u) | OVER bets: 48.7% WR (-240.56u)
+- BLK UNDER: 69.8% WR (829 bets) — strongest signal | 3PM UNDER: 60.1% WR (+53.44u)
+- BLUE CHIP / STEAL / CORE tiers all net positive; DIAMOND tier (50.9% WR, -242.92u) under recalibration
 - All paper bet tracking — model under live calibration, OVER structural losers filter pending
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
@@ -260,7 +260,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress and upcoming work.
 
 **Core thesis (validated):** Props are exploitable via scenario-conditional simulation. When stars sit, usage redistributes. Referee tendencies leave measurable signal. The math is real — but edge requires rigorous infrastructure to find and trust.
 
-**Where it is now (March 2026):** Phase 8 AI-Enhanced Pipeline — a 9-module production platform with 10,000-iteration Monte Carlo sims, 10+ redundant data sources, 40+ database tables, 9,200+ settled bets, and a 7-person AI employee team (Solomon, Silas, Vera, Iris, Henrik, Maren, Lena) managing pipeline health and content strategy.
+**Where it is now (March 2026):** Phase 8 AI-Enhanced Pipeline — a 9-module production platform with 10,000-iteration Monte Carlo sims, 10+ redundant data sources, 40+ database tables, 9,200+ settled bets, and an 8-person AI employee team managing pipeline health, code quality, and content strategy.
 
 **Where it's headed:** Ludi Lens web dashboard (Streamlit, post-Phase 8), WNBA/NFL expansion (2026-27 season), and deeper CLV recalibration as the model crosses 30,000+ settled bets.
 

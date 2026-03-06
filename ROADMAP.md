@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, March 6, 2026 — 9:44 AM EST
+**Last Updated:** Friday, March 6, 2026 — 10:08 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade (`is_valid` column, 2PM+4:30PM midday refresh, `perplexity_client.py` upgrades) + employee onboarding docs
+**Active Work:** Employee onboarding (`.claude/agents/*.md`, `employees/*/ONBOARDING.md`) — Skills 2.0 subagent implementation for 8 employees (Henrik, Silas, Lena first) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
 **Completed:** CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅
 
 This is the single source of truth for project tasks and priorities.
@@ -86,19 +86,21 @@ This is the single source of truth for project tasks and priorities.
 
 ## Medium Priority
 
-### AI Employee Workforce (March 2026 — OpenClaw Sprint)
-**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — 7 AI employees on OpenClaw runtime (~$4.60/mo)
-**Team:** Solomon (PM), Silas (System Monitor), Vera (Pipeline QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Content Strategist), **Lena (Data Analyst / Model Calibration)**
+### AI Employee Workforce (March 2026 — Skills 2.0 Hybrid)
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` | **Implementation plan:** `.claude/plans/crystalline-petting-reef.md`
+**Team (8):** Solomon (PM), Silas (SRE), Vera (QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Strategist), Lena (Data Analyst), **Kai (Repo Custodian, junior under Silas)**
+**Architecture:** Claude Code Skills 2.0 subagents (`.claude/agents/*.md`) for interactive work + external stack (Telegram bots, GH Actions, launchd) for scheduled/always-on. $0 incremental for subagents (uses subscription).
 
-**Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 6 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
+**Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 7 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
+**Research complete (Mar 6):** Skills 2.0 + subagents + agent teams evaluated. Hybrid architecture finalized. Plan in `.claude/plans/`.
 
-- [ ] **Employee onboarding docs** — `employees/{name}/ONBOARDING.md` for all 8 employees. Gemini done ✅. Remaining 7 (incl. Lena): project context + domain ownership + first task + red lines. **Lena-specific:** glossary cheat sheet — archetypes (15 offensive + 5 defensive), team schemes (4 types), matchup matrix, scenario tags. Sources: `module_e.py`, `utils/tag_classifier.py`, `team_scheme_cache`. Also inject into curation system prompt (Pattern 6).
-- [ ] Monday kickoff: Agent Teams live test (Solomon → Henrik first audit)
-- [ ] Build `employees/silas/run_check.py` + launchd plist — Silas goes live
-- [ ] Build `employees/iris/run_collection.py` + launchd plist — Iris goes live
-- [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon (sprint status, next actions, team health). Pattern: `bots/ask_ludi.py`. Week 1 build.
-- [ ] **Discord two-way** — command handlers in employee channels so you can message Silas/Iris/Henrik in Discord and they respond/act (e.g. `/run-check` in #silas, `/audit file.py` in #henrik). Requires Discord bot polling loop.
-- [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `player_shot_quality`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, WOWY accuracy, line movement → outcome correlation, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers. Plan details after Lena onboarding.
+- [ ] **Phase 1 subagents** — Create `.claude/agents/` for Henrik (sonnet, worktree), Silas (haiku, read-only), Lena (sonnet, memory)
+- [ ] **Phase 2 skills** — `/silas-check`, `/lena-analyze`, `/repo-hygiene` (Kai); upgrade `ludi-audit` + `daily` + `backtest` frontmatter
+- [ ] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM)
+- [ ] **ONBOARDING.md** — `employees/{name}/ONBOARDING.md` for all 8 employees. Gemini done ✅. Lena needs domain glossary (archetypes, schemes, matchup matrix). Kai needs archive conventions + gitignore rules.
+- [ ] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md`
+- [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
+- [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
