@@ -195,7 +195,7 @@ class LineupSync:
             if players and len(players) > 0:
                 starter = players[0]
                 if isinstance(starter, dict):
-                    starter_name = starter.get("playerName", "")
+                    starter_name = starter.get("longName", "")  # Tank01 depth chart key (not "playerName")
                 else:
                     starter_name = str(starter)
                 if starter_name:
