@@ -92,18 +92,35 @@ def get_claude_analysis(
         
         client = Anthropic(api_key=auth_token, max_retries=2)
         
-        response = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        input_tokens = response.usage.input_tokens
-        output_tokens = response.usage.output_tokens
+        # Anthropic SDK requires streaming for requests estimated > 10 min
+        # (~2000 tok/min Sonnet throughput; max_tokens=32000 → 16 min estimate)
+        if max_tokens > 4096:
+            with client.messages.stream(
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            ) as stream:
+                response_text = stream.get_final_text()
+                final_message = stream.get_final_message()
+                input_tokens = final_message.usage.input_tokens
+                output_tokens = final_message.usage.output_tokens
+        else:
+            response = client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            response_text = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
 
         try:
             from utils.api_monitor import get_monitor
@@ -122,14 +139,14 @@ def get_claude_analysis(
                 model=model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
-                response_text=response.content[0].text,
+                response_text=response_text,
                 game_date=_gd,
                 player_name=player_name,
             )
         except Exception:
             pass
 
-        return response.content[0].text
+        return response_text
 
     except Exception as e:
         print(f"[claude_client] Error: {e}")
