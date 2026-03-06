@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Thursday, March 5, 2026 — 11:53 AM EST
+**Last Updated:** Friday, March 6, 2026 — 9:44 AM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade (`is_valid` column, 2PM+4:30PM midday refresh, `perplexity_client.py` upgrades) + employee onboarding docs
 **Completed:** CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅

@@ -255,6 +255,17 @@ def send_solomon_photo(photo_path: str, caption: str = None, parse_mode: str = N
         with open(photo_path, 'rb') as f:
             files = {'photo': f}
             data = {'chat_id': TELEGRAM_CHAT_ID_SOLOMON}
+
+            # Telegram sendPhoto caption limit is 1024 chars.
+            # If too long, send photo alone then text as separate message.
+            if caption and len(caption) > 1024:
+                print(f"⚠️ Caption too long ({len(caption)} chars) — sending photo + text separately")
+                response = requests.post(url, files=files, data=data, timeout=20)
+                response.raise_for_status()
+                if response.json().get("ok"):
+                    return send_solomon_message(caption)
+                return False
+
             if caption:
                 data['caption'] = caption
                 if parse_mode:

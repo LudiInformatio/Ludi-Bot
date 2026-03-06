@@ -70,6 +70,20 @@ class ProjectManagerBot:
                 print(f"⚠️ Error configuring Gemini: {e}")
                 self.client = None
 
+    @staticmethod
+    def _trim_task(task: str, max_len: int = 80) -> str:
+        """Trim a ROADMAP task to its title portion.
+
+        ROADMAP bullets follow pattern: 'Title — detailed description...'
+        Strip at the em dash to keep just the title. If still too long,
+        hard-truncate with ellipsis.
+        """
+        if ' — ' in task:
+            task = task.split(' — ')[0].strip()
+        if len(task) > max_len:
+            task = task[:max_len - 1] + '…'
+        return task
+
     def _parse_roadmap(self):
         """
         Parse ROADMAP.md into structured sections.
@@ -111,6 +125,12 @@ class ProjectManagerBot:
         all_pending = []                # - [ ] items from all High/Medium (fallback)
 
         for line in lines:
+            # Skip blockquote lines — the ROADMAP template contract uses > prefixed
+            # lines that contain literal '### Current Sprint' and '- [ ]' text,
+            # which would falsely trigger section tracking and task collection.
+            if line.strip().startswith('>'):
+                continue
+
             # ── PRIMARY: Parse header block ────────────────────────────────────
             # **Active Work:**, **Completed:**, **Current Phase:** are maintained
             # as the single source of truth and always read first.
@@ -125,19 +145,19 @@ class ProjectManagerBot:
                 if active_str:
                     parts = active_str.split(' + ')
                     for part in parts:
-                        clean = part.strip().replace('**', '').strip()
+                        clean = part.strip().replace('**', '').replace('`', '').strip()
                         if clean:
-                            in_progress.append(clean)
+                            in_progress.append(self._trim_task(clean))
 
             elif line.startswith('**Completed:**'):
                 # Last 3 ` + ` segments = most recently completed items
                 completed_str = line.replace('**Completed:**', '').strip()
                 parts = completed_str.split(' + ')
                 for part in parts[-3:]:
-                    clean = part.strip().replace('**', '').replace('✅', '').strip()
+                    clean = part.strip().replace('**', '').replace('`', '').replace('✅', '').strip()
                     clean = re.sub(r'\s+', ' ', clean).strip()
                     if clean:
-                        completed.append(clean)
+                        completed.append(self._trim_task(clean))
 
             # ── SECTION TRACKING ───────────────────────────────────────────────
 
@@ -157,23 +177,23 @@ class ProjectManagerBot:
 
             if in_sprint_section:
                 if '- [ ]' in line:
-                    task = line.replace('- [ ]', '').strip().replace('`', '')
+                    task = line.replace('- [ ]', '').strip().replace('`', '').replace('**', '')
                     if task:
-                        sprint_pending.append(task)
+                        sprint_pending.append(self._trim_task(task))
                 elif '- [-]' in line:
-                    task = line.replace('- [-]', '').strip().replace('`', '')
+                    task = line.replace('- [-]', '').strip().replace('`', '').replace('**', '')
                     task = task.split('🏗️')[0].strip() if '🏗️' in task else task
                     if task and task not in in_progress:
-                        sprint_in_progress.append(task)
+                        sprint_in_progress.append(self._trim_task(task))
             elif in_tasks_section:
                 if '- [ ]' in line:
-                    task = line.replace('- [ ]', '').strip().replace('`', '')
+                    task = line.replace('- [ ]', '').strip().replace('`', '').replace('**', '')
                     if task:
-                        all_pending.append(task)
+                        all_pending.append(self._trim_task(task))
                 elif '- [-]' in line:
-                    task = line.replace('- [-]', '').strip().replace('`', '')
+                    task = line.replace('- [-]', '').strip().replace('`', '').replace('**', '')
                     if task and task not in in_progress:
-                        in_progress.append(task)
+                        in_progress.append(self._trim_task(task))
 
         # Sprint items take priority — fall back to general pending only if none found
         pending = sprint_pending if sprint_pending else all_pending
@@ -399,6 +419,7 @@ No "go touch grass". Name the actual feature or file being built.
 
 if __name__ == "__main__":
     import argparse
+    import sys
     parser = argparse.ArgumentParser(description="Vibe Starters Assistant")
     parser.add_argument("--mode", choices=["morning", "nightly", "break", "session"], default="morning",
                         help="Briefing mode: morning, nightly, break, or session")
@@ -407,6 +428,9 @@ if __name__ == "__main__":
     bot = ProjectManagerBot()
 
     if args.mode == "break":
-        bot.send_break_message()
+        result = bot.send_break_message()
     else:
-        bot.generate_briefing(mode=args.mode)
+        result = bot.generate_briefing(mode=args.mode)
+
+    if not result:
+        sys.exit(1)
