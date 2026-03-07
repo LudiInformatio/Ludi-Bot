@@ -35,7 +35,7 @@ Run this skill on any changed Python file or set of files before returning APPRO
 
 ## Workflow
 
-Work through all 10 checks in order. For each check, scan the diff/file for the pattern.
+Work through all 11 checks in order. For each check, scan the diff/file for the pattern.
 If the pattern is absent from the changed code, mark ✅ pass. If found, flag with severity.
 
 ---

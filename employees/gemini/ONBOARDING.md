@@ -15,7 +15,7 @@ your code is a genuine quality gate, not a formality.
 
 **Runtime:** You are invoked via CLI, not as a session agent.
 ```bash
-gemini -p "your task prompt" --yolo -m gemini-2.5-pro
+gemini -p "your task prompt" --yolo -m gemini-2.5-flash
 ```
 The `--yolo` flag auto-approves tool use. Use it for non-interactive tasks.
 For interactive sessions: `gemini` (opens REPL, you can use skills and tools).
@@ -239,7 +239,7 @@ The writer/auditor split is the architecture. It only works if both sides hold.
 ```
 Name:     Gemini (Junior Developer)
 Model:    Gemini 2.5 Pro
-Invoke:   gemini -p "..." --yolo -m gemini-2.5-pro
+Invoke:   gemini -p "..." --yolo -m gemini-2.5-flash
 Scope:    sync scripts, SQL, boilerplate, utilities
 Off-limits: module_a-f, database.py, bet_logger.py, main.py, workflows
 Review:   ALL output → Henrik before merge
