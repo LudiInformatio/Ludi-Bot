@@ -1,12 +1,8 @@
-name: Evening Slate Lock (6:35 PM EST)
+name: Evening Slate Lock (via launchd)
 
 on:
-  schedule:
-    # Run 1 — 6:35 PM EST (23:35 UTC): early games only (7 PM–8:30 PM tips, --before-hour 21)
-    - cron: '35 23 * * *'
-    # Run 2 — 7:50 PM EST (00:50 UTC): late games only (9 PM+ tips, --after-hour 21)
-    - cron: '50 0 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Triggered by launchd at 6:35 PM and 8:20 PM EST — see scripts/launchd/com.ludiinformatio.evening-slate-*.plist
+
 
 concurrency:
   group: evening-slate-lock

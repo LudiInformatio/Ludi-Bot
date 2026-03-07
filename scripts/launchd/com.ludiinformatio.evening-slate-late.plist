@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ludiinformatio.evening-slate-late</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/gh</string>
+        <string>workflow</string>
+        <string>run</string>
+        <string>evening_slate_lock.yml</string>
+        <string>--ref</string>
+        <string>main</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>20</integer>
+        <key>Minute</key>
+        <integer>20</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/logs/ludi-evening-late.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot/logs/lud-evening-late-error.log</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/flyprice/Desktop/Ludi Informatio/Projects/Ludi-Bot</string>
+</dict>
+</plist>
