@@ -4,6 +4,8 @@ description: >
   Run validation suite to check model accuracy against historical data.
   Verifies fatigue modifiers, playtype matchups, and archetype performance.
   Trigger phrases: "backtest", "run validation", "model accuracy", "/backtest".
+agent: lena
+user-invocable: true
 ---
 
 # Backtest Validation

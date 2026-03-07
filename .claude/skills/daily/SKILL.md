@@ -4,6 +4,9 @@ description: >
   Run daily pipeline health check before the 10 AM simulation.
   Verifies data integrity, API quotas, and system readiness.
   Trigger phrases: "health check", "daily check", "run /daily", "/daily".
+agent: silas
+user-invocable: true
+context: fork
 ---
 
 # Daily Pipeline Health Check

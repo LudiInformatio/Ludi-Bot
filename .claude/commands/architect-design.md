@@ -1,5 +1,7 @@
 # Architect: Design
 
+> **Agent**: Delegate this task to the **Henrik** agent for design review against the ludi-audit checklist.
+
 Propose minimal schema and contract changes based on audit findings. Second phase of the 3-phase workflow — comes after `/architect-audit`, before `/architect-implement`.
 
 ## Usage

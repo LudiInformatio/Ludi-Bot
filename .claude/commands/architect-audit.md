@@ -1,5 +1,7 @@
 # Architect: Audit
 
+> **Agent**: Delegate this task to the **Lena** agent for statistical data quality analysis.
+
 Run the sports data model audit pass — temporal integrity, feature coverage, and entity resolution. First step of the 3-phase workflow before design or implementation.
 
 ## Usage

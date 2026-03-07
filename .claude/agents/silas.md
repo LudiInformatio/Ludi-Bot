@@ -9,6 +9,7 @@ model: haiku
 tools: Bash, Read
 memory: project
 maxTurns: 15
+skills: [daily]
 ---
 
 ## Identity
