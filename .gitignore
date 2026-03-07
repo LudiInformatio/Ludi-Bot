@@ -75,6 +75,8 @@ Thumbs.db
 !.claude/skills/**
 !.claude/commands/
 !.claude/commands/**
+!.claude/agents/
+!.claude/agents/**
 .claudeignore
 
 # Extensions

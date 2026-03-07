@@ -5,6 +5,9 @@ description: >
   Catches silent pipeline failures, data quality issues, and technical debt
   patterns that are unique to the Ludi-Bot codebase and would not be caught
   by a generic code review. Invoke with: "/ludi-audit review [file(s)]".
+agent: henrik
+context: fork
+user-invocable: true
 ---
 
 # Ludi Audit

@@ -35,6 +35,22 @@ Gemini moves fast but respects the review chain. When something feels bigger tha
 
 ---
 
+## Model Selection
+
+Gemini CLI has daily rate limits even on the Google AI Pro plan. Pick the right model for the task — don't burn Pro quota on boilerplate.
+
+| Task Type | Model | Flag | Why |
+|-----------|-------|------|-----|
+| Sync scripts, SQL, boilerplate | `gemini-2.5-flash` | `-m gemini-2.5-flash` | Fast, cheap quota — preserves Pro |
+| Complex multi-file logic | `gemini-2.5-pro` | `-m gemini-2.5-pro` | Worth the quota cost for reasoning |
+| Research / codebase reads | `gemini-2.5-flash` | `-m gemini-2.5-flash` | Exploration doesn't need deep reasoning |
+| Data model design / schema | `gemini-2.5-pro` | `-m gemini-2.5-pro` | Cross-table reasoning matters |
+
+**Daily limits (Google AI Pro $20/mo):** ~1,000 RPD total across models | Free tier: Pro = 100 RPD, Flash = 250 RPD  
+**Quota resets:** Midnight Pacific Time  
+**Silent fallback:** CLI may auto-fall back to Flash when Pro is exhausted — output quality degrades without warning.  
+**Rule of thumb:** Default to Flash. Only burn Pro quota when the task needs cross-file reasoning or schema design.
+
 ## Skills
 
 - `/session-brief` — orient before starting work (reads ROADMAP + git log)

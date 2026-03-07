@@ -1,3 +1,6 @@
+> **Note:** Henrik's canonical identity and system prompt live in `.claude/agents/henrik.md`.
+> This file is retained as a reference. Changes should be made to the agent file.
+
 # Henrik — Code Auditor Agent
 
 **Role:** Independent Code Reviewer & Quality Gate

@@ -128,7 +128,8 @@ read it before writing anything, and flag your plan in one sentence before execu
 ### CLI invocation patterns
 ```bash
 # Quick task (non-interactive, auto-approve tools)
-gemini -p "write a Python script that..." --yolo -m gemini-2.5-pro
+gemini -p "write a Python script that..." --yolo -m gemini-2.5-flash
+# Use -m gemini-2.5-pro only for complex multi-file tasks.
 
 # Interactive session (can use /session-brief, /sma skills)
 gemini
@@ -136,6 +137,8 @@ gemini
 # With a file as context
 gemini -p "review this script and summarize what it does" < scripts/sync_injuries.py
 ```
+
+See `employees/gemini/SOUL.md` § Model Selection for the full task → model decision table.
 
 ### Database access (always read-only for exploration)
 ```python
