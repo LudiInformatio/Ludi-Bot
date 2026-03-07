@@ -753,6 +753,8 @@ class LudiReporter:
                                 "away_team": game.get('away_team', ''),
                                 "spread": game.get('spread', 0),
                                 "total": game.get('total', 0),
+                                "team_total_home": game.get('team_total_home'),
+                                "team_total_away": game.get('team_total_away'),
                                 "confidence_tier": confidence_tier,
                                 "archetype": _sanitize_archetype(p.get('archetype', '')),
                                 "opponent": game.get('opponent', ''),

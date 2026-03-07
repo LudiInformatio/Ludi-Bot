@@ -225,63 +225,86 @@ def _build_slate_trends_header(tonight_teams: list, conn) -> str:
 
 
 def _build_rotation_block(team_abbr: str, out_names: list, cursor) -> str:
-    """Return top-8 active rotation players for a team from ludi.db (last 14d).
-    Excludes tonight's OUT players so Claude only sees currently available names.
-    Prevents Claude from falling back on stale training-data roster knowledge."""
+    """Return top-8 active rotation players for a team from ludi.db.
+    Sources roster from players.team (authoritative, synced daily) and
+    enriches with avg minutes from the team's last 10 games. Covers returning
+    players and G League call-ups (shown as "returning") while excluding tonight's
+    OUT players so Claude only sees available names."""
     try:
-        if out_names:
-            placeholders = ','.join('?' * len(out_names))
-            cursor.execute(f"""
-                SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
-                FROM player_game_logs
-                WHERE team_abbreviation = ?
-                  AND game_date >= date('now', '-14 days')
-                  AND minutes > 0
-                  AND player_name NOT IN ({placeholders})
-                GROUP BY player_name
-                ORDER BY avg_min DESC
-                LIMIT 8
-            """, [team_abbr] + list(out_names))
-        else:
-            cursor.execute("""
-                SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
-                FROM player_game_logs
-                WHERE team_abbreviation = ?
-                  AND game_date >= date('now', '-14 days')
-                  AND minutes > 0
-                GROUP BY player_name
-                ORDER BY avg_min DESC
-                LIMIT 8
-            """, (team_abbr,))
+        exclude = list(out_names) if out_names else []
+        placeholders = ','.join('?' * len(exclude)) if exclude else "''"
+        where_exclude = f"AND p.name NOT IN ({placeholders})" if exclude else ""
+        cursor.execute(f"""
+            SELECT p.name,
+                   COALESCE(ROUND(AVG(gl.minutes), 1), 0.0) as avg_min
+            FROM players p
+            LEFT JOIN player_game_logs gl
+                ON gl.player_name = p.name
+                AND gl.team_abbreviation = p.team
+                AND gl.game_date IN (
+                    SELECT DISTINCT game_date FROM player_game_logs
+                    WHERE team_abbreviation = ?
+                    ORDER BY game_date DESC LIMIT 10
+                )
+                AND gl.minutes > 0
+            WHERE p.team = ?
+              {where_exclude}
+            GROUP BY p.name
+            ORDER BY avg_min DESC
+            LIMIT 8
+        """, [team_abbr, team_abbr] + exclude)
+
         rows = cursor.fetchall()
         if not rows:
-            return f"No recent game logs for {team_abbr}."
-        return ", ".join(f"{r[0]} ({r[1]}min)" for r in rows)
+            return f"No roster data for {team_abbr}."
+
+        def _fmt(name, avg_min):
+            if avg_min == 0.0:
+                return f"{name} (returning)"
+            return f"{name} ({avg_min}min)"
+
+        return ", ".join(_fmt(r[0], r[1]) for r in rows)
     except Exception as e:
         return f"Rotation data unavailable ({e})"
 
 
 def _build_teammates_context(player_name: str, team_abbr: str, out_names: list, cursor) -> str:
     """Return top-3 active teammates by avg minutes for spotlight grounding.
-    Prevents Claude from hallucinating lineup context (e.g. mentioning traded players)."""
+    Sources roster from players.team (authoritative) and last 10 game logs to avoid
+    hallucinated lineups."""
     try:
         exclude = list(out_names) + [player_name]
         placeholders = ','.join('?' * len(exclude))
         cursor.execute(f"""
-            SELECT player_name, ROUND(AVG(minutes), 1) as avg_min
-            FROM player_game_logs
-            WHERE team_abbreviation = ?
-              AND game_date >= date('now', '-14 days')
-              AND minutes > 0
-              AND player_name NOT IN ({placeholders})
-            GROUP BY player_name
+            SELECT p.name,
+                   COALESCE(ROUND(AVG(gl.minutes), 1), 0.0) as avg_min
+            FROM players p
+            LEFT JOIN player_game_logs gl
+                ON gl.player_name = p.name
+                AND gl.team_abbreviation = p.team
+                AND gl.game_date IN (
+                    SELECT DISTINCT game_date FROM player_game_logs
+                    WHERE team_abbreviation = ?
+                    ORDER BY game_date DESC LIMIT 10
+                )
+                AND gl.minutes > 0
+            WHERE p.team = ?
+              AND p.name NOT IN ({placeholders})
+            GROUP BY p.name
             ORDER BY avg_min DESC
             LIMIT 3
-        """, [team_abbr] + exclude)
+        """, [team_abbr, team_abbr] + exclude)
+
         rows = cursor.fetchall()
         if not rows:
             return "Teammate data unavailable."
-        return ", ".join(f"{r[0]} ({r[1]}min)" for r in rows)
+
+        def _fmt(name, avg_min):
+            if avg_min == 0.0:
+                return f"{name} (returning)"
+            return f"{name} ({avg_min}min)"
+
+        return ", ".join(_fmt(r[0], r[1]) for r in rows)
     except Exception as e:
         print(f"[WARNING] _build_teammates_context: {e}")
         return "Teammate data unavailable."
@@ -450,6 +473,29 @@ class MorningBriefEngine:
         conn = sqlite3.connect(config.DB_PATH, timeout=30)
         conn.execute("PRAGMA journal_mode=WAL;")
         return conn
+
+    def _fetch_strong_bets(self, conn) -> set:
+        """Fetch today's AI-curated STRONG bets."""
+        try:
+            today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+            cursor = conn.execute("""
+                SELECT player_name, stat_category, bet_side
+                FROM bet_recommendations
+                WHERE date(run_date) = ?
+                  AND is_curated = 1
+                  AND curation_grade = 'STRONG'
+            """, (today_str,))
+            # Key: (player_name, stat, side)
+            return {
+                (
+                    resolve_canonical_name(conn, row[0]),
+                    row[1],
+                    row[2]
+                ) for row in cursor.fetchall()
+            }
+        except Exception as e:
+            print(f"[WARNING] Could not fetch curated STRONG bets: {e}")
+            return set()
 
     def run(self):
         """
@@ -822,16 +868,16 @@ Return JSON only."""
                     first = bets[0]
                     home_team = first.get('home_team', 'UNK')
                     away_team = first.get('away_team', 'UNK')
-                    spread = first.get('spread', 0)
-                    total = first.get('total', 0)
-                    _gate_vegas = {}
-                    if hasattr(self, 'gate') and hasattr(self.gate, 'games'):
-                        _gate_vegas = self.gate.games.get(gid, {}).get('vegas', {})
-                    home_team_total = _gate_vegas.get('team_total_home', 'N/A')
-                    away_team_total = _gate_vegas.get('team_total_away', 'N/A')
+                    spread = first.get('spread') or 0
+                    total = first.get('total') or 0
+                    home_team_total = first.get('team_total_home') or 'N/A'
+                    away_team_total = first.get('team_total_away') or 'N/A'
                     matchup = first.get('matchup', gid)
                     
-                    blowout_risk = "HIGH" if abs(spread) > 10 else "MODERATE"
+                    try:
+                        blowout_risk = "HIGH" if abs(float(spread)) > 10 else "MODERATE"
+                    except (TypeError, ValueError):
+                        blowout_risk = "MODERATE"
                     
                     print(f"   > Notes for {matchup}...")
                     
@@ -1241,11 +1287,43 @@ Return JSON only."""
         print("\n🔦 Generating Player Spotlight Cards...")
         try:
             if processed_bets:
-                # 1. Filter for top-tier bets
-                top_bets = [b for b in processed_bets if b.get('confidence_tier') in ('DIAMOND', 'BLUE CHIP', 'CORE ASSET')][:5]
+                conn = self._get_db_conn()
+
+                # 1. Fetch AI-curated STRONG bets to prioritize them
+                strong_bets_set = self._fetch_strong_bets(conn)
+                if strong_bets_set:
+                    print(f"   ℹ️  Found {len(strong_bets_set)} AI-curated STRONG plays to prioritize.")
+
+                # 2. Annotate processed bets with curation grade
+                for bet in processed_bets:
+                    try:
+                        # Must resolve name to canonical to match the DB key
+                        canonical_name = resolve_canonical_name(conn, bet.get('player_name') or bet.get('name'))
+                        key = (canonical_name, bet.get('stat_category') or bet.get('stat'), bet.get('bet_side'))
+                        if key in strong_bets_set:
+                            bet['curation_grade'] = 'STRONG'
+                    except Exception as e:
+                        print(f"   [WARN] Failed to check curation status for {bet.get('name')}: {e}")
+
+
+                # 3. Sort to select top bets: STRONG first, then by tier
+                _tier_order = {'DIAMOND': 0, 'BLUE CHIP': 1, 'CORE ASSET': 2, 'THE STEAL': 3}
+                
+                # Filter for bets that are either STRONG or a high enough tier
+                eligible_bets = [
+                    b for b in processed_bets 
+                    if b.get('curation_grade') == 'STRONG' or b.get('confidence_tier') in ('DIAMOND', 'BLUE CHIP', 'CORE ASSET')
+                ]
+
+                eligible_bets.sort(key=lambda b: (
+                    b.get('curation_grade') != 'STRONG', # False (0) for STRONG, True (1) for others
+                    _tier_order.get(b.get('confidence_tier'), 99)
+                ))
+                
+                top_bets = eligible_bets[:5]
                 
                 if top_bets:
-                    conn = self._get_db_conn()
+                    # DB connection is already open from fetch/annotate step
                     
                     for bet in top_bets:
                         try:
@@ -1259,11 +1337,10 @@ Return JSON only."""
                             line = bet.get('line', 0.0)
 
                             # Resolve to canonical name so Claude receives consistent names
-                            # that match what's in injury_intel_block and player_injuries table.
-                            # e.g. 'Nikola Jokic' (from Odds API) → 'Nikola Jokić' (canonical)
                             player_name = resolve_canonical_name(conn, player_name)
 
-                            print(f"   > Spotlight analysis for {player_name} ({stat_cat})...")
+                            source_tag = "[AI PICK]" if bet.get('curation_grade') == 'STRONG' else "[TIER PICK]"
+                            print(f"   > {source_tag} Spotlight analysis for {player_name} ({stat_cat})...")
 
                             # 2a. Get trend data (Phase 8.15 — replaces _get_l10_for_spotlight)
                             trend_data = get_player_trends(player_name, stat_cat, team, line=line)
@@ -1372,7 +1449,7 @@ Return JSON only."""
                             
                     conn.close()
                 else:
-                    print("   ℹ️ No DIAMOND/BLUE CHIP/CORE ASSET bets for spotlights.")
+                    print("   ℹ️ No STRONG or high-tier bets for spotlights.")
             else:
                 print("   ℹ️ No processed bets available for spotlights.")
                 

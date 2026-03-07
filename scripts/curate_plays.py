@@ -48,10 +48,8 @@ from utils.game_dossier import build_game_dossier
 VOLUME_STATS = {'PTS', 'REB', 'AST', 'MIN'}
 SANITY_FAIL_STATUSES = {'OUT', 'DOUBTFUL'}
 
-SANITY_GATE_SYSTEM = """You are a bet sanity checker for an NBA analytics model.
-VALID OUTPUT ONLY:
-  {"result": "PASS", "reason": ""}
-  {"result": "FLAG", "reason": "<one sentence describing the contradiction>"}
+SANITY_GATE_SYSTEM = """You are a bet sanity checker for an NBA analytics model. TEAM SOURCE RULE: The "Team (DB):" field in each prompt is the authoritative source for player team assignment. Do NOT use any external knowledge about where players play.
+VALID OUTPUT ONLY: {"result": "PASS", "reason": ""} {"result": "FLAG", "reason": "<one sentence describing the contradiction>"}
 No other values are valid for "result". Return JSON only."""
 
 TIER_EMOJI = {
@@ -132,7 +130,75 @@ def _fetch_player_injury(conn: sqlite3.Connection, player_name: str) -> dict | N
     return None
 
 
+def _fetch_player_team(conn: sqlite3.Connection, player_name: str) -> str:
+    """Fetch team from players table — injected into Haiku + Sonnet prompts as authoritative."""
+    canonical_name = resolve_canonical_name(conn, player_name)
+    try:
+        row = conn.execute(
+            "SELECT team FROM players WHERE name = ? LIMIT 1", (canonical_name,)
+        ).fetchone()
+        return row[0] if row else ''
+    except sqlite3.OperationalError:
+        return ''
+
+
+
 # ─── Stage 1: Haiku Sanity Gate ───────────────────────────────────────────────
+
+def _format_player_block(
+    player_name: str,
+    team: str,
+    archetype: str,
+    bets: list[dict],
+    injury: dict | None,
+    dossier: dict,
+) -> str:
+    """Serializes one player's full context into a canonical text block."""
+    lines = []
+    
+    # Header
+    lines.append(f"=== {player_name} | Team (DB): {team} | Archetype: {archetype} ===")
+
+    # Injury
+    if injury:
+        status = injury.get('status', 'UNKNOWN')
+        days_out = injury.get('days_out', '??')
+        desc = injury.get('description', 'No description')
+        gdr = 'Yes' if injury.get('is_game_day_report') else 'No'
+        lines.append(f"Injury: Status={status} | Days Out={days_out} | Desc={desc} | GameDayReport={gdr}")
+    else:
+        lines.append(f"Injury: No active record | Last checked: {datetime.now().strftime('%Y-%m-%d %H:%M')} UTC")
+
+    # Bets
+    lines.append(f"Bets ({len(bets)}):")
+    for bet in bets:
+        if bet.get('bet_side', '').upper() == 'OVER':
+            odds = bet.get('odds_over')
+        else:
+            odds = bet.get('odds_under')
+        odds_str = f"@ {odds}" if odds else ""
+        
+        line = (
+            f"  [{bet['id']}] {bet['stat_category']} {bet['bet_side']} {bet['line']} {odds_str} | "
+            f"Tier={bet.get('confidence_tier', 'N/A')} | Edge=+{bet.get('true_edge', 0):.1f}% | "
+            f"Proj={bet.get('projection', 'N/A')}"
+        )
+        lines.append(line)
+
+    # Game Context & Dossier Signals
+    if bets:
+        game_bet = bets[0]
+        game_id = game_bet.get('game_id')
+        lines.append(
+            f"Game: {game_bet.get('matchup', 'N/A')} | Spread={game_bet.get('spread', 'N/A')} | Total={game_bet.get('total', 'N/A')}"
+        )
+        if dossier and game_id in dossier and player_name in dossier[game_id]['players']:
+            signals = dossier[game_id]['players'][player_name]
+            lines.append(f"Dossier Signals: {signals}")
+            
+    return "\n".join(lines)
+
+
 def _deterministic_sanity_check(bet: dict, injury: dict | None) -> tuple[str, str]:
     """
     Fast rule-based check that runs before calling Haiku.
@@ -163,98 +229,61 @@ def _deterministic_sanity_check(bet: dict, injury: dict | None) -> tuple[str, st
     return 'PASS', ''
 
 
-def _haiku_sanity_check(bet: dict, injury: dict | None, verbose: bool = False) -> tuple[str, str]:
+def _haiku_player_sanity_check(
+    player_name: str,
+    team: str,
+    bets: list[dict],
+    injury: dict | None,
+    verbose: bool = False,
+) -> tuple[str, str]:
     """
-    Ask Haiku to sanity-check a single bet against injury data.
-    Returns ('PASS'|'FLAG', reason_string).
-
-    Strategy:
-    - Deterministic check first (no API cost)
-    - Deterministic FLAG + days_out ≤ 3 → verify with Perplexity before hard-flagging
-      (short-term ESPN OUT may be stale — player might be active tonight)
-    - Deterministic FLAG + days_out > 3 → hard FLAG (no override)
-    - If injury exists → ask Haiku for nuanced assessment
-    - If no injury → auto-PASS (saves tokens)
-    - On any parse failure → conservative PASS (never drop a bet on parse error)
+    Ask Haiku to sanity-check all bets for a single player.
+    One API call per player.
     """
-    perp_news = ""
-
-    # Fast path: deterministic check first
-    result, reason = _deterministic_sanity_check(bet, injury)
-    if result == 'FLAG':
-        # For short-term injuries (days_out ≤ 3), consult Perplexity before hard-flagging.
-        # A 1-day ESPN OUT might be stale — Perplexity can confirm if the player is active tonight.
-        short_term = (
-            injury
-            and injury.get('days_out') is not None
-            and injury['days_out'] <= 3
-        )
-        if short_term and getattr(config, 'PERPLEXITY_API_KEY', None):
-            try:
-                from utils.perplexity_client import PerplexityClient
-                perp_news = PerplexityClient().search_player_news(
-                    bet['player_name'], bet['team']
-                )
-            except Exception:
-                pass
-        if not perp_news:
-            # Hard FLAG: no real-time override available
+    # Run deterministic checks on each bet first. If any fails, hard-flag the player.
+    for bet in bets:
+        result, reason = _deterministic_sanity_check(bet, injury)
+        if result == 'FLAG':
             if verbose:
-                print(f"  [HAIKU-SKIP] Deterministic FLAG: {reason}")
-            return result, reason
-        # Perplexity found news — escalate to Haiku with real-time context instead of hard-flagging
-        if verbose:
-            print(
-                f"  [HAIKU] Short-term FLAG: escalating to Haiku review "
-                f"(days_out={injury['days_out']}, perp_news found)"
-            )
+                print(f"  [HAIKU-SKIP] Deterministic FLAG for {player_name}: {reason}")
+            return 'FLAG', reason
 
-    # No injury record → try Perplexity for soft-scratch detection
+    # If no injury, no need for nuanced check, pass all bets for this player.
+    # Perplexity is not used here to keep Haiku gate minimal.
     if not injury:
-        if not perp_news and getattr(config, 'PERPLEXITY_API_KEY', None):
-            try:
-                from utils.perplexity_client import PerplexityClient
-                perp_news = PerplexityClient().search_player_news(
-                    bet['player_name'], bet['team']
-                )
-            except Exception:
-                pass
+        return 'PASS', ''
+        
+    injury_text = (
+        f"Status: {injury['status']}\n"
+        f"Days Out: {injury['days_out'] if injury['days_out'] is not None else 'Unknown'}\n"
+        f"Description: {injury['description'] or 'None provided'}\n"
+        f"Game Day Report: {'Yes' if injury['is_game_day_report'] else 'No'}"
+    )
 
-        if not perp_news:
-            return 'PASS', ''
-
-        injury_text = f"RECENT NEWS (from Perplexity, fetched today):\n{perp_news}"
-    else:
-        injury_text = (
-            f"Status: {injury['status']}\n"
-            f"Days Out: {injury['days_out'] if injury['days_out'] is not None else 'Unknown'}\n"
-            f"Description: {injury['description'] or 'None provided'}\n"
-            f"Game Day Report: {'Yes' if injury['is_game_day_report'] else 'No'}"
+    bets_to_review_text = []
+    for bet in bets:
+        bets_to_review_text.append(
+            f"  [{bet['id']}] {bet['stat_category']} {bet['bet_side']} {bet['line']} | "
+            f"Proj: {bet.get('projection', 'N/A')} | Edge: +{bet.get('true_edge', 0):.1f}%"
         )
-
-    system_prompt = f"{SANITY_GATE_SYSTEM}\n\n{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
-
-    perplexity_block = f"\n\nRECENT NEWS (Perplexity):\n{perp_news}" if perp_news else ""
     
-    env = config.get_scoring_environment()
-    env_note = f"\nSCORING ENVIRONMENT: {env.get('environment','NEUTRAL')} — OVER bets hitting {env.get('over_hit_rate_14d',0):.0%} last 14 days.\n" if env else ""
+    system_prompt = f"{SANITY_GATE_SYSTEM}\n\n{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+    
+    user_prompt = f"""Sanity check all bets for this player. Team (DB) is authoritative.
 
-    user_prompt = f"""Sanity check this bet. Return JSON only, no other text:
-{{"result": "PASS" or "FLAG", "reason": "<one sentence max>"}}
+PLAYER: {player_name}
+Team (DB): {team}
+INJURY (from official report, fetched today):
+{injury_text}
 
-BET:
-- Player: {bet['player_name']} ({bet['team']})
-- Stat: {bet['stat_category']} {bet['bet_side']} {bet['line']}
-- Model Projection: {bet.get('projection', 'N/A')}
-- True Edge: {bet.get('true_edge', 'N/A')}%
+BETS TO REVIEW ({len(bets)} total):
+{chr(10).join(bets_to_review_text)}
 
-INJURY DATA (from official report, fetched today):
-{injury_text}{perplexity_block}{env_note}
-
-FLAG this bet ONLY if:
-1. Player is OUT or DOUBTFUL AND bet_side is OVER a volume stat (PTS, REB, AST, MIN)
-2. The line appears statistically impossible given the injury context
-Otherwise PASS. When in doubt, PASS."""
+FLAG this player ONLY if:
+1. Player is OUT or DOUBTFUL and any bet is OVER a volume stat (PTS, REB, AST, MIN)
+2. Injury context makes all their props unreliable (e.g., minutes restriction affects all)
+Otherwise PASS. When in doubt, PASS. Return JSON only.
+"""
 
     response = get_claude_analysis(
         prompt=user_prompt,
@@ -262,17 +291,16 @@ Otherwise PASS. When in doubt, PASS."""
         model=HAIKU_MODEL,
         temperature=0.1,
         max_tokens=100,
-        call_type='sanity_gate',
-        player_name=bet.get('player_name'),
-        game_date=bet.get('game_date'),
+        call_type='sanity_gate_player',
+        player_name=player_name,
+        game_date=bets[0].get('game_date') if bets else None,
     )
 
     if not response:
         if verbose:
-            print(f"  [HAIKU] No response for {bet['player_name']} — defaulting PASS")
+            print(f"  [HAIKU] No response for {player_name} — defaulting PASS")
         return 'PASS', ''
 
-    # Parse JSON — Claude may wrap in ```json``` blocks
     try:
         clean = response.strip()
         if '```' in clean:
@@ -286,51 +314,17 @@ Otherwise PASS. When in doubt, PASS."""
         if result not in ('PASS', 'FLAG'):
             result = 'PASS'
         if verbose:
-            print(f"  [HAIKU] {bet['player_name']}: {result} — {reason}")
+            print(f"  [HAIKU] {player_name}: {result} — {reason}")
         return result, reason
     except (json.JSONDecodeError, KeyError, IndexError) as e:
         raw_preview = response[:200] if response else "empty"
-        print(f"[HAIKU PARSE FAIL] {bet['player_name']}: {type(e).__name__} | raw={raw_preview}")
+        print(f"[HAIKU PARSE FAIL] {player_name}: {type(e).__name__} | raw={raw_preview}")
         if verbose:
-            print(f"  [HAIKU] Parse error for {bet['player_name']}: {e} — defaulting PASS")
+            print(f"  [HAIKU] Parse error for {player_name}: {e} — defaulting PASS")
         return 'PASS', ''
 
 
 # ─── Stage 2: Sonnet Top 5 Curation ──────────────────────────────────────────
-def _format_bets_for_prompt(bets: list[dict], dossier: dict) -> str:
-    """Format bet list as readable text block for Sonnet's context."""
-    lines = []
-    for bet in bets:
-        tier_emoji = TIER_EMOJI.get(bet.get('confidence_tier', ''), '📌')
-        injury_note = bet.get('_injury_note', 'No injury on record')
-        # Show odds for the side being bet
-        if bet.get('bet_side', '').upper() == 'OVER':
-            odds = bet.get('odds_over')
-        else:
-            odds = bet.get('odds_under')
-        odds_str = f"@ {odds}" if odds else ""
-
-        gid = bet.get('game_id')
-        pname = bet.get('player_name')
-        signals = ""
-        if gid in dossier and pname in dossier[gid]['players']:
-            signals = f"\n      {dossier[gid]['players'][pname]}"
-
-        lines.append(
-            f"[{bet['id']}] {bet['player_name']} | "
-            f"{bet['stat_category']} {bet['bet_side']} {bet['line']} {odds_str}\n"
-            f"      {tier_emoji} {bet.get('confidence_tier', 'N/A')} | "
-            f"Edge: +{bet.get('true_edge', 0):.1f}% | "
-            f"Proj: {bet.get('projection', 'N/A')}\n"
-            f"      Game: {bet.get('matchup', 'N/A')} "
-            f"(game_id: {bet.get('game_id', 'N/A')}) | "
-            f"Spread: {bet.get('spread', 'N/A')} | "
-            f"Total: {bet.get('total', 'N/A')}\n"
-            f"      Injury: {injury_note}{signals}"
-        )
-    return '\n\n'.join(lines)
-
-
 def _get_system_wr_context(conn: sqlite3.Connection) -> str:
     """Build empirical win rate context for Sonnet curation — Pattern 6 (BERT domain pre-training).
 
@@ -388,27 +382,38 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
-def _sonnet_curate(passing_bets: list[dict], dossier: dict, verbose: bool = False) -> list[dict] | None:
+def _sonnet_curate(
+    passing_bets: list[dict],
+    player_bets: dict[str, list[dict]],
+    player_team: dict[str, str],
+    player_injury: dict[str, dict | None],
+    dossier: dict,
+    verbose: bool = False,
+) -> list[dict] | None:
     """
     Ask Sonnet to grade EVERY bet as STRONG/LEAN/FADE.
-
-    Claude reasons about portfolio quality — correlation, diversity, tier.
-    It does NOT recalculate edges. true_edge is authoritative.
-
-    Returns list of {'bet_id', 'grade', 'reasoning'} dicts, or None on failure.
-    None triggers the deterministic fallback in the caller.
     """
     if not passing_bets:
         return None
 
-    bets_text = _format_bets_for_prompt(passing_bets, dossier)
+    passing_bets_set = {b['id'] for b in passing_bets}
+    bets_text = '\n\n'.join(
+        _format_player_block(
+            player_name=pname,
+            team=player_team.get(pname, ''),
+            archetype=pbets[0].get('archetype', 'UNKNOWN'),
+            bets=pbets,
+            injury=player_injury.get(pname),
+            dossier=dossier,
+        )
+        for pname, pbets in player_bets.items()
+        if any(b['id'] in passing_bets_set for b in pbets)
+    )
 
     dossier_text = ""
     for gid, data in dossier.items():
         dossier_text += data['game_context'] + "\n\n"
 
-    # Build domain WR context from live DB (Pattern 6: domain pre-training proxy)
-    # Wilson-adjusted WR grades auto-update as bets settle each night.
     try:
         conn_wr = sqlite3.connect(DB_PATH)
         wr_context = _get_system_wr_context(conn_wr)
@@ -417,7 +422,6 @@ def _sonnet_curate(passing_bets: list[dict], dossier: dict, verbose: bool = Fals
         wr_context = ""
 
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
-    # Part 6B: Performance-Weighted Selection Guidance
     system_prompt += "\n\nPrefer UNDER bets on BLK, 3PM, and STL — these have historically outperformed. Be conservative selecting OVER bets on PTS, AST, and 3PM unless the edge and injury context are compelling."
     
     if wr_context:
@@ -433,17 +437,17 @@ def _sonnet_curate(passing_bets: list[dict], dossier: dict, verbose: bool = Fals
     curate_examples = """
 === CURATION EXAMPLES ===
 [STRONG]
-Input: [WING SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | injury_status=ACTIVE
+Input: [TWO_LEVEL_SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | Injury: No active record
 Reasoning: Diamond edge combined with favorable defensive matchup and strong L5 form makes this a top priority.
 Grade: STRONG
 
 [LEAN]
-Input: [RIM BIG BLOCKER] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | injury_status=ACTIVE
+Input: [WARRIOR_BIG] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | Injury: No active record
 Reasoning: Strong system signal for BLK UNDER, but opponent has high rim frequency which limits confidence to a LEAN.
 Grade: LEAN
 
 [FADE]
-Input: [HELIOCENTRIC BIG] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | injury_status=ACTIVE
+Input: [JUMBO_FACILITATOR] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | Injury: No active record
 Reasoning: Low edge on a high-variance stat with a ref crew that tends to let teams play; better options available.
 Grade: FADE
 === END EXAMPLES ===
@@ -481,7 +485,7 @@ Grade every bet listed above. Return JSON array only."""
         system_prompt=system_prompt,
         model=SONNET_MODEL,
         temperature=0.1,
-        max_tokens=32000,  # ~443 bets x ~50 tokens each = ~22K needed; 8192 was truncating mid-JSON
+        max_tokens=32000,
         call_type='curation',
     )
 
@@ -501,7 +505,6 @@ Grade every bet listed above. Return JSON array only."""
         if not isinstance(data, list):
             raise ValueError("Expected JSON array")
 
-        # Parse and validate max-2-per-game constraint for STRONG bets
         result = []
         game_counts: dict[str, int] = {}
         bet_id_to_game_map = {b['id']: b.get('game_id', '') for b in passing_bets}
@@ -512,7 +515,6 @@ Grade every bet listed above. Return JSON array only."""
                 grade = str(item['grade']).upper()
                 game_id = bet_id_to_game_map.get(bet_id, '')
 
-                # Enforce max-2-per-game for STRONG in code
                 if grade == 'STRONG':
                     if game_counts.get(game_id, 0) >= 2:
                         if verbose:
@@ -530,9 +532,7 @@ Grade every bet listed above. Return JSON array only."""
         if not result:
             raise ValueError("No valid picks parsed from response")
         
-        # Assign rank post-hoc: STRONG bets sorted by edge DESC -> rank 1-N
         strong_bets = [r for r in result if r['grade'] == 'STRONG']
-        # Map edge back for sorting
         id_to_edge = {b['id']: b.get('true_edge', 0) for b in passing_bets}
         strong_bets.sort(key=lambda x: id_to_edge.get(x['bet_id'], 0), reverse=True)
         
@@ -819,6 +819,7 @@ def main() -> None:
 
     conn = sqlite3.connect(DB_PATH)
     try:
+        from collections import defaultdict
         # ── Schema migrations (safe, idempotent)
         _run_migrations(conn)
 
@@ -834,39 +835,51 @@ def main() -> None:
         dossier = build_game_dossier(conn, run_date, bets)
 
         # ─────────────────────────────────────────────────────────
-        # STAGE 1: Haiku Sanity Gate
+        # STAGE 1: Haiku Sanity Gate (Player-Grouped)
         # ─────────────────────────────────────────────────────────
-        print(f"[STAGE 1] Haiku Sanity Gate — checking {len(bets)} bets...")
-        passing_bets: list[dict] = []
-        flagged_bets: list[dict] = []
+        print(f"[STAGE 1] Haiku Sanity Gate — grouping {len(bets)} bets by player...")
+        
+        player_bets: dict[str, list[dict]] = defaultdict(list)
+        player_injury: dict[str, dict | None] = {}
+        player_team: dict[str, str] = {}
 
         for bet in bets:
-            # Fetch injury context (used in both sanity check and Stage 2 prompt)
-            injury = _fetch_player_injury(conn, bet['player_name'])
-
-            # Annotate injury summary for Stage 2 prompt formatting
-            if injury:
-                days_str = f"{injury['days_out']}d " if injury['days_out'] is not None else ""
-                desc = injury['description'] or 'no description'
-                bet['_injury_note'] = f"{injury['status']}, {days_str}({desc})"
+            pname = bet['player_name']
+            player_bets[pname].append(bet)
+            if pname not in player_injury:
+                player_injury[pname] = _fetch_player_injury(conn, pname)
+                player_team[pname] = _fetch_player_team(conn, pname)
+            
+            # Annotate injury note on each bet for deterministic fallback + informational purposes
+            if player_injury[pname]:
+                inj = player_injury[pname]
+                days_str = f"{inj['days_out']}d " if inj['days_out'] is not None else ""
+                note = f"{inj.get('status', '??')}, {days_str}({inj.get('description') or 'no description'})"
             else:
-                bet['_injury_note'] = 'No injury on record'
+                note = 'No injury on record'
+            bet['_injury_note'] = note
 
-            if verbose:
-                print(
-                    f"  Checking: {bet['player_name']} "
-                    f"{bet['stat_category']} {bet['bet_side']} {bet['line']} | "
-                    f"injury: {bet['_injury_note']}"
-                )
-
-            result, reason = _haiku_sanity_check(bet, injury, verbose=verbose)
+        passing_bets: list[dict] = []
+        flagged_bets: list[dict] = []
+        
+        print(f"[STAGE 1] Checking {len(player_bets)} unique players...")
+        for pname, pbets in player_bets.items():
+            result, reason = _haiku_player_sanity_check(
+                player_name=pname,
+                team=player_team.get(pname, ''),
+                bets=pbets,
+                injury=player_injury.get(pname),
+                verbose=verbose,
+            )
 
             if result == 'FLAG':
-                bet['_flag_reason'] = reason
-                flagged_bets.append(bet)
-                print(f"  ❌ FLAGGED: {bet['player_name']} — {reason}")
+                for bet in pbets:
+                    bet['_flag_reason'] = reason
+                flagged_bets.extend(pbets)
+                if verbose:
+                    print(f"  ❌ FLAGGED ({len(pbets)} bets): {pname} — {reason}")
             else:
-                passing_bets.append(bet)
+                passing_bets.extend(pbets)
 
         print(
             f"\n[STAGE 1] Complete: {len(passing_bets)} passing, "
@@ -884,7 +897,14 @@ def main() -> None:
         # ─────────────────────────────────────────────────────────
         print(f"[STAGE 2] Sonnet Curation — grading {len(passing_bets)} passing bets...")
 
-        sonnet_result = _sonnet_curate(passing_bets, dossier, verbose=verbose)
+        sonnet_result = _sonnet_curate(
+            passing_bets=passing_bets,
+            player_bets=player_bets,
+            player_team=player_team,
+            player_injury=player_injury,
+            dossier=dossier,
+            verbose=verbose,
+        )
         claude_available = sonnet_result is not None
 
         if not claude_available:
@@ -940,17 +960,16 @@ def main() -> None:
             # Attempt to get token usage from api_monitor if available
             from utils.api_monitor import get_monitor  # noqa: F401 (imported for side-effects/future use)
 
-            # Get current session's Claude usage
-            haiku_calls = len(bets)
+            haiku_calls = len(player_bets) # One call per player
             sonnet_calls = 1 if claude_available else 0
 
             # Rough estimates based on typical usage
-            haiku_tokens_est = haiku_calls * 1200  # ~1100 in, ~100 out per call
-            sonnet_tokens_est = sonnet_calls * 35000  # Input is large now
+            haiku_tokens_est = haiku_calls * 1200
+            sonnet_tokens_est = sonnet_calls * 35000 
 
-            # Cost estimates (Haiku: $0.80/$4 per 1M, Sonnet: $3/$15 per 1M)
-            haiku_cost_est = (haiku_tokens_est * 0.80 / 1_000_000) + (haiku_tokens_est * 4 / 1_000_000)
-            sonnet_cost_est = (sonnet_tokens_est * 3 / 1_000_000) + (sonnet_tokens_est * 15 / 1_000_000)
+            # Cost estimates (Haiku: $0.25/$1.25 per 1M, Sonnet: $3/$15 per 1M)
+            haiku_cost_est = (haiku_tokens_est / 1_000_000 * 0.25) + (haiku_tokens_est / 1_000_000 * 1.25)
+            sonnet_cost_est = (sonnet_tokens_est / 1_000_000 * 3) + (sonnet_tokens_est / 1_000_000 * 15)
             total_cost_est = haiku_cost_est + sonnet_cost_est
 
             print(f"\n[TOKEN COST] Estimated usage this run:")
@@ -958,7 +977,6 @@ def main() -> None:
             print(f"  Sonnet: {sonnet_calls} calls, ~{sonnet_tokens_est:,} tokens, ~${sonnet_cost_est:.4f}")
             print(f"  Total: ~${total_cost_est:.4f}")
         except Exception:
-            # If api_monitor not available, skip token reporting
             pass
 
         print(

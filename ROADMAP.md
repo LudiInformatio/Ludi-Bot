@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, March 6, 2026 — 8:52 PM EST
+**Last Updated:** Saturday, March 7, 2026 — 12:26 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Employee onboarding (`.claude/agents/*.md`, `employees/*/ONBOARDING.md`) — Skills 2.0 subagent implementation for 8 employees (Henrik, Silas, Lena first) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅ + Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅
+**Completed:** Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅ + Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅ + Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -43,7 +43,6 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **Game notes team totals fix** (`morning_brief.py` ~L758) — `{home_team_total}` / `{away_team_total}` always 'N/A'. Load from `cache/daily_games_{date}.json` instead of `bet_recommendations`. Data exists, just not wired.
 
 ---
 

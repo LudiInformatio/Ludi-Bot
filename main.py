@@ -518,6 +518,7 @@ class LudiOrchestrator:
                         'sharp_book_under': v.get('sharp_book_under') if isinstance(v, dict) else None
                     }
                 except Exception as e:
+                    print(f"   >>> [main] Prop format error for {p_name} -> {k}: {v}")
                     print(f"   >>> [main] Prop format error for {k}: {e}")
                     continue
             
@@ -565,6 +566,9 @@ class LudiOrchestrator:
             'game_date': _actual_game_date,
             'home_team': home, 'away_team': away, 'opponent': '',
             'spread': float(spread) if spread != 'N/A' else 0,
+            'total': float(total) if isinstance(total, (int, float)) else 0,
+            'team_total_home': team_total_home,
+            'team_total_away': team_total_away,
             'ref_data': game_data.get('archetypes', {}).get('ref_data', {'pace_impact': 1.0, 'whistle_impact': 1.0, 'crew': [], 'confidence': 0.0}),
             # Sprint 4: alt lines captured by Module A Phase 2B → consumed by Module F EV sweep
             # Structure: {stat_key: {player_name: {alt_line: {odds_over, book_over, odds_under, book_under}}}}
