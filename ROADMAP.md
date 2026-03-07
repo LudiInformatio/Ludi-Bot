@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, March 6, 2026 — 10:08 AM EST
+**Last Updated:** Friday, March 6, 2026 — 8:52 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Employee onboarding (`.claude/agents/*.md`, `employees/*/ONBOARDING.md`) — Skills 2.0 subagent implementation for 8 employees (Henrik, Silas, Lena first) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** CLV hardening (`module_b.py`, `db_backup.yml`, `morning_brief.py`) — game_date logger fix, closing lines wired nightly, stat_category case fix, bench filter, Feb 27–Mar 1 backfill ✅ + Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅
+**Completed:** Curation v2 (`curate_plays.py`, `game_dossier.py`) — full-slate grading, 3-layer decision tree, shared dossier cache, BERT Pattern 2 prompt, evening guard ✅ + Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅ + Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -19,7 +19,7 @@ This is the single source of truth for project tasks and priorities.
 - `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md` — Social Intel + Prop Pulse Score full spec
 - `docs/FUTURE_DATA_SOURCES.md` — Ask Ludi architecture (§6) + competitive patterns (§5.2-B) + PBP Stats endpoints (§4.4)
 - `best-practices/api/API_BEST_PRACTICES.md` — BDL + Tank01 + ESPN endpoint reference
-- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — AI Employee Workforce PRD (6 employees, OpenClaw runtime, ~$4.60/mo)
+- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — AI Employee Workforce PRD (8 employees, Skills 2.0 hybrid, ~$4.60/mo)
 
 ---
 

@@ -1,8 +1,8 @@
 # AGENTS.md
 
-**Version:** 2.0 — AI Employee Workforce Edition
-**Last Updated:** March 1, 2026
-**Purpose:** Primary operating guide for all Claude Code agents working in Ludi-Bot — both solo sessions and Agent Teams teammates.
+**Version:** 3.0 — Skills 2.0 Hybrid Architecture
+**Last Updated:** March 6, 2026
+**Purpose:** Primary operating guide for all Claude Code agents working in Ludi-Bot — both solo sessions and subagent teammates.
 
 When instructions conflict: `AGENTS.md` > `ROADMAP.md` > `CLAUDE.md`
 
@@ -36,18 +36,20 @@ Use this precedence when gathering context:
 
 ## AI Employee Workforce
 
-Ludi-Bot is staffed by 6 AI employees operating across two runtimes.
+Ludi-Bot is staffed by 8 AI employees on a hybrid architecture — Skills 2.0 subagents for interactive work + external stack (launchd, GH Actions, Telegram) for scheduled/always-on.
 
 ### Employee Roster
 
 | Employee | Role | Model | Runtime | Discord Channel |
 | -------- | ---- | ----- | ------- | --------------- |
-| Solomon | PM Lead — coordinates all work, owns session lifecycle | Claude Sonnet | Agent Teams (session) | `#solomon` |
-| Henrik | Code Auditor — reviews ALL code changes | Claude Sonnet | Agent Teams (session) | `#henrik` |
-| Vera | Pipeline QA — pre-flight checks, model validation | Claude Haiku | Agent Teams (session) | `#vera` |
-| Maren | Content Strategist — brainstorming, BERT refinement, skill ideation | Claude Sonnet | Agent Teams (on-demand) | `#maren` |
-| Silas | System Monitor — GH Actions, quota, pipeline health | Claude Haiku | OpenClaw (always-on) | `#silas` |
-| Iris | Social Scout — Twitter/Reddit/Action Network signals | Haiku + HTTP/regex | OpenClaw (always-on) | `#iris` |
+| Solomon | PM Lead — coordinates all work, owns session lifecycle | Claude Sonnet | Subagent (interactive) + Telegram bot (always-on) | `#solomon` |
+| Henrik | Code Auditor — reviews ALL code changes | Claude Sonnet | Subagent (worktree isolation) | `#henrik` |
+| Vera | Pipeline QA — pre-flight checks, model validation | Claude Haiku | Subagent (read-only) | `#vera` |
+| Maren | Content Strategist — brainstorming, BERT refinement, skill ideation | Claude Sonnet | Subagent (on-demand) | `#maren` |
+| Silas | Senior SRE — GH Actions, quota, pipeline health | Claude Haiku | Subagent (read-only) + launchd (scheduled) | `#silas` |
+| Iris | Social Scout — Twitter/Reddit/Action Network signals | Haiku + HTTP/regex | Skill (zero-LLM) + launchd (scheduled) | `#iris` |
+| Lena | Data Analyst — pattern mining, model calibration | Claude Sonnet | Subagent (persistent memory) | — |
+| Kai | Repo Custodian — file staleness, archive, gitignore, remote sync | Claude Haiku | Subagent (read-only, junior under Silas) | — |
 
 **Discord server:** Ludi Lens
 
@@ -61,8 +63,10 @@ Ludi-Bot is staffed by 6 AI employees operating across two runtimes.
 | Vera | `daily`, `backtest` | `/daily`, `/backtest` |
 | Solomon | `session-brief`, `session-debrief` | `/session-brief`, `/session-debrief` |
 | Maren | `ultrathink`, `research`, `design` | `/ultrathink`, `/research`, `/design` |
-| Silas | N/A — runs via OpenClaw SOUL.md + HEARTBEAT.md | — |
-| Iris | N/A — runs via OpenClaw SOUL.md + HEARTBEAT.md | — |
+| Silas | `silas-check` | `/silas-check` |
+| Iris | `iris-collect` | `/iris-collect` |
+| Lena | `lena-analyze`, `backtest`, `sports-data-model-architect` | `/lena-analyze`, `/backtest`, `/sma` |
+| Kai | `repo-hygiene` | `/repo-hygiene` |
 
 ### Communication Protocol (Hub-and-Spoke)
 
@@ -78,7 +82,7 @@ Ludi-Bot is staffed by 6 AI employees operating across two runtimes.
 
 This applies to:
 
-- Code written by Claude teammates during Agent Teams sessions
+- Code written by Claude subagent teammates during sessions
 - Code written by Gemini 2.5 Pro or Kimi K2.5 in OpenCode (Terminal 2)
 - Any script, SQL, or utility change — regardless of size
 
@@ -223,6 +227,10 @@ When a message starts with one of these aliases, run the mapped skill workflow:
 | `/ultrathink` | (global plugin) | Maren |
 | `/research` | (global plugin) | Maren |
 | `/design` | (global plugin) | Maren |
+| `/silas-check` | `.claude/skills/silas-check/SKILL.md` | Silas |
+| `/lena-analyze` | `.claude/skills/lena-analyze/SKILL.md` | Lena |
+| `/repo-hygiene` | `.claude/skills/repo-hygiene/SKILL.md` | Kai |
+| `/iris-collect` | `.claude/skills/iris-collect/SKILL.md` | Iris |
 
 ### Invoke Examples
 

@@ -28,7 +28,7 @@ best-practices/
 │   └── README.md
 ├── docs/                   # ✅ Documentation maintenance rules (COMPLETE)
 │   └── README.md
-├── openclaw/               # ✅ Always-on agents + Gemini CLI writer (COMPLETE)
+├── agents/                 # ✅ Subagent + external agent patterns (UPDATED Mar 6)
 │   └── README.md
 ├── ops-hub/                # ✅ Claude Ops Hub institutional memory (AUTO-MAINTAINED)
 │   ├── README.md
@@ -127,9 +127,10 @@ Each time the ops-hub diagnoses a failure, it appends an entry to `KNOWN_FIXES.m
 - `README.md` — 11 patterns: `clean: false` checkout, `--autostash` on rebase, secrets `env:` blocks, `continue-on-error` scope, concurrency groups, workflow gates, timeout-minutes, Telegram notification guards, Ghost Protocol popup handling
 - Real incidents documented: Feb workflow audit, database wipe prevention, self-hosted runner secret injection
 
-### 🤖 OpenClaw (`openclaw/`)
-**Status:** ✅ Complete (Mar 1, 2026)
-- `README.md` — Always-on agent patterns: launchd plist template, Discord webhook vs bot token, Telegram chat_id setup, Gemini CLI writer subprocess, agent output schema
+### 🤖 Agent Infrastructure (`agents/`)
+**Status:** ✅ Updated (Mar 6, 2026)
+- `README.md` — Hybrid architecture: Skills 2.0 subagent patterns (agent file anatomy, frontmatter fields, auto-delegation, shell injection, `$ARGUMENTS`) + external stack patterns (launchd plist template, Discord webhook, Telegram setup, Gemini CLI writer, agent output schema)
+- Decision table: when to use subagent vs external (launchd/GH Actions/Telegram)
 - Gemini CLI slash command format: `.gemini/commands/*.toml` + mirrored skill structure in `.gemini/skills/`
 
 ---
@@ -205,12 +206,12 @@ When you discover a new pattern or lesson:
 - **Ops Hub Patterns:** [ops-hub/DOMAIN_PATTERNS.md](ops-hub/DOMAIN_PATTERNS.md)
 - **Doc Maintenance:** [docs/README.md](docs/README.md)
 - **Skills Guide:** [ai/SKILLS_GUIDE.md](ai/SKILLS_GUIDE.md)
-- **OpenClaw Patterns:** [openclaw/README.md](openclaw/README.md)
+- **Agent Patterns:** [agents/README.md](agents/README.md)
 - **Project Documentation:** [../docs/](../docs/)
 - **Architecture Guide:** [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 - **Roadmap:** [../ROADMAP.md](../ROADMAP.md)
 
 ---
 
-**Last Updated:** March 3, 2026 EST
-**Categories Complete:** 12 (api, ai, ai-prompting, coding, data, data-modeling, debugging, deployment, docs, openclaw, testing, ops-hub)
+**Last Updated:** March 6, 2026 EST
+**Categories Complete:** 12 (api, ai, ai-prompting, coding, data, data-modeling, debugging, deployment, docs, agents, testing, ops-hub)

@@ -1,8 +1,8 @@
 # Iris — Social Scout Agent
 
 **Role:** Social Intelligence & Competitive Scout
-**Model:** Claude Haiku 4.5 (OpenClaw / launchd) + Gemini Flash for summaries
-**Runtime:** Always-on via macOS launchd
+**Model:** Claude Haiku 4.5 + Gemini Flash for summaries
+**Runtime:** Zero-LLM skill (`/iris-collect`) + launchd (scheduled collection)
 **Channel:** #iris (Discord) | Discord webhook
 
 ---

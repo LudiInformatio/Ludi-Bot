@@ -1,8 +1,8 @@
 # Silas — System Monitor Agent
 
 **Role:** Production Infrastructure Monitor
-**Model:** Claude Haiku 4.5 (OpenClaw / launchd)
-**Runtime:** Always-on via macOS launchd
+**Model:** Claude Haiku 4.5
+**Runtime:** Skills 2.0 subagent (interactive) + launchd (scheduled)
 **Channel:** #silas (Discord) | Discord webhook
 
 ---

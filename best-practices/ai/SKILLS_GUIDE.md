@@ -1,6 +1,6 @@
 # Skills Guide — Writing, Assigning & Evolving Employee Skills
 
-**Created:** March 1, 2026
+**Created:** March 1, 2026 | **Updated:** March 6, 2026
 **Purpose:** How to create, assign, refine, and retire skills for the AI Employee Workforce. Maren's reference for ideating new skills over time.
 
 ---
@@ -33,6 +33,11 @@ name: skill-name
 description: >
   One paragraph describing when this skill is invoked and what it does.
   Include trigger phrases if applicable.
+model: sonnet              # optional — haiku, sonnet, or opus (overrides default)
+allowed-tools: [Read, Grep, Glob, Bash]  # optional — restrict tool access
+context: fork              # optional — run in background subprocess
+agent: henrik              # optional — route to specific subagent
+user-invocable: true       # required for /slash-command invocation
 ---
 
 # Skill Name
@@ -74,9 +79,13 @@ Exact format the skill returns. Always include a template.
 | ↳ `architect-audit` | `.claude/commands/architect-audit.md` | Henrik | Audit phase only — run scripts, return severity findings | Step 1 of schema work |
 | ↳ `architect-design` | `.claude/commands/architect-design.md` | Henrik | Design phase only — propose minimal additive changes | Step 2, after audit findings reviewed |
 | ↳ `architect-implement` | `.claude/commands/architect-implement.md` | Henrik | Implement phase only — migration-safe SQL/Python + validation | Step 3, after design approved |
-| `ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik | Ludi-specific 10-point gotcha checklist | After any `.py` code change |
+| `ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik | Ludi-specific 11-point gotcha checklist | After any `.py` code change |
 | `backtest` | `.claude/skills/backtest/SKILL.md` | Vera | Model validation suite | Weekly or after model changes |
 | `daily` | `.claude/skills/daily/SKILL.md` | Vera | Pipeline health check | Daily pre-pipeline |
+| `silas-check` | `.claude/skills/silas-check/SKILL.md` | Silas | System health — API quotas, DB integrity, workflow status | On-demand or pre-pipeline |
+| `lena-analyze` | `.claude/skills/lena-analyze/SKILL.md` | Lena | Data mining queries on ludi.db — patterns, correlations | On-demand data questions |
+| `repo-hygiene` | `.claude/skills/repo-hygiene/SKILL.md` | Kai | Stale files, archive candidates, gitignore, remote sync | Periodic repo cleanup |
+| `iris-collect` | `.claude/skills/iris-collect/SKILL.md` | Iris | Social intelligence collection (zero-LLM) | Scheduled collection runs |
 | `simplify` | (global plugin) | Henrik | Code quality + DRY review | After writing new code |
 | `research` | (global plugin) | Maren | Quick web research | On-demand competitive/API questions |
 | `ultrathink` | (global plugin) | Maren | Deep thinking protocol | Complex architectural decisions |
@@ -91,10 +100,11 @@ Exact format the skill returns. Always include a template.
 | Solomon (PM Lead) | `session-brief`, `session-debrief` | Coordinates all work, owns session lifecycle |
 | Henrik (Code Auditor) | `ludi-audit`, `sports-data-model-architect`, `architect-audit`, `architect-design`, `architect-implement`, `simplify` | Reviews ALL code changes |
 | Vera (Pipeline QA) | `daily`, `backtest` | Pre-flight checks, model validation |
-| Lena (Data Analyst) | `backtest`, `sports-data-model-architect` | Model calibration, stat confidence grades, backtest analysis |
+| Lena (Data Analyst) | `lena-analyze`, `backtest`, `sports-data-model-architect` | Pattern mining, model calibration, stat confidence |
 | Maren (Content/Ideas) | `ultrathink`, `research`, `design` | Brainstorming, BERT refinement, skill ideation |
-| Silas (Monitor) | N/A — runs via OpenClaw | Always-on monitoring, not skill-based |
-| Iris (Scout) | N/A — runs via OpenClaw | Always-on collection, not skill-based |
+| Silas (SRE) | `silas-check` | System health, API quotas, DB integrity (subagent + launchd scheduled) |
+| Iris (Scout) | `iris-collect` | Social intelligence collection (zero-LLM skill + launchd scheduled) |
+| Kai (Repo Custodian) | `repo-hygiene` | Stale files, archive compliance, gitignore, remote sync (junior under Silas) |
 
 ---
 
@@ -156,6 +166,8 @@ Maren should evaluate new skills when:
 | Noun-first | `session-brief`, `sports-data-model-architect` | Named workflows/modes |
 
 **Rule:** Never name a skill after the employee who uses it (e.g., `henrik-review`). Skills can be reassigned. Name them after what they do.
+
+**Exception:** Skill names that route to a specific subagent use `{employee}-{action}` only when the skill IS the employee's primary interactive interface (e.g., `/silas-check`, `/lena-analyze`). General skills usable by multiple employees keep the `ludi-` or verb-first prefix.
 
 ### Skill vs Prompt Pattern — Decision Table
 
@@ -250,4 +262,6 @@ Retire a skill when:
 - `PM_BOT_NOTES_GUIDE.md` — ROADMAP grounding for Gemini PM messages
 - `AI_PROMPTING_BEST_PRACTICES.md` — Temperature rules, cost breakdown per model
 - `AGENTS.md` (project root) — Employee role definitions + skill assignments
-- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — Full PRD for the 7-employee workforce
+- `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — Original PRD for the workforce (6 employees, OpenClaw design)
+- `.claude/plans/crystalline-petting-reef.md` — Skills 2.0 implementation plan (8 employees, hybrid architecture)
+- `best-practices/agents/README.md` — Subagent + external infrastructure patterns

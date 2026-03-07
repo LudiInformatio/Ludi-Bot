@@ -1,6 +1,6 @@
 # AI Prompting Best Practices
 
-**Last Updated:** February 20, 2026
+**Last Updated:** March 6, 2026
 **Applies to:** Claude (Haiku/Sonnet) and Perplexity Sonar used throughout Ludi-Bot
 
 ---
@@ -15,7 +15,7 @@
 | Play curation Top 5 | Sonnet | `utils/claude_prompts.py` | ~$0.08/day |
 | Archetype classification | Haiku (`temperature=0.0`) | `scripts/classify_archetypes.py` · `ARCHETYPE_SYSTEM_PROMPT` in `claude_prompts.py` | ~$0.03/week |
 | Game context search | Perplexity Sonar | `utils/perplexity_client.py` | ~$0.10/day |
-| Suspension detection | Perplexity Sonar | Phase 8.16 (planned) | ~$0.02/day |
+| Suspension detection | ESPN sync + Perplexity Sonar | Phase 8.16 — ESPN sync shipped, Perplexity layer deferred | ~$0.02/day |
 
 ---
 

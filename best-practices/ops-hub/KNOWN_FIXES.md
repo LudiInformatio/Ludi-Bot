@@ -745,3 +745,13 @@ git push origin main                   # Runner now gets correct code
 **Root cause:** Commit `13ae048` (Feb 28) moved CLV to overnight-only batch in `db_backup.yml`. The original 12-run/night schedule (`25,55 23,0,1,2,3,4 * * *`) was replaced with "MANUAL TRIGGER ONLY" comment. Overnight batch captures post-game lines, not true pre-tipoff closing lines.
 
 **Fix:** Restored 6 hourly crons (`25 23,0,1,2,3,4 * * *`). Overnight batch kept as fallback. Commit `6ceb447`.
+
+## 2026-03-06 — Evening slate 2nd run (00:50 UTC) silently skipped + launchd migration
+
+**Symptom:** The 7:50 PM EST evening slate cron (`50 0 * * *`) never appeared in GH Actions for the March 6 evening. The 6:35 PM run (`35 23 * * *`) worked. Second run was 35+ min past schedule with no queued job.
+
+**Root cause:** The `00:50 UTC` zone is still within the high-delay window — tonight it was skipped entirely (not delayed, absent). `workflow_dispatch` events from launchd have lower queue contention than `schedule` crons.
+
+**Fix:** Removed both crons from `evening_slate_lock.yml`. Added two macOS launchd plists at `scripts/launchd/com.ludiinformatio.evening-slate-early.plist` (6:35 PM) and `com.ludiinformatio.evening-slate-late.plist` (8:20 PM). Each calls `gh workflow run evening_slate_lock.yml --ref main`. Logs to `~/Library/Logs/ludi-evening-{early,late}.log`. Commit `a5eee3c`.
+
+**Rule:** For time-critical single-user workflows on a self-hosted runner, prefer `launchd` (macOS) over GH Actions crons. launchd fires at exact local time regardless of GH queue state. Only applies to `workflow_dispatch`-capable workflows.

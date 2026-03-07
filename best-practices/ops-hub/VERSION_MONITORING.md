@@ -4,7 +4,7 @@
 **Frequency:** Session start — check before reviewing any diffs
 **Added:** 2026-03-04
 
-Henrik runs this scan at the top of every Agent Teams session. The goal is to catch
+Henrik runs this scan at the top of every subagent session. The goal is to catch
 upstream breaking changes *before* they silently break production workflows.
 
 ---
@@ -16,7 +16,7 @@ upstream breaking changes *before* they silently break production workflows.
 | Resource | What to check | Why it matters |
 |----------|--------------|----------------|
 | `anthropics/claude-code-action` releases | New tags, SHA changes to `@v1` | Floating `@v1` auto-updates — a bad bump breaks ALL 4 Claude workflows simultaneously (Mar 4, 2026 incident) |
-| `anthropics/claude-code` releases | New CLI versions | Claude Code CLI updates may change command flags, output format, or `settings.json` schema used by Agent Teams |
+| `anthropics/claude-code` releases | New CLI versions | Claude Code CLI updates may change command flags, output format, or `settings.json` schema used by subagents |
 | `claude.ai/release-notes` | Feature changes, model updates, OAuth changes | Token format or auth flow changes can silently expire `CLAUDE_CODE_OAUTH_TOKEN` behavior |
 | `anthropics/anthropic-sdk-python` releases | Breaking changes to `anthropic` package | Pinned in `requirements.txt` — if Claude SDK bumps a major version, `claude_prompts.py` callers may break |
 
@@ -61,7 +61,7 @@ grep "google-generativeai" requirements.txt
 | `@v1` SHA changed on `claude-code-action` since last session | Check KNOWN_FIXES.md for prior broken bump pattern. If new bump = likely broken, alert Solomon before any workflows trigger. |
 | New `claude-code-action` release is a major/minor bump (e.g. `v1 → v2`, or `v1.1`) | Update all 4 workflows to the new stable tag. This is an **unpin opportunity**. |
 | `anthropic` SDK major version bump (e.g. `0.x → 1.x`) | Check changelog for breaking changes. Run: `python -c "import anthropic; print(anthropic.__version__)"` to confirm what's installed in `.venv`. |
-| `gemini-cli` flag renamed or removed | Check our Agent Teams scripts in `employees/` for any subprocess calls. |
+| `gemini-cli` flag renamed or removed | Check our subagent scripts in `employees/` for any subprocess calls. |
 | Model ID `gemini-2.5-pro` deprecated | Find replacement model ID and update all invocations. |
 
 ---
@@ -92,7 +92,7 @@ These are the packages where a version bump can silently break the pipeline:
 
 | Package | Risk level | Why |
 |---------|-----------|-----|
-| `anthropic` | HIGH | All Claude API calls, Agent Teams, `claude_prompts.py` |
+| `anthropic` | HIGH | All Claude API calls, subagents, `claude_prompts.py` |
 | `google-generativeai` | MEDIUM | Gemini writer workflow, future `utils/gemini_client.py` |
 | `python-telegram-bot` | MEDIUM | Ask Ludi bot + Solomon bot — async API changes can break handlers |
 | `playwright` | LOW | Ghost Protocol scraper — Chromium updates occasionally break selectors |
