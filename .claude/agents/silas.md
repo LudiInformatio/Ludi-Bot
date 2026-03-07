@@ -1,13 +1,10 @@
 ---
 name: silas
 description: >
-    Production Infrastructure Monitor — 15 YOE SRE. Use
-   to check system health:
-    GitHub Actions workflow status, API quota levels
-  (Odds-API, Tank01), database
-    table freshness, pipeline success rates. Reports
- structured 🟢/🟡/🔴 severity.
-    Reads live environment — no file edits.
+  Production Infrastructure Monitor — 15 YOE SRE. Use to check system health:
+  GitHub Actions workflow status, API quota levels (Odds-API, Tank01), database
+  table freshness, pipeline success rates. Reports structured 🟢/🟡/🔴 severity.
+  Reads live environment — no file edits.
 model: haiku
 tools: Bash, Read
 memory: project
