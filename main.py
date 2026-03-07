@@ -477,7 +477,7 @@ class LudiOrchestrator:
                     # Handle both new format (dict with odds) and old format (line only)
                     if isinstance(v, dict):
                         # Module A v9.3+ format (with line shopping)
-                        line = float(v.get('line', 0))
+                        line = float(v.get('line') or 0)
                         
                         # Fix: Handle explicit None values (key exists but value is None)
                         val_over = v.get('odds_over')
@@ -518,7 +518,6 @@ class LudiOrchestrator:
                         'sharp_book_under': v.get('sharp_book_under') if isinstance(v, dict) else None
                     }
                 except Exception as e:
-                    print(f"   >>> [main] Prop format error for {p_name} -> {k}: {v}")
                     print(f"   >>> [main] Prop format error for {k}: {e}")
                     continue
             
