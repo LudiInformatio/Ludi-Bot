@@ -4,14 +4,14 @@
 **Phase:** Phase 8 — AI-Enhanced Pipeline
 
 ## Active Sprint
-- Phase 2 skills: `/silas-check`, `/lena-analyze`, `/repo-hygiene` (Kai) + upgrade `ludi-audit`, `daily`, `backtest` frontmatter
+- Module X projection calibration: Sprint A (`module_x_scenario.py` + `module_c.py`) — expand 4→7 stats, DVP/scheme/spread/total conditions. Plan at `.claude/plans/crystalline-petting-reef.md`
 - Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
 - Phase 8.23 Feedback Loop — `claude_analysis_log` collecting, Wilson calibration at ~Mar 10
 
 ## Last 3 Major Completions
-- Phase 1 agents shipped: Henrik, Silas, Lena as `.claude/agents/*.md` Skills 2.0 subagents — audit-fix pattern established (2 follow-up commits per agent) ✅
-- Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, hybrid roster window ✅
-- Evening Slate reliability: 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅
+- Phase 1 agents shipped: Henrik, Silas, Lena as `.claude/agents/*.md` Skills 2.0 subagents — audit-fix pattern established ✅
+- Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit complete ✅
+- Module X calibration plan approved — 8 conditions × 7 stats, 4 sprints, plan at `crystalline-petting-reef.md` ✅
 
 ## Database State (Mar 6, 2026)
 - `player_canonical_ids`: 638 players, 99.79% clean canonical IDs post full remediation

@@ -1,9 +1,11 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 7, 2026 — 4:20 PM EST
+**Last Updated:** Saturday, March 7, 2026 — 6:08 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 2 skills (`/silas-check`, `/lena-analyze`, `/repo-hygiene`) — upgrade existing skill frontmatter (ludi-audit, daily, backtest) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅ + Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅ + Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅
+**Active Work:** `module_x_scenario.py` — Module X projection calibration Sprint A (expand 4→7 stats, DVP/scheme/spread/total conditions, plan at `crystalline-petting-reef.md`) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
+**Completed:** Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅ + Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅ + Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅
+
+> **⚠️ TEMP NOTE (Mar 7–8, 2026):** Odds API + Tank01 API payments lapsed tonight. Keys will be inactive until owner renews tomorrow morning (Mar 8). Any workflows calling these APIs (injury refresh, closing line capture, nightly settlement) will return auth errors — this is expected, not a pipeline bug. Remove this note once APIs are confirmed active.
 
 This is the single source of truth for project tasks and priorities.
 
