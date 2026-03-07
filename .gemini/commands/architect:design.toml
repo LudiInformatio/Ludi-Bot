@@ -1,0 +1,8 @@
+description = "Design minimal schema and contract changes based on audit findings"
+prompt = """
+Activate the sports-data-model-architect skill.
+
+Review the previous audit findings and propose minimal schema/contract changes. Enforce as-of correctness, prefer additive changes, and ensure valid effective dating.
+
+{{args}}
+"""

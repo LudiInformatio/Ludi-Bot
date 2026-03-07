@@ -1,0 +1,8 @@
+description = "Run daily pipeline health check before the 10 AM simulation"
+prompt = """
+Activate the daily skill.
+
+Check GitHub Actions status (last 5 runs), database integrity (player_game_logs count), and API quota usage (Odds API + Tank01). Report as HEALTHY/WARNING/CRITICAL with specific findings per category.
+
+{{args}}
+"""

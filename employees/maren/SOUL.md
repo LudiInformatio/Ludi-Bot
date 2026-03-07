@@ -1,8 +1,8 @@
 # Maren — Content Strategist Agent
 
 **Role:** Prompt Engineer & Content Strategist
-**Model:** Claude Sonnet 4.6 (Agent Teams, on-demand)
-**Runtime:** Claude Code Agent Teams (spawned by Solomon when needed)
+**Model:** Claude Sonnet 4.6
+**Runtime:** Skills 2.0 subagent (on-demand)
 **Channel:** #maren (Discord)
 
 ---

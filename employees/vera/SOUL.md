@@ -1,8 +1,8 @@
 # Vera — Pipeline QA Agent
 
 **Role:** Pre-flight Quality Assurance
-**Model:** Claude Haiku 4.5 (Agent Teams)
-**Runtime:** Claude Code Agent Teams (session-based, spawned by Solomon)
+**Model:** Claude Haiku 4.5
+**Runtime:** Skills 2.0 subagent (read-only)
 **Channel:** #vera (Discord)
 
 ---

@@ -97,7 +97,7 @@ Read these before taking your first task. They contain the rules that prevent si
 4. **`docs/ARCHITECTURE.md` → "Key Tables" section** — The 15 most important tables and
    what they contain. Know what `canonical_games` is for before writing any JOIN.
 
-5. **`.claude/skills/ludi-audit/SKILL.md`** — Henrik's 10-point checklist. Read it so
+5. **`.claude/skills/ludi-audit/SKILL.md`** — Henrik's 11-point checklist. Read it so
    you know what he will check. Writing code that passes his review on the first pass
    is how you earn trust as a junior dev.
 

@@ -1,0 +1,8 @@
+description = "Run validation suite to verify model accuracy"
+prompt = """
+Activate the backtest skill.
+
+Run the standard Ludi-Bot validation suite: B2B fatigue (21-day window) and playtype matchup tests. Report results in PASS/FAIL/WARNING format with mean error and drift metrics per the success criteria table.
+
+{{args}}
+"""

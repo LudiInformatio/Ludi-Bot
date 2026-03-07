@@ -1,0 +1,8 @@
+description = "Wraps up a session cleanly (updates docs, commits, pushes, sends PM message)"
+prompt = """
+Activate the session-debrief skill.
+
+Execute the 10 ordered steps strictly in sequence: get real time, understand session scope, PM bot grounding check (BERT formula validation), update ROADMAP.md + active docs + README.md scope, review best-practices, update MEMORY.md, check git status/CLAUDE.md, test & verify (conditional gate if agent work or 5+ files changed), commit + push (push is mandatory), and send the PM bot session message.
+
+{{args}}
+"""

@@ -1,0 +1,8 @@
+description = "Implement migration-safe SQL/Python snippets and validation checks"
+prompt = """
+Activate the sports-data-model-architect skill.
+
+Based on the proposed design, generate concise, migration-safe SQL/Python snippets. Include validation queries or tests for each material change, and rollback/fallback notes for risky data operations.
+
+{{args}}
+"""

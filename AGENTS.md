@@ -89,7 +89,7 @@ This applies to:
 Henrik's workflow:
 
 1. Runs `/simplify` first (generic code quality + DRY check)
-2. Runs `/ludi-audit` second (10-point Ludi-specific gotcha checklist)
+2. Runs `/ludi-audit` second (11-point Ludi-specific gotcha checklist)
 3. Returns: `APPROVED` | `APPROVED_WITH_NOTES` | `REVIEW_REQUIRED`
 
 ### Writer/Auditor Separation

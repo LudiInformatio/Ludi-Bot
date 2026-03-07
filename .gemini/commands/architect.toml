@@ -1,0 +1,6 @@
+description = "Invoke the sports-data-model-architect skill"
+prompt = """
+Activate the sports-data-model-architect skill and act as the Sports Data Model Architect.
+
+{{args}}
+"""

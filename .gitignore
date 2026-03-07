@@ -92,10 +92,14 @@ cache/historical_odds/
 cache/daily_games_*.json
 ludi_history_db.json
 
-# Tool logs (MCP, opencode, etc.) — exclude local settings, track shared skills
+# Tool logs (MCP, opencode, etc.) — exclude local settings, track shared skills/commands
 .playwright-mcp/
-.opencode/
+.opencode/*
+!.opencode/commands/
+!.opencode/commands/**
 .gemini/*
 !.gemini/skills/
 !.gemini/skills/**
+!.gemini/commands/
+!.gemini/commands/**
 yak_cache.json

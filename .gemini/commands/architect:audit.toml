@@ -1,0 +1,11 @@
+description = "Run sports data model audits (temporal, coverage, entity resolution)"
+prompt = """
+Activate the sports-data-model-architect skill.
+
+Run the following scripts and summarize the findings by severity (critical, high, medium):
+- scripts/audit_temporal_integrity.py
+- scripts/audit_feature_coverage.py
+- scripts/audit_entity_resolution.py
+
+{{args}}
+"""

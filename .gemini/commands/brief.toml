@@ -1,0 +1,8 @@
+description = "Instantly orient yourself at the start of any session"
+prompt = """
+Activate the session-brief skill.
+
+Read ROADMAP.md, memory/MEMORY.md, recent git commits, and git status, then synthesize them into a single structured brief. Follow all the execution steps in the skill carefully.
+
+{{args}}
+"""
