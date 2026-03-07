@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 7, 2026 — 12:26 PM EST
+**Last Updated:** Saturday, March 7, 2026 — 4:20 PM EST
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Employee onboarding (`.claude/agents/*.md`, `employees/*/ONBOARDING.md`) — Skills 2.0 subagent implementation for 8 employees (Henrik, Silas, Lena first) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Pipeline Reliability (`database.py`, `sync_browser_backfill.py`) — DB lock cascade fix, Ghost Protocol Lastname/Firstname firewall, extract_id_from_href restored, dead script ref removed ✅ + Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅ + Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅
+**Active Work:** Phase 2 skills (`/silas-check`, `/lena-analyze`, `/repo-hygiene`) — upgrade existing skill frontmatter (ludi-audit, daily, backtest) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
+**Completed:** Evening Slate reliability (`evening_slate_lock.yml`, `trend_engine.py`, `module_b.py`) — 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅ + Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅ + Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅
 
 This is the single source of truth for project tasks and priorities.
 

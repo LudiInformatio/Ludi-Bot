@@ -1,17 +1,17 @@
 # Current System Status
 
-**Last Updated:** March 6, 2026
+**Last Updated:** March 7, 2026
 **Phase:** Phase 8 — AI-Enhanced Pipeline
 
 ## Active Sprint
-- Employee onboarding (`.claude/agents/*.md`) — Skills 2.0 subagent implementation for 8 employees; research complete, implementation plan finalized
+- Phase 2 skills: `/silas-check`, `/lena-analyze`, `/repo-hygiene` (Kai) + upgrade `ludi-audit`, `daily`, `backtest` frontmatter
 - Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
 - Phase 8.23 Feedback Loop — `claude_analysis_log` collecting, Wilson calibration at ~Mar 10
 
 ## Last 3 Major Completions
-- Skills 2.0 research: hybrid architecture finalized — 7 subagents + 4 new skills + Kai (repo custodian) added as Employee 8 ✅
-- Pipeline Reliability: DB lock cascade fix, Ghost Protocol firewall (136→2 warnings), curate max_tokens 8192→32000 ✅
-- Curation v2: 3-layer decision tree (math → dossier → Claude), shared cache, BERT Pattern 2, full-slate grading ✅
+- Phase 1 agents shipped: Henrik, Silas, Lena as `.claude/agents/*.md` Skills 2.0 subagents — audit-fix pattern established (2 follow-up commits per agent) ✅
+- Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, hybrid roster window ✅
+- Evening Slate reliability: 5 silent failures fixed, GH crons → launchd triggers, Sonnet streaming + data grounding rule ✅
 
 ## Database State (Mar 6, 2026)
 - `player_canonical_ids`: 638 players, 99.79% clean canonical IDs post full remediation
