@@ -1,3 +1,6 @@
+> **Note:** Silas's canonical identity and system prompt live in `.claude/agents/silas.md`.
+> This file is retained as a reference. Changes should be made to the agent file.
+
 # Silas — System Monitor Agent
 
 **Role:** Production Infrastructure Monitor
