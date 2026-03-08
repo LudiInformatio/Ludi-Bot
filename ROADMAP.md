@@ -14,7 +14,9 @@ This is the single source of truth for project tasks and priorities.
 > - Never put actionable next-steps ONLY in the Phase 8 table; the table is for status tracking only.
 
 **Active Project Docs:**
-- `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` — BERT-derived prompt patterns
+- `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` — BERT-derived prompt patterns (Patterns 1-9) + advanced paradigms (Patterns 10-16)
+- `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md` — Phase 9 implementation plan (5 sprints)
+- `docs/research/LLM_CANONICAL_RESEARCH_TABLE.md` — Academic LLM research reference table
 - `docs/projects/HISTORICAL_BACKFILL_2024_25.md` — 2024-25 backfill plan (~18k rows, 6-night automated)
 - `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md` — Social Intel + Prop Pulse Score full spec
 - `docs/FUTURE_DATA_SOURCES.md` — Ask Ludi architecture (§6) + competitive patterns (§5.2-B) + PBP Stats endpoints (§4.4)
@@ -100,6 +102,17 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md` ✅
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
 - [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
+
+### Phase 9: Advanced LLM Paradigms & Model Calibration (Post-Phase 8)
+**Full plan:** `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md`
+**Research:** `docs/research/LLM_TRAINING_METHODOLOGIES_LANDSCAPE.md` | `docs/research/LLM_CANONICAL_RESEARCH_TABLE.md`
+**Best practices:** `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` (Patterns 10-16), `best-practices/data/MODEL_CALIBRATION_PATTERNS.md`, `best-practices/ai/EMPLOYEE_TRAINING_PARADIGMS.md`
+**Principle:** LLMs orchestrate, never calculate. ML learns constants OFFLINE; math stays deterministic.
+- [ ] Sprint 1: Measurement infrastructure (Brier Score, residual analysis, calibration curves)
+- [ ] Sprint 2: Learned constants (isotonic calibration, per-stat variance, absorption rates)
+- [ ] Sprint 3: Curation prompt engineering (randomize order, prefilling, Many-Shot ICL, CoT)
+- [ ] Sprint 4: Knowledge distillation + Reflexion (feedback loops, Haiku calibration, lessons-learned)
+- [ ] Sprint 5: Advanced patterns + structural hardening (debate, confidence scoring, handoff protocols)
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint

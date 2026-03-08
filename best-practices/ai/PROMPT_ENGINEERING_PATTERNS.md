@@ -323,4 +323,174 @@ Over time, parse failure logs reveal which prompts are producing malformed outpu
 
 ---
 
+---
+
+## Pattern 10: Chain-of-Thought (CoT) — Reasoning Before Output
+
+**Source:** Wei et al. 2022 — "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"
+
+**What:** Force the model to show its reasoning trace BEFORE committing to an output. Adding "Let's think step by step" or requiring a `thinking` field before the answer improves classification accuracy by 12-15%.
+
+**Why it works:** DeepSeek-R1 achieved 71% on AIME 2024 (from 15.6%) with emergent CoT from pure RL. Reasoning-trained models naturally process information through explicit reasoning steps. Prompting for CoT aligns with how they were trained.
+
+**Application — Sonnet curation (`curate_plays.py`):**
+```json
+{"bet_id": 123, "thinking": "Edge is 16% but PTS OVER WR is only 49.7%. Matchup is NEUTRAL scheme, no defensive advantage. Ref crew is LENIENT — helps FTA but not PTS. Risk: high-edge PTS OVER historically underperforms in this system.", "grade": "LEAN", "reasoning": "Strong edge undermined by weak PTS OVER historical signal"}
+```
+
+The `thinking` field is logged to `claude_analysis_log` for audit trail but NOT used for downstream grading.
+
+**Files:** `scripts/curate_plays.py` (output schema), `utils/claude_logger.py` (log thinking field)
+
+---
+
+## Pattern 11: Many-Shot In-Context Learning (ICL)
+
+**Source:** Google DeepMind 2024 — "Many-Shot In-Context Learning"
+
+**What:** 50-100 examples consistently outperform 3-5 for structured tasks. With 9,293+ settled bets and outcomes, we have a massive example bank. Build a `_select_icl_examples()` function that dynamically picks 5-8 REAL historical bets most similar to tonight's slate.
+
+**Selection method:** TF-IDF similarity on (stat_category, archetype, defensive_scheme). Research shows TF-IDF outperforms random sampling and semantic embedding for example selection (Few-Shot Dilemma, 2025).
+
+**Why not always 50-100:** Token budget constraint. At ~100 tokens per example, 8 examples = 800 tokens. 50 examples would be 5,000 tokens — wasteful for Haiku calls. Scale examples to task complexity.
+
+**Application — Sonnet curation:**
+```python
+def _select_icl_examples(bets, conn, max_examples=8):
+    """Select real historical bets similar to tonight's slate."""
+    # Query: recent settled bets where curation was correct
+    # (STRONG + WIN, or FADE + LOSS)
+    # Similarity: match by stat_category + archetype + scheme
+    # Return: formatted examples with outcome
+```
+
+**Files:** `scripts/curate_plays.py` (new function + injection into prompt)
+
+---
+
+## Pattern 12: Response Prefilling
+
+**Source:** Anthropic API feature + RogueQuant prompt patterns (2024)
+
+**What:** Start the assistant message mid-structure to force format compliance. Instead of hoping Claude outputs valid JSON, begin the response with `[{"bet_id":` so Claude must continue the JSON array.
+
+**Why it works:** Eliminates the need to strip markdown code blocks, preamble text, or explanatory prose before JSON. The model is constrained to continue from the prefill point.
+
+**Application — Sonnet curation:**
+```python
+messages = [
+    {"role": "user", "content": curation_prompt},
+    {"role": "assistant", "content": '[{"bet_id":'}
+]
+# Claude continues from '[{"bet_id":' — guaranteed JSON
+```
+
+**Files:** `utils/claude_client.py` (add `assistant_prefill` parameter), `scripts/curate_plays.py` (pass prefill)
+
+---
+
+## Pattern 13: Self-Consistency
+
+**Source:** Wang et al. 2023 — "Self-Consistency Improves Chain of Thought Reasoning"
+
+**What:** Generate N answers independently, take majority vote. For classification tasks, this reduces variance and increases reliability.
+
+**Application — Backtest validation:**
+- Run curation 3× on the same slate with different random seeds
+- Grade only on agreement: if all 3 say STRONG → high confidence. If 2 say STRONG, 1 says LEAN → medium confidence
+- Disagreement → flag for human review
+
+**Cost tradeoff:** 3× API cost per validation run. Use for validation/backtest only, not daily production.
+
+**Files:** `scripts/calibration_analysis.py` (validation mode)
+
+---
+
+## Pattern 14: Debate / Adversarial
+
+**Source:** TradingAgents (Dec 2024) + Constitutional AI critique-revise loop
+
+**What:** Generate opposing arguments (bull vs bear) before making a decision. Mirrors the TradingAgents "researcher debate" pattern where bull/bear researchers argue before the Trader decides.
+
+**Critical warning:** LLM debate leads to overconfidence (72.9% → 83% confidence, rational baseline: 50%). NEVER trust raw LLM confidence scores from debate. Always calibrate externally.
+
+**Application — Maren strategist (top 10 bets):**
+```
+BULL CASE: Haliburton PTS OVER 22.5 — 16% edge, favorable matchup vs WAS FUNNEL scheme,
+           L7 trend +2.3 PTS, clean injury status.
+BEAR CASE: PTS OVER WR only 49.7% historically. High-edge PTS OVER plays have
+           inversely lower hit rate (edge monotonicity violation). FUNNEL defense
+           allows rim but Haliburton is primarily a perimeter player.
+```
+
+**Files:** `skills/maren-debate/SKILL.md`, `scripts/curate_plays.py` (inject debate context)
+
+---
+
+## Pattern 15: Reflexion (Memory-Based Self-Improvement)
+
+**Source:** Shinn et al. 2023 — "Reflexion: Language Agents with Verbal Reinforcement Learning"
+
+**What:** After task completion, reflect on failures in natural language, store reflections in memory, retry with accumulated wisdom. Over time, the agent avoids repeating past mistakes.
+
+**Application — Curation prompt:**
+```python
+def _build_reflexion_context(conn, run_date):
+    """Inject yesterday's curation mistakes into today's prompt."""
+    # STRONG bets that LOST yesterday
+    # FADE bets that WON yesterday
+    # Cap at 5 examples, 500 chars total
+    return "YESTERDAY'S LESSONS:\n- [Player] [stat] graded STRONG but LOST — [reason]"
+```
+
+**Also applies to employees:** `employees/{name}/LESSONS_LEARNED.md` files consulted at start of every agent invocation.
+
+**Files:** `scripts/curate_plays.py` (reflexion context), `employees/*/LESSONS_LEARNED.md` (per-employee)
+
+---
+
+## Pattern 16: Confidence Scoring
+
+**Source:** LLM-as-Judge Survey (Dec 2024) — forcing confidence scores improves calibration
+
+**What:** Every LLM output includes a confidence level. Binary pass/fail loses information that downstream consumers need for filtering and prioritization.
+
+**Standard levels:**
+| Level | Criteria | Downstream Action |
+|-------|----------|-------------------|
+| HIGH | N > 100, p < 0.01 | Auto-inject into modifiers |
+| MEDIUM | N > 50, p < 0.05 | Queue for human review |
+| LOW | N < 50 or p > 0.05 | Log only, do NOT act on |
+
+**Application — All employee outputs:**
+```
+Confidence: HIGH — N=267 settled bets, p=0.003, effect size +13.2% vs baseline
+```
+
+**Application — Curation grades:**
+```json
+{"bet_id": 123, "grade": "STRONG", "confidence": "HIGH", "reasoning": "..."}
+```
+
+**Files:** All `employees/*/ONBOARDING.md`, `.claude/agents/*.md` (output format)
+
+---
+
+## Updated Implementation Priority (Patterns 1-16)
+
+| Priority | Pattern | Effort | Impact | Status |
+|----------|---------|--------|--------|--------|
+| 1-8 | BERT Patterns 1-8 | Done | High | ✅ Done (Phase 8.19-8.20) |
+| 9 | Negative Few-Shot | Partial | High | 🟡 `classify_archetypes.py` only |
+| 10 | Chain-of-Thought | 1 hr | High | Phase 9 Sprint 3 |
+| 11 | Many-Shot ICL | 3 hrs | High | Phase 9 Sprint 3 |
+| 12 | Response Prefilling | 30 min | Medium | Phase 9 Sprint 3 |
+| 13 | Self-Consistency | 2 hrs | Medium | Phase 9 Sprint 3 (validation only) |
+| 14 | Debate/Adversarial | 3 hrs | Medium | Phase 9 Sprint 5 |
+| 15 | Reflexion | 2 hrs | Medium | Phase 9 Sprint 4 |
+| 16 | Confidence Scoring | 1 hr | Medium | Phase 9 Sprint 5 |
+
+---
+
 *Authored Feb 21, 2026 — based on google-research/bert codebase + S1877050924025766 (Procedia CS 2024)*
+*Expanded Mar 8, 2026 — Patterns 10-16 from Phase 9 research (30+ academic papers, 15+ architectures)*
