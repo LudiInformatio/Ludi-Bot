@@ -203,7 +203,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
 | 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
-| Mondays 9:00 AM | `weekly_referee_sync.yml` | Weekly referee intelligence sync via Playwright (OddsShark + Covers data) |
+| Mondays 4:00 AM | `weekly_referee_sync.yml` | Weekly referee intelligence sync via Playwright (OddsShark + Covers data) |
 | 9:30 AM | `referee_sync.yml` | Daily referee assignments |
 | 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
 | 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |

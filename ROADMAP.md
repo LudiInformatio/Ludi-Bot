@@ -1,11 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 7, 2026 — 6:08 PM EST
+**Last Updated:** Sunday, March 8, 2026 — 12:39 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** `module_x_scenario.py` — Module X projection calibration Sprint A (expand 4→7 stats, DVP/scheme/spread/total conditions, plan at `crystalline-petting-reef.md`) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Pipeline fixes (`curate_plays.py`, `morning_brief.py`, `main.py`) — player-grouped Haiku gate 290→~15 calls, DB team injection, game lines restored, curation grades wired, hybrid roster window ✅ + Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅ + Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅
-
-> **⚠️ TEMP NOTE (Mar 7–8, 2026):** Odds API + Tank01 API payments lapsed tonight. Keys will be inactive until owner renews tomorrow morning (Mar 8). Any workflows calling these APIs (injury refresh, closing line capture, nightly settlement) will return auth errors — this is expected, not a pipeline bug. Remove this note once APIs are confirmed active.
+**Completed:** Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅ + Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅ + DST cron update (17 workflows) + `capture_closing_lines.py` Henrik audit — false sys.exit on live games fixed, check_slate UTC gate fixed ✅
 
 This is the single source of truth for project tasks and priorities.
 

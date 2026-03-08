@@ -274,7 +274,7 @@ def _odds_api_get(url: str, params: dict) -> Optional[dict]:
         return None
 
 
-def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bool = False) -> List[Dict]:
+def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bool = False) -> Tuple[List[Dict], bool]:
     """
     Two-step Odds API fetch for player prop closing lines.
 
@@ -287,7 +287,10 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
     NOT from the bulk /odds endpoint (which returns game-level markets only).
     This matches the pattern in module_a.py:397.
 
-    Returns: list of normalized game dicts.
+    Returns:
+        (normalized_games: list, all_games_live: bool)
+        all_games_live=True means every pending game was skipped because it has
+        already started — caller should exit 0 (not a failure, just late night).
     """
     # Pre-flight: skip Odds API entirely if last run reported quota = 0
     # BUT first check if cache is stale (from prior billing cycle)
@@ -300,7 +303,7 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
     cached_quota = _read_cached_quota()
     if cached_quota == "0":
         print("  Odds API: quota exhausted (cached) — skipping to BDL fallback")
-        return []
+        return [], False
 
     base = f"https://api.the-odds-api.com/v4/sports/basketball_nba"
 
@@ -317,30 +320,38 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
         {'api_key': config.ODDS_API_KEY}
     )
     if not events_data:
-        return []
+        return [], False
 
-    # Match events to tonight's pending games — reject live games and future-date games
-    matched_events = [
+    # Partition tonight's pending games into live (started) vs still pre-tip
+    tonight_events = [
         ev for ev in events_data
         if (ev.get('away_team', ''), ev.get('home_team', '')) in tonight_pairs
-        and _game_is_on_slate(ev, game_date)
     ]
 
-    # Log any live/future-date games that were filtered out (verbose only)
-    if verbose:
-        skipped_live = [
-            ev for ev in events_data
-            if (ev.get('away_team', ''), ev.get('home_team', '')) in tonight_pairs
-            and not _game_is_on_slate(ev, game_date)
-        ]
-        for ev in skipped_live:
-            print(f"  Odds API: SKIPPED live/future game — "
-                  f"{ev.get('away_team')} @ {ev.get('home_team')} "
-                  f"(commence: {ev.get('commence_time', 'unknown')})")
+    # Log any live/future-date games that were filtered out (always — not just verbose)
+    skipped_live = [ev for ev in tonight_events if not _game_is_on_slate(ev, game_date)]
+    for ev in skipped_live:
+        print(f"  Odds API: SKIPPED live/finished game — "
+              f"{ev.get('away_team')} @ {ev.get('home_team')} "
+              f"(commence: {ev.get('commence_time', 'unknown')})")
+
+    matched_events = [ev for ev in tonight_events if _game_is_on_slate(ev, game_date)]
+
+    # All known games for tonight have started — CLV window is closed.
+    # This is expected late at night (10 PM+ EST); treat as clean exit, not failure.
+    if not matched_events and skipped_live:
+        all_games_live = len(skipped_live) == len(tonight_pairs) if tonight_pairs else False
+        if all_games_live:
+            print(f"  Odds API: all {len(skipped_live)} game(s) for tonight have already "
+                  f"started — CLV capture window closed")
+        else:
+            print(f"  Odds API: {len(skipped_live)} live game(s) skipped, "
+                  f"no pre-tip matches found among {len(tonight_pairs)} pending game(s)")
+        return [], all_games_live
 
     if not matched_events:
         print(f"  Odds API: no events matched tonight's {len(tonight_pairs)} pending game(s)")
-        return []
+        return [], False
 
     print(f"  Odds API: matched {len(matched_events)} event(s) to pending bets")
 
@@ -369,7 +380,7 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
         else:
             print(f"    {away_team} @ {home_team}: props fetch failed, skipping")
 
-    return normalized
+    return normalized, False  # all_games_live=False — we had real pre-tip matches
 
 
 # ---------------------------------------------------------------------------
@@ -864,7 +875,15 @@ def main():
 
         # Step 2: Fetch closing data — Odds API primary
         normalized_games: List[Dict] = []
-        api_games = fetch_all_closing_data(pending_bets, game_date, verbose=args.verbose)
+        api_games, all_games_live = fetch_all_closing_data(pending_bets, game_date, verbose=args.verbose)
+
+        # All games have already tipped off — CLV capture window is closed for tonight.
+        # This is normal behavior for runs after ~10:30 PM EST when all games are in-progress.
+        # Exit 0 (clean) — do not fall through to BDL or Tank01 for live games.
+        if all_games_live:
+            print("All pending games have already started — CLV capture window closed. "
+                  "Overnight batch in db_backup.yml will handle any remaining captures.")
+            sys.exit(0)
 
         if api_games:
             normalized_games = api_games  # Already normalized inside fetch_all_closing_data()

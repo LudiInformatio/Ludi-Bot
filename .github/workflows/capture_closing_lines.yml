@@ -41,7 +41,9 @@ jobs:
         run: |
           export PYTHONPATH=$PWD
           set +e
-          .venv/bin/python scripts/check_slate.py
+          # Pass EST date explicitly — at 10-11 PM EDT, UTC is already the next calendar day
+          GAME_DATE=$(TZ='America/New_York' date +%Y-%m-%d)
+          .venv/bin/python scripts/check_slate.py --date "$GAME_DATE"
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
