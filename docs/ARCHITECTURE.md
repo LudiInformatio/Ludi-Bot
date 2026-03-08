@@ -105,6 +105,8 @@ Supporting Modules:
 | G: Zebras | `module_g.py` | `LudiRefEngine` | NBA.com (scraping) |
 | H: Historian | `module_h_historian.py` | `LudiHistorian` | Tank01 (PAID) |
 | X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` | None (usage vacuum) |
+| I: Aggregator | `module_i_aggregator.py` | `LudiAggregator` (placeholder) | None |
+| DB Firewall | `database.py` | `LudiHistorian.resolve_player_id_for_insert` | None |
 
 **Import Examples:**
 ```python
@@ -140,7 +142,7 @@ from module_e import LudiEvaluator           # ImportError
 | `team_lineups` | 10,669 | WOWY lineup data |
 | `player_canonical_ids` | 638+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); `team` column removed (Mar 3) — team always via LEFT JOIN `players`. CREATE TABLE in `database.py`. Full remediation Mar 4: 0 dirty canonical IDs, 99.79% downstream clean. |
 | `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
-| `canonical_games` | 902 | Game identity crosswalk: `canonical_game_id` PK (`{date}_{home}_{away}`), `nba_official_id` (002... format), `referee_crew`, `pace`. Deduplicates the 3-format games table (NBA official / shortened / date-team). `sync_canonical_games(conn)` importable from `database.py`. Use for Pattern-B JOINs (date+team pair) to prevent 3× row inflation. Added Feb 28. |
+| `canonical_games` | 955+ | Game identity crosswalk: `canonical_game_id` PK (`{date}_{home}_{away}`), `nba_official_id` (002... format), `referee_crew`, `pace`. Deduplicates the 3-format games table (NBA official / shortened / date-team). `sync_canonical_games(conn)` importable from `database.py`. Use for Pattern-B JOINs (date+team pair) to prevent 3× row inflation. Added Feb 28. |
 | `player_news_staging` | Dynamic | RSS-discovered players not yet in `player_canonical_ids` (rookies, two-ways, call-ups). `UNIQUE(player_name, source)`. Auto-promotes after 3+ appearances. Added Feb 25. |
 | `player_type_profiles` | 382 | Unified classification layer: archetype + defensive_tag + top-3 Synergy playtypes + freqs + PPPs + `archetype_in_top3` flag + `position_synergy_match`. `PRIMARY KEY (player_name, season)`. Feeds BERT negative few-shot injection. Added Feb 25. |
 | `player_foul_splits` | 459 | Rolling 21-day foul stats per player: `foul_rate`, `min_dampener` (0.70–1.0 scale), `data_confidence` (HIGH ≥ 10g / MEDIUM ≥ 5g). Synced daily via `scripts/sync_player_foul_splits.py`. Module C pre-loads at init via `_load_foul_splits_data()` — zero per-simulation DB connections. Added Feb 25 (Phase 8.17). |

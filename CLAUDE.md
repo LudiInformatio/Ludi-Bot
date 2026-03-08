@@ -10,15 +10,7 @@ When instructions conflict, use this order:
 2. `ROADMAP.md` (current phase and priorities)
 3. `CLAUDE.md` (supplemental project context)
 
-## Project Overview
-
-**Ludi Informatio v2.0** is an NBA analytics platform that generates betting recommendations for player props using Monte Carlo simulations, injury intelligence, and edge calculation with devigging.
-
-- **Product Name**: Ludi Lens v2.0 — The Edge, Magnified
-- **Descriptor**: NBA Player Props Analytics | AI-Driven | Always On
-- **Engine**: S.A.V.A.G.E. Protocol (Hybrid Poisson/Normal Sim | Usage Vacuum)
-- **Tech Stack**: Python + Streamlit + SQLite + GitHub Actions
-- **Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
+**Repository**: https://github.com/LudiInformatio/Ludi-Bot.git
 
 ---
 
@@ -30,7 +22,6 @@ See @docs/METHODOLOGY.md for betting edge calculations.
 See @docs/STATUS_CURRENT.md for current system state.
 See docs/STATUS_HISTORY.md for full sprint history (not auto-loaded).
 See @docs/TOOLS_GUIDE.md for task automation scripts and helpers.
-See @best-practices/ for reusable patterns and lessons learned.
 
 ---
 
@@ -107,63 +98,24 @@ python -c "from utils.telegram_notifier import send_message; send_message('Test'
 .venv/bin/python bots/ask_ludi.py
 ```
 
+> **Note:** Paper trade any model changes before deploying to production. Back up the database before running migration scripts.
+
 ---
 
 ## Database Management
 
-**IMPORTANT:** `ludi.db` is NOT tracked in git to prevent merge conflicts.
+**IMPORTANT:** `ludi.db` is NOT tracked in git. Full backup/restore docs in `docs/PRODUCTION_HANDBOOK.md`.
 
-**Architecture:**
-- **Local Development:** Database managed locally with backup/restore workflow
-- **CI/CD Workflows:** Database rebuilt via data sync (not restored from git)
-- **Backups:** Automated daily backups at 4 AM EST via GitHub Actions
-
-### Backup & Restore
-
-**Create manual backup:**
 ```bash
-bash scripts/backup_database.sh
+bash scripts/backup_database.sh                                          # create backup
+bash scripts/restore_database.sh archives/data/ludi.db.backup_YYYYMMDD_HHMMSS.gz  # restore
 ```
-
-**Restore from backup:**
-```bash
-# List available backups
-bash scripts/restore_database.sh
-
-# Restore specific backup
-bash scripts/restore_database.sh archives/data/ludi.db.backup_YYYYMMDD_HHMMSS.gz
-```
-
-**List recent backups:**
-```bash
-ls -lht archives/data/ludi.db.backup_*.gz | head -10
-```
-
-### Why Database is Not in Git
-
-**Problem:** Binary database files create merge conflicts that cause data loss
-**Solution:** Local database + automated backups + data sync workflows
-**Result:** No more merge conflicts, data is safe, CI/CD still works
-
-**If you need to share database state:** Use backup files, not git commits
 
 ---
 
 ## Module Reference
 
-| Module | File | Class Name |
-|--------|------|------------|
-| A: Gatekeeper | `module_a.py` | `Gatekeeper` |
-| B: Engine | `module_b.py` | `LudiEngine` |
-| C: Oracle | `module_c.py` | `LudiOracle` |
-| D: Yak | `module_d.py` | `LudiYak` |
-| E: Calibrator | `module_e.py` | `LudiCalibrator` |
-| F: Alchemist | `module_f.py` | `LudiReporter` |
-| G: Zebras | `module_g.py` | `LudiRefEngine` |
-| H: Historian | `module_h_historian.py` | `LudiHistorian` |
-| X: Scenario | `module_x_scenario.py` | `ScenarioBuilder` |
-| I: Aggregator | `module_i_aggregator.py` | `LudiAggregator` (placeholder) |
-| DB Firewall | `database.py` | `LudiHistorian.resolve_player_id_for_insert` |
+See `docs/ARCHITECTURE.md` → "Module Class Names Reference" for the full table with import examples. Use exact class names only — wrong names cause ImportError.
 
 ---
 
@@ -175,16 +127,9 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10
 
 ---
 
-## API Configuration
+## Environment Setup
 
-| API | Tier | Purpose |
-|-----|------|---------|
-| The-Odds-API | PAID (20K/mo) | Game lines, player props |
-| Tank01 | PAID (1K/day) | Rosters, injuries, box scores |
-| Ball Don't Lie | GOAT ($39.99/mo) | Fallback odds, injuries, game logs |
-| PBP Stats | FREE | Shot quality, WOWY data |
-
-Environment variables in `.env` (see `.env.template` for full list):
+Key `.env` variables (see `.env.template` for full list):
 - `ODDS_API_KEY`, `TANK01_KEY`, `BALLDONTLIE_KEY` (required)
 - `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` (notifications)
 - `GEMINI_API_KEY` (optional — Ask Ludi chatbot)
@@ -192,67 +137,29 @@ Environment variables in `.env` (see `.env.template` for full list):
 
 ---
 
-## Automation Schedule (GitHub Actions)
+## Automation Schedule
 
-All workflows run on a self-hosted macOS runner. See `.github/workflows/` for details.
-
-| Time (EST) | Workflow | Purpose |
-|------------|----------|---------|
-| 1:00 AM | `db_backup.yml` | Database backup + overnight CLV capture (`--yesterday`) |
-| 3:00 AM | `data_sync.yml` | Sync game logs, clutch, assists, enrichment |
-| 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
-| 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
-| 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
-| Mondays 4:00 AM | `weekly_referee_sync.yml` | Weekly referee intelligence sync via Playwright (OddsShark + Covers data) |
-| 9:30 AM | `referee_sync.yml` | Daily referee assignments |
-| 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
-| 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
-| 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
-| Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | `injury_refresh.yml` | Intraday injury refresh — 9 daytime runs + 15 evening runs during game hours |
-| 6:35 PM (launchd) + 8:20 PM (launchd) | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM early games 7-8:30 PM tips; 8:20 PM late games 9 PM+ tips only) — triggered via `scripts/launchd/com.ludiinformatio.evening-slate-*.plist`, not GH cron (GH `01:xx UTC` zone unreliable) |
-| 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
-| Hourly 6:25–11:25 PM | `capture_closing_lines.yml` | Pre-tipoff CLV capture (6 hourly runs); overnight batch in `db_backup.yml` as fallback |
-| Sundays + Thursdays | `ghost_protocol_sync.yml` | NBA.com tracking data (Sunday: 7-day sweep, Thursday: gap-fill only) |
-| Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
-| 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
-| 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
-| On failure/cancel | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
-| On PR open/push/sync | `claude-code-review.yml` | Automatic Claude code review on every pull request (Henrik's domain) |
-| On `@claude` mention in issue/PR | `claude.yml` | Interactive Claude assistant — responds to @claude comments on-demand |
-
----
-
-## Development Workflow
-
-1. ALWAYS activate virtual environment before running code
-2. ALWAYS check `.env` file exists with required API keys
-3. Test modules individually before running full pipeline
-4. Backup database before running migration scripts
-5. Paper trade any model changes before deploying to production
+See `docs/PRODUCTION_HANDBOOK.md` for the full workflow schedule (all times, triggers, and purposes). All workflows run on a self-hosted macOS runner.
 
 ---
 
 ## Known Gotchas
 
+> **See also:** `best-practices/ai/COMMON_MISTAKES.md` for recurring Claude Code session mistakes, SQL schema traps, and silent failure patterns with prevention rules.
+
 - Referee assignments require web scraping (can fail if NBA.com changes HTML)
 - DuckDuckGo search in Module D can be rate-limited — use sparingly
 - Module I (Aggregator) is placeholder code — not yet implemented
 - Runner DB symlink: `actions-runner/.../ludi.db` → local project DB. Don't break the symlink.
-- BDL team abbreviation mismatches: GS/NO/NY/PHO/SA vs our GSW/NOP/NYK/PHX/SAS — use `normalize_bdl_abbr()` from `utils/mappings.py` (centralized Feb 24; do NOT add local dicts)
-- Always use correct class names (see Module Reference above)
+- BDL abbreviation mismatches (GS→GSW, NO→NOP, NY→NYK, PHO→PHX, SA→SAS) — always use `normalize_bdl_abbr()` from `utils/mappings.py`. See `best-practices/ai/COMMON_MISTAKES.md` §2.3.
+- Always use correct class names — see ARCHITECTURE.md "Module Class Names Reference" for the full table with import examples.
 - Player name resolution: Odds API returns non-accented names (e.g. "Nikola Jokic") but `player_injuries` + `players` tables store canonical names with accents (e.g. "Nikola Jokić"). Always call `resolve_canonical_name(conn, player_name)` from `utils/player_id_resolver.py` before any name-based DB query in Claude prompt pipelines
 - `canonical_teams` table (30 rows) is the single source of truth for BDL/Tank01/ESPN team ID mappings — do NOT hardcode `ESPN_TEAM_IDS` dicts in new scripts
-- `canonical_games` table (902 rows) is the single source of truth for game identity — use for any JOIN on `(date, home_team, away_team)` (Pattern-B) to prevent 3× row inflation. The `games` table has 3 duplicate game_id formats per game (NBA official / shortened / date-team). Call `from database import sync_canonical_games` and `sync_canonical_games(conn)` after any INSERT INTO games. Never use `JOIN games g ON g.date = ... AND (g.home_team = ... OR g.away_team = ...)` — use `canonical_games` instead.
+- `canonical_games` table (955+ rows) is the single source of truth for game identity — use for any JOIN on `(date, home_team, away_team)` (Pattern-B) to prevent 3× row inflation. The `games` table has 3 duplicate game_id formats per game (NBA official / shortened / date-team). Call `from database import sync_canonical_games` and `sync_canonical_games(conn)` after any INSERT INTO games. Never use `JOIN games g ON g.date = ... AND (g.home_team = ... OR g.away_team = ...)` — use `canonical_games` instead.
 - **Odds-API `team_totals`** — NOT supported on the bulk `/v4/sports/basketball_nba/odds` endpoint (returns 422, drops entire slate). Fetch separately via `/v4/sports/{sport}/events/{event_id}/odds?markets=team_totals`. Per-event format: `outcome['description']=team name`, `outcome['name']=Over/Under`. Cost: 1 credit/game.
-- **`sharp_book` direction key** — `module_a.py` writes `sharp_book_over` and `sharp_book_under` as separate keys per stat in `sportsbook_props`. Using `v.get('sharp_book')` (no direction suffix) always returns `None`. When passing sharp book to `module_f.py`, always use the direction-specific key: `v.get('sharp_book_over')` / `v.get('sharp_book_under')`.
-- **`games` table column is `date`** — NOT `game_date`. `bet_recommendations` uses `game_date`, but `games` uses `date`. Querying `games.game_date` returns "no such column". Common mistake in new scripts.
 - **`start_time` from JSON cache is a string** — `save_games_cache()` serializes `datetime` → string. After `load_games_cache()`, always parse with `datetime.fromisoformat(start_time)` before accessing `.tzinfo` or comparing with `datetime.now()`.
 - **Tank01 `getNBADepthCharts` format change (2026-03)** — Tank01 changed response from `{"ATL": {...}}` (dict keyed by team) to `[{"teamAbv": "ATL", ...}]` (list of 30 objects). `utils/tank01_client.get_depth_charts()` normalizes both → always returns dict. Also: Tank01 depth charts use BDL-style abbreviations (NY/GS/NO/PHO/SA) — `normalize_bdl_abbr()` is applied automatically inside `get_depth_charts()`. Do NOT call it again at the call site.
-- **Team Defensive Schemes (2025-26)** — Sync'd with `team_scheme_cache` (Mar 4):
-  - **PAINT_PACK**: BOS, CHI, CLE, DEN, IND, LAC, MEM, MIA, MIN, NYK, PHI, SAS
-  - **BLITZ**: ATL
-  - **PERIMETER**: BKN, CHA, GSW, ORL, PHX, SAC, TOR, WAS
-  - **NEUTRAL**: DAL, DET, HOU, LAL, MIL, NOP, OKC, POR, UTA
+- **Team Defensive Schemes** — always query `team_scheme_cache` table (`WHERE scheme_type='DEFENSE'`). Never rely on any hardcoded list in docs — schemes update mid-season.
 - **ROADMAP.md Template Contract** — When any agent updates `ROADMAP.md`, preserve these patterns so `utils/pm_bot.py` parses correctly:
   - `**Active Work:**` — short phrase(s) separated by ` + `. First segment = current sprint focus (shown in break messages).
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).
@@ -310,10 +217,11 @@ This project has custom skills available:
 - **Current State**: @docs/STATUS_CURRENT.md (active sprint + DB state)
 - **Status History**: docs/STATUS_HISTORY.md (full sprint archive — not auto-loaded)
 - **Production Handbook**: @docs/PRODUCTION_HANDBOOK.md
-- **Best Practices**: `best-practices/` (API patterns, lessons learned, reusable templates)
+- **Best Practices**: `best-practices/` directory — key files listed below (no auto-load; open manually):
   - **API Best Practices**: `best-practices/api/API_BEST_PRACTICES.md` (comprehensive guide)
   - **API Quick Reference**: `best-practices/api/API_QUICK_REFERENCE.md` (cheatsheet)
   - **Canonical Name Resolution**: `best-practices/data/CANONICAL_NAME_RESOLUTION.md` (accent handling across APIs, two-direction transforms, injection point table)
   - **PM Bot Notes Guide**: `best-practices/ai/PM_BOT_NOTES_GUIDE.md` (how to write ROADMAP header lines so PM bot messages are specific, not generic)
+  - **Common Mistakes**: `best-practices/ai/COMMON_MISTAKES.md` (recurring Claude Code mistakes — DPO-style prevention rules, schema traps, silent failure patterns)
 - **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
 - **Research**: `docs/research/` (competitive analysis, prompt engineering)

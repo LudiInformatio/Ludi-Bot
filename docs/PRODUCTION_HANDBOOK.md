@@ -116,11 +116,33 @@ python database.py
 3. Select test_mode: `false` (full run)
 4. Monitor execution logs
 
-**Scheduled Execution:**
-- **Daily Pipeline:** 11:00 AM EST (Monday-Friday)
-- **Weekly Validation:** Tuesday 4:00 AM EST
-- **Data Sync:** 5:00 AM EST (daily)
-- **Referee Sync:** 9:30 AM EST (daily)
+**Automation Schedule (GitHub Actions):**
+
+All workflows run on a self-hosted macOS runner. See `.github/workflows/` for details.
+
+| Time (EST) | Workflow | Purpose |
+|------------|----------|---------|
+| 1:00 AM | `db_backup.yml` | Database backup + overnight CLV capture (`--yesterday`) |
+| 3:00 AM | `data_sync.yml` | Sync game logs, clutch, assists, enrichment |
+| 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
+| 6:00 AM | `daily_reports.yml` | Work notes + bet summary |
+| 7:00 AM | `wowy_sync.yml` | Daily WOWY sync |
+| Mondays 4:00 AM | `weekly_referee_sync.yml` | Weekly referee intelligence sync via Playwright (OddsShark + Covers data) |
+| 9:30 AM | `referee_sync.yml` | Daily referee assignments |
+| 9:45 AM | `lineup_sync.yml` | Pre-game starting lineup sync |
+| 10:00 AM | `daily_simulation_pipeline.yml` | Full pipeline run |
+| 11:00 AM | `daily_briefing.yml` | Morning Telegram cards (moved from 9 AM — refs+pipeline must run first) |
+| Every 2hr (11 AM–5 PM) + Every 20min (6–10:40 PM) | `injury_refresh.yml` | Intraday injury refresh — 9 daytime runs + 15 evening runs during game hours |
+| 6:35 PM (launchd) + 8:20 PM (launchd) | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM early games 7-8:30 PM tips; 8:20 PM late games 9 PM+ tips only) — triggered via `scripts/launchd/com.ludiinformatio.evening-slate-*.plist`, not GH cron (GH `01:xx UTC` zone unreliable) |
+| 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
+| Hourly 6:25–11:25 PM | `capture_closing_lines.yml` | Pre-tipoff CLV capture (6 hourly runs); overnight batch in `db_backup.yml` as fallback |
+| Sundays + Thursdays | `ghost_protocol_sync.yml` | NBA.com tracking data (Sunday: 7-day sweep, Thursday: gap-fill only) |
+| Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
+| 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
+| 5:30 PM | `claude-qa-check.yml` | Pre-evening-lock quota/health check |
+| On failure/cancel | `claude-ops-hub.yml` | Auto-diagnosis of workflow failures |
+| On PR open/push/sync | `claude-code-review.yml` | Automatic Claude code review on every pull request (Henrik's domain) |
+| On `@claude` mention in issue/PR | `claude.yml` | Interactive Claude assistant — responds to @claude comments on-demand |
 
 ---
 
