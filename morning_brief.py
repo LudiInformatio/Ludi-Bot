@@ -1014,6 +1014,8 @@ Return JSON only."""
                     sorted_bets = sorted(bets, key=_display_score, reverse=True)[:3]
                     edges_lines = []
                     for b in sorted_bets:
+                        if b.get('line', 0) <= 0:
+                            continue
                         edges_lines.append(
                             f"• {b['name']} {b['stat']} ({b['line']}) — {b['bet_on']} "
                             f"(Edge: {b.get('edge', 0)}%)"

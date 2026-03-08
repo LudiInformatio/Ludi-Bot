@@ -477,7 +477,11 @@ class LudiOrchestrator:
                     # Handle both new format (dict with odds) and old format (line only)
                     if isinstance(v, dict):
                         # Module A v9.3+ format (with line shopping)
-                        line = float(v.get('line') or 0)
+                        line = v.get('line')
+                        if not line or float(line) <= 0:
+                            print(f"   >>> [main] Skipping prop {k}: no real market line (line={line})")
+                            continue
+                        line = float(line)
                         
                         # Fix: Handle explicit None values (key exists but value is None)
                         val_over = v.get('odds_over')

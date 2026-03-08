@@ -298,8 +298,9 @@ class LudiReporter:
                             book_under = 'consensus'
 
                         # Map internal projection keys to common sportsbook prop keys
-                        # Ensure line is numeric
-                        if not isinstance(line, (int, float)):
+                        # Ensure line is numeric and non-zero (zero = no market coverage)
+                        if not isinstance(line, (int, float)) or line <= 0:
+                            print(f"   [Module F] Skipping {stat_key}: invalid line={line}")
                             continue
 
                         raw_val = self._map_stat(p, stat_key)

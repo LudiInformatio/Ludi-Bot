@@ -237,6 +237,11 @@ class BetLogger:
         if missing:
             raise ValueError(f"Missing required fields: {', '.join(missing)}")
 
+        if (rec_data.get('line') or 0) <= 0:
+            print(f"[BetLogger] Rejecting zero/negative line for {rec_data.get('player_name')} "
+                  f"{rec_data.get('stat_category')}: line={rec_data.get('line')}")
+            return None
+
         try:
             # 1. Insert to database
             bet_id = self._insert_to_database(rec_data)
