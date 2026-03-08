@@ -45,6 +45,8 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
+- [ ] **T-001: Comm Protocol docs** — `docs/operations/COMMUNICATION_PROTOCOL.md` + `docs/decisions/DECISION_LOG.md` + `docs/decisions/ADR_TEMPLATE.md`. No code. Junior dev → Henrik review.
+- [ ] **T-002: Slack P1 wiring** — `curate_plays.py` / `module_d.py` / `module_g.py` Slack alert on failure. After T-001.
 
 ---
 
