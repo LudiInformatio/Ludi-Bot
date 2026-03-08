@@ -2,7 +2,7 @@
 
 **Last Updated:** Sunday, March 8, 2026 — 3:00 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** `module_x_scenario.py` — Module X projection calibration Sprint A (expand 4→7 stats, DVP/scheme/spread/total conditions, plan at `crystalline-petting-reef.md`) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
+**Active Work:** `module_x_scenario.py` — Module X Sprint B (DVP Condition 5 via `team_dvp_by_archetype`, awaiting Sprint A production validation) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
 **Completed:** Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅ + Module X Sprint A — expanded 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (module_f.py), stl/blk/fg3m mods in module_c.py ✅ + Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (agents + ONBOARDING.md + skills) ✅
 
 This is the single source of truth for project tasks and priorities.
