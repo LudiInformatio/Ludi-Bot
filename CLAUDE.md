@@ -262,6 +262,28 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 
 ---
 
+## Employee Delegation (MANDATORY)
+
+**When the user explicitly asks an employee to do work, delegate immediately — do not do the work yourself.**
+
+This is an explicit authorization from the owner. When the user says "have Henrik do X", "send to Lena", "have the junior dev implement", or any similar phrasing that routes a task to a named employee:
+
+1. **Launch the appropriate agent** using the Agent tool (`subagent_type: henrik`, `lena`, `silas`, or `general-purpose` for the junior dev / Gemini)
+2. **Do not read files, write code, or make edits yourself** before delegating
+3. **Pass the full task context** in the agent prompt so they can work autonomously
+4. **Report back** what the employee did, any issues they found, and the commit hash
+
+**Employee roster:**
+- **Henrik** (`subagent_type: henrik`) — Code auditor & implementer. Use `isolation: worktree` + `mode: acceptEdits` for code changes.
+- **Silas** (`subagent_type: silas`) — Infrastructure monitor. Read-only, health checks only.
+- **Lena** (`subagent_type: lena`) — Data analyst. Queries ludi.db, reviews plans, signs off on data logic.
+- **Junior dev / Gemini** — General-purpose agent (`subagent_type: general-purpose`) or Bash `gemini` CLI for code writing tasks.
+
+**Workflow when employee sign-off triggers execution:**
+Lena approves plan → automatically delegate to Henrik + junior dev to execute → report back. No need to ask the user for a second approval after an employee has signed off.
+
+---
+
 ## Custom Skills
 
 This project has custom skills available:
