@@ -2,10 +2,10 @@ name: Ghost Protocol Tracking Sync
 
 on:
   schedule:
-    # Sunday 11:00 UTC (6 AM EST) — weekly full sweep (last 7 days)
-    - cron: '0 11 * * 0'
-    # Thursday 11:00 UTC (6 AM EST) — smart gap-fill (re-scrape incomplete dates)
-    - cron: '0 11 * * 4'
+    # Sunday 10:00 UTC (6 AM EDT) — weekly full sweep (last 7 days)
+    - cron: '0 10 * * 0'
+    # Thursday 10:00 UTC (6 AM EDT) — smart gap-fill (re-scrape incomplete dates)
+    - cron: '0 10 * * 4'
   workflow_dispatch:
 
 permissions:
@@ -68,14 +68,6 @@ jobs:
       # Synergy playtypes (isolation PPP, transition, handoff, cut, etc.) now via BDL API:
       # sync_bdl_season_averages.py --category playtype runs weekly in weekly_validation.yml
       # NBA.com browser scraping of synergy data is no longer needed.
-
-      - name: Upload database artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ludi-db-post-tracking-sync
-          path: ludi.db
-          retention-days: 7
 
       - name: Notify on failure
         if: failure()

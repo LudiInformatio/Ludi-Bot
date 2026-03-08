@@ -5,26 +5,26 @@ name: Injury Refresh (Intraday)
 # current (< threshold minutes old) the script exits early without hitting APIs.
 #
 # Schedule design:
-#   11 AM - 6 PM EST:  every 2 hours   (4 runs, low API pressure)
-#   6 PM  - 11 PM EST: every 20 min    (15 runs, game-time accuracy)
+#   11 AM - 6 PM EDT:  every 2 hours   (4 runs, low API pressure)
+#   6 PM  - 11 PM EDT: every 20 min    (15 runs, game-time accuracy)
 #
-# All times in UTC (EST = UTC-5, EDT = UTC-4)
+# All times in UTC (EDT = UTC-4)
 # Runs are intentionally slightly offset from other workflows to avoid DB lock.
 
 on:
   schedule:
-    # --- Daytime: every 2 hours (11 AM, 1 PM, 3 PM, 5 PM EST) ---
-    - cron: '2 16 * * *'   # 11:02 AM EST
-    - cron: '2 18 * * *'   # 1:02  PM EST
-    - cron: '2 20 * * *'   # 3:02  PM EST
-    - cron: '2 22 * * *'   # 5:02  PM EST
+    # --- Daytime: every 2 hours (11 AM, 1 PM, 3 PM, 5 PM EDT) ---
+    - cron: '2 15 * * *'   # 11:02 AM EDT
+    - cron: '2 17 * * *'   # 1:02  PM EDT
+    - cron: '2 19 * * *'   # 3:02  PM EDT
+    - cron: '2 21 * * *'   # 5:02  PM EDT
 
-    # --- Evening: every 20 min (6 PM - 10:40 PM EST) ---
-    - cron: '2,22,42 23 * * *'   # 6:02, 6:22, 6:42 PM EST
-    - cron: '2,22,42 0 * * *'    # 7:02, 7:22, 7:42 PM EST
-    - cron: '2,22,42 1 * * *'    # 8:02, 8:22, 8:42 PM EST
-    - cron: '2,22,42 2 * * *'    # 9:02, 9:22, 9:42 PM EST
-    - cron: '2,22,42 3 * * *'    # 10:02, 10:22, 10:42 PM EST
+    # --- Evening: every 20 min (6 PM - 10:40 PM EDT) ---
+    - cron: '2,22,42 22 * * *'   # 6:02, 6:22, 6:42 PM EDT
+    - cron: '2,22,42 23 * * *'   # 7:02, 7:22, 7:42 PM EDT
+    - cron: '2,22,42 0 * * *'    # 8:02, 8:22, 8:42 PM EDT
+    - cron: '2,22,42 1 * * *'    # 9:02, 9:22, 9:42 PM EDT
+    - cron: '2,22,42 2 * * *'    # 10:02, 10:22, 10:42 PM EDT
 
   workflow_dispatch:
     inputs:

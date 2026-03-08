@@ -2,8 +2,8 @@ name: Daily Production Pipeline
 
 on:
   schedule:
-    # Daily at 10:00 AM EST (15:00 UTC) — 7 days (NBA has weekend games)
-    - cron: '0 15 * * *'
+    # Daily at 10:00 AM EDT (14:00 UTC) — 7 days (NBA has weekend games)
+    - cron: '0 14 * * *'
   workflow_dispatch:
     inputs:
       test_mode:

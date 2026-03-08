@@ -2,11 +2,11 @@ name: Daily Morning Briefing
 
 on:
   schedule:
-    # 11:00 AM EST = 16:00 UTC — runs AFTER referee_sync (9:30 AM) and pipeline (10:00 AM)
+    # 11:00 AM EDT = 15:00 UTC — runs AFTER referee_sync (9:30 AM) and pipeline (10:00 AM)
     # NBA referee assignments publish at ~9 AM; ref sync runs at 9:30 AM; pipeline at 10 AM.
     # Morning brief at 11 AM has all data ready: refs in DB, pipeline output complete.
     # Note: GitHub Actions uses UTC.
-    - cron: '0 16 * * *'
+    - cron: '0 15 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 concurrency:

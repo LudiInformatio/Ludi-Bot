@@ -1,17 +1,17 @@
 name: Capture Closing Lines
 
-# Hourly pre-tipoff CLV capture (6:25 PM – 11:25 PM EST).
+# Hourly pre-tipoff CLV capture (6:25 PM – 11:25 PM EDT).
 # check-slate gate skips non-game nights. Overnight batch in db_backup.yml is fallback.
 on:
   schedule:
-    # Hourly pre-tipoff CLV capture: 6:25 PM – 11:25 PM EST
+    # Hourly pre-tipoff CLV capture: 6:25 PM – 11:25 PM EDT
     # check-slate gate skips non-game nights (cheap — just BDL slate check)
-    - cron: '25 23 * * *'   # 6:25 PM EST
-    - cron: '25 0 * * *'    # 7:25 PM EST
-    - cron: '25 1 * * *'    # 8:25 PM EST
-    - cron: '25 2 * * *'    # 9:25 PM EST
-    - cron: '25 3 * * *'    # 10:25 PM EST
-    - cron: '25 4 * * *'    # 11:25 PM EST
+    - cron: '25 22 * * *'   # 6:25 PM EDT
+    - cron: '25 23 * * *'   # 7:25 PM EDT
+    - cron: '25 0 * * *'    # 8:25 PM EDT
+    - cron: '25 1 * * *'    # 9:25 PM EDT
+    - cron: '25 2 * * *'    # 10:25 PM EDT
+    - cron: '25 3 * * *'    # 11:25 PM EDT
   workflow_dispatch:
     inputs:
       game_date:

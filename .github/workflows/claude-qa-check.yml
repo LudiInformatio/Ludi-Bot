@@ -2,12 +2,12 @@ name: Claude QA & Debug Check
 
 on:
   schedule:
-    # Run daily at 6 AM EST (11 AM UTC) - after data_sync completes
-    - cron: '0 11 * * *'
-    # Run daily at 5:30 PM EST (22:30 UTC) - proactive pre-evening-lock quota check
-    - cron: '30 22 * * *'
-    # Run daily at 8 PM EST (1 AM UTC) - catch afternoon/evening pipeline failures
-    - cron: '0 1 * * *'
+    # Run daily at 6 AM EDT (10 AM UTC) - after data_sync completes
+    - cron: '0 10 * * *'
+    # Run daily at 5:30 PM EDT (21:30 UTC) - proactive pre-evening-lock quota check
+    - cron: '30 21 * * *'
+    # Run daily at 8 PM EDT (midnight UTC) - catch afternoon/evening pipeline failures
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       scope:

@@ -2,8 +2,8 @@ name: Weekly Validation
 
 on:
   schedule:
-    # Tuesdays at 6:00 AM EST (11:00 UTC) — shifted from 4 AM to avoid data_sync write overlap
-    - cron: '0 11 * * 2'
+    # Tuesdays at 6:00 AM EDT (10:00 UTC) — shifted from 4 AM to avoid data_sync write overlap
+    - cron: '0 10 * * 2'
   workflow_dispatch:
     inputs:
       backtest_type:

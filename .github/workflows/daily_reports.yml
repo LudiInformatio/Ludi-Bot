@@ -2,10 +2,10 @@ name: Daily Reports
 
 on:
   schedule:
-    # 5am EST = 10am UTC - Work Notes (PM Bot + Settlement Grading)
+    # 5am EDT = 9am UTC - Work Notes (PM Bot + Settlement Grading)
+    - cron: '0 9 * * *'
+    # 6am EDT = 10am UTC - Bet Summary to Telegram
     - cron: '0 10 * * *'
-    # 6am EST = 11am UTC - Bet Summary to Telegram
-    - cron: '0 11 * * *'
   workflow_dispatch:
     inputs:
       report_type:

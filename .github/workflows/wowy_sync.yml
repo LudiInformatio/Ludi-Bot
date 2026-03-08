@@ -2,8 +2,8 @@ name: Daily WOWY Sync
 
 on:
   schedule:
-    # Daily at 12:00 UTC (7:00 AM EST) — offset from daily_briefing (14:00 UTC) to avoid SQLite lock
-    - cron: '0 12 * * *'
+    # Daily at 11:00 UTC (7:00 AM EDT) — offset from daily_briefing (15:00 UTC) to avoid SQLite lock
+    - cron: '0 11 * * *'
   workflow_dispatch:
 
 permissions:
@@ -54,14 +54,6 @@ jobs:
             --gap-fill \
             --gap-fill-days 30 \
             --ghost
-
-      - name: Upload database artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ludi-db-post-wowy-sync
-          path: ludi.db
-          retention-days: 7
 
       - name: Notify on failure
         if: failure()

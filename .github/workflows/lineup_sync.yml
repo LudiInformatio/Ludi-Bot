@@ -2,8 +2,8 @@ name: Lineup Sync (9:45 AM EST)
 
 on:
   schedule:
-    # 9:45 AM EST = 14:45 UTC
-    - cron: '45 14 * * *'
+    # 9:45 AM EDT = 13:45 UTC
+    - cron: '45 13 * * *'
   workflow_dispatch:
 
 jobs:

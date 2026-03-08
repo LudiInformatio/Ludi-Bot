@@ -2,7 +2,7 @@ name: Daily Database Backup
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # 1 AM EST (6 AM UTC) — runs before data_sync (3 AM) to avoid SQLite lock
+    - cron: '0 5 * * *'  # 1 AM EDT (5 AM UTC) — runs before data_sync (3 AM) to avoid SQLite lock
   workflow_dispatch:
     inputs:
       description:
@@ -73,13 +73,24 @@ jobs:
           echo "Recent backups:"
           ls -lht archives/data/ludi.db.backup_*.gz 2>/dev/null | head -5 || echo "No compressed backups found"
 
+      - name: Find today's backup file
+        id: find_backup
+        if: steps.db.outputs.present == 'true'
+        run: |
+          BACKUP_FILE=$(ls -t archives/data/ludi.db.backup_*.gz 2>/dev/null | head -1)
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "No backup file found to upload" >&2
+            exit 1
+          fi
+          echo "path=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+
       - name: Upload backup artifact
         if: steps.db.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ github.run_number }}
-          path: archives/data/ludi.db.backup_*.gz
-          retention-days: 30
+          path: ${{ steps.find_backup.outputs.path }}
+          retention-days: 7
 
       - name: Backup summary
         if: steps.db.outputs.present == 'true'
