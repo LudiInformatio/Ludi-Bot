@@ -451,6 +451,17 @@ class LudiOracle:
                         player['AST'] = round(player['AST'] * ast_mod, 2)
                     if 'REB' in player and abs(reb_mod - 1.0) > 0.01:
                         player['REB'] = round(player['REB'] * reb_mod, 2)
+                    # Sprint A: apply stl/blk/fg3m mods (new 3 of 7 bet-able stats)
+                    stl_mod  = cond_mods.get('stl',  1.0)
+                    blk_mod  = cond_mods.get('blk',  1.0)
+                    fg3m_mod = cond_mods.get('fg3m', 1.0)
+                    if 'STL' in player and abs(stl_mod - 1.0) > 0.01:
+                        player['STL'] = round(player['STL'] * stl_mod, 2)
+                    if 'BLK' in player and abs(blk_mod - 1.0) > 0.01:
+                        player['BLK'] = round(player['BLK'] * blk_mod, 2)
+                    # fg3m_mod applies to FG3A volume — 3PM output follows 3PA opportunity
+                    if 'FG3A' in player and abs(fg3m_mod - 1.0) > 0.01:
+                        player['FG3A'] = round(player['FG3A'] * fg3m_mod, 2)
 
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)

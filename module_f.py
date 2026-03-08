@@ -847,16 +847,29 @@ class LudiReporter:
             return None
 
     def _map_stat(self, p, key):
-        """Maps internal projection keys to common sportsbook prop keys."""
+        """Maps internal projection keys to common sportsbook prop keys.
+        Combo markets apply a correlation factor (Sprint A) because game-flow positively
+        correlates PTS+REB+AST — high-pace games lift all three together.
+        Data-implied factors from backtest baseline (Mar 7, 2026):
+          PRA: actual/projected = 1.1062 → 1.10  (was underprojecting by +2.07 mean error)
+          PA:  actual/projected = 1.1287 → 1.10  (was underprojecting by +2.04 mean error)
+          PR:  minimal gap → 1.01
+          RA:  slight over-projection → 0.97
+        Note: PRA OVER is in STRUCTURAL_LOSERS (25% WR) — factor applies to UNDER bets only
+        (raises projection, making UNDER line harder to clear = fewer false UNDER bets).
+        """
         COMBOS = {
             'pra': ('proj_pts', 'proj_reb', 'proj_ast'),
-            'pa': ('proj_pts', 'proj_ast'),
-            'pr': ('proj_pts', 'proj_reb'),
-            'ra': ('proj_reb', 'proj_ast'),
+            'pa':  ('proj_pts', 'proj_ast'),
+            'pr':  ('proj_pts', 'proj_reb'),
+            'ra':  ('proj_reb', 'proj_ast'),
         }
+        # Data-implied correlation multipliers (Lena audit, Mar 7 2026)
+        COMBO_CORRELATION_FACTOR = {'pra': 1.10, 'pa': 1.10, 'pr': 1.01, 'ra': 0.97}
         k = key.lower()
         if k in COMBOS:
-            return sum(p.get(c, 0) for c in COMBOS[k])
+            raw = sum(p.get(c, 0) for c in COMBOS[k])
+            return raw * COMBO_CORRELATION_FACTOR.get(k, 1.0)
         m = {
             'pts': 'proj_pts', 'reb': 'proj_reb', 'ast': 'proj_ast',
             '3pm': 'proj_3pm', 'oreb': 'proj_oreb', 'dreb': 'proj_dreb',

@@ -66,25 +66,30 @@ class ScenarioBuilder:
             return {}
 
     def _load_player_game_stats(self) -> dict:
-        """ {player_id: {game_id: {pts, fta, ast, reb, game_date}}}
+        """ {player_id: {game_id: {pts, fta, ast, reb, stl, blk, fg3m, game_date}}}
         Includes game_date for recency trend detection (Module E speed_recent pattern).
         Only games where player had minutes >= 10.
+        Expanded to 7 stats (Sprint A): adds stl, blk, fg3m.
         """
         if not self.conn:
             return {}
         try:
             rows = self.conn.execute('''
-                SELECT player_id, game_id, game_date, 
-                       COALESCE(pts, 0) as pts, 
-                       COALESCE(fta, 0) as fta, 
-                       COALESCE(ast, 0) as ast, 
-                       COALESCE(reb, 0) as reb
+                SELECT player_id, game_id, game_date,
+                       COALESCE(pts,  0) as pts,
+                       COALESCE(fta,  0) as fta,
+                       COALESCE(ast,  0) as ast,
+                       COALESCE(reb,  0) as reb,
+                       COALESCE(stl,  0) as stl,
+                       COALESCE(blk,  0) as blk,
+                       COALESCE(fg3m, 0) as fg3m
                 FROM player_game_logs WHERE minutes >= 10
             ''').fetchall()
             stats = {}
-            for pid, gid, gdate, pts, fta, ast, reb in rows:
+            for pid, gid, gdate, pts, fta, ast, reb, stl, blk, fg3m in rows:
                 stats.setdefault(str(pid), {})[gid] = {
-                    'pts': pts, 'fta': fta, 'ast': ast, 'reb': reb, 
+                    'pts': pts, 'fta': fta, 'ast': ast, 'reb': reb,
+                    'stl': stl, 'blk': blk, 'fg3m': fg3m,
                     'game_date': gdate or ''
                 }
             return stats
@@ -158,51 +163,69 @@ class ScenarioBuilder:
         return AFFINITY.get(key, AFFINITY.get((key[1], key[0]), 0.30))
 
     def _load_ha_splits(self) -> dict:
-        """Pre-load home vs away avg PPG per player for conditional baseline."""
+        """Pre-load home vs away avg stats per player for conditional baseline.
+        Uses canonical_games JOIN for H/A detection — home_or_away column is only 52%
+        populated, making it an unreliable signal. canonical_games covers all 955 games.
+        Expanded to 7 stats: pts, fta, ast, reb, stl, blk, fg3m (Sprint A).
+        """
         if not self.conn: return {}
         try:
             rows = self.conn.execute('''
-                SELECT l.player_id,
-                       l.home_or_away,
-                       COUNT(*) as n_games,
-                       AVG(l.pts) as avg_pts,
-                       AVG(l.fta) as avg_fta,
-                       AVG(l.ast) as avg_ast,
-                       AVG(l.reb) as avg_reb
-                FROM player_game_logs l
-                WHERE l.home_or_away IS NOT NULL
-                  AND l.home_or_away != ''
-                  AND l.minutes >= 20
-                GROUP BY l.player_id, l.home_or_away
-                HAVING COUNT(*) >= 3
+                SELECT pgl.player_id,
+                       CASE WHEN cg.home_team = pgl.team_abbreviation THEN 'home' ELSE 'away' END AS ha,
+                       COUNT(*) AS n_games,
+                       AVG(pgl.pts)  AS avg_pts,
+                       AVG(pgl.fta)  AS avg_fta,
+                       AVG(pgl.ast)  AS avg_ast,
+                       AVG(pgl.reb)  AS avg_reb,
+                       AVG(pgl.stl)  AS avg_stl,
+                       AVG(pgl.blk)  AS avg_blk,
+                       AVG(pgl.fg3m) AS avg_fg3m
+                FROM player_game_logs pgl
+                JOIN canonical_games cg
+                  ON cg.date = pgl.game_date
+                 AND (cg.home_team = pgl.team_abbreviation
+                      OR cg.away_team = pgl.team_abbreviation)
+                WHERE pgl.minutes >= 10
+                GROUP BY pgl.player_id, ha
+                HAVING COUNT(*) >= 5
             ''').fetchall()
 
             result = {}
             for row in rows:
-                pid, ha, n, pts, fta, ast, reb = row['player_id'], row['home_or_away'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
-                pid = str(pid)
-                ha = ha.lower() if ha else ha  # normalize: 'HOME'→'home', 'AWAY'→'away' (DB stores uppercase)
+                pid = str(row['player_id'])
+                ha = row['ha']  # already lowercase 'home'/'away'
+                n, pts, fta, ast, reb = row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                stl, blk, fg3m = row['avg_stl'], row['avg_blk'], row['avg_fg3m']
                 if pid not in result:
                     result[pid] = {}
-                result[pid][ha] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
-                                   'ast': ast or 0, 'reb': reb or 0}
+                result[pid][ha] = {
+                    'n': n, 'pts': pts or 0, 'fta': fta or 0,
+                    'ast': ast or 0, 'reb': reb or 0,
+                    'stl': stl or 0, 'blk': blk or 0, 'fg3m': fg3m or 0
+                }
             return result
         except sqlite3.Error as e:
             print(f"   [Module X] _load_ha_splits failed: {e}")
             return {}
 
     def _load_starter_splits(self) -> dict:
-        """Pre-load starter vs bench avg stats per player."""
+        """Pre-load starter vs bench avg stats per player.
+        Expanded to 7 stats: pts, fta, ast, reb, stl, blk, fg3m (Sprint A).
+        """
         if not self.conn: return {}
         try:
             rows = self.conn.execute('''
                 SELECT l.player_id,
                        l.started,
                        COUNT(*) as n_games,
-                       AVG(l.pts) as avg_pts,
-                       AVG(l.fta) as avg_fta,
-                       AVG(l.ast) as avg_ast,
-                       AVG(l.reb) as avg_reb
+                       AVG(l.pts)  as avg_pts,
+                       AVG(l.fta)  as avg_fta,
+                       AVG(l.ast)  as avg_ast,
+                       AVG(l.reb)  as avg_reb,
+                       AVG(l.stl)  as avg_stl,
+                       AVG(l.blk)  as avg_blk,
+                       AVG(l.fg3m) as avg_fg3m
                 FROM player_game_logs l
                 WHERE l.started IS NOT NULL
                   AND l.minutes >= 15
@@ -212,13 +235,18 @@ class ScenarioBuilder:
 
             result = {}
             for row in rows:
-                pid, started, n, pts, fta, ast, reb = row['player_id'], row['started'], row['n_games'], row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
-                pid = str(pid)
+                pid = str(row['player_id'])
+                started, n = row['started'], row['n_games']
+                pts, fta, ast, reb = row['avg_pts'], row['avg_fta'], row['avg_ast'], row['avg_reb']
+                stl, blk, fg3m = row['avg_stl'], row['avg_blk'], row['avg_fg3m']
                 if pid not in result:
                     result[pid] = {}
                 key = 'starter' if started == 1 else 'bench'
-                result[pid][key] = {'n': n, 'pts': pts or 0, 'fta': fta or 0,
-                                    'ast': ast or 0, 'reb': reb or 0}
+                result[pid][key] = {
+                    'n': n, 'pts': pts or 0, 'fta': fta or 0,
+                    'ast': ast or 0, 'reb': reb or 0,
+                    'stl': stl or 0, 'blk': blk or 0, 'fg3m': fg3m or 0
+                }
             return result
         except sqlite3.Error as e:
             print(f"   [Module X] _load_starter_splits failed: {e}")
@@ -244,7 +272,9 @@ class ScenarioBuilder:
         1. USG filter: beneficiary must have usg_pct >= 0.12 (Module G star bias standard)
         2. Position affinity: dampens modifier for cross-position pairs (Module E bucket logic)
         3. Trend detection: blend L5 recent 'without' avg with full avg (Module E speed_recent pattern)
-        Returns {'pts': modifier, 'fta': modifier, 'ast': modifier, 'reb': modifier, 'n': n_without} or None if insufficient data or filtered out.
+        Returns {'pts': modifier, 'fta': modifier, 'ast': modifier, 'reb': modifier,
+                 'stl': modifier, 'blk': modifier, 'fg3m': modifier, 'n': n_without}
+        or None if insufficient data or filtered out.
         """
         # --- Layer 1: USG filter ---
         bene_meta = self._player_meta.get(beneficiary_pid, {})
@@ -282,10 +312,10 @@ class ScenarioBuilder:
         use_trend = len(recent_without) >= 5 # only blend if we have enough recent games
 
         result = {'n': len(without_game_ids)}
-        for stat in ['pts', 'fta', 'ast', 'reb']:
+        for stat in ['pts', 'fta', 'ast', 'reb', 'stl', 'blk', 'fg3m']:
             # Full-history averages (stability anchor)
-            with_avg = sum(bene_stats[gid][stat] for gid in with_game_ids) / len(with_game_ids)
-            without_avg = sum(bene_stats[gid][stat] for gid in without_game_ids) / len(without_game_ids)
+            with_avg = sum(bene_stats[gid].get(stat, 0) for gid in with_game_ids) / len(with_game_ids)
+            without_avg = sum(bene_stats[gid].get(stat, 0) for gid in without_game_ids) / len(without_game_ids)
 
             if with_avg <= 0:
                 result[stat] = 1.0
@@ -313,7 +343,8 @@ class ScenarioBuilder:
         Compute a combined conditional modifier for a player given tonight's context.
 
         Returns a dict of stat-specific multipliers, e.g.:
-        {'pts': 1.08, 'fta': 1.12, 'ast': 1.02, 'reb': 0.96, 'combined_n': 15}
+        {'pts': 1.08, 'fta': 1.12, 'ast': 1.02, 'reb': 0.96,
+         'stl': 1.05, 'blk': 0.97, 'fg3m': 1.03, 'combined_n': 15}
 
         Uses dampened modifier approach:
         - modifier = conditional_avg / season_avg
@@ -333,7 +364,7 @@ class ScenarioBuilder:
             if ha_stats and len(all_games) >= 2:
                 # Compute season avg from both home + away games
                 total_n = sum(g['n'] for g in all_games)
-                for stat in ['pts', 'fta', 'ast', 'reb']:
+                for stat in ['pts', 'fta', 'ast', 'reb', 'stl', 'blk', 'fg3m']:
                     season_avg = sum(g[stat] * g['n'] for g in all_games) / total_n if total_n > 0 else 0
                     conditional_avg = ha_stats[stat]
                     n = ha_stats['n']
@@ -352,9 +383,9 @@ class ScenarioBuilder:
 
             if starter_stats and bench_stats:
                 # Compare starter games vs bench games for this player
-                for stat in ['pts', 'fta', 'ast', 'reb']:
-                    bench_avg = bench_stats[stat]
-                    starter_avg = starter_stats[stat]
+                for stat in ['pts', 'fta', 'ast', 'reb', 'stl', 'blk', 'fg3m']:
+                    bench_avg = bench_stats.get(stat, 0)
+                    starter_avg = starter_stats.get(stat, 0)
                     n = starter_stats['n']
                     if bench_avg > 0 and n >= 3:
                         # Modifier: how much better does this player perform when starting?
@@ -371,10 +402,10 @@ class ScenarioBuilder:
             if lineup_result:
                 n_without = lineup_result.pop('n', 0)
                 weight = min(1.0, max(0.0, (n_without - 5) / 15.0))
-                for stat in ['pts', 'fta', 'ast', 'reb']:
+                for stat in ['pts', 'fta', 'ast', 'reb', 'stl', 'blk', 'fg3m']:
                     # lineup_result[stat] already has position affinity baked in
                     # Apply sample-size confidence dampening on top
-                    dampened = 1.0 + (lineup_result[stat] - 1.0) * weight
+                    dampened = 1.0 + (lineup_result.get(stat, 1.0) - 1.0) * weight
                     modifiers.setdefault(stat, []).append((dampened, n_without))
 
         # --- Condition 3: Scheme-Conditional ---
@@ -396,18 +427,25 @@ class ScenarioBuilder:
             # Per-condition cap: ±20%
             combined[stat] = max(0.80, min(1.20, avg_mod))
 
-        # Apply combined cap: ±25% across all stats
+        # Apply combined cap: ±25% for high-volume stats, ±15% for rare stats
+        # Rare stats (stl/blk/fg3m) use tighter cap to preserve UNDER edge — UNDER bias is the model's edge
         pts_mod = combined.get('pts', 1.0)
         fta_mod = combined.get('fta', 1.0)
         ast_mod = combined.get('ast', 1.0)
         reb_mod = combined.get('reb', 1.0)
+        stl_mod = combined.get('stl', 1.0)
+        blk_mod = combined.get('blk', 1.0)
+        fg3m_mod = combined.get('fg3m', 1.0)
 
         # Don't over-dampen: if any single modifier is significant, trust it
-        # (combined cap handles outliers without zeroing signal)
-        combined['pts'] = max(0.75, min(1.25, pts_mod))
-        combined['fta'] = max(0.75, min(1.25, fta_mod))
-        combined['ast'] = max(0.75, min(1.25, ast_mod))
-        combined['reb'] = max(0.75, min(1.25, reb_mod))
+        combined['pts']  = max(0.75, min(1.25, pts_mod))
+        combined['fta']  = max(0.75, min(1.25, fta_mod))
+        combined['ast']  = max(0.75, min(1.25, ast_mod))
+        combined['reb']  = max(0.75, min(1.25, reb_mod))
+        # Tighter ±15% cap for rare stats: prevents overcorrecting projections that are already near-zero
+        combined['stl']  = max(0.85, min(1.15, stl_mod))
+        combined['blk']  = max(0.85, min(1.15, blk_mod))
+        combined['fg3m'] = max(0.85, min(1.15, fg3m_mod))
 
         return combined
 
