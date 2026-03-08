@@ -75,8 +75,6 @@ Thumbs.db
 !.claude/skills/**
 !.claude/commands/
 !.claude/commands/**
-!.claude/agents/
-!.claude/agents/**
 .claudeignore
 
 # Extensions
@@ -105,3 +103,46 @@ ludi_history_db.json
 !.gemini/commands/
 !.gemini/commands/**
 yak_cache.json
+
+# Competitive intelligence — local only, never public
+best-practices/ai/
+best-practices/ai-prompting/
+best-practices/api/
+best-practices/coding/
+best-practices/data/
+best-practices/data-modeling/
+best-practices/debugging/
+best-practices/deployment/
+best-practices/docs/
+best-practices/testing/
+best-practices/agents/
+best-practices/README.md
+# best-practices/ops-hub/ is intentionally tracked (claude-ops-hub.yml reads at runtime)
+
+# Internal project planning docs
+docs/projects/
+docs/research/
+docs/research-screenshots/
+docs/CANONICAL_ID_GUIDELINES.md
+
+# Employee soul/onboarding files
+employees/
+
+# Claude agent files (IP — internal only)
+.claude/agents/
+
+# Internal session plans
+.claude/plans/
+.claude/agent-memory/
+
+# Cache files (not already covered)
+cache/game_dossier_*.json
+cache/game_intelligence_*.json
+
+# Internal docs — status history and future planning
+docs/STATUS_HISTORY.md
+docs/STATUS_CURRENT.md
+docs/FUTURE_DATA_SOURCES.md
+docs/archive/
+docs/audit/
+reports/
