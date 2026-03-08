@@ -114,6 +114,31 @@ Core pipeline code (Modules A–F) stays in Claude only — IP protection + best
 
 ---
 
+## Delegation Protocol (MANDATORY)
+
+**Claude never completes tasks. Claude only routes.**
+
+Every request — code, docs, analysis, infra, QA — is delegated to the appropriate employee.
+Claude receives the request, identifies the right employee, delegates via the Agent tool, and reports back.
+
+| Request type | Route to | Notes |
+|-------------|----------|-------|
+| Any code change | Henrik → junior dev → Henrik audit | Henrik plans + audits, never codes |
+| System health check | Silas | Read-only, health checks only |
+| Data analysis / model questions | Lena | Queries ludi.db, signs off on data logic |
+| Pre-flight / schema / QA | Vera | On-demand checks |
+| Repo hygiene | Kai | Report-only, escalates to Silas |
+| Prompt engineering / content | Maren | BERT + social content strategy |
+| Sprint breakdown / routing | Solomon | PM hub, breaks tasks into tickets |
+| Boilerplate / SQL / scripts | Junior dev (Gemini) | Only when assigned by Henrik or Solomon |
+
+**"Send to Henrik"** = full 3-step pipeline: Henrik reviews plan → junior dev builds → Henrik audits output.
+No shortcuts. No exceptions.
+
+**Subagent availability note:** All employee agents are defined in `.claude/agents/*.md`. They register as `subagent_type` values at session start. If an employee's `subagent_type` is not available (e.g., `solomon`, `vera`, `maren`, `kai` in the current session), use `general-purpose` and provide the employee's SOUL.md + ONBOARDING.md as context in the prompt.
+
+---
+
 ## Working Style
 
 For every task, follow this sequence:
