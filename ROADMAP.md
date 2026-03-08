@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 8, 2026 — 3:00 PM EDT
+**Last Updated:** Sunday, March 8, 2026 — 4:22 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** `module_x_scenario.py` — Module X Sprint B (DVP Condition 5 via `team_dvp_by_archetype`, awaiting Sprint A production validation) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅ + Module X Sprint A — expanded 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (module_f.py), stl/blk/fg3m mods in module_c.py ✅ + Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (agents + ONBOARDING.md + skills) ✅
+**Active Work:** `docs/operations/COMMUNICATION_PROTOCOL.md` — Comm Protocol Sprint (T-001 protocol doc + T-002 Slack P1 wiring in `curate_plays.py`/`module_d.py`/`module_g.py`) + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
+**Completed:** Module X Sprint A — expanded 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (module_f.py), stl/blk/fg3m mods in module_c.py ✅ + Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (agents + ONBOARDING.md + skills) ✅ + Communication Protocol T-003 — Discord `#incidents` channel + webhook + `send_to_incidents()` in `utils/discord_notifier.py` ✅
 
 This is the single source of truth for project tasks and priorities.
 
