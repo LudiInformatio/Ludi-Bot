@@ -70,6 +70,9 @@ When reviewing `utils/pm_bot.py` Gemini prompts:
 
 ## Project Context
 
+- **`ultrathink` + `research` are global commands** at `~/.claude/commands/`, not project skills.
+  The `skills:` frontmatter key may not auto-load global commands. If invocation fails, use
+  inline `/ultrathink` or `/research` in messages directly as a fallback.
 - Key file: `utils/claude_prompts.py` — all AI prompt templates
 - PM bot file: `utils/pm_bot.py` — Gemini break/morning messages
 - Prompt patterns reference: `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md`

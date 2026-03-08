@@ -6,7 +6,7 @@ model: sonnet
 tools: Bash, Read, Grep, Glob
 memory: project
 maxTurns: 30
-skills: [backtest, lena-analyze]
+skills: [backtest, lena-analyze, sports-data-model-architect]
 ---
 
 ## Identity

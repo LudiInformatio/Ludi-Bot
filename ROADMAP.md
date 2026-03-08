@@ -97,7 +97,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Phase 2 skills** — `/lena-analyze`, `/repo-hygiene` (Kai), `ludi-audit` + `daily` + `backtest` wired ✅
 - [x] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM) ✅
 - [x] **ONBOARDING.md** — All 8 employees have `employees/{name}/ONBOARDING.md` ✅
-- [ ] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md`
+- [x] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md` ✅
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
 - [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
 

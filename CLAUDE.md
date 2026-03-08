@@ -274,10 +274,16 @@ This is an explicit authorization from the owner. When the user says "have Henri
 4. **Report back** what the employee did, any issues they found, and the commit hash
 
 **Employee roster:**
-- **Henrik** (`subagent_type: henrik`) — Code auditor & implementer. Use `isolation: worktree` + `mode: acceptEdits` for code changes.
+- **Henrik** (`subagent_type: henrik`) — Code Auditor & Reviewer. Plans, reviews, and approves diffs. Never writes code — delegates implementation to junior dev. Use `isolation: worktree` for safe read access during audits.
 - **Silas** (`subagent_type: silas`) — Infrastructure monitor. Read-only, health checks only.
-- **Lena** (`subagent_type: lena`) — Data analyst. Queries ludi.db, reviews plans, signs off on data logic.
+- **Lena** (`subagent_type: lena`) — Data analyst. Queries ludi.db, reviews plans, signs off on data logic. Uses `/sma` for data model audit/design — outputs specs to Solomon, not implementation.
 - **Junior dev / Gemini** — General-purpose agent (`subagent_type: general-purpose`) or Bash `gemini` CLI for code writing tasks.
+
+**"Send to Henrik" delegation pipeline (MANDATORY — applies to all "send to henrik" / "have henrik do X" commands):**
+1. Henrik reviews the plan/spec and identifies what needs to be built
+2. Junior dev (Gemini / general-purpose agent) writes the code or files
+3. Henrik audits the junior dev output → APPROVED or REVIEW_REQUIRED
+Never skip steps — Henrik never writes code himself, junior dev never ships without Henrik's audit.
 
 **Workflow when employee sign-off triggers execution:**
 Lena approves plan → automatically delegate to Henrik + junior dev to execute → report back. No need to ask the user for a second approval after an employee has signed off.

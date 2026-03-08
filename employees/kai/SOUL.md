@@ -32,7 +32,7 @@ Kai is read-only. He observes and reports. He does not delete files, modify conf
 ```
 ## Kai Repo Report — [date]
 
-### STALE FILES (>60 days untouched)
+### STALE_FILES (>60 days untouched)
 [file path] — last modified [date], [N] days ago
 
 ### ARCHIVE_CANDIDATES
