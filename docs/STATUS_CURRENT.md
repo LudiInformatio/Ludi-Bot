@@ -1,16 +1,16 @@
 # Current System Status
 
-**Last Updated:** March 7, 2026
+**Last Updated:** March 8, 2026
 **Phase:** Phase 8 — AI-Enhanced Pipeline
 
 ## Active Sprint
-- Module X projection calibration: Sprint A (`module_x_scenario.py` + `module_c.py`) — expand 4→7 stats, DVP/scheme/spread/total conditions. Plan at `.claude/plans/crystalline-petting-reef.md`
-- Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-- Phase 8.23 Feedback Loop — `claude_analysis_log` collecting, Wilson calibration at ~Mar 10
+- Module X projection calibration: Sprint A shipped — expand 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (pra:1.10, pa:1.10), stl/blk/fg3m mods applied in module_c.py. Awaiting production validation (10 AM pipeline).
+- Sprint B next: DVP Condition 5 (`team_dvp_by_archetype`) — ready after Sprint A validates. Sprint B2 (Scheme) blocked: 14/30 teams stale in `team_scheme_cache`.
+- Phase 8.23 Feedback Loop — Wilson calibration window closes ~Mar 10
 
 ## Last 3 Major Completions
-- Phase 1 agents shipped: Henrik, Silas, Lena as `.claude/agents/*.md` Skills 2.0 subagents — audit-fix pattern established ✅
-- Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit complete ✅
+- Module X Sprint A — `module_x_scenario.py` + `module_c.py` + `module_f.py` — expanded 4→7 stats, canonical_games H/A fix, combo correlation factor ✅
+- Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (8 agents total, 10 skills total) ✅
 - Module X calibration plan approved — 8 conditions × 7 stats, 4 sprints, plan at `crystalline-petting-reef.md` ✅
 
 ## Database State (Mar 6, 2026)

@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 8, 2026 — 12:39 PM EDT
+**Last Updated:** Sunday, March 8, 2026 — 3:00 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** `module_x_scenario.py` — Module X projection calibration Sprint A (expand 4→7 stats, DVP/scheme/spread/total conditions, plan at `crystalline-petting-reef.md`) + Sprint 2 (`revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** Phase 1 agents (`.claude/agents/henrik.md`, `silas.md`, `lena.md`) — 3 Skills 2.0 subagents shipped, audit patterns established, research notes saved ✅ + Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅ + DST cron update (17 workflows) + `capture_closing_lines.py` Henrik audit — false sys.exit on live games fixed, check_slate UTC gate fixed ✅
+**Completed:** Phase 2 skills (`skills/backtest/SKILL.md`, `/lena-analyze`) — 3-tier backtest redesign, baseline run, projection accuracy audit + Module X calibration plan approved ✅ + Module X Sprint A — expanded 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (module_f.py), stl/blk/fg3m mods in module_c.py ✅ + Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (agents + ONBOARDING.md + skills) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -93,10 +93,10 @@ This is the single source of truth for project tasks and priorities.
 **Setup complete (Mar 1–2):** Telegram Bot 2 + Discord server + 7 soul files + webhooks + Gemini SOUL/ONBOARDING ✅
 **Research complete (Mar 6):** Skills 2.0 + subagents + agent teams evaluated. Hybrid architecture finalized. Plan in `.claude/plans/`.
 
-- [ ] **Phase 1 subagents** — Create `.claude/agents/` for Henrik (sonnet, worktree), Silas (haiku, read-only), Lena (sonnet, memory)
-- [ ] **Phase 2 skills** — `/silas-check`, `/lena-analyze`, `/repo-hygiene` (Kai); upgrade `ludi-audit` + `daily` + `backtest` frontmatter
-- [ ] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM)
-- [ ] **ONBOARDING.md** — `employees/{name}/ONBOARDING.md` for all 8 employees. Gemini done ✅. Lena needs domain glossary (archetypes, schemes, matchup matrix). Kai needs archive conventions + gitignore rules.
+- [x] **Phase 1 subagents** — Henrik, Silas, Lena shipped as `.claude/agents/*.md` ✅
+- [x] **Phase 2 skills** — `/lena-analyze`, `/repo-hygiene` (Kai), `ludi-audit` + `daily` + `backtest` wired ✅
+- [x] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM) ✅
+- [x] **ONBOARDING.md** — All 8 employees have `employees/{name}/ONBOARDING.md` ✅
 - [ ] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md`
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
 - [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
