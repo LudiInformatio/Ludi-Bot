@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 8, 2026 — 4:22 PM EDT
+**Last Updated:** Sunday, March 8, 2026 — 6:17 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** `docs/operations/COMMUNICATION_PROTOCOL.md` — Comm Protocol Sprint (T-001 protocol doc + T-002 Slack P1 wiring in `curate_plays.py`/`module_d.py`/`module_g.py`) + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
-**Completed:** Module X Sprint A — expanded 4→7 stats, H/A via canonical_games JOIN, combo correlation fix (module_f.py), stl/blk/fg3m mods in module_c.py ✅ + Phase 3 employee onboarding — Kai, Vera, Solomon, Maren, Iris all shipped (agents + ONBOARDING.md + skills) ✅ + Communication Protocol T-003 — Discord `#incidents` channel + webhook + `send_to_incidents()` in `utils/discord_notifier.py` ✅
+**Active Work:** T-002 Slack P1 (`curate_plays.py`, `module_d.py`, `module_g.py`) — Slack alert on critical failure wiring + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
+**Completed:** Communication Protocol T-001a — `COMMUNICATION_PROTOCOL.md` + `DECISION_LOG.md` (5 seed ADRs) + `ADR_TEMPLATE.md` shipped ✅ + Public repo security cleanup — 203 competitive intelligence files untracked via Kai → Silas → Solomon → junior dev chain ✅ + Agent training sprint — 5 training sections + 8 LESSONS_LEARNED.md files + `## Output Rule` enforcement + Solomon maxTurns 50 ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -13,7 +13,7 @@ This is the single source of truth for project tasks and priorities.
 > - `### Current Sprint` → `**Next Actions:**` block — use `- [ ]` bullets for PM bot pending tasks.
 > - Never put actionable next-steps ONLY in the Phase 8 table; the table is for status tracking only.
 
-**Active Project Docs:**
+**Active Project Docs (on-disk, gitignored — private intel):**
 - `best-practices/ai/PROMPT_ENGINEERING_PATTERNS.md` — BERT-derived prompt patterns (Patterns 1-9) + advanced paradigms (Patterns 10-16)
 - `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md` — Phase 9 implementation plan (5 sprints)
 - `docs/research/LLM_CANONICAL_RESEARCH_TABLE.md` — Academic LLM research reference table
@@ -22,6 +22,11 @@ This is the single source of truth for project tasks and priorities.
 - `docs/FUTURE_DATA_SOURCES.md` — Ask Ludi architecture (§6) + competitive patterns (§5.2-B) + PBP Stats endpoints (§4.4)
 - `best-practices/api/API_BEST_PRACTICES.md` — BDL + Tank01 + ESPN endpoint reference
 - `docs/projects/AI_EMPLOYEE_WORKFORCE.md` — AI Employee Workforce PRD (8 employees, Skills 2.0 hybrid, ~$4.60/mo)
+
+**Tracked ops docs:**
+- `docs/operations/COMMUNICATION_PROTOCOL.md` — channel routing, decision authority, escalation paths
+- `docs/decisions/DECISION_LOG.md` — seed ADRs: Skills 2.0, canonical_games, bet_recs dedup, CLV props, DST cron
+- `best-practices/agents/AGENT_OUTPUT_PATTERNS.md` — silent failure root cause, maxTurns config, resume vs re-run
 
 ---
 
@@ -45,8 +50,8 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **T-001: Comm Protocol docs** — `docs/operations/COMMUNICATION_PROTOCOL.md` + `docs/decisions/DECISION_LOG.md` + `docs/decisions/ADR_TEMPLATE.md`. No code. Junior dev → Henrik review.
-- [ ] **T-002: Slack P1 wiring** — `curate_plays.py` / `module_d.py` / `module_g.py` Slack alert on failure. After T-001.
+- [x] **T-001a: Comm Protocol docs** — `docs/operations/COMMUNICATION_PROTOCOL.md` + `docs/decisions/DECISION_LOG.md` + `docs/decisions/ADR_TEMPLATE.md` ✅
+- [ ] **T-002: Slack P1 wiring** — `curate_plays.py` / `module_d.py` / `module_g.py` Slack alert on critical failure. Junior dev writes → Henrik audits. After T-001a.
 
 ---
 
@@ -90,7 +95,7 @@ This is the single source of truth for project tasks and priorities.
 ## Medium Priority
 
 ### AI Employee Workforce (March 2026 — Skills 2.0 Hybrid)
-**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` | **Implementation plan:** `.claude/plans/crystalline-petting-reef.md`
+**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` (on-disk, gitignored) | **Implementation plan:** `.claude/plans/crystalline-petting-reef.md`
 **Team (8):** Solomon (PM), Silas (SRE), Vera (QA), Iris (Social Scout), Henrik (Code Auditor), Maren (Strategist), Lena (Data Analyst), **Kai (Repo Custodian, junior under Silas)**
 **Architecture:** Claude Code Skills 2.0 subagents (`.claude/agents/*.md`) for interactive work + external stack (Telegram bots, GH Actions, launchd) for scheduled/always-on. $0 incremental for subagents (uses subscription).
 

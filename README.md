@@ -79,7 +79,7 @@ As of March 2026, the Ludi system is staffed by an 8-person AI team running on a
 
 **Architecture:** Subagents auto-delegate based on description (e.g., "check pipeline health" → Silas). Persistent memory (`memory: project`) lets employees learn across sessions. Tool restrictions enforce read-only for monitoring agents. Solomon Telegram bot (`bots/solomon_bot.py`) stays always-on externally.
 
-**PRD:** `docs/projects/AI_EMPLOYEE_WORKFORCE.md` | **Implementation plan:** `.claude/plans/crystalline-petting-reef.md`
+**Status (March 8, 2026):** All 8 agents fully onboarded — ONBOARDING.md + LESSONS_LEARNED.md + SOUL.md per employee. `## Output Rule` enforcement added to all agent files (prevents silent maxTurns failures). Solomon maxTurns bumped to 50 for heavy orchestration tasks. Delegation chain proven in production: Kai → Silas → Solomon → junior dev → Henrik.
 
 ---
 
@@ -141,7 +141,7 @@ ls -lht archives/data/ludi.db.backup_*.gz | head -10               # List backup
 | PBP Stats WOWY Sync | 5:00 AM Mon/Wed/Fri | PBP Stats WOWY + four-factor + team leverage profiles |
 | Daily Reports | 6:00 AM | Work notes + bet summary |
 | WOWY Sync | 7:00 AM | Daily WOWY sync |
-| Weekly Referee Sync | Mondays 9:00 AM | Weekly referee intelligence — OddsShark + Covers data via Playwright |
+| Weekly Referee Sync | Mondays 4:00 AM | Weekly referee intelligence — OddsShark + Covers data via Playwright |
 | Daily Referee Sync | 9:30 AM | Scrape referee assignments |
 | Lineup Sync | 9:45 AM | Pre-game starting lineups via Tank01 depth charts |
 | Production Pipeline | 10:00 AM | Full simulation + play curation → Telegram; pipeline stats → Slack |
