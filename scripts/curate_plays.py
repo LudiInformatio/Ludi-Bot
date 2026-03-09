@@ -345,7 +345,7 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
             FROM bet_recommendations
             WHERE outcome IN ('WIN','LOSS')
             GROUP BY stat_category, bet_side
-            HAVING COUNT(*) >= 50
+            HAVING COUNT(*) >= 5
             ORDER BY wr DESC
         """).fetchall()
     except Exception as e:
@@ -355,7 +355,25 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
     z = 1.96  # 95% confidence
     lines = [
         "LUDI-BOT EMPIRICAL WIN RATES (this season, Wilson 95% confidence floor):",
-        "Use these to break selection ties. High raw edge ≠ reliable bet for high-variance stats.",
+        "",
+        "NOTE: The win rate data below is MEASURED historical outcome data from our settled bet database",
+        "(4,207 bets). It is NOT generated or estimated. ANALYSIS_PROTOCOL rule 7 ('Do NOT generate",
+        "win rates') does not apply here — these are injected empirical facts, not model-produced claims.",
+        "Treat this table with the same authority as a stat injected from player_game_logs.",
+        "",
+        "WEIGHTING RULE — read WR grade FIRST, before edge%, before matchup:",
+        "  A+ grade (floor >= 60%, n >= 500): WR is the primary signal. STRONG unless injury or",
+        "      extreme correlation conflict overrides. Edge% is confirming evidence, not deciding factor.",
+        "  A  grade (floor >= 55%, n >= 150): Prefer STRONG. Edge% must be >= 5% to confirm.",
+        "  B  grade (floor >= 50%, n >= 50):  Default LEAN. Needs edge% >= 10% + clean matchup for STRONG.",
+        "  C  grade (floor >= 45%):           Neutral. Grade by edge% and matchup normally.",
+        "  D  grade (floor >= 40%):           Default LEAN. Needs overwhelming evidence for STRONG.",
+        "  F  grade (floor < 40%):            Default FADE. Only structural factors can override to LEAN.",
+        "",
+        "WHY THIS MATTERS: Our data shows 4,207 settled bets. True_edge has near-zero correlation with",
+        "outcome for high-edge bets (Amen Thompson PTS OVER 109.2% edge → LOSS). Wilson floor is the",
+        "only statistically validated predictor we have. Edge% measures model conviction, not market",
+        "efficiency. Grade WR first.",
     ]
     for stat, side, n, wr, wins in rows:
         p = wins / n
@@ -370,7 +388,14 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
         elif lb >= 0.42:               grade, flag = "D",  " ← DEPRIORITIZE"
         else:                          grade, flag = "F",  " ← AVOID"
 
-        lines.append(f"  {stat} {side}: {wr:.0f}% WR (95% floor={lb*100:.0f}%, n={n}) [{grade}]{flag}")
+        # Tiered n-guard: ESTABLISHED (n >= 100) / EMERGING (20-99) / WATCH (< 20)
+        if n >= 100:
+            lines.append(f"  {stat} {side}: {wr:.0f}% WR (95% floor={lb*100:.0f}%, n={n}) [{grade}]{flag}")
+        elif n >= 20:
+            direction = "above" if wr >= 50 else "below"
+            lines.append(f"  {stat} {side}: {wr:.0f}% WR (EMERGING — n={n}, direction={direction} 50%, treat as supporting signal) [{grade}*]")
+        else:
+            lines.append(f"  {stat} {side}: {wr:.0f}% WR (WATCH — n={n}, too small for statistical grade)")
 
     lines += [
         "",
@@ -380,6 +405,8 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
         "- STEALS UNDER: improving trend — confidence growing as sample builds",
         "- REB OVER: actively degrading (WR falling late-season) — deprioritize unless edge >10%",
         "- PRA OVER: structural avoid — 25% WR on 80 bets, should be filtered before curation",
+        "- EMERGING (*) signals: directional only — use to confirm an otherwise strong grade, not to create one.",
+        "- WATCH signals: count too small for any statistical inference — note only, do not weight.",
     ]
     return "\n".join(lines)
 
@@ -429,7 +456,7 @@ def _sonnet_curate(
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 
-    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "grade": "STRONG|LEAN|FADE", "reasoning": "one sentence"}]'
+    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "thinking": "WR grade: [grade]. Edge: [edge]. Matchup: [summary]. Decision: [why].", "grade": "STRONG|LEAN|FADE", "reasoning": "one sentence"}]'
 
     env = config.get_scoring_environment()
     over_rate = env.get('over_hit_rate_14d', 0)
@@ -438,20 +465,102 @@ def _sonnet_curate(
 
     curate_examples = """
 === CURATION EXAMPLES ===
-[STRONG]
-Input: [TWO_LEVEL_SCORER] PTS OVER 22.5 | DIAMOND | edge=16.2% | game=TEAM1_TEAM2 | Injury: No active record
-Reasoning: Diamond edge combined with favorable defensive matchup and strong L5 form makes this a top priority.
+
+=== EXAMPLE 1 — BLK UNDER: A+ WR grade overrides yellow matchup flag (→ STRONG) ===
+Input:
+  Player: Jayson Tatum [BOS]
+  Bet: BLK UNDER 0.5
+  True edge: 34.9% | Tier: DIAMOND
+  Archetype: TWO_LEVEL_SCORER
+  Injury status: No active record
+  Game context: BOS vs MIA, spread BOS -4.5, total 222.5
+  Note in dossier: MIA ranks 3rd in rim frequency this season
+
+Reasoning chain (consult WR grade FIRST):
+  Step 1 — WR grade: BLK UNDER = A+ (Wilson floor 67.1%, n=918). Primary signal.
+           Action: Default to STRONG unless hard override applies.
+  Step 2 — Edge confirms: 34.9% DIAMOND edge. Strongly confirms the WR signal.
+  Step 3 — Matchup flag: MIA high rim frequency could produce 1 block. Yellow flag, not red.
+           At A+ WR grade, a yellow flag does NOT override to LEAN. Would need proven block
+           frequency in Tatum's own log (he averages 0.5 BLK/g — structural UNDER holds).
+  Step 4 — Grade: STRONG. WR primary signal + DIAMOND edge + acceptable matchup risk.
+
+thinking: "WR grade for BLK UNDER: A+ (67.1% floor, n=918). Edge confirms at 34.9% DIAMOND. MIA rim freq is yellow flag but does not override A+ grade. Grade: STRONG."
 Grade: STRONG
+Reasoning: BLK UNDER A+ empirical signal (67.1% floor, 918 bets) + DIAMOND edge confirms. Opponent rim frequency is a yellow flag but does not override A+ WR grade.
+=== END EXAMPLE 1 ===
 
-[LEAN]
-Input: [WARRIOR_BIG] BLK UNDER 1.5 | BLUE CHIP | edge=11.8% | game=TEAM3_TEAM4 | Injury: No active record
-Reasoning: Strong system signal for BLK UNDER, but opponent has high rim frequency which limits confidence to a LEAN.
-Grade: LEAN
+=== EXAMPLE 2 — PTS OVER: extreme edge% does NOT override absent WR (→ FADE) ===
+Input:
+  Player: Amen Thompson [HOU]
+  Bet: PTS OVER 16.5
+  True edge: 109.2% | Tier: DIAMOND
+  Archetype: SLASHING_CREATOR
+  Injury status: No active record
+  Game context: HOU vs CLE, spread HOU -2.5, total 228.0
+  Note in dossier: CLE defensive scheme = PERIMETER
 
-[FADE]
-Input: [JUMBO_FACILITATOR] AST UNDER 8.5 | CORE ASSET | edge=9.1% | game=TEAM5_TEAM6 | Injury: No active record
-Reasoning: Low edge on a high-variance stat with a ref crew that tends to let teams play; better options available.
+Reasoning chain (consult WR grade FIRST):
+  Step 1 — WR grade: PTS OVER does NOT appear in the A+/A/B section of the WR table.
+           Absent from established WR table = D grade. No confirmed empirical edge.
+  Step 2 — Edge check: 109.2% is an extreme outlier. ALERT: edge outliers >= 50% indicate
+           volatile market conditions. They do NOT indicate a high-probability outcome.
+  Step 3 — Matchup: CLE scheme is PERIMETER. Thompson is SLASHING_CREATOR — perimeter
+           defense is neutral-to-negative for slash + drive volume. Neutral matchup signal.
+  Step 4 — Grade: FADE. D-grade WR + extreme edge outlier flag. Edge% alone never makes STRONG.
+
+thinking: "WR grade for PTS OVER: absent from established table (D grade). Edge 109.2% is an outlier flag, not a signal. CLE PERIMETER = neutral matchup for SLASHING_CREATOR. Grade: FADE."
 Grade: FADE
+Reasoning: PTS OVER has no confirmed empirical edge in this system (absent from WR table). Extreme edge outlier (109.2%) signals market volatility, not probability certainty.
+=== END EXAMPLE 2 ===
+
+=== EXAMPLE 3 — PR UNDER: emerging signal, small n, handled correctly (→ STRONG with note) ===
+Input:
+  Player: Cooper Flagg [DAL]
+  Bet: PR UNDER 25.5
+  True edge: 38.8% | Tier: DIAMOND
+  Archetype: TWO_LEVEL_SCORER
+  Injury status: No active record
+  Game context: DAL vs BKN, spread DAL -6.5, total 224.0
+
+Reasoning chain (consult WR grade FIRST):
+  Step 1 — WR grade: PR UNDER = C grade overall (Wilson floor 45.9%, n=404).
+           HOWEVER: PR UNDER STRONG grade cases show 85.7% WR (EMERGING, n=7).
+           This is a curation-conditional signal — grading LEAN destroys it (38.5% WR, n=26).
+           Grading STRONG when factors align is the correct behavior.
+  Step 2 — Edge confirms: 38.8% DIAMOND. Strong model conviction.
+  Step 3 — Matchup: BKN is PERIMETER scheme. Flagg TWO_LEVEL_SCORER attacks paint + mid.
+           Perimeter defense = neutral for Flagg volume. Blowout risk: DAL -6.5, below 7.5 threshold.
+  Step 4 — n-guard: PR UNDER STRONG n=7 is WATCH-tier. Apply uncertainty note in reasoning.
+
+thinking: "WR grade: PR UNDER C overall, but STRONG grade cases = 85.7% WR (WATCH n=7). Grading LEAN destroys signal. DIAMOND edge + neutral matchup confirms. Grade: STRONG with EMERGING note."
+Grade: STRONG
+Reasoning: PR UNDER with STRONG curation shows 85.7% WR (WATCH, n=7) — grading LEAN destroys signal. DIAMOND edge + neutral matchup confirm. EMERGING signal — confidence interval wide, verify context.
+=== END EXAMPLE 3 ===
+
+=== EXAMPLE 4 — BLK UNDER: A+ category WR, but player personal avg overrides to LEAN ===
+Input:
+  Player: Nicolas Claxton [BKN]
+  Bet: BLK UNDER 1.5
+  True edge: 17.7% | Tier: DIAMOND
+  Archetype: RIM_GUARDIAN
+  Injury status: No active record
+  Game context: BKN vs NYK, spread even, total 217.0
+
+Reasoning chain (consult WR grade FIRST):
+  Step 1 — WR grade: BLK UNDER = A+ (67.1% floor, n=918). Default to STRONG.
+  Step 2 — Player-specific override: Claxton averages 1.8 BLK/g. Line is 1.5 — set BELOW his
+           personal average. A+ category WR applies to structural UNDERs (line above player avg).
+           When line is below player avg, the structural edge disappears.
+  Step 3 — Edge: 17.7% DIAMOND. Real edge, but player-specific risk dilutes it.
+  Step 4 — Grade: LEAN. LEAN means WR context was engaged, specific concern found.
+           LEAN is NOT the same as NULL (no data informed). LEAN = real edge + specific concern.
+
+thinking: "WR grade: A+ category BLK UNDER. But Claxton averages 1.8 BLK/g — line at 1.5 is below his mean, structural UNDER edge absent. A+ applies structurally, not here. LEAN not STRONG."
+Grade: LEAN
+Reasoning: BLK UNDER A+ category signal, but Claxton's personal avg (1.8 BLK/g) places the 1.5 line below his mean — structural UNDER edge absent. DIAMOND edge real but player-specific risk reduces confidence.
+=== END EXAMPLE 4 ===
+
 === END EXAMPLES ===
 """
 
@@ -528,6 +637,7 @@ Grade every bet listed above. Return JSON array only."""
                 result.append({
                     'bet_id': bet_id,
                     'grade': grade,
+                    'thinking': str(item.get('thinking', '')),  # CoT trace — logged to claude_analysis_log for audit
                     'reasoning': str(item.get('reasoning', '')),
                 })
 
