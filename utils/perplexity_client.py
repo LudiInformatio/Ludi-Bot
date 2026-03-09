@@ -1,11 +1,14 @@
 import json
 import hashlib
+import logging
 import re as _re
 import time
 import requests
 from pathlib import Path
 from datetime import date
 import config
+
+logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path("cache/perplexity")
 CACHE_TTL = 4 * 3600
@@ -194,7 +197,7 @@ class PerplexityClient:
                     "search_recency_filter": recency_filter,
                     "max_tokens": 200
                 },
-                timeout=10
+                timeout=28
             )
             # Log empty responses so we can diagnose auth vs rate limit issues
             if not resp.text.strip():
@@ -209,6 +212,9 @@ class PerplexityClient:
             self._cache[key] = {"text": text, "ts": time.time()}
             self._save_cache()
             return text
+        except requests.exceptions.Timeout:
+            logger.warning(f"[Perplexity] _query timeout (28s) for query: {query[:80]}")
+            return ""
         except Exception as e:
             print(f"[Perplexity] error: {e}")
             return ""
