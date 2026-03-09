@@ -1,3 +1,4 @@
+# ARCHIVED: 2026-03-04 — DB firewall integration test, superseded by production firewall in database.py (LudiHistorian.resolve_player_id_for_insert)
 
 import logging
 import sqlite3

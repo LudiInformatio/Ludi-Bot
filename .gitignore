@@ -103,6 +103,9 @@ ludi_history_db.json
 !.gemini/commands/
 !.gemini/commands/**
 yak_cache.json
+tui.json
+opencode.json*
+*.gz
 
 # Competitive intelligence — local only, never public
 best-practices/ai/
