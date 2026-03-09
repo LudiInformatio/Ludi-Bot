@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 9, 2026 — 2:09 PM EDT
+**Last Updated:** Monday, March 9, 2026 — 4:04 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation + Sprint 2 (`scripts/revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
-**Completed:** T-002 Slack P1 (`send_slack_failure_alert`) — 6 critical failure points wired across `curate_plays.py`, `module_d.py`, `module_g.py` → `#ludi-lite-health`, Henrik APPROVED ✅ + Employee Training Sprint complete — T-TRAIN-001 (`REFERENCE_CARD.md` + Session Start hooks), T-TRAIN-002 (CoT reasoning traces Henrik+Lena), T-TRAIN-003 (18 LESSONS_LEARNED entries seeded), T-TRAIN-004 (`discord_notifier.py` #lena wired), live test passed ✅ + `daily_reports.yml` cron sequencing fix — collapsed dual cron to single trigger, bet-summary now fires correctly ✅
+**Active Work:** Employee Training (`employees/*/ONBOARDING.md`) — individual 1-on-1 training per employee, establishing baselines + Phase 8.23 Wilson calibration (`calibrate_claude_outputs.py`) — 14-day data window closing ~Mar 10
+**Completed:** Solomon-as-Primary (`AGENTS.md`, `CLAUDE.md`) — Solomon is now the main persona, Claude invisible ✅ + T-002 Slack P1 (`send_slack_failure_alert`) — 6 failure points wired, `#ludi-pipeline-alerts` channel + webhook + GH secret live ✅ + Employee Training Sprint — T-TRAIN-001 through T-TRAIN-004 complete, all 8 employees onboarded with REFERENCE_CARD + Session Start hooks + CoT traces + 18 LESSONS_LEARNED entries ✅
 
 This is the single source of truth for project tasks and priorities.
 

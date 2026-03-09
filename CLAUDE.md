@@ -165,7 +165,7 @@ See `docs/PRODUCTION_HANDBOOK.md` for the full workflow schedule (all times, tri
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).
   - `### Current Sprint` section — must include a `**Next Actions:**` block with `- [ ]` bullets for actionable tasks. The PM bot's pending task list comes ONLY from here; the Phase 8 table is status-tracking only and NOT parsed for tasks.
   - Never collapse all completions into one segment or remove the ` + ` delimiters — it breaks the parser.
-- **`## Project Vision` in README.md is permanent** — never delete, reorder above the License section, or trim its content. Update `*Last updated:*` and the "Where it is now" / "Where it's headed" bullets periodically. This section is institutional memory, not bloat.
+- **`## Project Vision` in OVERVIEW.md is permanent** — never delete or trim. Update periodically. This section is institutional memory. Note: `README.md` is a minimal public-facing file; `OVERVIEW.md` (gitignored) is the detailed internal version.
 
 ---
 

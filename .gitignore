@@ -142,6 +142,9 @@ employees/
 cache/game_dossier_*.json
 cache/game_intelligence_*.json
 
+# Internal overview (detailed README — proprietary)
+OVERVIEW.md
+
 # Internal docs — status history and future planning
 docs/STATUS_HISTORY.md
 docs/STATUS_CURRENT.md
