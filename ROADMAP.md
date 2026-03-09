@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 9, 2026 — 12:45 PM EDT
+**Last Updated:** Monday, March 9, 2026 — 1:44 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** T-002 Slack P1 (`curate_plays.py`, `module_d.py`, `module_g.py`) — Slack alert on critical failure wiring + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
-**Completed:** `docs/ARCHITECTURE.md` + `docs/PRODUCTION_HANDBOOK.md` updated — 2 missing module rows, canonical_games count, 21-row automation schedule ✅ + Phase 9 docs (`LLM_PARADIGMS_AND_CALIBRATION.md`, `MODEL_CALIBRATION_PATTERNS.md`, Patterns 10-16) shipped in `3cab28c` ✅ + T-TRAIN-001 shipped — 7 `REFERENCE_CARD.md` files + `## Session Start` hooks in all 7 agent files, Henrik APPROVED ✅
+**Completed:** Employee Training Sprint complete — T-TRAIN-001 (`REFERENCE_CARD.md` + Session Start hooks), T-TRAIN-002 (CoT reasoning traces Henrik+Lena), T-TRAIN-003 (18 LESSONS_LEARNED entries seeded), T-TRAIN-004 (`discord_notifier.py` #lena wired), live test passed ✅ + `daily_reports.yml` cron sequencing fix — collapsed dual cron to single trigger, bet-summary now fires correctly ✅ + Solomon hub-and-spoke delegation — all 7 agent files updated with escalation rules → Solomon only ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -146,11 +146,11 @@ This is the single source of truth for project tasks and priorities.
 - [ ] CLV reporting in PM Bot daily summary
 - [ ] 30-day rolling CLV metrics
 
-### Historical Odds Backfill (March 2026)
+### Historical Odds Backfill (April 2026)
 ~5,593 bets lost Jan 8–Feb 1 due to `clean: true` bug. Recoverable via The-Odds-API `/v4/historical/`.
 - [ ] Backfill historical odds (~10 credits/query, ~150 credits total for 15 dates)
 - [ ] Re-run pipeline for 15 missing dates and settle bets
-- **Ready to run** — primary key has ~17K credits. `ODDS_API_KEY_BACKFILL` reserved for April season-archive run only. Use `scripts/backfill_historical_odds.py --date YYYY-MM-DD --verbose`.
+- **Deferred to April 2026** — prior run overran credit/token budget estimates. `ODDS_API_KEY_BACKFILL` reserved for April season-archive run only. Use `scripts/backfill_historical_odds.py --date YYYY-MM-DD --verbose`.
 
 ### Data Pipeline Improvements
 - [ ] **Trade-aware sim context**: When a traded player returns from injury, verify Module C/E use correct team for matchup modifiers and L5/L10 stats split by pre/post-trade. `players.team` is correct (roster sync), but `player_game_logs` history is all on old team — could skew projections.
@@ -184,7 +184,6 @@ This is the single source of truth for project tasks and priorities.
 
 ### Developer Workflow Improvements
 - [ ] **Session start checklist**: `scripts/session_check.py` — quick health check (DB rows, API quota, last sync time) in <5s
-- [ ] **`AGENTS.md`**: Create agent operating guide (primary rules for Codex-style agents)
 - [ ] **GH workflow shortcuts**: `scripts/run_workflow.sh <name>` wrapper for `gh workflow run`
 - [ ] **`/compact` habit**: Use before context fills — prevents losing work mid-session
 - [ ] **End-of-session memory update**: Always update `memory/MEMORY.md` at session end
