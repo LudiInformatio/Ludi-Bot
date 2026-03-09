@@ -23,6 +23,7 @@ Created: February 2026 | Phase 8.5
 import argparse
 import json
 import os
+import random
 import sqlite3
 import sys
 from datetime import date, datetime
@@ -901,6 +902,9 @@ def main() -> None:
         # STAGE 2: Sonnet Curation
         # ─────────────────────────────────────────────────────────
         print(f"[STAGE 2] Sonnet Curation — grading {len(passing_bets)} passing bets...")
+
+        # Shuffle to eliminate position bias — LLM-as-Judge research shows earlier items rated systematically higher
+        random.shuffle(passing_bets)
 
         sonnet_result = _sonnet_curate(
             passing_bets=passing_bets,
