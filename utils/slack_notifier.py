@@ -7,6 +7,10 @@ Slack    = ops/work notes (pipeline failures, health alerts, diagnostics, QA, PM
 
 Uses Incoming Webhook — no OAuth, no bot token. Just a URL in SLACK_WEBHOOK_URL.
 Graceful degradation: if URL not set, prints warning but doesn't crash.
+
+Webhook routing:
+  SLACK_WEBHOOK_URL    → #ludi-bot-notes  (PM bot work notes, general ops)
+  SLACK_WEBHOOK_ALERTS → #ludi-lite-health (critical pipeline failure alerts)
 """
 import os
 import requests
@@ -22,6 +26,11 @@ def _get_webhook() -> str:
     # Workflow steps without `env: SLACK_WEBHOOK_URL:` in their step definition get an empty
     # string from the imported constant. os.getenv() catches the process-level env var directly.
     return SLACK_WEBHOOK_URL or os.getenv('SLACK_WEBHOOK_URL', '')
+
+
+def _get_alerts_webhook() -> str:
+    # Always read from process env — SLACK_WEBHOOK_ALERTS is never imported from config.py.
+    return os.getenv('SLACK_WEBHOOK_ALERTS', '')
 
 
 def send_slack_message(text: str) -> bool:
@@ -43,5 +52,32 @@ def send_slack_message(text: str) -> bool:
 
 
 def send_slack_alert(title: str, message: str) -> bool:
-    """Send a formatted warning alert to Slack."""
+    """Send a formatted warning alert to Slack (ops channel)."""
     return send_slack_message(f"⚠️ *{title}*\n\n{message}")
+
+
+def send_slack_failure_alert(title: str, message: str) -> bool:
+    """Send a critical pipeline failure alert to #ludi-lite-health via SLACK_WEBHOOK_ALERTS.
+
+    Used for hard failures that affect bet generation or injury data:
+    - Zero bets pass curation filters
+    - Claude API unavailable during curation
+    - Tank01 injury sync failed
+    - BDL fallback also failed (both sources down)
+    - Playwright referee scrape returned empty
+    - Perplexity referee fallback also failed
+    """
+    webhook = _get_alerts_webhook()
+    if not webhook:
+        print("⚠️ SLACK_WEBHOOK_ALERTS not configured - skipping failure alert")
+        return False
+    try:
+        r = requests.post(
+            webhook,
+            json={"text": f"🚨 *{title}*\n\n{message}"},
+            timeout=10
+        )
+        return r.status_code == 200
+    except Exception as e:
+        print(f"⚠️ Slack failure alert send failed: {e}")
+        return False

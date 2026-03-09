@@ -42,6 +42,7 @@ from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
 from utils.telegram_notifier import send_message, send_solomon_message
 from utils.player_id_resolver import resolve_canonical_name
 from utils.game_dossier import build_game_dossier
+from utils.slack_notifier import send_slack_failure_alert
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
@@ -888,6 +889,10 @@ def main() -> None:
 
         if not passing_bets:
             print("[WARNING] All bets flagged by sanity gate — nothing left to curate")
+            send_slack_failure_alert(
+                "Curation: Zero bets passed sanity gate",
+                f"Date: {date.today()}\nAll {len(flagged_bets)} bets were flagged — nothing reached Sonnet curation. Check injury flags or bet_recommendations table."
+            )
             if not dry_run:
                 _write_curation_results(conn, [], flagged_bets, verbose=verbose)
             return
@@ -909,6 +914,10 @@ def main() -> None:
 
         if not claude_available:
             print("[WARNING] Claude unavailable — using edge-sorted deterministic fallback")
+            send_slack_failure_alert(
+                "Curation: Claude API unavailable",
+                f"Date: {date.today()}\nSonnet curation failed — fell back to edge-sorted deterministic ranking for {len(passing_bets)} bets. Check Anthropic API status or quota."
+            )
             graded_picks = _deterministic_top(passing_bets)
         else:
             graded_picks = sonnet_result

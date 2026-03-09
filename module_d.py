@@ -28,6 +28,7 @@ from utils.player_id_resolver import PlayerIDResolver
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL
 from utils.claude_prompts import INJURY_BLURB_SYSTEM, INJURY_BLURB_PARSE_PROMPT
 from utils.injury_taxonomy import get_category
+from utils.slack_notifier import send_slack_failure_alert
 
 # ==========================================
 # LUDI INFORMATIO | MODULE D: THE YAK
@@ -281,6 +282,10 @@ class LudiYak:
         except Exception as e:
             print(f"   [YAK] ⚠️ Tank01 Sync Failed: {e}")
             self.monitor.log_failed_request('tank01', 'injury_list', str(e))
+            send_slack_failure_alert(
+                "Module D: Tank01 injury sync failed",
+                f"Error: {e}\nFalling back to BallDontLie. If BDL also fails, injury data will be stale."
+            )
 
         # FALLBACK SOURCE: BallDontLie
         if not tank_success:
@@ -348,6 +353,10 @@ class LudiYak:
 
         except Exception as e:
             print(f"   [YAK] ❌ Fallback Failed: {e}")
+            send_slack_failure_alert(
+                "Module D: BOTH injury sources failed (Tank01 + BDL)",
+                f"BDL fallback error: {e}\nInjury data is now stale. Pipeline will run without current injury status — manual review required."
+            )
             return False
 
     def classify_headline(self, text):

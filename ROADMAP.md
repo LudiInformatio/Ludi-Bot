@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 9, 2026 — 1:44 PM EDT
+**Last Updated:** Monday, March 9, 2026 — 2:09 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** T-002 Slack P1 (`curate_plays.py`, `module_d.py`, `module_g.py`) — Slack alert on critical failure wiring + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
-**Completed:** Employee Training Sprint complete — T-TRAIN-001 (`REFERENCE_CARD.md` + Session Start hooks), T-TRAIN-002 (CoT reasoning traces Henrik+Lena), T-TRAIN-003 (18 LESSONS_LEARNED entries seeded), T-TRAIN-004 (`discord_notifier.py` #lena wired), live test passed ✅ + `daily_reports.yml` cron sequencing fix — collapsed dual cron to single trigger, bet-summary now fires correctly ✅ + Solomon hub-and-spoke delegation — all 7 agent files updated with escalation rules → Solomon only ✅
+**Active Work:** Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation + Sprint 2 (`scripts/revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Perplexity upgrade
+**Completed:** T-002 Slack P1 (`send_slack_failure_alert`) — 6 critical failure points wired across `curate_plays.py`, `module_d.py`, `module_g.py` → `#ludi-lite-health`, Henrik APPROVED ✅ + Employee Training Sprint complete — T-TRAIN-001 (`REFERENCE_CARD.md` + Session Start hooks), T-TRAIN-002 (CoT reasoning traces Henrik+Lena), T-TRAIN-003 (18 LESSONS_LEARNED entries seeded), T-TRAIN-004 (`discord_notifier.py` #lena wired), live test passed ✅ + `daily_reports.yml` cron sequencing fix — collapsed dual cron to single trigger, bet-summary now fires correctly ✅
 
 This is the single source of truth for project tasks and priorities.
 

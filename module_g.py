@@ -11,6 +11,7 @@ import config
 from utils.mappings import resolve_team_abbr
 from database import sync_canonical_games
 from utils.browser_utils import close_popups, simulate_human_interaction
+from utils.slack_notifier import send_slack_failure_alert
 
 # ==============================================================================
 # LUDI INFORMATIO | MODULE G: THE ZEBRAS
@@ -315,7 +316,10 @@ class LudiRefEngine:
                     except Exception as e:
                         print(f"[TAG] Context: {e}")
                         pass
-                    
+                    send_slack_failure_alert(
+                        "Module G: Playwright referee scrape failed",
+                        f"Browser error — returned empty dict. Referee data unavailable for today's slate. Perplexity fallback will be attempted."
+                    )
                     browser.close()
                     return {}
                     
@@ -432,8 +436,16 @@ class LudiRefEngine:
                             print(f"   [ZEBRAS] ✅ Perplexity bulk fallback populated {perp_count} crew(s)")
                         else:
                             print(f"   [ZEBRAS] ⚠️ Perplexity bulk fallback returned no matchable refs")
+                            send_slack_failure_alert(
+                                "Module G: Both referee sources failed (Playwright + Perplexity)",
+                                "Playwright scrape returned empty and Perplexity fallback matched 0 crews. Referee modifiers will be absent from today's pipeline run."
+                            )
                 except Exception as e:
                     print(f"   [ZEBRAS] Perplexity referee fallback failed: {e}")
+                    send_slack_failure_alert(
+                        "Module G: Perplexity referee fallback exception",
+                        f"Error: {e}\nPlaywright also failed earlier. Referee data unavailable for today's slate."
+                    )
 
             return self.daily_assignments
 
