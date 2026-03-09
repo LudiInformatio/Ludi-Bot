@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 from module_d import LudiYak
+from utils.player_id_resolver import resolve_canonical_name
 
 
 def parse_game_arg(game_str: str) -> tuple:
@@ -76,22 +77,33 @@ def run_automated_mode():
 
         catalysts_found = []
         for player in bet_players:
-            cursor.execute("SELECT team FROM players WHERE name = ?", (player,))
+            # Resolve accented canonical name before DB lookup (e.g. "Nikola Jokic" → "Nikola Jokić")
+            canonical_player = resolve_canonical_name(conn, player)
+            cursor.execute("SELECT team FROM players WHERE name = ?", (canonical_player,))
             row = cursor.fetchone()
             if not row:
                 continue
             player_team = row[0]
+            # Use canonical_games to avoid 3× row inflation from the games table (Pattern-B fix)
+            # canonical_game_id format: {YYYY-MM-DD}_{HOME}_{AWAY}
             cursor.execute("""
-                SELECT home_team, away_team FROM games
-                WHERE date(date) = date('now')
-                  AND (home_team = ? OR away_team = ?)
+                SELECT canonical_game_id FROM canonical_games
+                WHERE date(substr(canonical_game_id, 1, 10)) = date('now')
+                  AND (
+                    canonical_game_id LIKE '%_' || ? || '_%'
+                    OR canonical_game_id LIKE '%_' || ?
+                  )
                 LIMIT 1
             """, (player_team, player_team))
             game_row = cursor.fetchone()
             if not game_row:
                 opponent = "Opponent"
             else:
-                opponent = game_row[0] if game_row[1] == player_team else game_row[1]
+                # Split '2026-03-09_LAL_GSW' → ['2026', '03', '09', 'LAL', 'GSW']
+                parts = game_row[0].split('_')
+                home_team = parts[-2]
+                away_team = parts[-1]
+                opponent = home_team if away_team == player_team else away_team
 
             result = yak._check_news_catalyst(player, player_team, opponent)
 
@@ -118,7 +130,7 @@ def run_automated_mode():
 
     except Exception as e:
         print(f"[NEWS AGENT] Error: {e}")
-        sys.exit(0)
+        sys.exit(1)
 
 
 def main():
@@ -251,5 +263,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"Error: {e}")
-        sys.exit(0)
+        sys.exit(1)
     sys.exit(0)
