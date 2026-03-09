@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 8, 2026 — 6:48 PM EDT
+**Last Updated:** Monday, March 9, 2026 — 12:45 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** T-002 Slack P1 (`curate_plays.py`, `module_d.py`, `module_g.py`) — Slack alert on critical failure wiring + Module X Sprint B (`team_dvp_by_archetype`) — DVP Condition 5, awaiting Sprint A production validation
-**Completed:** `CLAUDE.md` slimmed 323→227 lines — Henrik audit + junior dev 9-edit spec, redundancy removed, `COMMON_MISTAKES.md` cross-ref added ✅ + `docs/ARCHITECTURE.md` + `docs/PRODUCTION_HANDBOOK.md` updated — 2 missing module rows, canonical_games count, 21-row automation schedule ✅ + Phase 9 docs (`LLM_PARADIGMS_AND_CALIBRATION.md`, `MODEL_CALIBRATION_PATTERNS.md`, Patterns 10-16) shipped in `3cab28c` ✅
+**Completed:** `docs/ARCHITECTURE.md` + `docs/PRODUCTION_HANDBOOK.md` updated — 2 missing module rows, canonical_games count, 21-row automation schedule ✅ + Phase 9 docs (`LLM_PARADIGMS_AND_CALIBRATION.md`, `MODEL_CALIBRATION_PATTERNS.md`, Patterns 10-16) shipped in `3cab28c` ✅ + T-TRAIN-001 shipped — 7 `REFERENCE_CARD.md` files + `## Session Start` hooks in all 7 agent files, Henrik APPROVED ✅
 
 This is the single source of truth for project tasks and priorities.
 
