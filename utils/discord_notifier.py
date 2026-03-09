@@ -4,7 +4,7 @@ Routes employee-specific messages to individual Discord channels via webhooks.
 
 Telegram = betting product (game notes, bet cards, spotlights, P&L)
 Slack    = ops/work notes (pipeline failures, health alerts, diagnostics)
-Discord  = employee channels (Henrik, Silas, Vera, Solomon, Maren, Iris, weekly roundtable)
+Discord  = employee channels (Henrik, Silas, Vera, Solomon, Maren, Lena, Iris, weekly roundtable)
 
 Uses Incoming Webhooks — no OAuth, no bot token. Just a URL per channel in .env.
 Graceful degradation: if URL not set, logs warning and returns False without crashing.
@@ -31,6 +31,7 @@ try:
         DISCORD_WEBHOOK_SOLOMON,
         DISCORD_WEBHOOK_HENRIK,
         DISCORD_WEBHOOK_MAREN,
+        DISCORD_WEBHOOK_LENA,
         DISCORD_WEBHOOK_WEEKLY,
         DISCORD_WEBHOOK_INCIDENTS,
     )
@@ -41,6 +42,7 @@ except (ImportError, ModuleNotFoundError):
     DISCORD_WEBHOOK_SOLOMON = os.getenv('DISCORD_WEBHOOK_SOLOMON', '')
     DISCORD_WEBHOOK_HENRIK = os.getenv('DISCORD_WEBHOOK_HENRIK', '')
     DISCORD_WEBHOOK_MAREN = os.getenv('DISCORD_WEBHOOK_MAREN', '')
+    DISCORD_WEBHOOK_LENA = os.getenv('DISCORD_WEBHOOK_LENA', '')
     DISCORD_WEBHOOK_WEEKLY = os.getenv('DISCORD_WEBHOOK_WEEKLY', '')
     DISCORD_WEBHOOK_INCIDENTS = os.getenv('DISCORD_WEBHOOK_INCIDENTS', '')
 
@@ -53,6 +55,7 @@ _EMPLOYEE_WEBHOOK_MAP = {
     'solomon': 'DISCORD_WEBHOOK_SOLOMON',
     'henrik':  'DISCORD_WEBHOOK_HENRIK',
     'maren':   'DISCORD_WEBHOOK_MAREN',
+    'lena':    'DISCORD_WEBHOOK_LENA',
 }
 
 # Discord hard limit. Messages exceeding this must be chunked.
@@ -133,7 +136,7 @@ def send_to_employee(employee: str, message: str) -> bool:
     """Post a message to a named employee's Discord channel.
 
     Args:
-        employee: One of: silas, iris, vera, solomon, henrik, maren (case-insensitive).
+        employee: One of: silas, iris, vera, solomon, henrik, maren, lena (case-insensitive).
         message:  Message content.
 
     Returns:
