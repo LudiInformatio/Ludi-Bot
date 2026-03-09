@@ -27,8 +27,8 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write  # Required for git push of settlement logs
-    # Run at 5am EST (10am UTC) or when triggered manually with work_notes/both
-    if: github.event.schedule == '0 10 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
+    # Run at 5am EDT (9am UTC) or when triggered manually with work_notes/both
+    if: github.event.schedule == '0 9 * * *' || github.event.inputs.report_type == 'work_notes' || github.event.inputs.report_type == 'both'
     
     steps:
       - name: Checkout repository
@@ -117,7 +117,7 @@ jobs:
     needs: [work-notes]
     if: |
       always() && (
-        github.event.schedule == '0 11 * * *' ||
+        github.event.schedule == '0 10 * * *' ||
         github.event.inputs.report_type == 'bet_summary' ||
         (github.event.inputs.report_type == 'both' && needs.work-notes.result != 'skipped')
       )
