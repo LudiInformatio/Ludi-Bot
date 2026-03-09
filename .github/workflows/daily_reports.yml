@@ -2,10 +2,8 @@ name: Daily Reports
 
 on:
   schedule:
-    # 5am EDT = 9am UTC - Work Notes (PM Bot + Settlement Grading)
+    # 5am EDT = 9am UTC - Work Notes (PM Bot + Settlement Grading) + Bet Summary
     - cron: '0 9 * * *'
-    # 6am EDT = 10am UTC - Bet Summary to Telegram
-    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       report_type:
@@ -117,7 +115,7 @@ jobs:
     needs: [work-notes]
     if: |
       always() && (
-        github.event.schedule == '0 10 * * *' ||
+        github.event.schedule == '0 9 * * *' ||
         github.event.inputs.report_type == 'bet_summary' ||
         (github.event.inputs.report_type == 'both' && needs.work-notes.result != 'skipped')
       )
