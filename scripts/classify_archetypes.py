@@ -94,15 +94,19 @@ def get_db_connection(db_path='ludi.db'):
 
 
 def get_active_players(conn, window_days=21, min_games=3):
-    """Query active players with sufficient game sample."""
+    """Query active players with sufficient game sample.
+
+    Returns rows with updated_at included so the batch loop can apply the
+    skip-if-recently-classified filter (< 7 days since last archetype update).
+    """
     cutoff_date = (datetime.now() - timedelta(days=window_days)).strftime('%Y-%m-%d')
-    
+
     # COALESCE position: prefer player_canonical_ids.position (ESPN fine-grained PG/SG/SF/PF/C)
     # over players.position (Tank01 coarse G/F/C/UNK). player_canonical_ids is refreshed
     # weekly by build_espn_crosswalk.py. Tank01 daily sync only returns G/F/C so we never
     # store fine-grained data in players.position — canonical_ids is the authoritative source.
     query = """
-        SELECT player_id, name, position, team, current_archetype
+        SELECT player_id, name, position, team, current_archetype, updated_at
         FROM (
             SELECT p.player_id, p.name,
                 COALESCE(
@@ -112,7 +116,7 @@ def get_active_players(conn, window_days=21, min_games=3):
                          THEN p.position ELSE NULL END,
                     'UNK'
                 ) as position,
-                p.team, p.archetype as current_archetype
+                p.team, p.archetype as current_archetype, p.updated_at
             FROM players p
             LEFT JOIN player_canonical_ids pc ON p.name = pc.full_name
             JOIN player_game_logs pgl ON p.player_id = pgl.player_id
@@ -123,7 +127,7 @@ def get_active_players(conn, window_days=21, min_games=3):
         )
         ORDER BY name
     """
-    
+
     cur = conn.cursor()
     cur.execute(query, (cutoff_date, min_games))
     return cur.fetchall()
@@ -366,7 +370,19 @@ def build_archetype_system_prompt(conn) -> str:
     examples_block = "\n\n".join(examples) if examples else "(no canonical examples available this run)"
     if neg_block:
         examples_block += neg_block
-    return ARCHETYPE_SYSTEM_PROMPT.format(examples_block=examples_block)
+    prompt = ARCHETYPE_SYSTEM_PROMPT.format(examples_block=examples_block)
+
+    # Batch-mode addendum: tell Claude how to handle both single-player and batch calls.
+    # Single-player calls request a single string; batch calls request a JSON object.
+    # Appended here so the base ARCHETYPE_SYSTEM_PROMPT stays unchanged.
+    prompt += (
+        "\n\nOUTPUT FORMAT:\n"
+        "- Single-player call: return exactly one archetype label, e.g. SNIPER_ELITE\n"
+        "- Batch call (user message requests JSON): return a JSON object keyed by player name, "
+        'e.g. {"Player Name": "ARCHETYPE", ...}\n'
+        "No explanation. No markdown. No other text."
+    )
+    return prompt
 
 
 def build_archetype_prompt(name, position, team, synergy_data, shot_data, l10_data, current_archetype, season_data=None):
@@ -829,6 +845,198 @@ def _assign_defensive_tag(synergy_data, shot_data, l10_data) -> str | None:
     return None
 
 
+def build_team_batch_prompt(players_data: list) -> str:
+    """Build a single user prompt classifying all players on one team.
+
+    Called once per team (30 calls instead of 500 per-player calls).
+    Output schema: JSON object keyed by player name → one archetype label each.
+
+    Token budget per batch (15 players):
+        - Per-player data block: ~120 tokens
+        - 15 players: ~1,800 tokens input
+        - Output: ~60 tokens (15 players × 4 tokens avg)
+        - Total: ~1,860 tokens — well within Haiku budget
+
+    BERT Pattern 1 (label space first): valid archetypes listed before any player data.
+    BERT Pattern 4 (token budget): synergy capped at 4 rows per player in batch mode
+                                   (vs 6 in single-player) to stay within budget.
+    """
+    valid_labels = (
+        "HELIOCENTRIC_MAESTRO, SLASHING_CREATOR, JUMBO_FACILITATOR, SNIPER_ELITE, "
+        "TWO_LEVEL_SCORER, ISO_ASSASSIN, WARRIOR_BIG, STRETCH_BIG, ROLL_MAN, "
+        "HUB_BIG, ENERGY_BIG, CUTTER_SPECIALIST, CONNECTOR, FACILITATOR, GENERALIST"
+    )
+
+    lines = [
+        f"Classify each player's offensive archetype. Return JSON only — no explanation.\n"
+        f'Output format: {{"Player Name": "ARCHETYPE", ...}}\n'
+        f"Valid values: {valid_labels}\n\n"
+        "PLAYERS:"
+    ]
+
+    for pd in players_data:
+        name       = pd['name']
+        position   = pd.get('position') or 'UNK'
+        team       = pd.get('team') or 'UNK'
+        current_a  = pd.get('current_archetype') or 'NULL'
+        synergy    = pd.get('synergy_data') or []
+        shot       = pd.get('shot_data') or {}
+        l10        = pd.get('l10_data') or {}
+        season     = pd.get('season_data') or {}
+
+        # Compact per-player block — BERT Pattern 4: token discipline
+        # Cap synergy at 4 rows in batch mode (vs 6 in single-player)
+        syn_line = ""
+        if synergy:
+            parts = [f"{r[0]}: {r[1]:.0f}%" for r in synergy[:4]]
+            syn_line = "Syn: " + " | ".join(parts)
+
+        l10_line = ""
+        if l10:
+            fga = max(l10.get('fga', 1) or 1, 1)
+            l10_line = (
+                f"L21: PTS {l10.get('pts', 0):.1f} AST {l10.get('ast', 0):.1f} "
+                f"REB {l10.get('reb', 0):.1f} STL {l10.get('stl', 0):.1f} "
+                f"BLK {l10.get('blk', 0):.1f} FGA {fga:.1f} MIN {l10.get('minutes', 0):.0f} "
+                f"FTA/FGA {l10.get('fta', 0)/fga:.2f} 3PA/FGA {l10.get('fg3a', 0)/fga:.2f}"
+            )
+
+        shot_line = ""
+        if shot:
+            at_rim = (shot.get('at_rim_freq') or 0) * 100
+            c3 = (shot.get('corner_3_freq') or 0) * 100
+            shot_line = f"Shot: rim {at_rim:.0f}% c3 {c3:.0f}%"
+
+        season_line = ""
+        if season:
+            parts = []
+            if season.get('usg_pct') is not None:  parts.append(f"USG {season['usg_pct']:.1%}")
+            if season.get('ast_pct') is not None:  parts.append(f"AST% {season['ast_pct']:.1%}")
+            if season.get('off_rating') is not None: parts.append(f"OFF {season['off_rating']:.0f}")
+            if parts:
+                season_line = " ".join(parts)
+
+        player_block = f"\n{name} | {position} | {team} | DB:{current_a}"
+        if l10_line:   player_block += f"\n  {l10_line}"
+        if syn_line:   player_block += f"\n  {syn_line}"
+        if shot_line:  player_block += f"\n  {shot_line}"
+        if season_line: player_block += f"\n  {season_line}"
+        lines.append(player_block)
+
+    return "\n".join(lines)
+
+
+def _fallback_single_player(player_data: dict, system_prompt: str, args) -> str | None:
+    """Individual Claude call for one player.
+
+    Used when the batch result for this player is missing, invalid, or fails Gate 1.
+    Identical to the pre-batch per-player call — preserves original behavior.
+    """
+    return get_claude_analysis(
+        build_archetype_prompt(
+            player_data['name'], player_data['position'], player_data['team'],
+            player_data['synergy_data'], player_data['shot_data'], player_data['l10_data'],
+            player_data['current_archetype'], season_data=player_data['season_data']
+        ),
+        system_prompt,
+        HAIKU_MODEL,
+        temperature=0.0,
+        max_tokens=20,
+        call_type='archetype',
+        player_name=player_data['name'],
+    )
+
+
+def _process_player_result(
+    conn,
+    player_data: dict,
+    proposed_archetype: str | None,
+    system_prompt: str,
+    args,
+    stats: dict,
+) -> tuple:
+    """Validate and write archetype for one player. Called from both batch and per-player paths.
+
+    Returns (final_archetype, changed, is_generalist, fallback_used).
+    fallback_used=True means the batch result was missing/invalid and we fell back to a
+    per-player Claude call — useful for monitoring batch quality.
+    """
+    name             = player_data['name']
+    position         = player_data['position']
+    player_id        = player_data['player_id']
+    current_archetype = player_data['current_archetype']
+    synergy_data     = player_data['synergy_data']
+    shot_data        = player_data['shot_data']
+    l10_data         = player_data['l10_data']
+
+    fallback_used = False
+
+    # Gate 1: schema — proposed must be a valid archetype
+    if not proposed_archetype or proposed_archetype.strip().upper() not in VALID_ARCHETYPES:
+        if proposed_archetype:
+            print(f"[BATCH GATE1 FAIL] {name}: batch returned '{proposed_archetype}' → falling back to per-player")
+        else:
+            print(f"[BATCH MISSING] {name}: no result in batch response → falling back to per-player")
+        proposed_archetype = _fallback_single_player(player_data, system_prompt, args)
+        fallback_used = True
+        if not proposed_archetype:
+            # Claude unavailable — use current DB label if it passes Gate 2, else GENERALIST
+            curr_valid, _ = validate_archetype(
+                current_archetype or '', synergy_data, shot_data, l10_data, position=position
+            ) if current_archetype else (False, '')
+            proposed_archetype = current_archetype if (current_archetype and curr_valid) else 'GENERALIST'
+            print(f"[FALLBACK→{proposed_archetype}] {name}: Claude unavailable")
+
+    result = proposed_archetype.strip().upper() if proposed_archetype else 'GENERALIST'
+
+    # Gate 2: data sanity validation
+    valid, reason = validate_archetype(result, synergy_data, shot_data, l10_data, position=position)
+
+    if not valid:
+        # Try deterministic fallback before defaulting to GENERALIST
+        fallback_arch = _gate2_fallback(result, synergy_data, shot_data, l10_data, position=position)
+        if fallback_arch:
+            fb_valid, fb_reason = validate_archetype(fallback_arch, synergy_data, shot_data, l10_data, position=position)
+            if fb_valid:
+                print(f"[GATE2 FALLBACK] {name}: {result}({reason}) → {fallback_arch}")
+                result = fallback_arch
+                valid = True
+            else:
+                print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason} | fallback {fallback_arch} also failed: {fb_reason}")
+                result = 'GENERALIST'
+                valid = True
+        else:
+            print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason}")
+            result = 'GENERALIST'
+            valid = True
+
+    # Defensive tag (always recomputed — hybrid off/def system)
+    def_tag = _assign_defensive_tag(synergy_data, shot_data, l10_data)
+
+    changed = (result != current_archetype)
+    if changed:
+        print(f"[CHANGE] {name}: {current_archetype or 'NULL'} -> {result} | def_tag={def_tag or 'NULL'}")
+        if not args.dry_run:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE players SET archetype = ?, updated_at = datetime('now') WHERE player_id = ?",
+                (result, player_id)
+            )
+    else:
+        print(f"[UNCHANGED] {name}: {result} | def_tag={def_tag or 'NULL'}")
+
+    # Always write defensive_tag
+    if not args.dry_run:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE players SET defensive_tag = ? WHERE player_id = ?",
+            (def_tag, player_id)
+        )
+
+    is_generalist = (result == 'GENERALIST')
+    return result, changed, is_generalist, fallback_used
+
+
 def run_team_scheme_subprocess():
     """Run update_team_scheme_cache.py as subprocess for deterministic baseline."""
     import subprocess
@@ -934,152 +1142,236 @@ def main():
     parser.add_argument("--window-days", type=int, default=21, help="Window for active players (default: 21)")
     parser.add_argument("--min-games", type=int, default=3, help="Minimum games for active players (default: 3)")
     parser.add_argument("--db-path", default="ludi.db", help="Path to SQLite database")
+    parser.add_argument(
+        "--per-player", action="store_true",
+        help="Disable batch mode — run one Claude call per player (original behavior). "
+             "Use if batch mode produces suspect GENERALIST inflation."
+    )
     args = parser.parse_args()
-    
+
     conn = get_db_connection(args.db_path)
 
     # Build system prompt ONCE from live DB data (DB-verified examples, not training memory).
-    # Identical string passed to all ~535 calls → Anthropic prompt caching fires after player 1.
+    # Identical string passed to all batch calls → Anthropic prompt caching fires after call 1.
     system_prompt = build_archetype_system_prompt(conn)
 
     # ===================== PART A: PLAYER ARCHETYPES =====================
     print(f"\n=== PHASE 8.4 CLASSIFICATION STARTED ===")
-    print(f"Window: {args.window_days}d | Min games: {args.min_games}")
-    
+    mode_label = "per-player (--per-player flag)" if args.per_player else "batch-by-team"
+    print(f"Window: {args.window_days}d | Min games: {args.min_games} | Mode: {mode_label}")
+
     players = get_active_players(conn, args.window_days, args.min_games)
     if args.limit:
         players = players[:args.limit]
-    
+
     print(f"Active players to process: {len(players)}")
-    
+
     processed = 0
     changed = 0
     unchanged = 0
     skipped = 0
-    total_tokens = 0
     archetype_changes = []
     generalist_count = 0
-    
-    for player_id, name, position, team, current_archetype in players:
-        processed += 1
+    batch_fallback_count = 0  # tracks how often batch result was missing → per-player fallback
 
-        synergy_data = get_player_synergy(conn, name)
-        shot_data = get_player_shot_quality(conn, player_id)
-        l10_data = get_player_l10(conn, player_id, args.window_days)
-        season_data = get_player_season_advanced(conn, name)
+    # Accuracy guard thresholds (Lena-required — protect against GENERALIST inflation)
+    GENERALIST_ALERT_THRESHOLD = 35.0   # % — soft warning
+    GENERALIST_BLOCK_THRESHOLD = 40.0   # % — hard block: do NOT commit results
 
-        # ── Gate 2 audit on current DB label (no Claude needed) ──────────────
-        # Always run this so --compare mode and the Claude-unavailable fallback
-        # both have current_gate2_pass / current_gate2_reason available.
-        if current_archetype:
-            curr_valid, curr_reason = validate_archetype(
-                current_archetype, synergy_data, shot_data, l10_data, position=position
+    if args.per_player:
+        # ── Original per-player loop (preserved as --per-player escape hatch) ──────
+        # This is the pre-batch behavior. Used when batch mode produces suspect results.
+        for player_id, name, position, team, current_archetype, updated_at in players:
+            processed += 1
+
+            synergy_data = get_player_synergy(conn, name)
+            shot_data = get_player_shot_quality(conn, player_id)
+            l10_data = get_player_l10(conn, player_id, args.window_days)
+            season_data = get_player_season_advanced(conn, name)
+
+            # Gate 2 audit on current DB label (no Claude needed) — needed for compare mode
+            if current_archetype:
+                curr_valid, curr_reason = validate_archetype(
+                    current_archetype, synergy_data, shot_data, l10_data, position=position
+                )
+                current_gate2 = "PASS" if curr_valid else f"FAIL({curr_reason})"
+            else:
+                curr_valid, curr_reason = False, "no current archetype"
+                current_gate2 = "NULL"
+
+            prompt = build_archetype_prompt(
+                name, position, team, synergy_data, shot_data, l10_data,
+                current_archetype, season_data=season_data
             )
-            current_gate2 = "PASS" if curr_valid else f"FAIL({curr_reason})"
-        else:
-            curr_valid, curr_reason = False, "no current archetype"
-            current_gate2 = "NULL"
+            result = get_claude_analysis(
+                prompt, system_prompt, HAIKU_MODEL,
+                temperature=0.0, max_tokens=20, call_type='archetype', player_name=name,
+            )
+            claude_unavailable = not result
+            if claude_unavailable:
+                fallback = current_archetype if (current_archetype and curr_valid) else 'GENERALIST'
+                print(f"[FALLBACK→{fallback}] {name}: Claude unavailable | Gate2(current): {current_gate2}")
+                result = fallback
+            else:
+                result = result.strip()
+                if result.upper() not in VALID_ARCHETYPES:
+                    print(f"[PARSE FAIL] {name}: Claude returned '{result}' → will fall to GENERALIST")
 
-        # ── Gate 1: Claude Haiku classification ───────────────────────────────
-        prompt = build_archetype_prompt(
-            name, position, team, synergy_data, shot_data, l10_data,
-            current_archetype, season_data=season_data
-        )
-
-        result = get_claude_analysis(
-            prompt,
-            system_prompt,     # built once from DB — DB-verified examples, not training memory
-            HAIKU_MODEL,
-            temperature=0.0,   # deterministic — classification must be consistent across weekly batch
-            max_tokens=20,
-            call_type='archetype',
-            player_name=name,
-        )
-
-        claude_unavailable = not result
-        if claude_unavailable:
-            # Fallback: validate current DB label with Gate 2 and use it if it passes,
-            # otherwise downgrade to GENERALIST. This keeps the script functional even
-            # when the Anthropic API is unreachable.
-            fallback = current_archetype if (current_archetype and curr_valid) else 'GENERALIST'
-            print(f"[FALLBACK→{fallback}] {name}: Claude unavailable | Gate2(current): {current_gate2}")
-            result = fallback
-        else:
-            result = result.strip()
-            # BERT Pattern 8: log parse failures so we can tune the prompt over time
-            if result.upper() not in VALID_ARCHETYPES:
-                print(f"[PARSE FAIL] {name}: Claude returned '{result}' (not in VALID_ARCHETYPES) → will fall to GENERALIST")
-
-        # ── Gate 2: validate Claude's (or fallback) proposal ─────────────────
-        valid, reason = validate_archetype(result, synergy_data, shot_data, l10_data, position=position)
-
-        if not valid:
-            # Gate 2 rejected — try deterministic fallback before defaulting to GENERALIST.
-            # _gate2_fallback() uses position + synergy + box stats to route to the next
-            # most appropriate archetype (e.g. C+HELIOCENTRIC → JUMBO_FACILITATOR,
-            # PERIMETER_HAWK+low_STL → SNIPER_ELITE, HELIOCENTRIC+pts<18 → CONNECTOR).
-            fallback_arch = _gate2_fallback(result, synergy_data, shot_data, l10_data, position=position)
-            if fallback_arch:
-                fb_valid, fb_reason = validate_archetype(fallback_arch, synergy_data, shot_data, l10_data, position=position)
-                if fb_valid:
-                    if args.compare or not claude_unavailable:
-                        print(f"[GATE2 FALLBACK] {name}: {result}({reason}) → {fallback_arch}")
-                    result = fallback_arch
-                    valid = True
+            valid, reason = validate_archetype(result, synergy_data, shot_data, l10_data, position=position)
+            if not valid:
+                fallback_arch = _gate2_fallback(result, synergy_data, shot_data, l10_data, position=position)
+                if fallback_arch:
+                    fb_valid, fb_reason = validate_archetype(fallback_arch, synergy_data, shot_data, l10_data, position=position)
+                    if fb_valid:
+                        if args.compare or not claude_unavailable:
+                            print(f"[GATE2 FALLBACK] {name}: {result}({reason}) → {fallback_arch}")
+                        result = fallback_arch
+                        valid = True
+                    else:
+                        if args.compare or not claude_unavailable:
+                            print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason} | fallback {fallback_arch} also failed: {fb_reason}")
+                        result = 'GENERALIST'
+                        valid = True
                 else:
                     if args.compare or not claude_unavailable:
-                        print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason} | fallback {fallback_arch} also failed: {fb_reason}")
+                        print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason}")
                     result = 'GENERALIST'
                     valid = True
+
+            if args.compare:
+                claude_label = "N/A(fallback)" if claude_unavailable else result
+                action = "NO CHANGE" if result == current_archetype else f"→{result}"
+                print(
+                    f"[COMPARE] {name:<28} | DB:{current_archetype or 'NULL'}({current_gate2}) | "
+                    f"Claude:{claude_label} | Action:{action}"
+                )
+
+            if result == 'GENERALIST':
+                generalist_count += 1
+
+            def_tag = _assign_defensive_tag(synergy_data, shot_data, l10_data)
+            if result == current_archetype:
+                unchanged += 1
+                if not args.compare:
+                    print(f"[UNCHANGED] {name}: {result} | def_tag={def_tag or 'NULL'}")
             else:
-                if args.compare or not claude_unavailable:
-                    print(f"[GATE2 REJECT→GENERALIST] {name}: {result} | {reason}")
-                result = 'GENERALIST'
-                valid = True  # GENERALIST always passes
-
-        # ── Compare mode: side-by-side output ────────────────────────────────
-        if args.compare:
-            claude_label = "N/A(fallback)" if claude_unavailable else result
-            action = "NO CHANGE" if result == current_archetype else f"→{result}"
-            print(
-                f"[COMPARE] {name:<28} | "
-                f"DB:{current_archetype or 'NULL'}({current_gate2}) | "
-                f"Claude:{claude_label} | "
-                f"Action:{action}"
-            )
-
-        if result == 'GENERALIST':
-            generalist_count += 1
-
-        # ── Defensive tag: always recompute (hybrid off/def system) ──────────
-        # Runs for every player regardless of whether offensive archetype changed.
-        # defensive_tag is independent of archetype — a GENERALIST can be PERIMETER_HAWK.
-        def_tag = _assign_defensive_tag(synergy_data, shot_data, l10_data)
-
-        if result == current_archetype:
-            unchanged += 1
-            if not args.compare:
-                print(f"[UNCHANGED] {name}: {result} | def_tag={def_tag or 'NULL'}")
-        else:
-            changed += 1
-            archetype_changes.append((name, current_archetype or 'NULL', result))
-            if not args.compare:
-                print(f"[CHANGE] {name}: {current_archetype or 'NULL'} -> {result} | def_tag={def_tag or 'NULL'}")
-
+                changed += 1
+                archetype_changes.append((name, current_archetype or 'NULL', result))
+                if not args.compare:
+                    print(f"[CHANGE] {name}: {current_archetype or 'NULL'} -> {result} | def_tag={def_tag or 'NULL'}")
+                if not args.dry_run:
+                    cur = conn.cursor()
+                    cur.execute(
+                        "UPDATE players SET archetype = ?, updated_at = datetime('now') WHERE player_id = ?",
+                        (result, player_id)
+                    )
             if not args.dry_run:
                 cur = conn.cursor()
                 cur.execute(
-                    "UPDATE players SET archetype = ?, updated_at = datetime('now') WHERE player_id = ?",
-                    (result, player_id)
+                    "UPDATE players SET defensive_tag = ? WHERE player_id = ?",
+                    (def_tag, player_id)
                 )
 
-        # Always write defensive_tag (even for unchanged offensive archetype)
-        if not args.dry_run:
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE players SET defensive_tag = ? WHERE player_id = ?",
-                (def_tag, player_id)
+    else:
+        # ── Batch-by-team loop (default) ─────────────────────────────────────────
+        # Groups players by team, makes 1 Claude call per team (~30 calls instead of ~500).
+        # Falls back to per-player call for any player whose batch result is missing or invalid.
+        #
+        # Skip-if-recently-classified: players updated within 7 days are skipped — their
+        # current DB archetype is retained without a Claude call. On first run after deploy,
+        # all archetypes are stale (most recent is 7+ days old) so the skip has minimal effect.
+
+        import json as _json
+        from collections import defaultdict
+
+        SKIP_DAYS = 7  # skip players classified within this many days
+
+        # Phase 1: pre-fetch all player data and group by team (no DB calls inside loop)
+        teams = defaultdict(list)
+        for player_row in players:
+            player_id, name, position, team, current_archetype, updated_at = player_row
+
+            # Skip-if-recently-classified
+            if updated_at:
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at)
+                    if (datetime.now() - updated_dt).days < SKIP_DAYS:
+                        print(f"[SKIP-RECENT] {name}: classified {(datetime.now() - updated_dt).days}d ago → retaining {current_archetype}")
+                        skipped += 1
+                        continue
+                except (ValueError, TypeError):
+                    pass  # malformed date → proceed with classification
+
+            # Pre-fetch all data before grouping (zero DB calls during batch loop)
+            synergy = get_player_synergy(conn, name)
+            shot = get_player_shot_quality(conn, player_id)
+            l10 = get_player_l10(conn, player_id, args.window_days)
+            season = get_player_season_advanced(conn, name)
+            teams[team or 'UNKNOWN'].append({
+                "player_id": player_id, "name": name, "position": position,
+                "team": team, "current_archetype": current_archetype,
+                "synergy_data": synergy, "shot_data": shot,
+                "l10_data": l10, "season_data": season,
+            })
+
+        print(f"Teams to batch: {len(teams)} | Skipped (recent): {skipped}")
+
+        # Phase 2: one Claude call per team, then process each player's result
+        for team_name in sorted(teams.keys()):
+            team_players = teams[team_name]
+            batch_prompt = build_team_batch_prompt(team_players)
+
+            batch_raw = get_claude_analysis(
+                batch_prompt,
+                system_prompt,
+                HAIKU_MODEL,
+                temperature=0.0,
+                max_tokens=600,  # 30 players max × ~20 tokens = 600
+                call_type='archetype_batch',
             )
+
+            # Parse JSON batch response — BERT Pattern 8: log parse failures
+            parsed = {}
+            if batch_raw:
+                raw_stripped = batch_raw.strip()
+                # Strip markdown code fences if present (```json ... ```)
+                if raw_stripped.startswith('```'):
+                    raw_stripped = '\n'.join(
+                        line for line in raw_stripped.split('\n')
+                        if not line.strip().startswith('```')
+                    )
+                try:
+                    parsed = _json.loads(raw_stripped)
+                    if not isinstance(parsed, dict):
+                        import logging
+                        logging.warning(f"[BATCH PARSE FAIL] {team_name}: expected dict, got {type(parsed).__name__} → per-player fallback for all")
+                        parsed = {}
+                except _json.JSONDecodeError as e:
+                    import logging
+                    logging.warning(f"[BATCH PARSE FAIL] {team_name}: {e} → per-player fallback for all")
+                    parsed = {}
+            else:
+                print(f"[BATCH EMPTY] {team_name}: Claude returned no result → per-player fallback for all")
+
+            # Process each player with their batch result (or trigger per-player fallback)
+            for player_data in team_players:
+                name = player_data['name']
+                proposed = parsed.get(name)
+
+                stats_ctx = {}  # no stats context needed — used for future extension
+                final_arch, player_changed, is_gen, used_fallback = _process_player_result(
+                    conn, player_data, proposed, system_prompt, args, stats_ctx
+                )
+                processed += 1
+                if player_changed:
+                    changed += 1
+                    archetype_changes.append((name, player_data['current_archetype'] or 'NULL', final_arch))
+                else:
+                    unchanged += 1
+                if is_gen:
+                    generalist_count += 1
+                if used_fallback:
+                    batch_fallback_count += 1
     
     # ── Post-process cleanup: reset stale / invalid archetypes ───────────────
     # Players injured/inactive during this run (< min_games threshold) may retain
@@ -1230,20 +1522,38 @@ def main():
     
     # ===================== SUMMARY =====================
     generalist_pct = (generalist_count / processed * 100) if processed > 0 else 0
-    
+
     print(f"\n=== PHASE 8.4 CLASSIFICATION SUMMARY ===")
     print(f"Players: {processed} processed | {changed} changed | {unchanged} unchanged | {skipped} skipped")
-    print(f"GENERALIST: {generalist_pct:.1f}% of active players (target <25%)")
+    print(f"GENERALIST: {generalist_pct:.1f}% of active players (target <25% | alert >{GENERALIST_ALERT_THRESHOLD}% | block >{GENERALIST_BLOCK_THRESHOLD}%)")
+    if not args.per_player:
+        print(f"Batch mode: per-player fallbacks used = {batch_fallback_count} of {processed} ({batch_fallback_count/max(processed,1)*100:.1f}%)")
     print(f"Hybrid off/def system: archetype=offensive role | defensive_tag=defensive role")
-    
+
     if archetype_changes:
         print(f"Top archetype changes:")
         for name, old, new in archetype_changes[:5]:
             print(f"  {name}: {old} -> {new}")
-    
+
     print(f"Team schemes: {n_conflicts} conflicts found | {n_resolved} resolved")
     print(f"Team NEUTRAL count: {before_neutral} -> {after_neutral} (of 30 defensive slots)")
-    
+
+    # ── Lena-required GENERALIST accuracy guard ───────────────────────────────
+    # Baseline: 29.1% GENERALIST (143/492 active players, 2026-03-10).
+    # Alert at 35%: elevated inflation — review batch fallback count and individual changes.
+    # Block at 40%: abort DB write — batch may be producing anchoring degradation.
+    if generalist_pct >= GENERALIST_BLOCK_THRESHOLD:
+        print(f"\n[ACCURACY GUARD FAIL] GENERALIST rate {generalist_pct:.1f}% >= {GENERALIST_BLOCK_THRESHOLD}% block threshold")
+        print(f"[ACCURACY GUARD FAIL] Aborting DB write — results may reflect batch anchoring degradation")
+        print(f"[ACCURACY GUARD FAIL] Rerun with --per-player flag to bypass batch mode")
+        if not args.dry_run:
+            conn.rollback()
+        conn.close()
+        sys.exit(1)
+    elif generalist_pct >= GENERALIST_ALERT_THRESHOLD:
+        print(f"\n[ACCURACY GUARD WARN] GENERALIST rate {generalist_pct:.1f}% >= {GENERALIST_ALERT_THRESHOLD}% alert threshold")
+        print(f"[ACCURACY GUARD WARN] Review archetype_changes above before next pipeline run")
+
     # Store summary for verification
     summary = {
         'processed': processed,
@@ -1251,12 +1561,13 @@ def main():
         'unchanged': unchanged,
         'skipped': skipped,
         'generalist_pct': generalist_pct,
+        'batch_fallback_count': batch_fallback_count,
         'n_conflicts': n_conflicts,
         'n_resolved': n_resolved,
         'neutral_before': before_neutral,
-        'neutral_after': after_neutral
+        'neutral_after': after_neutral,
     }
-    
+
     return summary
 
 
