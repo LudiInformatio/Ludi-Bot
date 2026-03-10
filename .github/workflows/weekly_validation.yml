@@ -150,7 +150,8 @@ jobs:
         continue-on-error: true
         run: |
           echo "Running Weekly Archetype Classification..."
-          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
+          # Batch mode disabled until GENERALIST rate tuned below 35% — see plans/batch_archetype_classification_spec.md
+          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 --per-player || echo "WARNING: Classification failed -- continuing"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
