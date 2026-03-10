@@ -1066,15 +1066,24 @@ def get_team_scheme_conflicts(conn):
 
 def get_14d_offense_stats(conn, team_abbr, cutoff_date):
     """Get 14d offensive stats for a team."""
+    # games.pts does not exist — compute team PPG by summing player pts per game_id,
+    # then averaging across games. pace still pulled from games table via JOIN.
     query = """
-        SELECT 
-            AVG(g.pts) as pts,
+        SELECT
+            AVG(game_pts) as pts,
             AVG(g.pace) as pace,
-            SUM(pgl.fgm) as fgm,
-            SUM(pgl.ast) as ast
-        FROM player_game_logs pgl
-        JOIN games g ON pgl.game_id = g.game_id
-        WHERE pgl.team_abbreviation = ? AND pgl.game_date >= ?
+            SUM(pgl_fgm) as fgm,
+            SUM(pgl_ast) as ast
+        FROM (
+            SELECT pgl.game_id,
+                   SUM(pgl.pts) as game_pts,
+                   SUM(pgl.fgm) as pgl_fgm,
+                   SUM(pgl.ast) as pgl_ast
+            FROM player_game_logs pgl
+            WHERE pgl.team_abbreviation = ? AND pgl.game_date >= ?
+            GROUP BY pgl.game_id
+        ) team_games
+        JOIN games g ON team_games.game_id = g.game_id
     """
     cur = conn.cursor()
     cur.execute(query, (team_abbr, cutoff_date))

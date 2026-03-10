@@ -673,12 +673,12 @@ class LudiOrchestrator:
             for p in h_matched:
                 status = self.yak.get_player_status(p['PLAYER_NAME'], h_abbr)
                 p['status'], p['injury_status'], p['injury_note'] = status['status'], status['status'], status.get('note', '')
-                if status['status'].upper() not in ('OUT', 'DOUBTFUL'): final_h.append(p)
+                if (status['status'] or 'ACTIVE').upper() not in ('OUT', 'DOUBTFUL'): final_h.append(p)
 
             for p in a_matched:
                 status = self.yak.get_player_status(p['PLAYER_NAME'], a_abbr)
                 p['status'], p['injury_status'], p['injury_note'] = status['status'], status['status'], status.get('note', '')
-                if status['status'].upper() not in ('OUT', 'DOUBTFUL'): final_a.append(p)
+                if (status['status'] or 'ACTIVE').upper() not in ('OUT', 'DOUBTFUL'): final_a.append(p)
 
             # Build Base & Fork Scenarios
             base = self.build_simulation_scenario(game_data, final_h, final_a)

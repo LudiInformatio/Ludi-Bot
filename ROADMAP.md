@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 9, 2026 — 4:08 PM EDT
+**Last Updated:** Tuesday, March 10, 2026 — 10:56 AM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Phase 8.23 calibration (`calibrate_claude_outputs.py`, `plans/calibration_backtest_spec.md`) — position bias fix live, `actual_outcome` backfill + per-bet logging still open + T-Maren-002 (`curate_plays.py` prompt) — WR-first grading + CoT field shipped, LEAN redesign deferred 2 weeks
 **Completed:** T-Maren-002 (`curate_plays.py`) — WR-first grading + CoT thinking field + corrected examples + n-guard tiering + ANALYSIS_PROTOCOL bridge ✅ + Phase 8.23 calibration infra (`scripts/calibrate_claude_outputs.py`) — position bias fix (`random.shuffle`) + audit script + `plans/calibration_backtest_spec.md` ✅ + T-HYG-01/02 + repo cleanup — `.gitignore` gaps, `test_firewall.py` archive header, 900 MB recovered, stale branches deleted ✅
