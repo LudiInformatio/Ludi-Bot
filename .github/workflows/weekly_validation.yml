@@ -146,7 +146,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Weekly Classification (Phase 8.4)
-        timeout-minutes: 10
+        timeout-minutes: 20
+        continue-on-error: true
         run: |
           echo "Running Weekly Archetype Classification..."
           .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 || echo "WARNING: Classification failed -- continuing"
