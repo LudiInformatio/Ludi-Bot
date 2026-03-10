@@ -691,6 +691,8 @@ def _write_curation_results(
     conn: sqlite3.Connection,
     graded_picks: list[dict],
     flagged_bets: list[dict],
+    bet_map: dict,
+    run_date: str,
     verbose: bool = False,
 ) -> None:
     """Write curated grades and rankings back to bet_recommendations."""
@@ -718,6 +720,33 @@ def _write_curation_results(
         """, (bet['_flag_reason'], bet['id']))
         if verbose:
             print(f"  [DB] Flagged bet {bet['id']}: {bet['_flag_reason']}")
+
+    # Phase 8.23-F: Per-bet logging in claude_analysis_log
+    for pick in graded_picks:
+        bet = bet_map.get(pick.get('bet_id'), {})
+        try:
+            conn.execute(
+                """
+                INSERT INTO claude_analysis_log
+                    (call_type, model, game_date, player_name,
+                     stat_category, bet_side, curation_grade, bet_id,
+                     true_edge, thinking_text,
+                     input_tokens, output_tokens, estimated_cost_usd, response_text)
+                VALUES ('curation_per_bet', 'batch', ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, '')
+                """,
+                (
+                    run_date,
+                    bet.get('player_name'),
+                    bet.get('stat_category'),
+                    bet.get('bet_side'),
+                    pick.get('grade'),
+                    pick.get('bet_id'),
+                    bet.get('true_edge'),
+                    str(pick.get('thinking', ''))[:2000],
+                )
+            )
+        except Exception as e:
+            print(f"[WARN] claude_analysis_log per-bet insert failed for bet_id={pick.get('bet_id')}: {e}")
 
     conn.commit()
 
@@ -1005,7 +1034,7 @@ def main() -> None:
                 f"Date: {date.today()}\nAll {len(flagged_bets)} bets were flagged — nothing reached Sonnet curation. Check injury flags or bet_recommendations table."
             )
             if not dry_run:
-                _write_curation_results(conn, [], flagged_bets, verbose=verbose)
+                _write_curation_results(conn, [], flagged_bets, bet_map={}, run_date=run_date, verbose=verbose)
             return
 
         # ─────────────────────────────────────────────────────────
@@ -1060,7 +1089,7 @@ def main() -> None:
             print("\n[DRY RUN] Skipping DB writes and Telegram send")
         else:
             print("\n[INFO] Writing curation results to DB...")
-            _write_curation_results(conn, graded_picks, flagged_bets, verbose=verbose)
+            _write_curation_results(conn, graded_picks, flagged_bets, bet_map=bet_map, run_date=run_date, verbose=verbose)
 
             print("[INFO] Sending curation card to Telegram...")
             # Detect same-game correlation pairs for STRONG picks

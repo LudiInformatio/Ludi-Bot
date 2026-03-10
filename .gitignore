@@ -152,3 +152,4 @@ docs/FUTURE_DATA_SOURCES.md
 docs/archive/
 docs/audit/
 reports/
+cache/claude_calibration.json

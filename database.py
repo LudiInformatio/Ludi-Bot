@@ -1852,7 +1852,13 @@ class LudiHistorian:
                 response_text    TEXT,          -- first 2000 chars of Claude response
                 estimated_cost_usd REAL,        -- computed from tokens + pricing at log time
                 actual_outcome   TEXT,          -- NULL during Layer 1; 'WIN'/'LOSS'/'PUSH' after settlement
-                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                stat_category    TEXT,
+                bet_side         TEXT,
+                curation_grade   TEXT,
+                bet_id           INTEGER,
+                true_edge        REAL,
+                thinking_text    TEXT
             )
         ''')
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_call_type ON claude_analysis_log(call_type)")
@@ -1872,6 +1878,20 @@ class LudiHistorian:
                 c.execute(_col_def)
             except Exception:
                 pass  # Column already exists
+
+        # Phase 8.23-F — Per-bet logging columns migration guard
+        for _col_def in [
+            "ALTER TABLE claude_analysis_log ADD COLUMN stat_category TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN bet_side TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN curation_grade TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN bet_id INTEGER",
+            "ALTER TABLE claude_analysis_log ADD COLUMN true_edge REAL",
+            "ALTER TABLE claude_analysis_log ADD COLUMN thinking_text TEXT",
+        ]:
+            try:
+                c.execute(_col_def)
+            except Exception:
+                pass
 
         # Phase 8.24 — Edge type label migration guard (bet_recommendations is an orphan table
         # owned by utils/bet_logger.py; guards here ensure live DBs pick up new columns too).

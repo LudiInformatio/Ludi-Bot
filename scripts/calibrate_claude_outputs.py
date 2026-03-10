@@ -105,9 +105,10 @@ def run(verbose: bool = False) -> None:
 
     # ── Query all curated settled bets ────────────────────────────────────────
     cursor = conn.execute("""
-        SELECT stat_category, bet_side, outcome, true_edge, confidence_tier, game_date
+        SELECT stat_category, bet_side, outcome, true_edge, confidence_tier, game_date,
+               curation_grade
         FROM bet_recommendations
-        WHERE is_curated = 1
+        WHERE curation_grade IS NOT NULL
           AND game_date >= '2026-02-26'
           AND outcome IN ('WIN', 'LOSS')
         ORDER BY game_date
