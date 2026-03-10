@@ -383,9 +383,10 @@ def _get_system_wr_context(conn: sqlite3.Connection) -> str:
         lb = max(0.0, center - margin)
 
         if lb >= 0.60 and n >= 500:    grade, flag = "A+", " ← PRIORITIZE"
-        elif lb >= 0.55 and n >= 150:  grade, flag = "B",  " ← PREFER"
-        elif lb >= 0.50:               grade, flag = "C",  ""
-        elif lb >= 0.42:               grade, flag = "D",  " ← DEPRIORITIZE"
+        elif lb >= 0.55 and n >= 150:  grade, flag = "A",  " ← PREFER"
+        elif lb >= 0.50 and n >= 50:   grade, flag = "B",  ""
+        elif lb >= 0.42:               grade, flag = "C",  " ← DEPRIORITIZE"
+        elif lb >= 0.40:               grade, flag = "D",  " ← AVOID"
         else:                          grade, flag = "F",  " ← AVOID"
 
         # Tiered n-guard: ESTABLISHED (n >= 100) / EMERGING (20-99) / WATCH (< 20)
@@ -447,7 +448,8 @@ def _sonnet_curate(
         conn_wr = sqlite3.connect(DB_PATH)
         wr_context = _get_system_wr_context(conn_wr)
         conn_wr.close()
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] WR context query failed — curation will proceed without empirical WR data: {e}")
         wr_context = ""
 
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
@@ -463,6 +465,9 @@ def _sonnet_curate(
     env_label = env.get('environment', 'NEUTRAL')
     env_context = f"\nSCORING ENVIRONMENT TODAY: {env_label} ({over_rate:.0%} 14d OVER hit rate). When in doubt between two OVER plays, prefer the one with stronger UNDER characteristics.\n" if env else ""
 
+    # NOTE: Examples below use real players/teams as of 2026-03-09 for illustrative reasoning patterns only.
+    # These are NOT live roster lookups. Refresh examples if featured players change teams.
+    # Replace Example 4 (Claxton BKN) with a settled LEAN bet once one is available in claude_analysis_log.
     curate_examples = """
 === CURATION EXAMPLES ===
 
