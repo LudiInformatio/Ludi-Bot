@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 10, 2026 — 10:56 AM EDT
+**Last Updated:** Tuesday, March 10, 2026 — 12:01 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Phase 8.23 calibration (`calibrate_claude_outputs.py`, `plans/calibration_backtest_spec.md`) — position bias fix live, `actual_outcome` backfill + per-bet logging still open + T-Maren-002 (`curate_plays.py` prompt) — WR-first grading + CoT field shipped, LEAN redesign deferred 2 weeks
-**Completed:** T-Maren-002 (`curate_plays.py`) — WR-first grading + CoT thinking field + corrected examples + n-guard tiering + ANALYSIS_PROTOCOL bridge ✅ + Phase 8.23 calibration infra (`scripts/calibrate_claude_outputs.py`) — position bias fix (`random.shuffle`) + audit script + `plans/calibration_backtest_spec.md` ✅ + T-HYG-01/02 + repo cleanup — `.gitignore` gaps, `test_firewall.py` archive header, 900 MB recovered, stale branches deleted ✅
+**Active Work:** Sprint B2 (`module_x_scenario.py`) — scheme-conditional baseline Condition 3, blocker resolved + T-CAL-001 (`calibrate_claude_outputs.py`) — query fix `curation_grade IS NOT NULL` ready + batch prompt tuning v1 (`plans/batch_prompt_tuning_v1.md`) — Henrik review pending
+**Completed:** T-Maren-002 (`curate_plays.py`) — grade letter alignment + safety guards + position bias fix + CoT thinking field shipped ✅ + T-SCHEME-01/02 (`update_team_scheme_cache.py`) — window bump 15g→21g/7g→10g + weighted pick_active() voting, all 30 teams fresh ✅ + Batch archetype + crash fixes (`classify_archetypes.py`, `main.py`) — 30-call batch mode + GENERALIST guards + NoneType/g.pts pipeline fixes ✅
 
 This is the single source of truth for project tasks and priorities.
 

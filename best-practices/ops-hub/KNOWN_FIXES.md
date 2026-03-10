@@ -755,3 +755,33 @@ git push origin main                   # Runner now gets correct code
 **Fix:** Removed both crons from `evening_slate_lock.yml`. Added two macOS launchd plists at `scripts/launchd/com.ludiinformatio.evening-slate-early.plist` (6:35 PM) and `com.ludiinformatio.evening-slate-late.plist` (8:20 PM). Each calls `gh workflow run evening_slate_lock.yml --ref main`. Logs to `~/Library/Logs/ludi-evening-{early,late}.log`. Commit `a5eee3c`.
 
 **Rule:** For time-critical single-user workflows on a self-hosted runner, prefer `launchd` (macOS) over GH Actions crons. launchd fires at exact local time regardless of GH queue state. Only applies to `workflow_dispatch`-capable workflows.
+
+## 2026-03-10 — `games` table has no `pts` column
+
+**Symptom:** `classify_archetypes.py` crashed in `get_14d_offense_stats()` with SQL error on `AVG(g.pts)`.
+
+**Root cause:** `games` table stores `home_score`/`away_score`/`pace` — not individual player `pts`. The query was joining `games g` and selecting `g.pts` which doesn't exist.
+
+**Fix:** Replaced with subquery: `SUM(pgl.pts)/COUNT(DISTINCT pgl.game_id)` from `player_game_logs` grouped per game. Commit `7940a72`.
+
+**Rule:** Never select stat columns (`pts`, `ast`, `reb`) from the `games` table. Player stats live in `player_game_logs` only. `games` = game metadata (date, teams, pace, scores).
+
+## 2026-03-10 — `pick_active()` silently defaulted to season scheme for 14/30 teams
+
+**Symptom:** `team_scheme_cache.active_style` stale for 14/30 teams — always showed season-default, never g21/g10 windows.
+
+**Root cause:** `normalize_recent()` converted INSUFFICIENT→season before the vote. Season won 3-0 silently regardless of how thin the recent windows were.
+
+**Fix:** `pick_active()` rewritten with weighted voting: g21=0.60, g10=0.40, season=0.20. Explicit INSUFFICIENT returned when both recent windows thin. Caller guard ensures `active_style` always has a valid value. Commit `7e27975`.
+
+**Rule:** In weighted voting functions, never silently convert INSUFFICIENT to a default before the vote. Always let INSUFFICIENT propagate and handle it explicitly at the caller.
+
+## 2026-03-10 — NoneType crash on player status filter in main.py
+
+**Symptom:** Pipeline crashed with `AttributeError: 'NoneType' object has no attribute 'upper'` on freshly-traded players.
+
+**Root cause:** `get_player_status()` returns a dict where `status['status']` can be `None` for players with no injury record (e.g., just-traded, never logged an injury).
+
+**Fix:** `(status['status'] or 'ACTIVE').upper()` — None → ACTIVE default. Commit `7940a72`.
+
+**Rule:** Always guard `.upper()` / `.lower()` calls on database-sourced string fields with `or 'DEFAULT'`. Status columns can be NULL even when the row exists.
