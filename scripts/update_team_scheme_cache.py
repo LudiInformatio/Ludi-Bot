@@ -265,17 +265,38 @@ def normalize_offense(value: str, fallback: str) -> str:
 
 
 def pick_active(season: str, d21: str, d14: str) -> str:
-    d21_norm = normalize_recent(d21, season)
-    d14_norm = normalize_recent(d14, season)
+    """
+    Weighted voting: d21=60%, d14=40%, season=20%.
 
-    if d21_norm == d14_norm and d21_norm != season:
-        return d14_norm
+    Returns INSUFFICIENT when both recent windows are thin (no signal to override season).
+    Preserves INSUFFICIENT explicitly rather than silently defaulting all votes to season —
+    the old behavior caused season to win 3-0 whenever data was thin, hiding the fact
+    that recent windows had no data.
 
-    votes = Counter([season, d21_norm, d14_norm])
-    top = votes.most_common()
-    if len(top) > 1 and top[0][1] == top[1][1]:
-        return season
-    return top[0][0]
+    Weight accumulation per label: whichever label accumulates the most weight wins.
+    Tiebreaks resolve to season (safest default).
+    """
+    d21_real = d21 not in (None, "INSUFFICIENT")
+    d14_real = d14 not in (None, "INSUFFICIENT")
+
+    # Both recent windows are thin — return INSUFFICIENT so callers can handle explicitly.
+    if not d21_real and not d14_real:
+        return "INSUFFICIENT"
+
+    # Accumulate weights per label: d21=0.60, d14=0.40, season=0.20
+    weights: dict = {}
+    weights[season] = weights.get(season, 0.0) + 0.20
+    if d21_real:
+        weights[d21] = weights.get(d21, 0.0) + 0.60
+    if d14_real:
+        weights[d14] = weights.get(d14, 0.0) + 0.40
+
+    # Sort by weight descending; tiebreak to season
+    ranked = sorted(weights.items(), key=lambda kv: (-kv[1], kv[0] != season))
+    top_label, top_weight = ranked[0]
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        return season  # tied → season wins
+    return top_label
 
 
 def main():
@@ -294,8 +315,8 @@ def main():
     # when teams have irregular schedules. Every team gets exactly N games (or fewer
     # if early season), ensuring equal-sized samples for classification.
     GAMES_BASELINE = 30   # ~2 months of play
-    GAMES_MEDIUM   = 15   # ~3-4 weeks
-    GAMES_RECENT   = 7    # ~2 weeks (recent form)
+    GAMES_MEDIUM   = 21   # ~5 weeks (was 15 — bumped for larger sample, more stable mid-season signal)
+    GAMES_RECENT   = 10   # ~2.5 weeks (was 7 — bumped for noise reduction on 7-game window)
 
     off_classifier = TeamOffensiveClassifier(db_path=args.db_path)
     def_classifier = TeamDefensiveClassifier(db_path=args.db_path)
@@ -374,7 +395,13 @@ def main():
             base = s_def if s_def not in ("INSUFFICIENT", None) else "NEUTRAL"
             d14_def = "NEUTRAL" if team_def_quality == "WEAK" else base
 
-        a_def = pick_active(s_def if s_def != "INSUFFICIENT" else "NEUTRAL", d21_def, d14_def)
+        _season_for_vote = s_def if s_def not in ("INSUFFICIENT", None) else "NEUTRAL"
+        a_def = pick_active(_season_for_vote, d21_def, d14_def)
+        # If pick_active returns INSUFFICIENT (both recent windows thin), fall back to
+        # season style (or NEUTRAL if season is also missing). This keeps active_style
+        # always populated with a valid scheme label — INSUFFICIENT is diagnostic-only.
+        if a_def == "INSUFFICIENT":
+            a_def = _season_for_vote
 
         if args.verbose:
             quality_label = f" [{team_def_quality}]" if team_def_quality else ""
