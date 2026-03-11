@@ -105,7 +105,7 @@ def run(verbose: bool = False) -> None:
 
     # ── Query all curated settled bets ────────────────────────────────────────
     cursor = conn.execute("""
-        SELECT stat_category, bet_side, outcome, true_edge, confidence_tier, game_date,
+        SELECT stat_category, bet_side, outcome, true_edge, game_date,
                curation_grade
         FROM bet_recommendations
         WHERE curation_grade IS NOT NULL
@@ -176,6 +176,8 @@ def run(verbose: bool = False) -> None:
         avg_edge = sum(b.get('true_edge') or 0.0 for b in gbets) / n if n > 0 else 0.0
         brier_grade = compute_brier_score(gbets)
         status = group_status(n, wl)
+        # Inversion flag: FADE winning > 55% means grade hierarchy is backwards
+        inverted = grade == 'FADE' and n > 0 and raw_wr > 0.55
         grade_results.append({
             'grade': grade,
             'n': n,
@@ -185,6 +187,7 @@ def run(verbose: bool = False) -> None:
             'avg_edge': avg_edge,
             'brier_score': brier_grade,
             'status': status,
+            'inverted': inverted,
         })
 
     # ── Stdout output ─────────────────────────────────────────────────────────
@@ -232,7 +235,7 @@ def run(verbose: bool = False) -> None:
         if g['n'] == 0:
             print(f"  {g['grade']:<10} {'—':>4}  {'—':>4}  {'—':>7}  {'—':>13}  {'—':>9}  {'—':>7}  NO DATA")
         else:
-            inv_flag = " !" if (g['grade'] == 'FADE' and g['raw_wr'] > 0.55) else "  "
+            inv_flag = " !" if g['inverted'] else "  "
             print(
                 f"  {g['grade']:<10} {g['n']:>4}  "
                 f"{g['wins']:>4}  {g['raw_wr']:>6.1%}  {g['wilson_lower']:>12.1%}  "

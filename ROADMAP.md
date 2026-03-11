@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 10, 2026 — 8:30 PM EDT
+**Last Updated:** Tuesday, March 10, 2026 — 8:36 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Employee 1-on-1 training — `employees/solomon/ONBOARDING.md` baseline session (Solomon first) + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
 **Completed:** Phase 8.23 calibration sprint — T-CAL-001 + T-8.23-E/F + backfill + Maren prompt redesign + by_grade inversion flag, 4 Henrik APPROVED rounds, commits `e02a952`+`2c5f5a8`+`f8f7b14` ✅ + T-Maren-002 (`curate_plays.py`) — WR-first grading + CoT field + grade letter alignment + n-guard tiering ✅ + T-SCHEME-01/02 (`update_team_scheme_cache.py`) — window bump 15g→21g/7g→10g + weighted pick_active() voting ✅
