@@ -1,0 +1,48 @@
+======================================================================
+PHASE 3: 14-DAY PLAYTYPE TRENDS ANALYSIS
+======================================================================
+
+========================================
+LUDI INFORMATIO: MODULE E (CALIBRATOR V7.0) ONLINE
+   >>> SECONDARY PLAYTYPE SYSTEM ACTIVE
+========================================
+[Module E] DB clutch fallback loaded: 30 teams
+[Module E] Speed/fatigue data loaded: 346 players
+[Module E] Touches data loaded: 593 players
+[Module E] Leverage profiles loaded: 30 teams
+[Module E] Player leverage usage loaded: 445 players
+   [CAL] Synergy cache: 423 players loaded
+   [CAL] Tracking cache: 497 players loaded (last 15 games)
+   [CAL] TypeProfiles cache: 551 players loaded
+   [CAL] DVP by archetype: 251 team-archetype combos loaded
+   [CAL] ArchVsDef matrix: 72 matchup combos loaded
+   [CAL] B2B splits: 268 players with actual data
+   [CAL] Shot quality bulk load: 500 players
+[Module E] Offensive styles loaded from cache: 21 teams
+📅 Analyzing games since 2026-02-24...
+📊 Sample Size: 199 recent team-games vs 148 baseline.
+
+🔍 DEFENSIVE STYLE TRENDS (Last 14 Days vs Baseline)
+DEFENSE STYLE   | RECENT %   | PREV %     | TREND     
+------------------------------------------------------------
+BLITZ           |   5.0%     |   6.8%     | ➡️ ( -1.7%)
+NEUTRAL         |  26.1%     |  13.5%     | ⬆️ HOT (+12.6%)
+PAINT_PACK      |  27.6%     |  34.5%     | ⬇️ COLD ( -6.8%)
+PERIMETER       |  41.2%     |  45.3%     | ➡️ ( -4.1%)
+
+🎯 MATCHUP IMPLICATIONS
+------------------------------------------------------------
+
+📊 PERFORMANCE METRICS BY DEFENSIVE SCHEME (Last 14 Days)
+--------------------------------------------------------------------------------
+Scheme          | Bets   | Win%     | ROI        | Profit    
+--------------------------------------------------------------------------------
+vs_BLITZ        | 237    |   55.2% |     +1.3% |     +3.07u
+vs_FUNNEL       | 49     |   50.0% |     -5.4% |     -2.65u
+vs_NEUTRAL      | 1295   |   52.7% |     -2.6% |    -33.29u
+vs_PAINT_PACK   | 1665   |   52.9% |     -3.9% |    -64.39u
+vs_PERIMETER    | 1891   |   51.5% |     -5.4% |   -101.63u
+
+✅ Phase 3 Trend Analysis Complete
+
+📄 Report saved to: reports/playtype_trends_2026-03-10.md

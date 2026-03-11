@@ -1,0 +1,65 @@
+
+🔬 Starting 21-Day Fatigue Backtest...
+Window: 2026-02-17 to 2026-03-10
+
+======================================================================
+  PHASE 4: B2B FATIGUE - 21-DAY BACKTEST
+======================================================================
+
+Analyzing games from last 21 days...
+Found 2691 player-games with 10+ minutes
+
+Processing schedule scenarios...
+  Processed 500 games...
+  Processed 1000 games...
+  Processed 1500 games...
+  Processed 2000 games...
+  Processed 2500 games...
+
+✅ Processed 2591 player-games
+⚠️  Skipped 100 (insufficient baseline data)
+
+======================================================================
+  FATIGUE ADJUSTMENT PERFORMANCE REPORT
+======================================================================
+
+Scenario                  N      Mean Err   RMSE     Over%    Under%  
+----------------------------------------------------------------------
+Home_B2B_Guard            128       +1.29    6.85    53.9%   46.1%
+Home_B2B_NonGuard         335       +1.02    6.31    52.2%   47.8%
+Rested_Home               799       +0.49    6.09    51.2%   48.8%
+Density_4in5              428       +0.23    5.68    50.9%   49.1%
+Normal_Rest               901       +0.57    6.04    49.8%   49.8%
+
+======================================================================
+  KEY FINDINGS
+======================================================================
+
+2. HOME B2B GUARDS (n=128)
+   Modifier: -1.5% B2B Home, -2% Guard Tax = -3.5% total (V5.2)
+   Mean Error: +1.29 pts
+   ⚠️  UNDER-PROJECTION: Players are OUTPERFORMING by 1.3 pts
+
+4. HOME B2B NON-GUARDS (n=335)
+   Modifier: -1.5% B2B Home (V5.2)
+   Mean Error: +1.02 pts
+
+5. RESTED HOME (3+ days) (n=799)
+   Modifier: +3% boost
+   Mean Error: +0.49 pts
+   ✅ WELL-CALIBRATED
+
+======================================================================
+  OVERALL ASSESSMENT
+======================================================================
+
+B2B Players (All): +1.09 pts mean error (n=463)
+Normal Rest:       +0.57 pts mean error (n=901)
+
+✅ B2B vs Normal Rest difference: 0.5 pts (reasonable)
+
+======================================================================
+
+📄 Report saved to: reports/fatigue_trends_2026-03-10.md
+
+✅ Backtest Complete
