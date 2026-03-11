@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 10, 2026 — 12:01 PM EDT
+**Last Updated:** Tuesday, March 10, 2026 — 8:30 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint B2 (`module_x_scenario.py`) — scheme-conditional baseline Condition 3, blocker resolved + T-CAL-001 (`calibrate_claude_outputs.py`) — query fix `curation_grade IS NOT NULL` ready + batch prompt tuning v1 (`plans/batch_prompt_tuning_v1.md`) — Henrik review pending
-**Completed:** T-Maren-002 (`curate_plays.py`) — grade letter alignment + safety guards + position bias fix + CoT thinking field shipped ✅ + T-SCHEME-01/02 (`update_team_scheme_cache.py`) — window bump 15g→21g/7g→10g + weighted pick_active() voting, all 30 teams fresh ✅ + Batch archetype + crash fixes (`classify_archetypes.py`, `main.py`) — 30-call batch mode + GENERALIST guards + NoneType/g.pts pipeline fixes ✅
+**Active Work:** Employee 1-on-1 training — `employees/solomon/ONBOARDING.md` baseline session (Solomon first) + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
+**Completed:** Phase 8.23 calibration sprint — T-CAL-001 + T-8.23-E/F + backfill + Maren prompt redesign + by_grade inversion flag, 4 Henrik APPROVED rounds, commits `e02a952`+`2c5f5a8`+`f8f7b14` ✅ + T-Maren-002 (`curate_plays.py`) — WR-first grading + CoT field + grade letter alignment + n-guard tiering ✅ + T-SCHEME-01/02 (`update_team_scheme_cache.py`) — window bump 15g→21g/7g→10g + weighted pick_active() voting ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -46,15 +46,17 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
+- [x] **Per-grade calibration query** — `by_grade` breakdown in `calibrate_claude_outputs.py` with `!` inversion flag (FADE WR > 55%), Henrik APPROVED, commit `f8f7b14` ✅
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [x] **T-001a: Comm Protocol docs** — `docs/operations/COMMUNICATION_PROTOCOL.md` + `docs/decisions/DECISION_LOG.md` + `docs/decisions/ADR_TEMPLATE.md` ✅
-- [x] **T-002: Slack P1 wiring** — `curate_plays.py` / `module_d.py` / `module_g.py` Slack alert on critical failure. `send_slack_failure_alert()` live, `#ludi-pipeline-alerts` channel + webhook + GH secret deployed. ✅
-- [ ] **T-CAL-001: Fix calibration query** — `scripts/calibrate_claude_outputs.py` queries `is_curated=1`; must switch to `curation_grade IS NOT NULL` to capture all graded bets (STRONG/LEAN/FADE). Quick one-liner fix.
-- [ ] **T-8.23-E: `actual_outcome` backfill** — `claude_analysis_log` lacks outcome data for pre-Mar 9 rows. Per-grade accuracy analysis blocked until backfill runs. Design backfill script.
-- [ ] **T-8.23-F: Per-bet logging in `claude_analysis_log`** — currently 1 row per batch (curation run). Switch to 1 row per bet rec to enable individual bet-level calibration analysis.
+- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). Blocked: needs 30+ days of `claude_analysis_log` per-bet rows. Revisit ~Mar 20.
+- [ ] **Replace Claxton example in `curate_examples`** — Example 4 is constructed from unsettled data. Replace with first settled LEAN bet from `claude_analysis_log` once T-8.23-F accumulates rows.
+- [x] **T-CAL-001** — `calibrate_claude_outputs.py` query fix `curation_grade IS NOT NULL` ✅
+- [x] **T-8.23-E** — `scripts/backfill_claude_analysis_outcomes.py` built + runs clean ✅
+- [x] **T-8.23-F** — per-bet INSERT loop + 6-column schema in `database.py` + `curate_plays.py` ✅
+- [x] **T-002: Slack P1 wiring** — `#ludi-pipeline-alerts` webhook + GH secret `SLACK_WEBHOOK_ALERTS` deployed ✅
 
 ---
 
@@ -69,7 +71,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
-| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting. Calibration infra shipped (`calibrate_claude_outputs.py`, position bias fix). Wilson calibration window closes ~Mar 10. `actual_outcome` backfill + per-bet logging still open (T-8.23-E/F). | $0 |
+| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (T-8.23-F shipped Mar 10). Calibration infra complete: T-CAL-001 + T-8.23-E/F + backfill script + Maren prompt fixes all Henrik APPROVED. Key finding: FADE 66.7% > LEAN 51.5% > STRONG 50.0% — grade hierarchy inverted. Per-grade query in progress (Item 1). | $0 |
 
 ---
 
