@@ -158,6 +158,35 @@ def run(verbose: bool = False) -> None:
     display_groups = [g for g in group_results if g['n'] >= 5]
     display_groups.sort(key=lambda g: g['n'], reverse=True)
 
+    # ── Per-grade breakdown ───────────────────────────────────────────────────
+    # Groups: STRONG / LEAN / FADE — grouped from the same all_bets list
+    grade_groups: dict[str, list] = {}
+    for bet in all_bets:
+        grade = bet.get('curation_grade') or 'UNKNOWN'
+        grade_groups.setdefault(grade, []).append(bet)
+
+    grade_results = []
+    GRADE_ORDER = ['STRONG', 'LEAN', 'FADE']
+    for grade in GRADE_ORDER:
+        gbets = grade_groups.get(grade, [])
+        n = len(gbets)
+        wins = sum(1 for b in gbets if b['outcome'] == 'WIN')
+        raw_wr = wins / n if n > 0 else 0.0
+        wl = wilson_lower(wins, n)
+        avg_edge = sum(b.get('true_edge') or 0.0 for b in gbets) / n if n > 0 else 0.0
+        brier_grade = compute_brier_score(gbets)
+        status = group_status(n, wl)
+        grade_results.append({
+            'grade': grade,
+            'n': n,
+            'wins': wins,
+            'raw_wr': raw_wr,
+            'wilson_lower': wl,
+            'avg_edge': avg_edge,
+            'brier_score': brier_grade,
+            'status': status,
+        })
+
     # ── Stdout output ─────────────────────────────────────────────────────────
     date_range_start = min(b['game_date'] for b in all_bets)
     date_range_end = max(b['game_date'] for b in all_bets)
@@ -191,8 +220,25 @@ def run(verbose: bool = False) -> None:
     else:
         print("  No groups with N >= 5 found.\n")
 
-    print("  NOTE: Per-grade analysis (STRONG vs LEAN vs FADE) requires")
-    print("  actual_outcome backfill in claude_analysis_log — not yet built.")
+    # ── Per-grade section ─────────────────────────────────────────────────────
+    print(f"  {'─'*63}")
+    print(f"  Per-grade breakdown (STRONG / LEAN / FADE)")
+    print(f"  {'─'*63}")
+    grade_header = f"  {'grade':<10} {'N':>4}  {'wins':>4}  {'raw WR':>7}  {'wilson lower':>13}  {'avg edge':>9}  {'brier':>7}  status"
+    grade_sep = "  " + "-" * (len(grade_header) - 2)
+    print(grade_header)
+    print(grade_sep)
+    for g in grade_results:
+        if g['n'] == 0:
+            print(f"  {g['grade']:<10} {'—':>4}  {'—':>4}  {'—':>7}  {'—':>13}  {'—':>9}  {'—':>7}  NO DATA")
+        else:
+            inv_flag = " !" if (g['grade'] == 'FADE' and g['raw_wr'] > 0.55) else "  "
+            print(
+                f"  {g['grade']:<10} {g['n']:>4}  "
+                f"{g['wins']:>4}  {g['raw_wr']:>6.1%}  {g['wilson_lower']:>12.1%}  "
+                f"{g['avg_edge']:>8.2f}%  {g['brier_score']:>6.4f}  {g['status']}{inv_flag}"
+            )
+    print(f"\n  ! = FADE WR > 55% (grade hierarchy may be inverted)")
     print(f"{'='*65}\n")
 
     # ── Write cache/claude_calibration.json ───────────────────────────────────
@@ -221,8 +267,21 @@ def run(verbose: bool = False) -> None:
             }
             for g in group_results  # include all groups in JSON (N < 5 too, labeled)
         ],
+        'by_grade': [
+            {
+                'grade': g['grade'],
+                'n': g['n'],
+                'wins': g['wins'],
+                'raw_wr': round(g['raw_wr'], 4),
+                'wilson_lower': round(g['wilson_lower'], 4),
+                'avg_edge': round(g['avg_edge'], 2),
+                'brier_score': round(g['brier_score'], 4),
+                'status': g['status'],
+            }
+            for g in grade_results
+        ],
         'notes': [
-            "Per-grade analysis (STRONG/LEAN/FADE) requires actual_outcome backfill in claude_analysis_log — not yet built.",
+            "Per-grade breakdown groups by curation_grade (STRONG/LEAN/FADE) using the same Wilson CI logic as by_group.",
             "Groups with N < 5 shown in JSON but omitted from stdout table.",
             f"Wilson confidence interval uses z=1.96 (95% CI).",
             f"Brier predicted_prob = 0.5 + (true_edge/100 * 0.5), clamped to [0.50, 0.75].",
