@@ -126,6 +126,15 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Sprint 4: Knowledge distillation + Reflexion (feedback loops, Haiku calibration, lessons-learned)
 - [ ] Sprint 5: Advanced patterns + structural hardening (debate, confidence scoring, handoff protocols)
 
+### Proprietary Sports Betting LLM (Long-Term Research — Not Actionable Yet)
+**Research:** `docs/research/PROPRIETARY_SPORTS_LLM_FEASIBILITY.md` (Mar 14 2026)
+**Verdict:** NOT NOW — data too small (72 rows vs 5,000+ needed), API spend too low ($18–38/mo), edge lives in deterministic math not LLM layer. Competitive landscape is mostly vapor (Volt=marketing, FanDuel=AWS Bedrock wrapper). Karpathy autoresearch is for pretraining research, not domain fine-tuning.
+**Phased path (if scale ever justifies it):**
+- [ ] **Phase 0 (NOW):** Expand `claude_analysis_log` to capture ALL LLM calls with full prompt/completion text — passive training data collection. Target 10,000+ rows by Sep 2026.
+- [ ] **Phase 1 (6 months):** Fine-tune 3B micro-model (QLoRA) for classification only — intent (7-class), archetypes (15-class), injury parsing (6-status). Keep Sonnet for reasoning/narrative.
+- [ ] **Phase 2 (12 months):** RAG-enhanced 7B domain model for curation reasoning + game dossiers. Frontier model stays for user-facing narratives.
+- [ ] **Phase 3 (2027+):** Full proprietary model — only if 50,000+ logged interactions AND API costs exceed $100+/day.
+
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint
 **Design identity:** Dark Navy #0F172A, Gold #FBBF24, Emerald #10B981 | "The Edge, Magnified" theme
