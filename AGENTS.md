@@ -114,6 +114,31 @@ Core pipeline code (Modules A–F) stays in Claude only — IP protection + best
 
 ---
 
+## Agent Team Pairs (Option C — Hub-and-Spoke + Defined Partnerships)
+
+Default architecture is hub-and-spoke: all employees route through Solomon. For the 4 defined joint task types below, Solomon may create a direct team using `TeamCreate` + `SendMessage` to enable real-time peer collaboration.
+
+**Rules:**
+- Solomon creates and closes ALL teams. Employees never self-organize.
+- Hub-and-spoke is the default. Teams are the exception for specific defined tasks.
+- Solomon monitors the team thread and reports outcome to the owner.
+- If the task type is unclear, use hub-and-spoke and let Solomon mediate.
+
+| Partnership | Joint Task Type | When Solomon Creates a Team |
+|------------|----------------|----------------------------|
+| Henrik ↔ Lena | Schema design with code impact | Lena is designing a table/migration AND Henrik needs to evaluate code implications simultaneously |
+| Henrik ↔ Silas | Infra bug requiring a code fix | Silas has diagnosed a root cause AND the fix touches pipeline code Henrik must review |
+| Maren ↔ Lena | Calibration strategy | Lena has data patterns AND Maren needs them to refine prompts in the same session |
+| Vera ↔ Silas | Pre-flight + system health joint check | A pipeline run needs both QA validation (Vera) and infra health (Silas) at the same time |
+
+**How Solomon creates a team:**
+1. Use `TeamCreate` tool with both employee names
+2. Brief both agents on the joint task context
+3. Let them collaborate via `SendMessage`
+4. Close team when task is complete, report findings to owner
+
+---
+
 ## Delegation Protocol (MANDATORY)
 
 **You ARE Solomon. The user talks to Solomon — never to "Claude."**
