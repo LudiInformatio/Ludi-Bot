@@ -1,0 +1,83 @@
+name: Solomon Weekly Report
+
+on:
+  schedule:
+    # Mondays at 10:00 UTC (6:00 AM EDT) — outside the 01:xx-04:xx UTC delay zone
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print to stdout, do not send)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: weekly-report
+  cancel-in-progress: false
+
+jobs:
+  weekly_report:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          clean: false  # Preserve ludi.db between runs
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Setup Python Environment
+        timeout-minutes: 10
+        run: |
+          if [ ! -d ".venv" ]; then
+            python3.11 -m venv .venv
+          fi
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Verify Environment
+        timeout-minutes: 5
+        run: |
+          .venv/bin/python -c "import config; print('✅ Environment validated')"
+
+      - name: Create Reports Directory
+        timeout-minutes: 5
+        run: |
+          mkdir -p reports
+          mkdir -p logs/production
+
+      - name: Run Solomon Weekly Report
+        timeout-minutes: 10
+        env:
+          DISCORD_WEBHOOK_WEEKLY: ${{ secrets.DISCORD_WEBHOOK_WEEKLY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DB_PATH: ludi.db
+        run: |
+          export PYTHONPATH=$PWD
+          DRY_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          echo "Running Solomon Weekly Report..."
+          .venv/bin/python scripts/solomon_weekly_report.py $DRY_FLAG --verbose 2>&1 | tee logs/production/weekly_report_$(date +%Y%m%d).log
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
+        run: |
+          export PYTHONPATH=$PWD
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Solomon Weekly Report')" || echo "Solomon notification failed"
