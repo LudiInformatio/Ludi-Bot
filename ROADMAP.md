@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 14, 2026 — 11:45 AM EDT
+**Last Updated:** Saturday, March 14, 2026 — 3:37 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Employee 1-on-1 training — `employees/henrik/ONBOARDING.md` baseline session (Henrik next) + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
-**Completed:** Solomon 1-on-1 onboarding — 7 doc fixes + `scripts/solomon_weekly_report.py` + `weekly_report.yml` + `employees/COMPANY_RESOURCES.md` + Study Resources × 7, 3 Henrik APPROVED rounds ✅ + Phase 8.23 calibration sprint — T-CAL-001 + T-8.23-E/F + Maren prompt redesign + by_grade inversion flag ✅ + T-SCHEME-01/02 (`update_team_scheme_cache.py`) — window bump + weighted pick_active() ✅
+**Active Work:** Employee 1-on-1 training — `employees/maren/ONBOARDING.md` + `employees/iris/` (employees 7+8 remaining) + YouTube/Discord/Twitter external intel setup + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
+**Completed:** 6/8 employee onboardings (Solomon/Henrik/Silas/Lena/Vera/Kai) + CT-007 issue lifecycle fixes (`claude-ops-hub.yml`, `stale-issues.yml`) + `COMPANY_TASKS.md` + external intel infra (9 YT channels, 8 Discord servers, 4 Twitter accounts) ✅ + Solomon 1-on-1 — `scripts/solomon_weekly_report.py` + `weekly_report.yml` + `COMPANY_RESOURCES.md` ✅ + Phase 8.23 calibration sprint — T-CAL-001 + Maren prompt redesign + by_grade inversion flag ✅
 
 This is the single source of truth for project tasks and priorities.
 
