@@ -70,3 +70,27 @@ When refreshing the CLAUDE_CODE_OAUTH_TOKEN:
 **Common mistake:** `CLAUDE_TOKEN_EXPIRES_AT` stored as a Secret (write-only) instead of a Variable (readable). The ops-hub expiry check needs to READ the date — it must be a Variable.
 
 The daily expiry check in `claude-ops-hub.yml` will send Slack warnings 3 days before expiry.
+
+---
+
+## Issue Close Protocol
+
+An ops-hub or daily-qa issue should be closed when ONE of these conditions is met:
+
+| Tier | Close When |
+|------|-----------|
+| TIER 1 (auto-fix) | Auto-closed by Ops Hub after commit is verified |
+| TIER 2 (PR) | Closed after PR is merged and Henrik APPROVED |
+| TIER 3 (issue-only) | Closed after: (a) root cause identified, (b) fix implemented via standard pipeline (junior dev → Henrik), (c) fix verified in next pipeline run |
+
+**Who can close:**
+- Ops Hub closes TIER 1 automatically
+- Solomon closes TIER 2 after Henrik's PR review is merged
+- Solomon closes TIER 3 after fix is verified
+
+**Stale issues:** Auto-labeled `stale` after 14 days inactivity. Auto-closed after 30 days. Critical issues exempt.
+
+**Never close without:**
+- Confirming the root cause is resolved (not just the symptom)
+- Verifying the fix in at least one subsequent pipeline run
+- Logging the fix in `KNOWN_FIXES.md` (Ops Hub does this automatically for TIER 1/2)

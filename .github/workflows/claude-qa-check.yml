@@ -228,8 +228,10 @@ jobs:
             2. If schema status is FAIL:
                - Report which tables or constraints are missing
                - This is HIGH priority — missing Phase 8 tables cause silent pipeline degradation
+               - **MUST use label `severity:critical`** for any schema validation failure (not `severity:warning`)
 
             Keep the report concise and actionable. Label issues with `daily-qa` and appropriate severity.
+            Schema failures always get `severity:critical`. Workflow-only failures get `severity:warning` or `severity:transient`.
 
       - name: Send Telegram notification (failures found)
         if: steps.failures.outputs.fail_count != '0' || needs.validate-schema.outputs.schema_status == 'FAIL'

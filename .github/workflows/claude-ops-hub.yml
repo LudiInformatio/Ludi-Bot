@@ -195,11 +195,13 @@ jobs:
             Use for: multi-line fixes, logic changes, config updates, adding error handling
             - Create a PR with a clear description of root cause + fix
             - Add label `fix-pr` to the issue you create
+            - After creating the PR, add a reviewer: `gh pr edit <PR_NUMBER> --add-reviewer LudiInformatio`
 
             **TIER 3 — ISSUE ONLY (no code change):**
             Use for: ANYTHING touching ludi.db writes, pipeline math/simulations,
             secrets/credentials, infrastructure changes, or any uncertainty
             - Create an issue only — do NOT touch code
+            - Add `--assignee LudiInformatio` to the `gh issue create` command to prevent orphaned issues
 
             ---
 
@@ -373,6 +375,17 @@ jobs:
           else
             echo "❌ Fallback issue creation also failed: $FALLBACK_ISSUE"
             echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Solomon of new ops-hub issue
+        if: always()
+        env:
+          DISCORD_WEBHOOK_SOLOMON: ${{ secrets.DISCORD_WEBHOOK_SOLOMON }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_SOLOMON" ]; then
+            curl -s -H "Content-Type: application/json" \
+              -d "{\"content\": \"🔔 **Ops Hub Issue Created** — check GitHub Issues for details. Run: ${{ github.run_id }}\"}" \
+              "$DISCORD_WEBHOOK_SOLOMON" || echo "[WARN] Discord notification failed"
           fi
 
       - name: Notify via Slack
