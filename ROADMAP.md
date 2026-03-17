@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 17, 2026 — 4:05 PM EDT
+**Last Updated:** Tuesday, March 17, 2026 — 4:11 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Pipeline reliability fixes (`data_sync.yml`, `check_slate.py`, `bdl_client.py`, `espn_client.py`) — fallback pagination + false break detection resolved + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
-**Completed:** Pipeline 4-day data gap fix — BDL slate_check env + allstar_break guard + ESPN/BDL fallback pagination (`2ef4600`) ✅ + 415 PUSH bets re-settled (Mar 14-16 backfill via Module H) ✅ + Phase 8.23 calibration sprint — T-CAL-001 + Maren prompt redesign + by_grade inversion flag ✅
+**Active Work:** Employee 1-on-1 training — `employees/maren/ONBOARDING.md` + `employees/iris/` (employees 7+8 remaining) + YouTube/Discord/Twitter external intel setup + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
+**Completed:** 8/8 employee onboardings complete (CT-002 DONE) + external intel infra (26 YT channels, 8 Discord servers, 4 Twitter accounts on @Ludi_Lens) ✅ + Pipeline 4-day data gap fix — BDL slate_check env + fallback pagination (`2ef4600`) ✅ + Phase 8.23 calibration sprint — T-CAL-001 + Maren prompt redesign + by_grade inversion flag ✅
 
 This is the single source of truth for project tasks and priorities.
 
