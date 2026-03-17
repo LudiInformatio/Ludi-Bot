@@ -137,8 +137,12 @@ class APIMonitor:
             if remaining != 'N/A' and remaining != 'Unknown':
                 try:
                     remaining_int = int(remaining)
-                    # Assume 20K limit for paid tier (from config)
-                    total_limit = 20000
+                    # Pull limit from config if available; fall back to 20K
+                    try:
+                        from config import TIER_LIMITS
+                        total_limit = TIER_LIMITS.get('odds_api', {}).get('paid', 20000)
+                    except (ImportError, AttributeError):
+                        total_limit = 20000
                     used_pct = 1.0 - (remaining_int / total_limit)
 
                     if used_pct >= threshold:

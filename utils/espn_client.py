@@ -132,6 +132,31 @@ class ESPNClient:
                         break
 
                 if dk_odds is None:
+                    # No DK odds available — still include the game with None odds fields
+                    # so downstream consumers know the game exists even without pricing
+                    start_time = None
+                    try:
+                        from datetime import timezone
+                        import pytz as _pytz
+                        _est_tz = _pytz.timezone('US/Eastern')
+                        raw_dt = competition.get('date', '')
+                        if raw_dt:
+                            utc_dt = datetime.fromisoformat(raw_dt.replace('Z', '+00:00'))
+                            start_time = utc_dt.astimezone(_est_tz)
+                    except Exception as e:
+                        print(f"[ESPNClient] start_time parse failed for {away_abbr}@{home_abbr}: {e}")
+                        start_time = None
+
+                    game_key = f"{away_abbr}_{home_abbr}"
+                    results[game_key] = {
+                        'spread': None,
+                        'total': None,
+                        'ml_home': None,
+                        'ml_away': None,
+                        'home_abbr': home_abbr,
+                        'away_abbr': away_abbr,
+                        'start_time': start_time,
+                    }
                     continue
 
                 # --- Parse spread ---

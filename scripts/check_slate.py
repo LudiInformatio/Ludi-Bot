@@ -101,11 +101,21 @@ def _check_bdl_live(date_str: str) -> tuple:
         from utils.bdl_client import BDLClient
         bdl = BDLClient()
         response = bdl.get_games(date=date_str)
-        games = response.get("data", []) if isinstance(response, dict) else []
+
+        # Guard against error responses — BDL may return non-dict or dict without 'data'
+        if not isinstance(response, dict) or 'data' not in response:
+            print(f"⚠️  BDL returned unexpected response (possibly auth error) — failing open")
+            return True, 0, "unknown", False
+
+        games = response.get("data", [])
+        if not isinstance(games, list):
+            print(f"⚠️  BDL 'data' field is not a list — failing open")
+            return True, 0, "unknown", False
+
         game_count = len(games)
         has_games = game_count > 0
 
-        # Simple phase inference from date
+        # Date-aware phase inference
         month = int(date_str[5:7])
         if has_games:
             if month == 10 and game_count <= 4:
@@ -115,7 +125,14 @@ def _check_bdl_live(date_str: str) -> tuple:
             else:
                 phase = "regular"
         else:
-            phase = "offseason" if month in (7, 8, 9) else "allstar_break"
+            # Be precise: All-Star break is mid-February only, not any gameless day
+            if month in (7, 8, 9):
+                phase = "offseason"
+            elif month == 2:
+                phase = "allstar_break"
+            else:
+                # Could be API error, rest day, or schedule gap — don't assume break
+                phase = "no_games_today"
 
         return has_games, game_count, phase, False  # Can't check extended break without DB history
     except Exception as e:

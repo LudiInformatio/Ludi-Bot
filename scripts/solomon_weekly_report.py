@@ -266,7 +266,6 @@ def main() -> None:
         bets = fetch_settled_bets(conn, week_start, week_end)
     except Exception as e:
         print(f"[ERROR] Failed to query bet_recommendations: {e}")
-        conn.close()
         sys.exit(1)
     finally:
         conn.close()

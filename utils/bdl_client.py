@@ -377,24 +377,20 @@ class BDLClient:
             return []
 
     def get_odds(self, date: str = None) -> List[Dict]:
-        """Fetch game odds from BDL v2. Defaults to today (EST) if no date provided."""
+        """Fetch game odds from BDL v2. Defaults to today (EST) if no date provided.
+        Uses _get_all_pages() for pagination — BDL v2 defaults to 3 records/page."""
         # Default to today in EST — prevents accidentally fetching multi-day results
         if not date:
             date = datetime.now(_BDL_EST).strftime('%Y-%m-%d')
-        params: Dict[str, Any] = {"dates[]": date}
+        params: Dict[str, Any] = {"dates[]": date, "per_page": 100}
 
         cache_path = _get_cache_path("odds", params)
         cached = _read_cache(cache_path, ttl_hours=0.5)
         if cached is not None:
             return cached
 
-        self._wait_for_rate_limit()
         try:
-            url = f"{self.BASE_URL_V2}/odds"
-            response = self.session.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            result = data.get("data", [])
+            result = self._get_all_pages(f"{self.BASE_URL_V2}/odds", params)
             if result:
                 _write_cache(cache_path, result)
             return result

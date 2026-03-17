@@ -114,8 +114,11 @@ jobs:
       - name: Check slate for extended break
         # Sets is_extended_break output — heavy API steps are skipped during off-season / All-Star break.
         # Fail-open: if this step fails, heavy steps run anyway (assume active season).
+        # The Python script writes is_extended_break to GITHUB_OUTPUT directly.
         id: slate_check
         continue-on-error: true
+        env:
+          BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
         run: |
           export PYTHONPATH=$PWD
           set +e
@@ -123,10 +126,7 @@ jobs:
           CODE=$?
           set -e
           if [ $CODE -eq 2 ]; then
-            echo "is_extended_break=true" >> $GITHUB_OUTPUT
-            echo "📅 Extended break detected — skipping API-heavy sync steps"
-          else
-            echo "is_extended_break=false" >> $GITHUB_OUTPUT
+            echo "📅 No games today — API-heavy sync steps may be skipped"
           fi
 
       - name: Populate Today's Games (with fallback)
