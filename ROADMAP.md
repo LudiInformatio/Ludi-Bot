@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 17, 2026 — 4:11 PM EDT
+**Last Updated:** Friday, March 21, 2026 — 12:00 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Employee 1-on-1 training — `employees/maren/ONBOARDING.md` + `employees/iris/` (employees 7+8 remaining) + YouTube/Discord/Twitter external intel setup + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
-**Completed:** 8/8 employee onboardings complete (CT-002 DONE) + external intel infra (26 YT channels, 8 Discord servers, 4 Twitter accounts on @Ludi_Lens) ✅ + Pipeline 4-day data gap fix — BDL slate_check env + fallback pagination (`2ef4600`) ✅ + Phase 8.23 calibration sprint — T-CAL-001 + Maren prompt redesign + by_grade inversion flag ✅
+**Active Work:** All-hands Marcus cross-pollination review (15 patterns identified) + ROADMAP refresh + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
+**Completed:** Pipeline 4-day data gap fix — BDL slate_check env + fallback pagination (`2ef4600`) ✅ + Employee training sprint — T-TRAIN-001→004 + 18 production mistakes seeded + Discord #lena ✅ + All-hands Marcus review — 5 employees, 15 patterns prioritized, grade inversion normalized (STRONG 57% > LEAN 51% > FADE 49.3%) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -51,7 +51,7 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). Blocked: needs 30+ days of `claude_analysis_log` per-bet rows. Revisit ~Mar 20.
+- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 5,212 rows in `claude_analysis_log` (17 days, Mar 4–21). Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
 - [ ] **Replace Claxton example in `curate_examples`** — Example 4 is constructed from unsettled data. Replace with first settled LEAN bet from `claude_analysis_log` once T-8.23-F accumulates rows.
 - [x] **T-CAL-001** — `calibrate_claude_outputs.py` query fix `curation_grade IS NOT NULL` ✅
 - [x] **T-8.23-E** — `scripts/backfill_claude_analysis_outcomes.py` built + runs clean ✅
@@ -67,7 +67,7 @@ This is the single source of truth for project tasks and priorities.
 
 | # | Sub-Phase | Status | Description | Cost |
 |---|-----------|--------|-------------|------|
-| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **Blocked: needs Mar 2026 data.** | $0 |
+| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **UNBLOCKED: Mar 2026 data available (4,984 prop_line_snapshots).** | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
