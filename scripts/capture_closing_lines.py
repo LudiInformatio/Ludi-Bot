@@ -366,7 +366,7 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
             f"{base}/events/{game_id}/odds",
             {
                 'api_key':    config.ODDS_API_KEY,
-                'regions':    'us,us2',
+                'regions':    'us,us2,us_dfs,us_ex,eu',  # match module_a.py L652 — eu unlocks Pinnacle CLV
                 'markets':    PLAYER_PROP_MARKETS,
                 'oddsFormat': 'american',
             }

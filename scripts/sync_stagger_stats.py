@@ -36,7 +36,8 @@ MIN_PARTNER_GAMES = 15    # partner must have played this many games total in wi
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -57,7 +58,7 @@ def build_stagger_stats(days: int, season: str, dry_run: bool) -> int:
     usg_with/usg_without: approximated as per-36 FGA
     """
     conn = get_conn()
-    synced_at = datetime.now().strftime("%Y-%m-%d %Human:%M:%S")
+    synced_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows_written = 0
 
     print(f"[STAGGER] Building stagger stats for last {days} days (season {season})...")

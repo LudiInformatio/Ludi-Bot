@@ -146,12 +146,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Weekly Classification (Phase 8.4)
-        timeout-minutes: 20
+        timeout-minutes: 30
         continue-on-error: true
         run: |
           echo "Running Weekly Archetype Classification..."
           # Batch mode disabled until GENERALIST rate tuned below 35% — see plans/batch_archetype_classification_spec.md
-          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 --per-player || echo "WARNING: Classification failed -- continuing"
+          # --limit 400 guards against timeout (400×2.5s≈17min, well under 30min cap)
+          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 --per-player --limit 400 || echo "WARNING: Classification failed -- continuing"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
@@ -226,16 +227,14 @@ jobs:
         timeout-minutes: 10
         run: |
           echo "Running Stagger Stats Sync..."
-          .venv/bin/python scripts/sync_stagger_stats.py --days 60 || echo "WARNING: Stagger stats sync failed -- continuing"
+          .venv/bin/python scripts/sync_stagger_stats.py --days 21 || echo "WARNING: Stagger stats sync failed -- continuing"
         continue-on-error: true
 
       - name: Sync Stint Profiles (Phase 8.9-B)
         timeout-minutes: 10
         run: |
           echo "Running Stint Profiles Sync..."
-          # Use 60-day window: nba_game_id is only populated through early Feb 2026
-          # 21-day window has ~38 games which is insufficient for 5+ games/player
-          .venv/bin/python scripts/sync_stint_profiles.py --days 60 || echo "WARNING: Stint profiles sync failed -- continuing"
+          .venv/bin/python scripts/sync_stint_profiles.py --days 30 || echo "WARNING: Stint profiles sync failed -- continuing"
         continue-on-error: true
 
       - name: BDL Season Averages (tracking, hustle, shotdashboard, playtype — Ghost Protocol synergy demotion)
