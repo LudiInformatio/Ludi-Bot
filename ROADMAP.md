@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, March 21, 2026 — 12:00 PM EDT
+**Last Updated:** Saturday, March 21, 2026 — 3:06 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** All-hands Marcus cross-pollination review (15 patterns identified) + ROADMAP refresh + Sprint 2 (`scripts/revalidate_recs.py`) — Dynamic Rec Lifecycle
-**Completed:** Pipeline 4-day data gap fix — BDL slate_check env + fallback pagination (`2ef4600`) ✅ + Employee training sprint — T-TRAIN-001→004 + 18 production mistakes seeded + Discord #lena ✅ + All-hands Marcus review — 5 employees, 15 patterns prioritized, grade inversion normalized (STRONG 57% > LEAN 51% > FADE 49.3%) ✅
+**Active Work:** Sprint 2 (`scripts/revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Brier score calibration (`claude_analysis_log`) — anti-look-ahead fix first
+**Completed:** Ops triage — #39 timeout/DB lock cascade + #37 CLV regions fix + #38 closed (`004b3c3`) ✅ + All-hands Marcus review — 15 patterns prioritized, grade inversion normalized ✅ + Employee training sprint — T-TRAIN-001→004 + 18 production mistakes seeded ✅
 
 This is the single source of truth for project tasks and priorities.
 
