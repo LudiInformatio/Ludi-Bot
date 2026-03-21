@@ -1,11 +1,14 @@
 import copy
 import json
+import logging
 import unicodedata
 
 import numpy as np
 import sqlite3
 
 import config
+
+logger = logging.getLogger(__name__)
 
 # DB tables use 'YYYY-YY' format, NOT config.CURRENT_SEASON ('YYYY-YYYY')
 _DB_SEASON = '2025-26'
@@ -77,6 +80,9 @@ class LudiOracle:
         self._load_rotation_data()
         self._load_season_baselines()
         self._load_return_status()
+
+        # Sprint 1: Load empirical modifiers — zero DB calls during simulation
+        self.empirical_modifiers = self._load_empirical_modifiers()
 
     # ── DATA LOADERS ──────────────────────────────────────────────────────────
 
@@ -318,6 +324,30 @@ class LudiOracle:
             print(f"   >>> Injury return detection unavailable: {e}")
             self.return_status = {}
 
+    def _load_empirical_modifiers(self) -> dict:
+        """
+        Load player_empirical_modifiers into memory dict keyed by normalized player_name.
+        Returns {} if table does not exist yet (safe degradation during rollout).
+        """
+        try:
+            conn = sqlite3.connect(config.DB_PATH, timeout=10)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT * FROM player_empirical_modifiers
+                WHERE season = '2025-26'
+            """).fetchall()
+            conn.close()
+            result = {}
+            for r in rows:
+                result[self._normalize_name(r['player_name'])] = dict(r)
+            logger.info(f"[Oracle] Loaded empirical modifiers for {len(result)} players")
+            if len(result) == 0:
+                logger.warning("[Oracle] empirical_modifiers table is empty — all mods default to 1.0")
+            return result
+        except Exception as e:
+            logger.warning(f"[Oracle] empirical_modifiers load failed: {e} — defaulting to 1.0")
+            return {}
+
     # ── HELPERS ───────────────────────────────────────────────────────────────
 
     @staticmethod
@@ -462,6 +492,35 @@ class LudiOracle:
                     # fg3m_mod applies to FG3A volume — 3PM output follows 3PA opportunity
                     if 'FG3A' in player and abs(fg3m_mod - 1.0) > 0.01:
                         player['FG3A'] = round(player['FG3A'] * fg3m_mod, 2)
+
+                # Sprint 1: Apply empirical role modifiers
+                emp = self.empirical_modifiers.get(player_name_norm, {})
+                if emp:
+                    is_starter = player.get('is_starter', None)
+                    if is_starter is True:
+                        role_prefix = 'starter'
+                        role_n = emp.get('starter_n', 0)
+                    elif is_starter is False:
+                        role_prefix = 'bench'
+                        role_n = emp.get('bench_n', 0)
+                    else:
+                        role_prefix = None
+                        role_n = 0
+
+                    # Only apply if N >= MIN_ROLE_GAMES (Lena guard)
+                    if role_prefix and role_n >= 10:
+                        for stat, col in [
+                            ('FGA',  f'{role_prefix}_pts_mod'),
+                            ('FG3A', f'{role_prefix}_fg3m_mod'),
+                            ('FTA',  f'{role_prefix}_fta_mod'),
+                            ('AST',  f'{role_prefix}_ast_mod'),
+                            ('REB',  f'{role_prefix}_reb_mod'),
+                            ('STL',  f'{role_prefix}_stl_mod'),
+                            ('BLK',  f'{role_prefix}_blk_mod'),
+                        ]:
+                            mod = emp.get(col, 1.0) or 1.0
+                            if stat in player and abs(mod - 1.0) > 0.01:
+                                player[stat] = round(player[stat] * mod, 2)
 
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 fatigue_tax = self._calculate_fatigue_tax(player_days_rest)

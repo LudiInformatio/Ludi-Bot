@@ -123,6 +123,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | Time (EST) | Workflow | Purpose |
 |------------|----------|---------|
 | 1:00 AM | `db_backup.yml` | Database backup + overnight CLV capture (`--yesterday`) |
+| 2:30 AM | `empirical_modifiers.yml` | Compute per-player empirical modifiers (starter/bench, stdev, WOWY, depth) |
 | 3:00 AM | `data_sync.yml` | Sync game logs, clutch, assists, enrichment |
 | 5:00 AM Mon/Wed/Fri | `pbp_stats_sync.yml` | PBP Stats WOWY + leverage profiles |
 | 6:00 AM | `daily_reports.yml` | Work notes + bet summary |

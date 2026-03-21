@@ -1,8 +1,12 @@
 import json
+import logging
 import re
+import sqlite3
 import pandas as pd
 from datetime import datetime
 import config
+
+logger = logging.getLogger(__name__)
 from utils.devig import get_fair_probability, calculate_true_edge, american_to_implied
 from utils.bet_logger import get_bet_logger
 from utils.tag_classifier import get_tag_classifier
@@ -68,6 +72,26 @@ _STAT_RMSE = {
     'pts': 4.93,
     'pa':  4.80,  'pr': 4.96,  'pra': 5.51,
 }
+
+
+def _get_stat_stdev(player_name: str, stat_key: str,
+                    empirical_cache: dict) -> float:
+    """
+    Return empirical stdev for (player, stat) if available and N >= 30.
+    Falls back to _STAT_RMSE[stat_key] if not found.
+    """
+    norm_name = player_name.lower().strip()
+    emp = empirical_cache.get(norm_name, {})
+    stdev_val = emp.get(f"stdev_{stat_key}")
+    stdev_n   = emp.get("stdev_n", 0)
+
+    if stdev_val is not None and stdev_n >= 30:
+        return stdev_val
+
+    # Fallback to static RMSE dict
+    return _STAT_RMSE.get(stat_key, 2.5)
+
+
 #
 # --- STAT EDGE MINIMUMS (V5.5 Calibration) ---
 STAT_EDGE_MINIMUMS = {
@@ -226,6 +250,9 @@ class LudiReporter:
         # When sample_n >= 200, live calibration_gap + RMSE override hardcoded constants.
         # Falls back to _STAT_EDGE_CALIBRATION / _STAT_RMSE when cache is missing or thin.
         self._stat_conf = self._load_stat_confidence_cache()
+
+        # Sprint 1: Load empirical stdev cache for RMSE-based unit sizing
+        self.empirical_mod_cache = self._load_empirical_mod_cache()
 
         # C1: Hit rate cache — {(player_name, stat_key, line, direction): (l5_hr, l10_hr)}
         # Populated lazily during generate_report(); avoids duplicate DB queries per player.
@@ -495,7 +522,7 @@ class LudiReporter:
 
                             # V5.3: RMSE-based sizing modifier
                             # High projection uncertainty (PTS/PRA) → smaller bet at same tier
-                            units = round(units * self._rmse_sizing_modifier(stat_key), 2)
+                            units = round(units * self._rmse_sizing_modifier(stat_key, p.get('name', '')), 2)
 
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
@@ -1140,6 +1167,25 @@ class LudiReporter:
         except Exception:
             return {}
 
+    def _load_empirical_mod_cache(self) -> dict:
+        """Load stdev fields only from player_empirical_modifiers."""
+        try:
+            conn = sqlite3.connect(config.DB_PATH, timeout=10)
+            rows = conn.execute("""
+                SELECT player_name, stdev_pts, stdev_reb, stdev_ast,
+                       stdev_stl, stdev_blk, stdev_fg3m, stdev_fta, stdev_n
+                FROM player_empirical_modifiers
+                WHERE season = '2025-26'
+            """).fetchall()
+            conn.close()
+            return {r[0].lower().strip(): dict(zip(
+                ['player_name','stdev_pts','stdev_reb','stdev_ast',
+                 'stdev_stl','stdev_blk','stdev_fg3m','stdev_fta','stdev_n'], r
+            )) for r in rows}
+        except Exception as e:
+            logger.warning(f"[Alchemist] empirical stdev load failed: {e} — using _STAT_RMSE")
+            return {}
+
     def _apply_stat_calibration(self, edge: float, stat_key: str, bet_direction: str) -> float:
         """V5.3: Apply stat-specific edge calibration — live cache when data is sufficient,
         hardcoded fallback otherwise.
@@ -1170,11 +1216,11 @@ class LudiReporter:
         multiplier = factors.get(bet_direction.lower(), 1.0)
         return round(edge * multiplier, 1)
 
-    def _rmse_sizing_modifier(self, stat_key: str) -> float:
+    def _rmse_sizing_modifier(self, stat_key: str, player_name: str = '') -> float:
         """V5.3: RMSE-based unit sizing modifier — live cache when available, hardcoded fallback.
 
         LIVE (sample_n >= 50): uses RMSE from DB projection vs line analysis in cache.
-        FALLBACK: uses _STAT_RMSE hardcoded dict.
+        FALLBACK: tries empirical stdev per-player, then _STAT_RMSE hardcoded dict.
 
         RMSE ≤ 1.0: no penalty. 1.0–2.0: 5% cut. >4.0: 15% cut.
         BLOCKS/STEALS/3PM are precise projections → full sizing.
@@ -1187,8 +1233,8 @@ class LudiReporter:
                 rmse = entry['rmse']
                 break
         else:
-            # Fallback to hardcoded
-            rmse = _STAT_RMSE.get(stat_key.lower(), 2.0)
+            # Fallback: empirical stdev per-player, then hardcoded _STAT_RMSE
+            rmse = _get_stat_stdev(player_name, stat_key.lower(), self.empirical_mod_cache)
 
         if rmse <= 1.0:   return 1.00
         elif rmse <= 2.0: return 0.95

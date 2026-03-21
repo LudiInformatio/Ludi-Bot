@@ -1834,6 +1834,60 @@ class LudiHistorian:
         c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_team ON player_type_profiles(team)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_ptp_def_tag ON player_type_profiles(defensive_tag)")
 
+        # Sprint 1 — Empirical Modifiers
+        # Computed nightly by scripts/compute_empirical_modifiers.py (1-3 AM window).
+        # Module C reads at __init__; zero DB calls during simulation.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_empirical_modifiers (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name     TEXT NOT NULL,   -- normalized (accent-safe, lowercase)
+                season          TEXT NOT NULL DEFAULT '2025-26',
+
+                -- Item 1: Starter/bench role split (N >= 10 per role required)
+                starter_pts_mod     REAL DEFAULT 1.0,
+                starter_reb_mod     REAL DEFAULT 1.0,
+                starter_ast_mod     REAL DEFAULT 1.0,
+                starter_fta_mod     REAL DEFAULT 1.0,
+                starter_stl_mod     REAL DEFAULT 1.0,
+                starter_blk_mod     REAL DEFAULT 1.0,
+                starter_fg3m_mod    REAL DEFAULT 1.0,
+                starter_n           INTEGER DEFAULT 0,  -- games as starter
+                bench_pts_mod       REAL DEFAULT 1.0,
+                bench_reb_mod       REAL DEFAULT 1.0,
+                bench_ast_mod       REAL DEFAULT 1.0,
+                bench_fta_mod       REAL DEFAULT 1.0,
+                bench_stl_mod       REAL DEFAULT 1.0,
+                bench_blk_mod       REAL DEFAULT 1.0,
+                bench_fg3m_mod      REAL DEFAULT 1.0,
+                bench_n             INTEGER DEFAULT 0,  -- games as bench
+
+                -- Item 3: Per-stat empirical stdev (N >= 30 total games)
+                stdev_pts       REAL,   -- NULL if N < 30
+                stdev_reb       REAL,
+                stdev_ast       REAL,
+                stdev_stl       REAL,
+                stdev_blk       REAL,
+                stdev_fg3m      REAL,
+                stdev_fta       REAL,
+                stdev_n         INTEGER DEFAULT 0,
+
+                -- Item 4: WOWY lineup delta
+                wowy_with_avg   REAL,   -- team net_rating when player is in lineup
+                wowy_without_avg REAL,  -- team net_rating when player is out
+                wowy_delta      REAL,   -- with - without (positive = player helps)
+                wowy_with_n     INTEGER DEFAULT 0,
+                wowy_without_n  INTEGER DEFAULT 0,
+
+                -- Item 5: Depth chart slot (Tank01)
+                depth_slot      INTEGER,  -- 1=starter, 2=backup, 3=third-string, NULL=unknown
+                depth_synced_at TEXT,
+
+                computed_at     TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_name, season)
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_emp_mod_player ON player_empirical_modifiers(player_name)")
+
         # Phase 8.23 Layer 1 — Claude/Perplexity feedback loop data collection.
         # Every get_claude_analysis() call writes one row here.
         # Layer 2 (weekly): calibrate_claude_outputs.py computes Wilson accuracy per call_type.
@@ -1887,11 +1941,18 @@ class LudiHistorian:
             "ALTER TABLE claude_analysis_log ADD COLUMN bet_id INTEGER",
             "ALTER TABLE claude_analysis_log ADD COLUMN true_edge REAL",
             "ALTER TABLE claude_analysis_log ADD COLUMN thinking_text TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN prompt_version TEXT",
         ]:
             try:
                 c.execute(_col_def)
             except Exception:
                 pass
+
+        # Sprint 1 — lineup_id column for WOWY lineup identity
+        try:
+            c.execute("ALTER TABLE team_lineups ADD COLUMN lineup_id TEXT")
+        except Exception:
+            pass  # Column already exists
 
         # Phase 8.24 — Edge type label migration guard (bet_recommendations is an orphan table
         # owned by utils/bet_logger.py; guards here ensure live DBs pick up new columns too).

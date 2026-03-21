@@ -46,6 +46,7 @@ from utils.game_dossier import build_game_dossier
 from utils.slack_notifier import send_slack_failure_alert
 
 # ─── Constants ────────────────────────────────────────────────────────────────
+PROMPT_VERSION = 'v1.3-empirical-mods'
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
 VOLUME_STATS = {'PTS', 'REB', 'AST', 'MIN'}
 SANITY_FAIL_STATUSES = {'OUT', 'DOUBTFUL'}
@@ -735,9 +736,9 @@ def _write_curation_results(
                 INSERT INTO claude_analysis_log
                     (call_type, model, game_date, player_name,
                      stat_category, bet_side, curation_grade, bet_id,
-                     true_edge, thinking_text,
+                     true_edge, thinking_text, prompt_version,
                      input_tokens, output_tokens, estimated_cost_usd, response_text)
-                VALUES ('curation_per_bet', 'batch', ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, '')
+                VALUES ('curation_per_bet', 'batch', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, '')
                 """,
                 (
                     run_date,
@@ -748,6 +749,7 @@ def _write_curation_results(
                     pick.get('bet_id'),
                     bet.get('true_edge'),
                     str(pick.get('thinking', ''))[:2000],
+                    PROMPT_VERSION,
                 )
             )
         except Exception as e:

@@ -145,6 +145,7 @@ def save_api_data_to_db(df: pd.DataFrame, game_date: str) -> int:
             vals = {
                 'game_date': game_date,
                 'lineup_players': row['GROUP_NAME'],
+                'lineup_id': row.get('GROUP_ID', ''),   # dash-separated NBA player IDs
                 'team_abbreviation': row['TEAM_ABBREVIATION'],
                 'games_played': int(row['GP']),
                 'minutes': float(row['MIN']),

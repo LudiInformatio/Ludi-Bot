@@ -71,6 +71,7 @@ def ensure_tables_exist():
             efg_pct REAL,
             plus_minus REAL,
             synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            lineup_id TEXT,   -- PBP Stats GROUP_ID: dash-separated NBA player IDs
             UNIQUE(game_date, team_abbreviation, lineup_players)
         );
     ''')

@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 21, 2026 — 3:06 PM EDT
+**Last Updated:** Saturday, March 21, 2026 — 4:26 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 2 (`scripts/revalidate_recs.py`, `midday_refresh.py`) — Dynamic Rec Lifecycle + Brier score calibration (`claude_analysis_log`) — anti-look-ahead fix first
-**Completed:** Ops triage — #39 timeout/DB lock cascade + #37 CLV regions fix + #38 closed (`004b3c3`) ✅ + All-hands Marcus review — 15 patterns prioritized, grade inversion normalized ✅ + Employee training sprint — T-TRAIN-001→004 + 18 production mistakes seeded ✅
+**Active Work:** Empirical Modifiers Sprint 1 (`scripts/compute_empirical_modifiers.py`, `module_c.py`, `module_f.py`) — data-driven starter/bench/stdev/WOWY replacing 100+ hardcoded multipliers + classification architecture spec ready for build
+**Completed:** Empirical Modifiers Sprint 1 — 8 files shipped, Henrik APPROVED (`compute_empirical_modifiers.py`, WOWY GROUP_ID capture, prompt_version tracking) ✅ + Player classification architecture — 3-employee review, Module E canonical, `player_classification_log` spec (`memory/player_classification_architecture.md`) ✅ + Ops triage — #39 timeout/DB lock cascade + #37 CLV regions fix + #38 closed (`004b3c3`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
