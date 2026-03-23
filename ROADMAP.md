@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 21, 2026 — 4:26 PM EDT
+**Last Updated:** Monday, March 23, 2026 — 5:24 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Empirical Modifiers Sprint 1 (`scripts/compute_empirical_modifiers.py`, `module_c.py`, `module_f.py`) — data-driven starter/bench/stdev/WOWY replacing 100+ hardcoded multipliers + classification architecture spec ready for build
-**Completed:** Empirical Modifiers Sprint 1 — 8 files shipped, Henrik APPROVED (`compute_empirical_modifiers.py`, WOWY GROUP_ID capture, prompt_version tracking) ✅ + Player classification architecture — 3-employee review, Module E canonical, `player_classification_log` spec (`memory/player_classification_architecture.md`) ✅ + Ops triage — #39 timeout/DB lock cascade + #37 CLV regions fix + #38 closed (`004b3c3`) ✅
+**Active Work:** Backtesting data enrichment (`scripts/backfill_bdl_game_logs.py`, `sync_bdl_advanced_stats.py`) — 2-season BDL historical backfill complete, autoresearch backtesting next + `docs/TECH_DEBT.md` register created (11 items seeded)
+**Completed:** BDL 2-season historical backfill — 76K game logs + 63K advanced/hustle + 26K season averages for 2023-24 & 2024-25 (`backfill_bdl_game_logs.py`) ✅ + Tech debt register — `docs/TECH_DEBT.md` created with 11 items, wired into `/ludi-audit` + `/session-debrief` ✅ + TD-002/TD-003 fixes — `is_active` filter removed, `CURRENT_SEASON` hardcode fixed in 3 scripts ✅
 
 This is the single source of truth for project tasks and priorities.
 

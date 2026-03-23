@@ -34,8 +34,8 @@ load_dotenv()
 from utils.bdl_client import BDLClient
 
 
-CURRENT_SEASON = "2025-26"
-BDL_SEASON = 2025  # BDL uses start year
+CURRENT_SEASON = "2025-26"  # Default; overridden by --season arg in main()
+BDL_SEASON = 2025  # Default; overridden by --season arg in main()
 
 
 def get_db_connection(db_path: str = "ludi.db") -> sqlite3.Connection:
@@ -192,8 +192,8 @@ def fetch_bdl_clutch_data(client: BDLClient, conn: sqlite3.Connection,
             'clutch_gp': clutch_gp,
         })
 
-    if verbose and unmatched > 0:
-        print(f"[BDL Clutch] {unmatched} players not matched to local DB (traded/inactive)")
+    if unmatched > 0:
+        print(f"[CLUTCH] WARNING: {unmatched} players skipped (no team match)")
 
     return all_players
 
@@ -262,8 +262,7 @@ def save_player_leverage(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']}: {e}")
+            print(f"[ERROR] Error saving {p['player_name']}: {e}")
 
     conn.commit()
     return saved
@@ -275,7 +274,14 @@ def main():
     parser.add_argument('--backfill', action='store_true',
                         help="Also enrich from player_clutch_stats (Ghost Protocol)")
     parser.add_argument('--dry-run', action='store_true', help="Don't write to DB")
+    parser.add_argument('--season', type=int, default=2025,
+                        help="BDL season start year (default: 2025 = 2025-26)")
     args = parser.parse_args()
+
+    # Derive season constants from --season arg
+    global BDL_SEASON, CURRENT_SEASON
+    BDL_SEASON = args.season
+    CURRENT_SEASON = f"{args.season}-{str(args.season + 1)[-2:]}"
 
     client = BDLClient(api_key=os.getenv('BALLDONTLIE_KEY'))
     if not client.api_key:

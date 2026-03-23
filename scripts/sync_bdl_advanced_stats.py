@@ -113,7 +113,7 @@ def build_player_lookup(conn: sqlite3.Connection) -> Dict[str, str]:
     try:
         c.execute(
             "SELECT canonical_id, full_name, normalized_name "
-            "FROM player_canonical_ids WHERE is_active = 1"
+            "FROM player_canonical_ids"
         )
         for cid, full_name, norm_name in c.fetchall():
             if norm_name:
@@ -445,8 +445,9 @@ def main() -> None:
         sys.exit(0)
 
     db_path = getattr(config, "DB_PATH", "ludi.db")
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout = 30000")
 
     print("[sync_bdl_advanced_stats] Building player lookup...")
     lookup = build_player_lookup(conn)

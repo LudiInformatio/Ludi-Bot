@@ -36,8 +36,8 @@ from utils.bdl_client import BDLClient
 from utils.player_id_resolver import normalize_player_name
 
 
-CURRENT_SEASON = "2025-26"
-BDL_SEASON = 2025  # BDL uses start year
+CURRENT_SEASON = "2025-26"  # Default; overridden by --season arg in main()
+BDL_SEASON = 2025  # Default; overridden by --season arg in main()
 
 BDL_TO_PLAYTYPE = {
     'isolation': 'ISO',
@@ -199,8 +199,7 @@ def save_defense_data(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']}: {e}")
+            print(f"[ERROR] Error saving {p['player_name']}: {e}")
 
     conn.commit()
     return saved
@@ -318,8 +317,7 @@ def save_drives_data(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']}: {e}")
+            print(f"[ERROR] Error saving {p['player_name']}: {e}")
 
     conn.commit()
     return saved
@@ -436,8 +434,7 @@ def save_touches_data(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']}: {e}")
+            print(f"[ERROR] Error saving {p['player_name']}: {e}")
 
     conn.commit()
     return saved
@@ -534,8 +531,7 @@ def save_speed_data(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']}: {e}")
+            print(f"[ERROR] Error saving {p['player_name']}: {e}")
 
     conn.commit()
     return saved
@@ -663,8 +659,7 @@ def save_synergy_data(conn: sqlite3.Connection, players: List[Dict],
             ))
             saved += 1
         except sqlite3.Error as e:
-            if verbose:
-                print(f"   ⚠️ Error saving {p['player_name']} ({p['playtype']}): {e}")
+            print(f"[ERROR] Error saving {p['player_name']} ({p['playtype']}): {e}")
 
     conn.commit()
     return saved
@@ -684,8 +679,9 @@ def main():
     parser.add_argument('--season', type=int, default=2025, help="BDL season year (default: 2025)")
     args = parser.parse_args()
 
-    global BDL_SEASON
+    global BDL_SEASON, CURRENT_SEASON
     BDL_SEASON = args.season
+    CURRENT_SEASON = f"{args.season}-{str(args.season + 1)[-2:]}"
 
     client = BDLClient(api_key=os.getenv('BALLDONTLIE_KEY'))
     if not client.api_key:

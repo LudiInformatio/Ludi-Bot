@@ -204,6 +204,16 @@ FAIL the ROADMAP contract if any condition is violated — the PM bot will gener
 
 ---
 
+## Tech Debt Logging
+
+After completing the 11 checks, if ANY P1 or P2 finding represents a NEW pattern not already in `docs/TECH_DEBT.md`:
+1. Append a new `TD-XXX` entry to `docs/TECH_DEBT.md` with severity, location, description, impact, and recommended fix
+2. Note the new entry in your audit output under the relevant check
+
+This ensures every audit finding that isn't immediately fixed gets tracked for future cleanup.
+
+---
+
 ## Output Format
 
 Return exactly this format. No preamble. Start directly with `## Ludi Audit`.
@@ -246,4 +256,5 @@ Verdict: APPROVED | APPROVED_WITH_NOTES | REVIEW_REQUIRED
 - `best-practices/coding/README.md` — general coding patterns
 - `best-practices/data/CANONICAL_NAME_RESOLUTION.md` — accent handling (Check 5)
 - `best-practices/ops-hub/KNOWN_FIXES.md` — production failure log (source of these checks)
+- `docs/TECH_DEBT.md` — Technical debt register (append findings here)
 - `AGENTS.md` — Definition of Done (Henrik sign-off required before merge)

@@ -228,5 +228,6 @@ This project has custom skills available:
   - **Canonical Name Resolution**: `best-practices/data/CANONICAL_NAME_RESOLUTION.md` (accent handling across APIs, two-direction transforms, injection point table)
   - **PM Bot Notes Guide**: `best-practices/ai/PM_BOT_NOTES_GUIDE.md` (how to write ROADMAP header lines so PM bot messages are specific, not generic)
   - **Common Mistakes**: `best-practices/ai/COMMON_MISTAKES.md` (recurring Claude Code mistakes — DPO-style prevention rules, schema traps, silent failure patterns)
+- **Tech Debt Register**: `docs/TECH_DEBT.md` (tracked technical debt — Henrik + junior dev maintain, Solomon reviews during debrief)
 - **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
 - **Research**: `docs/research/` (competitive analysis, prompt engineering)
