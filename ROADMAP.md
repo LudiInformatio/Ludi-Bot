@@ -72,6 +72,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
 | 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (T-8.23-F shipped Mar 10). Calibration infra complete: T-CAL-001 + T-8.23-E/F + backfill script + Maren prompt fixes all Henrik APPROVED. Key finding: FADE 66.7% > LEAN 51.5% > STRONG 50.0% — grade hierarchy inverted. Per-grade query in progress (Item 1). | $0 |
+| 8.29 | Post-Game Auto-Research | SPEC | Karpathy-style nightly re-simulation loop. `scripts/resimulate_yesterday.py` re-runs Module C on settled games, stores residuals to `projection_residuals` table, surfaces drift flags. Joint spec: `memory/auto_research_spec.md` (Henrik + Lena). Slots after Sprint 2 ships. | $0 |
 
 ---
 
@@ -112,6 +113,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM) ✅
 - [x] **ONBOARDING.md** — All 8 employees have `employees/{name}/ONBOARDING.md` ✅
 - [x] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md` ✅
+- [x] **Phase 4 cadence skills** — `/standup` (Monday round-table) + `/weekly-review` (Friday retro) shipped as `.claude/skills/standup/SKILL.md` + `.claude/skills/weekly-review/SKILL.md`. Agent-first documentation standard added to `AGENTS.md` ✅
 - [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
 - [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
 

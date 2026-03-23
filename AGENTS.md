@@ -61,7 +61,7 @@ Ludi-Bot is staffed by 8 AI employees on a hybrid architecture — Skills 2.0 su
 | -------- | ------ | ------------- |
 | Henrik | `ludi-audit`, `sports-data-model-architect`, `simplify` | `/ludi-audit`, `/sma`, `/simplify` |
 | Vera | `daily`, `backtest` | `/daily`, `/backtest` |
-| Solomon | `session-brief`, `session-debrief` | `/session-brief`, `/session-debrief` |
+| Solomon | `session-brief`, `session-debrief`, `standup`, `weekly-review` | `/session-brief`, `/session-debrief`, `/standup`, `/weekly-review` |
 | Maren | `ultrathink`, `research`, `design` | `/ultrathink`, `/research`, `/design` |
 | Silas | `silas-check` | `/silas-check` |
 | Iris | `iris-collect` | `/iris-collect` |
@@ -106,11 +106,19 @@ Kimi K2.5 via MiniMax remains an option for precise algorithm work if needed lat
 
 Core pipeline code (Modules A–F) stays in Claude only — IP protection + best cross-module reasoning.
 
-### Weekly Roundtable (Sunday)
+### Company Cadence
 
+| When | Skill | Purpose |
+|------|-------|---------|
+| Monday AM | `/standup` | Team round-table — all employees report status, blockers, priorities |
+| Friday PM | `/weekly-review` | Retrospective — shipped, model performance, team health, next week |
+| Saturday 9 PM | (async) | Silas, Iris, Henrik post week digest to `#weekly-roundtable` |
+| Sunday 10 PM | (async) | Solomon reads all digests → synthesizes Monday report |
+
+- **Monday AM**: Solomon runs `/standup` → structured team report → Telegram card to owner
+- **Friday PM**: Solomon runs `/weekly-review` → structured retrospective → `#weekly-roundtable`
 - **Saturday 9 PM**: Silas, Iris, and Henrik post their week digest to `#weekly-roundtable`
 - **Sunday 10 PM**: Solomon reads all digests + `git log --since="7 days ago"` + ROADMAP.md → synthesizes Monday morning report
-- **Monday AM**: Report posted to `#weekly-roundtable` + Telegram card to owner
 
 ---
 
@@ -173,6 +181,22 @@ No shortcuts. No exceptions.
 5. **Session lifecycle:** `/session-brief` and `/session-debrief` are Solomon's tools — run them as Solomon, not as Claude invoking Solomon.
 
 **Subagent availability note:** All employee agents are defined in `.claude/agents/*.md`. They register as `subagent_type` values at session start. If an employee's `subagent_type` is not available (e.g., `vera`, `maren`, `kai` in the current session), use `general-purpose` and provide the employee's SOUL.md + ONBOARDING.md as context in the prompt.
+
+---
+
+## Agent-First Documentation Standard
+
+All company outputs (standups, reviews, briefs, reports) must be structured so AI employees can programmatically consume them — not just humans reading prose.
+
+| Rule | Pattern | Example |
+|------|---------|---------|
+| Predictable headers | `### Section` names are fixed per doc type | `### Shipped`, `### Blockers`, `### Next` |
+| Enum status values | Use `ON_TRACK`, `AT_RISK`, `BLOCKED`, `DONE` | Never "things are going well" |
+| Backtick grounding | Every code reference uses backticks | `module_c.py`, `LudiOracle`, `compute_empirical_modifiers.py` |
+| Machine-parseable lists | ` + ` delimiters for inline lists | Matches ROADMAP header contract |
+| Fixed schemas | Each doc type has known section order | Employees know where to look without scanning |
+
+This standard applies to: `/session-brief`, `/session-debrief`, `/standup`, `/weekly-review`, `/daily`, and any future reporting skills.
 
 ---
 
@@ -280,6 +304,8 @@ When a message starts with one of these aliases, run the mapped skill workflow:
 | ----- | ------- | ----- |
 | `/session-brief` | `.claude/skills/session-brief/SKILL.md` | Solomon |
 | `/session-debrief` | `.claude/skills/session-debrief/SKILL.md` | Solomon |
+| `/standup` | `.claude/skills/standup/SKILL.md` | Solomon |
+| `/weekly-review` | `.claude/skills/weekly-review/SKILL.md` | Solomon |
 | `/ludi-audit` | `.claude/skills/ludi-audit/SKILL.md` | Henrik |
 | `/sma` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik |
 | `/sports-model` | `.claude/skills/sports-data-model-architect/SKILL.md` | Henrik |

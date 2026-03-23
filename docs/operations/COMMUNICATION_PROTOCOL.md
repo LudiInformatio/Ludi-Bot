@@ -67,3 +67,13 @@ Owner → rotate in provider dashboard immediately → update `.env` → post to
 | Kai | N/A | On-demand only (posts to Silas if escalating) |
 | All employees | `#incidents` | P0/P1 issues only |
 | All employees | `#weekly-roundtable` | Solomon Sunday synthesis |
+
+---
+
+## Agent-First Documentation Standard
+
+All team outputs follow structured, machine-parseable formats so AI employees can consume them without human translation. See `AGENTS.md` § Agent-First Documentation Standard for the full rule table. Key points:
+- Fixed section headers per doc type (`### Shipped`, `### Blockers`, `### Next`)
+- Enum status values only: `ON_TRACK`, `AT_RISK`, `BLOCKED`, `DONE`
+- Code references always in backticks
+- ` + ` delimiters for inline lists (matching ROADMAP header contract)
