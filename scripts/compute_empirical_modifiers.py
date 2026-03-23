@@ -310,12 +310,12 @@ def compute_all_players(conn, season: str, dry_run: bool = False,
     """
     if player_filter:
         players = conn.execute(
-            "SELECT name FROM players WHERE name = ? AND status = 'Active'",
+            "SELECT name FROM players WHERE name = ? AND is_active = 1",
             (player_filter,)
         ).fetchall()
     else:
         players = conn.execute(
-            "SELECT name FROM players WHERE status = 'Active'"
+            "SELECT name FROM players WHERE is_active = 1"
         ).fetchall()
 
     if not players:

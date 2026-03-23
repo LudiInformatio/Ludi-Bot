@@ -29,6 +29,7 @@ on:
       - "Daily Reports"
       - "Claude QA & Debug Check"
       - "PBP Stats WOWY Sync"
+      - "Nightly Empirical Modifiers Compute"
     types:
       - completed
   schedule:

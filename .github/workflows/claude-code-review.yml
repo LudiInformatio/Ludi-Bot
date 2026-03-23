@@ -21,11 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: claude-code-review
+      # cancel-in-progress: true is correct here — supersedes stale reviews on new push
       cancel-in-progress: true
     timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
