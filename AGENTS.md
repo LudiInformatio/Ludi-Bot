@@ -1,7 +1,7 @@
 # AGENTS.md
 
 **Version:** 3.0 — Skills 2.0 Hybrid Architecture
-**Last Updated:** March 6, 2026
+**Last Updated:** March 23, 2026
 **Purpose:** Primary operating guide for all Claude Code agents working in Ludi-Bot — both solo sessions and subagent teammates.
 
 When instructions conflict: `AGENTS.md` > `ROADMAP.md` > `CLAUDE.md`
