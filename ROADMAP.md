@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 23, 2026 — 5:24 PM EDT
+**Last Updated:** Monday, March 23, 2026 — 5:39 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Backtesting data enrichment (`scripts/backfill_bdl_game_logs.py`, `sync_bdl_advanced_stats.py`) — 2-season BDL historical backfill complete, autoresearch backtesting next + `docs/TECH_DEBT.md` register created (11 items seeded)
-**Completed:** BDL 2-season historical backfill — 76K game logs + 63K advanced/hustle + 26K season averages for 2023-24 & 2024-25 (`backfill_bdl_game_logs.py`) ✅ + Tech debt register — `docs/TECH_DEBT.md` created with 11 items, wired into `/ludi-audit` + `/session-debrief` ✅ + TD-002/TD-003 fixes — `is_active` filter removed, `CURRENT_SEASON` hardcode fixed in 3 scripts ✅
+**Active Work:** Backtesting new data (`scripts/backfill_bdl_game_logs.py`, `compute_empirical_modifiers.py`) — 108K game logs ready for multi-season backtest + empirical modifiers first production run pending + sim integration review with team
+**Completed:** Workflow ops audit — 3 bugs fixed: dead pre-evening check (`claude-qa-check.yml`), PR review perms (`claude-code-review.yml`), ops-hub watch list + `is_active` fix (`1b9ec99`) ✅ + BDL 2-season historical backfill — 76K game logs + 63K advanced/hustle + 26K season averages (`backfill_bdl_game_logs.py`) ✅ + Tech debt register — `docs/TECH_DEBT.md` created with 11 items, TD-002/TD-003 fixed ✅
 
 This is the single source of truth for project tasks and priorities.
 
