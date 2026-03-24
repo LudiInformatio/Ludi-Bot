@@ -1,0 +1,39 @@
+============================================================
+SOLOMON WEEKLY REPORT
+Period: 2026-03-16 -> 2026-03-23
+============================================================
+Settled bets found: 239
+Git log lines: 1
+
+============================================================
+## Solomon's Weekly Report — Week of 2026-03-16
+
+### THE WINS
+```
+854fc469c feat(pipeline): Empirical Modifiers Sprint 1 — data-driven multipliers replacing hardcoded constants
+```
+
+### MODEL HEALTH
+Overall: 125W / 239 settled (52.3% WR)
+| Grade  | W  | N  | WR%  | Lower CI | Flag |
+|--------|----|----|------|----------|------|
+| STRONG | 32 | 51 | 62.7 | 49.0%    |      |
+| LEAN   | 83 | 170 | 48.8 | 41.4%    |      |
+| FADE   | 10 | 18 | 55.6 | 33.7%    | !    |
+**! GRADE INVERSION DETECTED: FADE WR > 55%. Review Maren prompt grading.**
+
+> ! = FADE WR > 55% (grade hierarchy may be inverted)
+
+### CODE HEALTH
+(Henrik digest — populate manually from session notes or `/session-debrief`)
+
+### NEXT WEEK
+(no pending items found in ROADMAP.md)
+
+---
+*Generated: 2026-03-23 | ludi.db settled bets 2026-03-16 → 2026-03-23 | $0 cost*
+============================================================
+
+[OK] Discord #weekly-roundtable sent
+[OK] Slack #ludi-bot-notes sent
+[OK] Report saved to /Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/reports/weekly_summary_2026-03-23.md
