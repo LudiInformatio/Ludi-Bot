@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 24, 2026 — 5:37 PM EDT
+**Last Updated:** Tuesday, March 24, 2026 — 6:47 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 3 production validation (`module_c.py` B2B fix, `module_f.py` EV gate, `calibrate_model_probabilities.py` PAV calibration) — awaiting 7-day window + Sprint 4 edge signal circuit breaker (`module_f.py` stat-level Kelly gating, chain of command MVP)
-**Completed:** Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492, full math + data audit (this commit) ✅ + Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium, PTS/AST cap tightened (`bfe860e`) ✅ + Backtest suite + projection tracking — 21-test suite, `player_projections` table, modifier attribution columns, 2 look-ahead fixes (`bab057c`) ✅
+**Active Work:** Sprint 4 production validation (`module_f.py` stat-level Kelly gate) — 7-day window running + T3 Three-Lens Curation Prompt (`curate_plays.py`, `utils/claude_prompts.py`) + P1/P2/P3 Sankore patterns (`docs/VALIDATION_GATES.md`, agent SOUL files)
+**Completed:** Sprint 4-A stat-level Kelly gate + Sprint 4-B chain of command — per-stat units cap (`module_f.py`), Henrik dispatches junior direct (`1cd8ee3`) ✅ + Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492 ✅ + Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium (`bfe860e`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -46,6 +46,11 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
+- [x] **Sprint 4-A: Stat-Level Kelly Gate** — per-stat units cap in `module_f.py` (PTS all edges, AST >14%, REB/BLK/STL/combos >20%, 3PM bypass), `config.py` `stat_kelly_gate` flag, Henrik APPROVED, commit `1cd8ee3` ✅
+- [x] **Sprint 4-B: Chain of Command MVP** — `Agent` tool in `henrik.md`, `AGENTS.md` Henrik-dispatches-junior pattern documented, commit `1cd8ee3` ✅
+- [ ] **T3: Three-Lens Curation Prompt** — VALUE/MOMENTUM/CONTRARIAN lenses into Stage 2 Sonnet. Injection point: between `wr_context` and `OUTPUT SCHEMA` in `curate_plays.py`. Route: Maren designs → junior dev → Henrik.
+- [ ] **T4: Replace Claxton example** — use Jalen Suggs 3PM UNDER 2.5 (game-cap LEAN, LOSS). Add `[STAR_PG]` Example 5 (false STRONG illustration). Files: `curate_plays.py` curate_examples section.
+- [ ] **P1/P2/P3: Sankore Tier 1 patterns** — YAML frontmatter on all agent + SOUL/ONBOARDING files (XS), `docs/VALIDATION_GATES.md` 3-gate doc (S, Lena queries), PIP Protocol in all 8 SOUL.md files (S, Maren designs template).
 - [x] **Per-grade calibration query** — `by_grade` breakdown in `calibrate_claude_outputs.py` with `!` inversion flag (FADE WR > 55%), Henrik APPROVED, commit `f8f7b14` ✅
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).

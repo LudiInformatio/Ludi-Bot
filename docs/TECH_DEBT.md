@@ -153,6 +153,16 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 
 ---
 
+### TD-022: `TIER_UNITS` dict re-instantiated on every inner loop iteration in `module_f.py`
+- **Severity:** P2
+- **Location:** `module_f.py` lines 534–539, inside per-player × per-prop inner loop
+- **Description:** `TIER_UNITS = {'DIAMOND': 1.25, 'BLUE CHIP': 1.00, ...}` is a constant dict reconstructed from scratch on every simulation output iteration. With 10+ players × 3–5 props each per slate, this runs 30–50+ times per pipeline invocation for no benefit.
+- **Impact:** Negligible runtime penalty at current slate sizes, but a clean-code violation that compounds if slate volume grows.
+- **Recommended Fix:** Hoist `TIER_UNITS` to module-level constant (alongside `_STAT_RMSE`, `_STAT_EDGE_CALIBRATION`). One-line change.
+- **Discovered:** 2026-03-24 (Henrik, Sprint 4-A audit)
+
+---
+
 ## Archive (Fixed)
 
 | ID | Description | Fixed In | Date |

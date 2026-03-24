@@ -166,7 +166,7 @@ See `docs/PRODUCTION_HANDBOOK.md` for the full workflow schedule (all times, tri
   - `**Completed:**` — keep the last 3 completions as separate ` + ` segments at the end (PM bot reads `parts[-3:]`).
   - `### Current Sprint` section — must include a `**Next Actions:**` block with `- [ ]` bullets for actionable tasks. The PM bot's pending task list comes ONLY from here; the Phase 8 table is status-tracking only and NOT parsed for tasks.
   - Never collapse all completions into one segment or remove the ` + ` delimiters — it breaks the parser.
-- **`config.MODIFIER_FLAGS`** — 39 boolean flags controlling every modifier in the pipeline (Modules C/E/F/X). All default `True`. Override per-flag via env: `MODIFIER_FLAGS_JSON='{"matchup_scheme": false}'`. Used for A/B ablation testing — disable modifiers individually to measure RMSE impact. Never set a flag to `False` in `config.py` directly — use the env override for temporary experiments.
+- **`config.MODIFIER_FLAGS`** — 40 boolean flags controlling every modifier in the pipeline (Modules C/E/F/X). All default `True`. Override per-flag via env: `MODIFIER_FLAGS_JSON='{"matchup_scheme": false}'`. Used for A/B ablation testing — disable modifiers individually to measure RMSE impact. Never set a flag to `False` in `config.py` directly — use the env override for temporary experiments.
 - **`## Project Vision` in OVERVIEW.md is permanent** — never delete or trim. Update periodically. This section is institutional memory. Note: `README.md` is a minimal public-facing file; `OVERVIEW.md` (gitignored) is the detailed internal version.
 
 ---
