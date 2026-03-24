@@ -546,6 +546,24 @@ class LudiReporter:
                             if config.MODIFIER_FLAGS.get('rmse_sizing', True):
                                 units = round(units * self._rmse_sizing_modifier(stat_key, p.get('name', '')), 2)
 
+                            # V5.4: Stat-level Kelly gate — signal degrades above stat-specific thresholds
+                            # Source: PAV calibration + per-stat edge analysis (N=15,553 settled bets, Mar 2026)
+                            # SIZE_DOWN = cap units at 0.5u. 3PM bypasses entirely (resilient at all tiers).
+                            if config.MODIFIER_FLAGS.get('stat_kelly_gate', True):
+                                _sk = stat_key.lower()
+                                _size_down = False
+                                if _sk == 'pts':
+                                    _size_down = True  # no monotone signal at any tier; 10-14% worst bucket (46.3%)
+                                elif _sk == 'ast' and edge > 14.0:
+                                    _size_down = True  # 53.7% at 10-14% collapses to 49.9% above 14%
+                                elif _sk in ('reb', 'blk', 'stl') and edge > 20.0:
+                                    _size_down = True  # all three collapse above 20% threshold
+                                elif _sk in ('pra', 'pa', 'pr', 'ra') and edge > 20.0:
+                                    _size_down = True  # combo stats collapse to 48-49% above 20%
+                                # 3PM bypasses entirely — 56.3% WR at 20%+ (N=948), resilient at all tiers
+                                if _size_down:
+                                    units = min(units, 0.5)
+
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
                             

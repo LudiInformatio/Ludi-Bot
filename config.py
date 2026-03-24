@@ -327,6 +327,7 @@ MODIFIER_FLAGS = {
     'stat_calibration': True,
     'rmse_sizing': True,
     'combo_correlation': True,
+    'stat_kelly_gate': True,
     # Module X
     'vegas_guardrail': True,
 }
