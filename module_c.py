@@ -616,6 +616,9 @@ class LudiOracle:
 
     def _calculate_fatigue_tax(self, days_rest):
         if days_rest == 0:
+            # If Module E fatigue is active, it owns B2B calibration — don't double-apply
+            if config.MODIFIER_FLAGS.get('fatigue_e', True):
+                return 1.0  # Module E handles this via _apply_fatigue_adjustments()
             return config.FATIGUE_B2B_TAX
         if days_rest >= 4:
             return config.FATIGUE_RUST_TAX

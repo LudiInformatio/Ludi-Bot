@@ -29,6 +29,8 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_SCRIPT_DIR)
 sys.path.insert(0, _PROJECT_ROOT)
 
+from utils.calibration_loader import load_probability_calibration, calibrated_prob_for_edge
+
 DB_PATH = os.path.join(_PROJECT_ROOT, 'ludi.db')
 CACHE_DIR = os.path.join(_PROJECT_ROOT, 'cache')
 
@@ -49,11 +51,10 @@ def wilson_lower(wins: int, n: int, z: float = 1.96) -> float:
 
 
 # ─── Brier Score ──────────────────────────────────────────────────────────────
-def compute_brier_score(bets: list[dict]) -> float:
+def compute_brier_score(bets: list, calibration: dict = None) -> float:
     """
     Brier Score = mean((predicted_prob - actual_outcome)^2)
-    predicted_prob: linear map from true_edge to probability
-      0% edge → 0.50, 25% edge → 0.625 (clamped to [0.50, 0.75])
+    predicted_prob: calibrated probability mapping from true_edge (falls back to linear heuristic)
     actual_outcome: 1 if WIN, 0 if LOSS
     Lower is better. Naive 50/50 predictor scores ~0.25.
     """
@@ -62,10 +63,8 @@ def compute_brier_score(bets: list[dict]) -> float:
     total = 0.0
     for bet in bets:
         edge = bet.get('true_edge') or 0.0
-        # Linear mapping: predicted_prob = 0.5 + (edge/100 * 0.5)
-        predicted_prob = 0.5 + (edge / 100.0 * 0.5)
-        # Clamp to [0.50, 0.75] to avoid distortion from outlier edges
-        predicted_prob = max(0.50, min(0.75, predicted_prob))
+        # Use calibrated probability mapping if available; falls back to linear heuristic
+        predicted_prob = calibrated_prob_for_edge(edge, calibration or {})
         actual = 1.0 if bet['outcome'] == 'WIN' else 0.0
         total += (predicted_prob - actual) ** 2
     return total / len(bets)
@@ -100,6 +99,12 @@ def run(verbose: bool = False) -> None:
         print(f"[ERROR] Database not found: {DB_PATH}")
         sys.exit(1)
 
+    _calibration = load_probability_calibration()
+    if _calibration:
+        print(f"  ✅ Probability calibration loaded ({_calibration.get('n_bets', '?')} bets, {_calibration.get('n_bins', '?')} bins)")
+    else:
+        print("  ⚠️  No calibration cache found — Brier score will use linear heuristic fallback")
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
@@ -125,7 +130,7 @@ def run(verbose: bool = False) -> None:
     total_wins = sum(1 for b in all_bets if b['outcome'] == 'WIN')
     overall_wr = total_wins / total_n
     overall_wl = wilson_lower(total_wins, total_n)
-    brier = compute_brier_score(all_bets)
+    brier = compute_brier_score(all_bets, _calibration)
     o_status = overall_status(total_n, overall_wl)
 
     # ── Per-group breakdown ───────────────────────────────────────────────────
@@ -174,7 +179,7 @@ def run(verbose: bool = False) -> None:
         raw_wr = wins / n if n > 0 else 0.0
         wl = wilson_lower(wins, n)
         avg_edge = sum(b.get('true_edge') or 0.0 for b in gbets) / n if n > 0 else 0.0
-        brier_grade = compute_brier_score(gbets)
+        brier_grade = compute_brier_score(gbets, _calibration)
         status = group_status(n, wl)
         # Inversion flag: FADE winning > 55% means grade hierarchy is backwards
         inverted = grade == 'FADE' and n > 0 and raw_wr > 0.55
@@ -287,7 +292,7 @@ def run(verbose: bool = False) -> None:
             "Per-grade breakdown groups by curation_grade (STRONG/LEAN/FADE) using the same Wilson CI logic as by_group.",
             "Groups with N < 5 shown in JSON but omitted from stdout table.",
             f"Wilson confidence interval uses z=1.96 (95% CI).",
-            f"Brier predicted_prob = 0.5 + (true_edge/100 * 0.5), clamped to [0.50, 0.75].",
+            "Brier predicted_prob uses calibrated correction table (falls back to linear heuristic if cache missing).",
         ],
     }
     cache_path = os.path.join(CACHE_DIR, 'claude_calibration.json')

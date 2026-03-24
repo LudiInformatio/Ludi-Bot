@@ -18,12 +18,13 @@ true_edge = (model_prob - fair_prob) / fair_prob * 100
 # 3. Filter by threshold
 if true_edge >= 5.0:  # 5% minimum edge (sharp market standard)
     # 4. Calculate EV
-    win_prob = clamp(model_prob, 0.51, 0.75)
-    ev = ((win_prob * 1.91) - 1) * 100  # Assumes -110 juice
+    win_prob = model_prob  # V4.6: clamp removed — raw simulation probability used directly
+    ev = ((win_prob * decimal_odds) - 1) * 100  # Uses actual best-available NC Legal book odds
 
     # 5. Kelly sizing
-    units = ev / 8  # Conservative fractional Kelly
-    units = clamp(units, 0.25, 1.5)
+    # V5.2: Tier-based sizing (replaced ev/8 fractional Kelly)
+    units = TIER_UNITS[confidence_tier]
+    # DIAMOND: 1.25u | BLUE CHIP: 1.00u | CORE ASSET: 0.65u | THE STEAL: 0.35u
 ```
 
 ---
@@ -177,10 +178,12 @@ final_projection = base_stat * pace_factor * referee_factor * fatigue_tax * defe
 ### Bet Tiers
 | Tier | Edge | Units |
 |------|------|-------|
-| DIAMOND | 15%+ | 1.25-1.5u |
-| BLUE CHIP | 10-15% | 1.0-1.25u |
-| CORE ASSET | 7-10% | 0.75-1.0u |
-| THE STEAL | 5-7% | 0.5-0.75u |
+| DIAMOND | 15%+ | 1.25u |
+| BLUE CHIP | 10-15% | 1.00u |
+| CORE ASSET | 7-10% | 0.65u |
+| THE STEAL | 5-7% | 0.35u |
+
+> **Note (V5.2):** The system moved from fractional Kelly (`ev/8`) to tier-based flat sizing in V5.2. Tier assignment is based on `true_edge` (devigged probability edge), not on EV. The Kelly criterion is retained as a reference model in methodology documentation but is not used for production sizing.
 
 ---
 

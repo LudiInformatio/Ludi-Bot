@@ -1,0 +1,174 @@
+{
+  "generated_at": "2026-03-24T16:46:01.578465",
+  "n_bets": 1868,
+  "min_date": "2026-02-26",
+  "brier_before": 0.2708,
+  "brier_after": 0.25,
+  "brier_naive_half": 0.25,
+  "improvement_pct": 7.7,
+  "n_bins": 10,
+  "calibration_curve": [
+    {
+      "bin_id": 0,
+      "edge_low": 3.0,
+      "edge_high": 11.5,
+      "n": 186,
+      "observed_wr": 0.6237,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 1,
+      "edge_low": 11.6,
+      "edge_high": 17.0,
+      "n": 186,
+      "observed_wr": 0.5645,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 2,
+      "edge_low": 17.1,
+      "edge_high": 20.6,
+      "n": 186,
+      "observed_wr": 0.457,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 3,
+      "edge_low": 20.6,
+      "edge_high": 23.4,
+      "n": 186,
+      "observed_wr": 0.4946,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 4,
+      "edge_low": 23.4,
+      "edge_high": 26.1,
+      "n": 186,
+      "observed_wr": 0.457,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 5,
+      "edge_low": 26.2,
+      "edge_high": 29.3,
+      "n": 186,
+      "observed_wr": 0.4892,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 6,
+      "edge_low": 29.4,
+      "edge_high": 32.8,
+      "n": 186,
+      "observed_wr": 0.4731,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 7,
+      "edge_low": 32.8,
+      "edge_high": 37.5,
+      "n": 186,
+      "observed_wr": 0.5215,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 8,
+      "edge_low": 37.5,
+      "edge_high": 44.4,
+      "n": 186,
+      "observed_wr": 0.4785,
+      "calibrated_prob": 0.5066
+    },
+    {
+      "bin_id": 9,
+      "edge_low": 44.5,
+      "edge_high": 73.4,
+      "n": 194,
+      "observed_wr": 0.5567,
+      "calibrated_prob": 0.5567
+    }
+  ],
+  "correction_table": [
+    {
+      "edge_low": 3.0,
+      "edge_high": 11.5,
+      "n": 186,
+      "raw_prob_mid": 0.5363,
+      "calibrated_prob": 0.5066,
+      "correction": 0.9447
+    },
+    {
+      "edge_low": 11.6,
+      "edge_high": 17.0,
+      "n": 186,
+      "raw_prob_mid": 0.5715,
+      "calibrated_prob": 0.5066,
+      "correction": 0.8864
+    },
+    {
+      "edge_low": 17.1,
+      "edge_high": 20.6,
+      "n": 186,
+      "raw_prob_mid": 0.5942,
+      "calibrated_prob": 0.5066,
+      "correction": 0.8525
+    },
+    {
+      "edge_low": 20.6,
+      "edge_high": 23.4,
+      "n": 186,
+      "raw_prob_mid": 0.61,
+      "calibrated_prob": 0.5066,
+      "correction": 0.8305
+    },
+    {
+      "edge_low": 23.4,
+      "edge_high": 26.1,
+      "n": 186,
+      "raw_prob_mid": 0.6238,
+      "calibrated_prob": 0.5066,
+      "correction": 0.8122
+    },
+    {
+      "edge_low": 26.2,
+      "edge_high": 29.3,
+      "n": 186,
+      "raw_prob_mid": 0.6388,
+      "calibrated_prob": 0.5066,
+      "correction": 0.7931
+    },
+    {
+      "edge_low": 29.4,
+      "edge_high": 32.8,
+      "n": 186,
+      "raw_prob_mid": 0.6555,
+      "calibrated_prob": 0.5066,
+      "correction": 0.7728
+    },
+    {
+      "edge_low": 32.8,
+      "edge_high": 37.5,
+      "n": 186,
+      "raw_prob_mid": 0.6757,
+      "calibrated_prob": 0.5066,
+      "correction": 0.7497
+    },
+    {
+      "edge_low": 37.5,
+      "edge_high": 44.4,
+      "n": 186,
+      "raw_prob_mid": 0.7047,
+      "calibrated_prob": 0.5066,
+      "correction": 0.7188
+    },
+    {
+      "edge_low": 44.5,
+      "edge_high": 73.4,
+      "n": 194,
+      "raw_prob_mid": 0.7948,
+      "calibrated_prob": 0.5567,
+      "correction": 0.7005
+    }
+  ]
+}

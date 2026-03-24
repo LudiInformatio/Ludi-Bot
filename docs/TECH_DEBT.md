@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 24, 2026
+**Last Updated:** March 24, 2026 (Sprint 3 — TD-017/018/019/020 added)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -110,6 +110,46 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Impact:** Cosmetic. Dirty IDs can accumulate in the projections table but do not affect pipeline outputs.
 - **Recommended Fix:** None required. If future analytics JOINs are added, wire the firewall at insert time.
 - **Discovered:** 2026-03-23 (Henrik, projection tracking audit)
+
+### TD-017: `module_x_scenario.py` secondary DB connections missing `busy_timeout`
+- **Severity:** P2
+- **Location:** `module_x_scenario.py` L709, L743, L810, L921, L963
+- **Description:** Five `sqlite3.connect(DB_PATH)` calls inside scenario-building methods have no `timeout` argument and no `PRAGMA busy_timeout`. Under concurrent pipeline runs, these will fail immediately on the default 5s SQLite lock timeout.
+- **Impact:** Silent scenario-building failures during concurrent DB writes.
+- **Recommended Fix:** Add `timeout=30` + `PRAGMA busy_timeout = 5000` to each connect call.
+- **Discovered:** 2026-03-24 (Henrik, Sprint 3 audit)
+
+### TD-018: Pace double-application — Module C game pace × Module E leverage pace
+- **Severity:** P2
+- **Location:** `module_c.py` L415-416, `module_e.py` `_apply_leverage_context()`
+- **Description:** Module C applies `scenario_pace * ref_pace` to all volume stats. Module E `_apply_leverage_context()` subsequently applies a second pace ratio (up to ±5%) from historical team `l_pace`/`vh_pace` vs `overall_pace`. On blowout games with a low-pace team, combined effect can reach `0.97 × 0.95 = 0.922`.
+- **Impact:** Unclear until modifier ablation baseline is established. Inputs are different (external game market vs team historical split) — may be intentional.
+- **Recommended Fix:** Evaluate after WS2 ablation baseline. Disable via `MODIFIER_FLAGS['leverage_context']` if ablation shows negative lift.
+- **Discovered:** 2026-03-24 (Henrik, Sprint 3 audit)
+
+### TD-020: `player_projections.actual_result` missing — ablation blocker
+- **Severity:** P1
+- **Location:** `player_projections` table, `scripts/run_modifier_ablation.py` L48-54
+- **Description:** `run_modifier_ablation.py` expects an `actual_result` column in `player_projections`. Column does not exist. Script detects the absence at runtime (L53-54) and returns empty list — no exception raised, no error surfaced. Correct fix is Option A: add a `_settle_actual_results()` function that JOINs `player_projections` → `player_game_logs` on `(player_id, game_date)` and maps `stat_category` strings (`'pts'`, `'reb'`, `'ast'`, etc.) to the corresponding `player_game_logs` columns. No schema change to `player_projections` needed.
+- **Impact:** WS2 (modifier ablation baseline) is fully blocked. 0 rows returned, 0 RMSE computed, no ablation output. Modifier flags cannot be evaluated until fixed.
+- **Recommended Fix:** Option A — see `plans/agent-chain-of-command.md` Decision 1 spec. Add `_settle_actual_results(conn, min_date, stat_cat)` to `run_modifier_ablation.py` that does: `SELECT pp.id, pgl.[stat_col] FROM player_projections pp JOIN player_game_logs pgl ON pp.player_id = pgl.player_id AND pp.game_date = pgl.game_date WHERE pp.stat_category = ?`, then bulk-UPDATEs `actual_result`. Add `--settle` CLI flag.
+- **Discovered:** 2026-03-24 (Henrik, Sprint 3 Decision 1 review)
+
+### TD-019: Calibration curve is not grade-stratified
+- **Severity:** P2
+- **Location:** `scripts/calibrate_model_probabilities.py` (new Sprint 3 file)
+- **Description:** Single calibration curve across all grades obscures grade-level inversion signal (FADE WR > LEAN WR > STRONG WR). v1 is a Brier score improvement but true calibration requires per-grade curves.
+- **Impact:** Miscalibrated probability estimates per grade.
+- **Recommended Fix:** v2 per-grade isotonic curves — Sprint 4.
+- **Discovered:** 2026-03-24 (Henrik, Sprint 3 audit)
+
+### TD-021: `player_game_hustle` not consumed by Module B — hustle stats absent from trend layer
+- **Severity:** P2
+- **Location:** `module_b.py` (missing hustle table load), `player_game_hustle` table (68,040 rows)
+- **Description:** Module B does not load `player_game_hustle`. Deflections, contested shots, and charges data from 2 seasons of BDL backfill are available but never reach the trend/streak layer. Module E consumes hustle stats for archetype classification only.
+- **Impact:** Hustle metrics (a strong indicator of defensive impact and motor) are not factored into L5/L10/L15 trend calculations or HOT_STREAK detection.
+- **Recommended Fix:** Add `_load_hustle_trends()` to Module B — compute L10 deflections + contested shots per player, expose as `hustle_l10` and `hustle_trend` in the player dict for Module E consumption.
+- **Discovered:** 2026-03-24 (Lena, data flow audit)
 
 ---
 

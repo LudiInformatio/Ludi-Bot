@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 24, 2026 — 12:41 PM EDT
+**Last Updated:** Tuesday, March 24, 2026 — 5:37 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Modifier ablation sprint (`config.MODIFIER_FLAGS`, `module_c.py`, `module_e.py`) — 39 A/B flags wired, 5 hotfixes live (star cap, HOT_STREAK gate, BLK AWAY premium, PTS/AST ±15% cap), awaiting 7-day production validation + B2B double-count fix (Sprint 3)
-**Completed:** Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium, PTS/AST cap tightened (`bfe860e`) ✅ + Empirical modifiers first run — 161/492 players computed, 3 column mismatches fixed (`aec6909`) ✅ + Backtest suite + projection tracking — 21-test suite, `player_projections` table, modifier attribution columns, 2 look-ahead fixes (`bab057c`) ✅
+**Active Work:** Sprint 3 production validation (`module_c.py` B2B fix, `module_f.py` EV gate, `calibrate_model_probabilities.py` PAV calibration) — awaiting 7-day window + Sprint 4 edge signal circuit breaker (`module_f.py` stat-level Kelly gating, chain of command MVP)
+**Completed:** Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492, full math + data audit (this commit) ✅ + Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium, PTS/AST cap tightened (`bfe860e`) ✅ + Backtest suite + projection tracking — 21-test suite, `player_projections` table, modifier attribution columns, 2 look-ahead fixes (`bab057c`) ✅
 
 This is the single source of truth for project tasks and priorities.
 

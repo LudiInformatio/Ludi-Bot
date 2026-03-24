@@ -346,6 +346,10 @@ class LudiReporter:
                             our_prob = sim_hit_rates[stat_key]
                         else:
                             # Fallback to heuristic
+                            logger.warning(
+                                f"_distributions absent for {p['name']} {stat_key} — using logistic CDF fallback. "
+                                "Check Module C output structure."
+                            )
                             our_prob = self._estimate_over_probability(final_proj, line, stat_key)
 
                         # Determine bet direction
@@ -519,6 +523,12 @@ class LudiReporter:
                             _bet_sharp_odds = sharp_odds_over_at_bet if bet_direction == 'over' else sharp_odds_under_at_bet
                             _bet_actual_odds = odds_over if bet_direction == 'over' else odds_under
                             sharp_consensus = self._sharp_consensus(_bet_actual_odds, _bet_sharp_odds, bet_direction)
+
+                            # Gate: skip bets with negative raw EV — edge filter provides partial protection
+                            # but doesn't catch all cases (e.g. positive odds with marginal model_prob)
+                            if ev_raw is not None and ev_raw <= 0.0:
+                                logger.debug(f"Skipping {p['name']} {stat_key} — negative EV: {ev_raw:.1f}%")
+                                continue
 
                             # V5.2: Tier-based unit sizing (replaces EV-formula sizing)
                             TIER_UNITS = {

@@ -167,7 +167,7 @@ def compute_stdev_modifiers(conn, player_name: str, season: str) -> dict:
 
         # Lena guard: rare stats in <18 min bracket need larger sample
         if stat in RARE_STATS:
-            full_min_values = [r[stat] for r in rows if r[stat] is not None and r['min'] >= 18]
+            full_min_values = [r[stat] for r in rows if r[stat] is not None and r['minutes'] >= 18]
             if len(full_min_values) < MIN_STDEV_GAMES:
                 logger.warning(
                     f"[empirical] {player_name}: {stat} in >=18min games N={len(full_min_values)} "
@@ -328,17 +328,40 @@ def compute_all_players(conn, season: str, dry_run: bool = False,
     for p_row in players:
         player_name = p_row['name']
         try:
+            # Resolve the name as stored in player_game_logs (may differ in accent encoding)
+            # player_game_logs may store non-accented names (e.g. "Nikola Jokic" vs "Nikola Jokić")
+            log_name_row = conn.execute(
+                "SELECT player_name FROM player_game_logs WHERE player_name = ? AND season_id = ? LIMIT 1",
+                (player_name, season)
+            ).fetchone()
+            if log_name_row:
+                log_player_name = log_name_row[0]
+            else:
+                # Try non-accented fallback via player_canonical_ids
+                canon_row = conn.execute(
+                    "SELECT full_name FROM player_canonical_ids WHERE full_name = ? OR normalized_name = LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(?, 'č','c'),'ć','c'),'ž','z'),'š','s'),'đ','d')) LIMIT 1",
+                    (player_name, player_name)
+                ).fetchone()
+                if canon_row:
+                    log_name_row2 = conn.execute(
+                        "SELECT player_name FROM player_game_logs WHERE player_name = ? AND season_id = ? LIMIT 1",
+                        (canon_row[0], season)
+                    ).fetchone()
+                    log_player_name = log_name_row2[0] if log_name_row2 else player_name
+                else:
+                    log_player_name = player_name
+
             row_data = {
                 'player_name': player_name,
                 'season': season,
             }
 
             # Item 1: Role split
-            role_mods = compute_role_modifiers(conn, player_name, season)
+            role_mods = compute_role_modifiers(conn, log_player_name, season)
             row_data.update(role_mods)
 
             # Item 3: Stdev
-            stdev_mods = compute_stdev_modifiers(conn, player_name, season)
+            stdev_mods = compute_stdev_modifiers(conn, log_player_name, season)
             row_data.update(stdev_mods)
 
             # Item 4: WOWY
