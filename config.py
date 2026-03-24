@@ -278,6 +278,61 @@ def get_scoring_environment():
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}
 
+# ====================================================
+# MODIFIER FLAGS (Subtractive Optimization)
+# ====================================================
+# All 38 flags default True — no behavior change at ship.
+# Set individual flags to False to isolate modifier contributions.
+# Override via env: MODIFIER_FLAGS_JSON='{"pace": false, "referee": false}'
+
+MODIFIER_FLAGS = {
+    # Module C
+    'pace': True,
+    'referee': True,
+    'fatigue': True,
+    'team_defense': True,
+    'shot_quality': True,
+    'drives_boost': True,
+    'return_ramp': True,
+    'season_blend': True,
+    'conditional_baseline': True,
+    'empirical_role': True,
+    # Module E
+    'matchup_scheme': True,
+    'secondary_playtype': True,
+    'dvp_modulator': True,
+    'synergy_efficiency': True,
+    'game_total': True,
+    'team_totals': True,
+    'scoring_env': True,
+    'pbp_shot_quality': True,
+    'ft_touch': True,
+    'shot_creation': True,
+    'shot_difficulty': True,
+    'opponent_context': True,
+    'fatigue_e': True,
+    'clutch_boost': True,
+    'speed_fatigue': True,
+    'touches_context': True,
+    'leverage_context': True,
+    'ppp_efficiency': True,
+    'defensive_diff': True,
+    'drives_ast': True,
+    'weak_link_boost': True,
+    'westbrook_rule': True,
+    # Module F
+    'blowout_tax': True,
+    'wowy_edge_penalty': True,
+    'edge_dampening': True,
+    'stat_calibration': True,
+    'rmse_sizing': True,
+    'combo_correlation': True,
+}
+
+# Env override: allows per-flag toggling without code changes
+_FLAG_OVERRIDES = json.loads(os.getenv('MODIFIER_FLAGS_JSON', '{}'))
+MODIFIER_FLAGS = {**MODIFIER_FLAGS, **_FLAG_OVERRIDES}
+
 # Run validation ONLY when executed directly, not on import
 if __name__ == "__main__":
     validate_config()

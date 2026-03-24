@@ -84,8 +84,8 @@ def compute_role_modifiers(conn, player_name: str, season: str) -> dict:
             SELECT pts, reb, ast, fta, stl, blk, fg3m
             FROM player_game_logs
             WHERE player_name = ?
-              AND season = ?
-              AND min >= 5
+              AND season_id = ?
+              AND minutes >= 5
             ORDER BY game_date DESC
             LIMIT 10
         )
@@ -102,9 +102,9 @@ def compute_role_modifiers(conn, player_name: str, season: str) -> dict:
             SELECT pts, reb, ast, fta, stl, blk, fg3m, COUNT(*) as n
             FROM player_game_logs
             WHERE player_name = ?
-              AND season = ?
-              AND min >= 5
-              AND is_starter = ?
+              AND season_id = ?
+              AND minutes >= 5
+              AND started = ?
         """, (player_name, season, role_flag)).fetchone()
 
         n = role_rows['n'] if role_rows else 0
@@ -142,11 +142,11 @@ def compute_stdev_modifiers(conn, player_name: str, season: str) -> dict:
     games OR where the cell value is NULL/0 for rare stats.
     """
     rows = conn.execute("""
-        SELECT pts, reb, ast, fta, stl, blk, fg3m, min
+        SELECT pts, reb, ast, fta, stl, blk, fg3m, minutes
         FROM player_game_logs
         WHERE player_name = ?
-          AND season = ?
-          AND min >= 5
+          AND season_id = ?
+          AND minutes >= 5
         ORDER BY game_date DESC
     """, (player_name, season)).fetchall()
 
