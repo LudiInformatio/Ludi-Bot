@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 23, 2026 — 5:24 PM EDT
+**Last Updated:** March 23, 2026
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -79,14 +79,6 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Recommended Fix:** Batch staging writes outside the loop, or pass the existing connection through.
 - **Discovered:** 2026-03-23 (Henrik, BDL backfill planning)
 
-### TD-009: `sync_bdl_clutch_usage.py` missing `--season` flag
-- **Severity:** P2
-- **Location:** `scripts/sync_bdl_clutch_usage.py`
-- **Description:** No `--season` argument. `BDL_SEASON = 2025` hardcoded. Cannot be used for historical backfill without code change.
-- **Impact:** Blocks clutch usage backfill for 2023-24 and 2024-25.
-- **Recommended Fix:** Add `--season` arg following the pattern in `sync_bdl_season_averages.py`.
-- **Discovered:** 2026-03-23 (Henrik, BDL backfill planning)
-
 ### TD-010: 175+ hardcoded multipliers across Modules C/E/F/X
 - **Severity:** P1
 - **Location:** `module_c.py`, `module_e.py`, `module_f.py`, `module_x_scenario.py`
@@ -105,6 +97,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Discovered:** 2026-03-21 (Henrik + Lena + Maren, classification architecture review)
 - **Blocked by:** Junior dev build time
 
+### TD-013: `player_projections.player_id` is unfirewalled
+- **Severity:** P3
+- **Location:** `utils/projection_logger.py` L86
+- **Description:** `player_id` is written to `player_projections` table without passing through `resolve_player_id_for_insert()`. Analytics table only — not joined to `player_canonical_ids` or `players` — so no canonical contamination risk.
+- **Impact:** Cosmetic. Dirty IDs can accumulate in the projections table but do not affect pipeline outputs.
+- **Recommended Fix:** None required. If future analytics JOINs are added, wire the firewall at insert time.
+- **Discovered:** 2026-03-23 (Henrik, projection tracking audit)
+
 ---
 
 ## Archive (Fixed)
@@ -113,6 +113,8 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 |----|-------------|----------|------|
 | TD-002 | `is_active=1` filter in `build_player_lookup()` | BDL backfill commit (Mar 23) | 2026-03-23 |
 | TD-003 | `CURRENT_SEASON` hardcoded in tracking/clutch scripts | BDL backfill commit (Mar 23) | 2026-03-23 |
+| TD-009 | `sync_bdl_clutch_usage.py` missing `--season` flag | BDL backfill commit (Mar 23) | 2026-03-23 |
+| TD-012 | `main.py` projection_logger uses `print()` not `logging.warning()` | This commit (Mar 23) | 2026-03-23 |
 
 ---
 

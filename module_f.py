@@ -758,6 +758,12 @@ class LudiReporter:
                                         'vendor_count': vendor_count,
                                         'bookmaker': book_over if bet_direction == 'over' else book_under,  # Line Shopping V2.0
                                         'time_context': _run_time_context,  # EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME
+                                        # Priority 1: Modifier attribution columns
+                                        'base_projection': p.get('_base_projection'),
+                                        'pace_contribution': p.get('_pace_contribution'),
+                                        'fatigue_contribution': p.get('_fatigue_contribution'),
+                                        'scheme_contribution': p.get('_scheme_contribution_pts'),
+                                        'ref_contribution': p.get('_ref_contribution'),
                                     }
                                     bet_id = self.bet_logger.log_recommendation(rec_data)
                                 except Exception as e:

@@ -357,17 +357,16 @@ class BacktestEngine:
                     skipped_count += 1
 
             # 2. Update Running Stats (Post-Game)
-            self.running_stats[pid]['pts'].append(pts)
-            self.running_stats[pid]['reb'].append(reb)
-            self.running_stats[pid]['ast'].append(ast)
-            self.running_stats[pid]['fg3m'].append(fg3m)
-            self.running_stats[pid]['minutes'].append(mins)
-            self.running_stats[pid]['fga'].append(fga)
-            self.running_stats[pid]['fta'].append(fta)
-            self.running_stats[pid]['tov'].append(tov)
-            self.running_stats[pid]['stl'].append(stl)
-            self.running_stats[pid]['blk'].append(blk)
-            self.running_stats[pid]['oreb'].append(oreb)
+            # Cap running window to prevent unbounded growth (look-ahead for early-season games)
+            _WINDOW = 30
+            for _stat, _val in [
+                ('pts', pts), ('reb', reb), ('ast', ast), ('fg3m', fg3m),
+                ('minutes', mins), ('fga', fga), ('fta', fta), ('tov', tov),
+                ('stl', stl), ('blk', blk), ('oreb', oreb)
+            ]:
+                self.running_stats[pid][_stat].append(_val)
+                if len(self.running_stats[pid][_stat]) > _WINDOW:
+                    self.running_stats[pid][_stat].pop(0)
 
         print(f"\n✅ Processing Complete: {label}")
         print(f"   Games Predicted: {processed_count}")

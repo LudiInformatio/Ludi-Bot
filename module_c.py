@@ -554,6 +554,15 @@ class LudiOracle:
                 sim_profile['USG_PCT'] = self._calculate_usage(sim_profile, player, team_totals, player_mods)
                 sim_profile['FANTASY_PTS'] = self._calculate_fantasy_score(sim_profile)
 
+                # Priority 1: Store modifier components for attribution tracking
+                # base_pace (L411) = scenario pace * ref_pace; fatigue_tax (L526); ref_pace (L408)
+                sim_profile['_base_pts'] = sim_profile.get('PTS', 0)
+                sim_profile['_base_reb'] = sim_profile.get('REB', 0)
+                sim_profile['_base_ast'] = sim_profile.get('AST', 0)
+                sim_profile['_raw_pace_factor'] = round(base_pace / fatigue_tax if fatigue_tax != 0 else base_pace, 3)
+                sim_profile['_fatigue_tax'] = round(fatigue_tax, 3)
+                sim_profile['_ref_pace_factor'] = round(ref_pace, 3)
+
                 # Phase 8.9: situational minutes projection
                 if getattr(config, 'USE_MINUTES_PROJECTION', True):
                     proj_min, min_conf = self._get_projected_minutes(player, game_context)

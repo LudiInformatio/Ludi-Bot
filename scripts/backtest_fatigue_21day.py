@@ -52,10 +52,10 @@ class FatigueBacktest:
             FROM player_game_logs
             WHERE player_name = ?
             AND game_date < ?
-            AND game_date >= date('now', '-90 days')
+            AND game_date >= date(?, '-90 days')
             GROUP BY player_name
             HAVING COUNT(*) >= 5
-        """, (player_name, game_date))
+        """, (player_name, game_date, game_date))
 
         row = cursor.fetchone()
 

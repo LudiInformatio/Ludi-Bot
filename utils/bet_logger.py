@@ -148,6 +148,13 @@ class BetLogger:
                 -- EARLY_LOOK (<noon) / AFTERNOON (noon-5 PM) / PRE_GAME (5-7 PM) / LOCK_TIME (>7 PM)
                 time_context TEXT DEFAULT 'EARLY_LOOK',
 
+                -- Projection modifier attribution (Priority 1)
+                base_projection REAL,
+                pace_contribution REAL,
+                fatigue_contribution REAL,
+                scheme_contribution REAL,
+                ref_contribution REAL,
+
                 -- Metadata
                 run_type TEXT DEFAULT 'production',
                 bookmaker TEXT DEFAULT 'consensus',
@@ -275,7 +282,9 @@ class BetLogger:
             'true_edge', 'ev', 'units', 'confidence_tier', 'confirmation_score', 
             'sharp_odds_over_at_bet', 'sharp_odds_under_at_bet', 'sharp_book_at_bet', 'sharp_consensus',
             'note', 'tags',
-            'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker', 'time_context'
+            'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker', 'time_context',
+            'base_projection', 'pace_contribution', 'fatigue_contribution',
+            'scheme_contribution', 'ref_contribution'
         ]
 
         # Get values (use None for missing optional fields)
@@ -346,7 +355,9 @@ class BetLogger:
                 'odds_over', 'odds_under', 'projection', 'fair_prob', 'model_prob',
                 'true_edge', 'ev', 'units', 'confidence_tier', 'note', 'tags',
                 'referee_impact', 'blowout_modifier', 'run_type', 'bookmaker',
-                'sharp_odds_over_at_bet', 'sharp_odds_under_at_bet', 'sharp_book_at_bet', 'sharp_consensus'
+                'sharp_odds_over_at_bet', 'sharp_odds_under_at_bet', 'sharp_book_at_bet', 'sharp_consensus',
+                'base_projection', 'pace_contribution', 'fatigue_contribution',
+                'scheme_contribution', 'ref_contribution'
             ]
 
             placeholders = ','.join(['?' for _ in fields])

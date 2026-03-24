@@ -295,7 +295,7 @@ class LudiHistorian:
         c.execute('CREATE INDEX IF NOT EXISTS idx_player_game_logs_player_date ON player_game_logs(player_id, game_date)')
 
         # CRITICAL: Unique index for Module H upsert operations (ON CONFLICT requires this)
-        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(game_id, player_id)')
+        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_player_game_logs_unique ON player_game_logs(player_id, game_date)')
 
         # 4. Odds Table (The Market)
         c.execute('''
@@ -1888,6 +1888,53 @@ class LudiHistorian:
         ''')
         c.execute("CREATE INDEX IF NOT EXISTS idx_emp_mod_player ON player_empirical_modifiers(player_name)")
 
+        # Priority 2 — Projection Tracking System
+        # Stores full projection breakdown for every simulated player (not just bets).
+        # Enables post-hoc modifier attribution, calibration curves, and residual analysis.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS player_projections (
+                id                    INTEGER PRIMARY KEY,
+                run_date              TEXT NOT NULL,
+                game_date             TEXT NOT NULL,
+                game_id               TEXT,
+                player_id             TEXT,
+                player_name           TEXT NOT NULL,
+                team                  TEXT,
+                opponent              TEXT,
+                archetype             TEXT,
+                opponent_scheme       TEXT,
+                stat_category         TEXT NOT NULL,
+                line                  REAL,
+                proj_fga              REAL,
+                proj_fg3a             REAL,
+                proj_fta              REAL,
+                assumed_fg_pct        REAL,
+                assumed_fg3_pct       REAL,
+                assumed_ft_pct        REAL,
+                base_projection       REAL NOT NULL,
+                pace_mod              REAL DEFAULT 1.0,
+                fatigue_mod           REAL DEFAULT 1.0,
+                ref_mod               REAL DEFAULT 1.0,
+                blowout_mod           REAL DEFAULT 1.0,
+                scheme_mod            REAL DEFAULT 1.0,
+                empirical_mod         REAL DEFAULT 1.0,
+                final_projection      REAL NOT NULL,
+                prob_over_line        REAL,
+                p10                   REAL,
+                p25                   REAL,
+                p75                   REAL,
+                p90                   REAL,
+                sim_stdev             REAL,
+                is_bet                BOOLEAN DEFAULT 0,
+                bet_rec_id            INTEGER,
+                scenario              TEXT,
+                UNIQUE(game_date, player_name, stat_category, run_date)
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_projections_gamedate ON player_projections(game_date)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_projections_player_stat ON player_projections(player_name, stat_category)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_projections_is_bet ON player_projections(is_bet, game_date)")
+
         # Phase 8.23 Layer 1 — Claude/Perplexity feedback loop data collection.
         # Every get_claude_analysis() call writes one row here.
         # Layer 2 (weekly): calibrate_claude_outputs.py computes Wilson accuracy per call_type.
@@ -1986,6 +2033,18 @@ class LudiHistorian:
             except Exception:
                 pass
 
+        # Priority 1 — Projection modifier attribution columns
+        for col in [
+            'base_projection REAL',
+            'pace_contribution REAL',
+            'fatigue_contribution REAL',
+            'scheme_contribution REAL',
+            'ref_contribution REAL',
+        ]:
+            try:
+                c.execute(f"ALTER TABLE bet_recommendations ADD COLUMN {col}")
+            except Exception:
+                pass
 
         # Seed canonical_games from any games data already in the DB.
         # Uses the same sync_canonical_games() function available to all game writers.

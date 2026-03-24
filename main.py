@@ -547,9 +547,28 @@ class LudiOrchestrator:
                 self.engine.enrich_player(p_dict, props_fmt)
                 
                 yak = {'status': sim.get('status', 'ACTIVE'), 'note': sim.get('injury_note', '')}
+
+                # Priority 1: Capture pre-Module-E projections for scheme attribution
+                _pre_scheme_pts = p_dict.get('proj_pts', 0)
+
                 # BUG A4: validate Module E output before appending
                 result = self.calib.calibrate_player(p_dict, yak)
                 if result:
+                    # Priority 1: Compute modifier contributions
+                    result['_scheme_contribution_pts'] = round(
+                        result.get('proj_pts', 0) - _pre_scheme_pts, 2
+                    )
+                    # Propagate base projection and modifier components from sim
+                    result['_base_projection'] = sim.get('_base_pts', sim.get('PTS', 0))
+                    result['_pace_contribution'] = round(
+                        result['_base_projection'] * (sim.get('_raw_pace_factor', 1.0) - 1.0), 2
+                    )
+                    result['_fatigue_contribution'] = round(
+                        result['_base_projection'] * (sim.get('_fatigue_tax', 1.0) - 1.0), 2
+                    )
+                    result['_ref_contribution'] = round(
+                        result['_base_projection'] * (sim.get('_ref_pace_factor', 1.0) - 1.0), 2
+                    )
                     players.append(result)
 
         # Use the game's actual start_time for game_date — not today's date.
@@ -724,7 +743,23 @@ class LudiOrchestrator:
                 # 2. Resolve Scenarios via Yak (Handle Injuries)
                 # This picks the correct scenario for each player based on live status
                 final_game_results = self.yak.resolve_scenarios(game_sim_results)
-                
+
+                # Priority 2: Log full projection breakdown for every simulated player
+                try:
+                    from utils.projection_logger import get_projection_logger
+                    _proj_logger = get_projection_logger()
+                    _first_item = items[0]
+                    _gdata = _first_item.get('game_data', {})
+                    _proj_game_ctx = {
+                        'game_id': gid,
+                        'game_date': game_date,
+                        'opponent': None,        # per-player, set inside logger if needed
+                        'opponent_scheme': None,  # per-player, set inside logger if needed
+                    }
+                    _proj_logger.log_projection_batch(final_game_results, _proj_game_ctx, game_date)
+                except Exception as _proj_err:
+                    logging.warning(f"[ProjectionLogger] Non-fatal: {_proj_err}")
+
                 # 3. Build Report
                 # Use game/props data from the first item (same for all in batch)
                 first = items[0]
