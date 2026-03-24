@@ -327,6 +327,8 @@ MODIFIER_FLAGS = {
     'stat_calibration': True,
     'rmse_sizing': True,
     'combo_correlation': True,
+    # Module X
+    'vegas_guardrail': True,
 }
 
 # Env override: allows per-flag toggling without code changes

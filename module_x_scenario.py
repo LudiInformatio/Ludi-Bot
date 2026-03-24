@@ -687,7 +687,10 @@ class ScenarioBuilder:
                 
             raw_players.append(new_p)
             
-        final_players = self._apply_vegas_guardrail(raw_players, game.get('odds', {}))
+        if config.MODIFIER_FLAGS.get('vegas_guardrail', True):
+            final_players = self._apply_vegas_guardrail(raw_players, game.get('odds', {}))
+        else:
+            final_players = raw_players
         scenario['players'] = final_players
         
         return scenario

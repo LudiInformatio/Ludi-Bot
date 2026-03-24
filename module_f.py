@@ -290,7 +290,9 @@ class LudiReporter:
                     continue
                 
                 # Calculate player-specific blowout tax
-                if BLOWOUT_TAX_AVAILABLE:
+                if not config.MODIFIER_FLAGS.get('blowout_tax', True):
+                    blowout_mult = 1.0
+                elif BLOWOUT_TAX_AVAILABLE:
                     # Player on home team: spread is from home perspective
                     # Player on away team: flip the spread
                     player_team = p.get('TEAM_ABBREVIATION', '')
@@ -396,6 +398,14 @@ class LudiReporter:
                         if _gap > 0.40 and _src_quality == 'BDL_FALLBACK':
                             continue  # Skip: projection vs line gap >40% in BDL fallback = alt line
 
+                        # Hotfix 4: BLK AWAY UNDER Premium — away players block less
+                        # (no home crowd energy, unfamiliar rim). +1.5% model_prob boost.
+                        if stat_key.lower() in ('blk', 'blocks') and bet_direction == 'under':
+                            _player_team = p.get('TEAM_ABBREVIATION', p.get('team', ''))
+                            _home_team = game.get('home_team', '')
+                            if _player_team and _home_team and (_player_team != _home_team):
+                                model_prob = min(model_prob + 0.015, 0.99)
+
                         # Calculate TRUE edge using devigged fair probability
                         edge = calculate_true_edge(
                             model_prob,
@@ -428,7 +438,8 @@ class LudiReporter:
                         # Deflates edge for high-variance stats (PTS/REB 19% overconfident)
                         # Boosts edge for BLOCKS UNDER (structural book inefficiency)
                         # See: best-practices/data/STAT_CONFIDENCE_FRAMEWORK.md
-                        edge = self._apply_stat_calibration(edge, stat_key, bet_direction)
+                        if config.MODIFIER_FLAGS.get('stat_calibration', True):
+                            edge = self._apply_stat_calibration(edge, stat_key, bet_direction)
                         # --- END STAT CALIBRATION ---
 
                         # Store fair probability for reporting
@@ -522,7 +533,8 @@ class LudiReporter:
 
                             # V5.3: RMSE-based sizing modifier
                             # High projection uncertainty (PTS/PRA) → smaller bet at same tier
-                            units = round(units * self._rmse_sizing_modifier(stat_key, p.get('name', '')), 2)
+                            if config.MODIFIER_FLAGS.get('rmse_sizing', True):
+                                units = round(units * self._rmse_sizing_modifier(stat_key, p.get('name', '')), 2)
 
                             # --- 3. DYNAMIC NOTE GENERATION (The Ludi Lens) ---
                             note_elements = []
@@ -902,7 +914,9 @@ class LudiReporter:
         k = key.lower()
         if k in COMBOS:
             raw = sum(p.get(c, 0) for c in COMBOS[k])
-            return raw * COMBO_CORRELATION_FACTOR.get(k, 1.0)
+            if config.MODIFIER_FLAGS.get('combo_correlation', True):
+                return raw * COMBO_CORRELATION_FACTOR.get(k, 1.0)
+            return raw
         m = {
             'pts': 'proj_pts', 'reb': 'proj_reb', 'ast': 'proj_ast',
             '3pm': 'proj_3pm', 'oreb': 'proj_oreb', 'dreb': 'proj_dreb',
@@ -1093,12 +1107,20 @@ class LudiReporter:
             hit_rate_signal = 0.60 * l5_hr + 0.40 * l10_hr
 
         # 2. streak_signal (0.20)
+        # Hotfix 3: Rare stat UNDERs use tighter streak thresholds — streak is less
+        # predictive for low-volume stats where the UNDER edge is structural, not momentum.
+        _rare_stat_under = stat_key.lower() in ('blk', 'stl', '3pm') and bet_direction.lower() == 'under'
         streak_sig_val = 0.50
-        if streak_score >= 0.7: streak_sig_val = 1.0
-        elif streak_score >= 0.5: streak_sig_val = 0.65
-        elif streak_score >= 0.3: streak_sig_val = 0.50
-        elif streak_score >= 0.1: streak_sig_val = 0.35
-        else: streak_sig_val = 0.20
+        if _rare_stat_under:
+            if streak_score >= 0.7: streak_sig_val = 1.0
+            elif streak_score >= 0.5: streak_sig_val = 0.65
+            # else: streak_sig_val stays at default 0.50 — no demotion for rare stat UNDERs
+        else:
+            if streak_score >= 0.7: streak_sig_val = 1.0
+            elif streak_score >= 0.5: streak_sig_val = 0.65
+            elif streak_score >= 0.3: streak_sig_val = 0.50
+            elif streak_score >= 0.1: streak_sig_val = 0.35
+            else: streak_sig_val = 0.20
         
         # 3. matchup_signal (0.15)
         matchup_score_val = max(0.0, min(1.0, 0.50 + (matchup_modifier / 60.0)))

@@ -405,10 +405,15 @@ class LudiOracle:
                 print(f"   >>> WARNING: Player dict missing keys: {missing} - using defaults")
 
             ref_data = scenario.get('ref_data', {})
-            ref_pace = ref_data.get('pace_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_impact', 1.0)
-            ref_whistle = ref_data.get('whistle_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_whistle', 1.0)
+            if config.MODIFIER_FLAGS.get('referee', True):
+                ref_pace = ref_data.get('pace_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_impact', 1.0)
+                ref_whistle = ref_data.get('whistle_impact', 1.0) if isinstance(ref_data, dict) else scenario.get('ref_whistle', 1.0)
+            else:
+                ref_pace = 1.0
+                ref_whistle = 1.0
 
-            base_pace = scenario.get('pace_factor', 1.0) * ref_pace
+            scenario_pace = scenario.get('pace_factor', 1.0) if config.MODIFIER_FLAGS.get('pace', True) else 1.0
+            base_pace = scenario_pace * ref_pace
             # NOTE: team_totals is computed from pre-blend stats. For thin-sample/returning
             # players, G2/G3 adjustments (below) shift individual stats AFTER this sum.
             # This means USG% (which divides individual FGA by team_totals) is slightly
@@ -433,7 +438,7 @@ class LudiOracle:
                 season_base = self.season_baselines.get(player_name_norm, {})
                 games_recent = player.get('GAMES_PLAYED', 25)
 
-                if season_base and games_recent < 15:
+                if config.MODIFIER_FLAGS.get('season_blend', True) and season_base and games_recent < 15:
                     w = min(games_recent / 15.0, 1.0)
                     for stat in ['PTS', 'REB', 'AST', 'FGA', 'FG3A', 'FTA',
                                  'STL', 'BLK', 'TOV', 'OREB', 'DREB']:
@@ -450,7 +455,7 @@ class LudiOracle:
                 # Applied before simulation so _simulate_volume uses dampened values.
                 player_id_key = str(player.get('player_id') or player.get('PLAYER_ID') or '')
                 games_back = self.return_status.get(player_id_key, 99)
-                if games_back <= 4:
+                if config.MODIFIER_FLAGS.get('return_ramp', True) and games_back <= 4:
                     ramp_factors = {1: 0.70, 2: 0.80, 3: 0.90, 4: 0.95}
                     ramp = ramp_factors.get(games_back, 1.0)
                     for stat in ['FGA', 'FG3A', 'FTA', 'MIN', 'PTS', 'REB',
@@ -466,7 +471,7 @@ class LudiOracle:
                 # Modifies volume inputs (FGA/FG3A/FTA/AST/REB) so the simulation
                 # reflects lineup-conditional, H/A, and starter/bench historical splits.
                 cond_mods = player.get('conditional_baseline_mods', {})
-                if cond_mods:
+                if config.MODIFIER_FLAGS.get('conditional_baseline', True) and cond_mods:
                     pts_mod = cond_mods.get('pts', 1.0)
                     fta_mod = cond_mods.get('fta', 1.0)
                     ast_mod = cond_mods.get('ast', 1.0)
@@ -495,7 +500,7 @@ class LudiOracle:
 
                 # Sprint 1: Apply empirical role modifiers
                 emp = self.empirical_modifiers.get(player_name_norm, {})
-                if emp:
+                if config.MODIFIER_FLAGS.get('empirical_role', True) and emp:
                     is_starter = player.get('is_starter', None)
                     if is_starter is True:
                         role_prefix = 'starter'
@@ -523,7 +528,10 @@ class LudiOracle:
                                 player[stat] = round(player[stat] * mod, 2)
 
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
-                fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
+                if config.MODIFIER_FLAGS.get('fatigue', True):
+                    fatigue_tax = self._calculate_fatigue_tax(player_days_rest)
+                else:
+                    fatigue_tax = 1.0
 
                 # Phase 8.9: build game_context for minutes projection
                 game_context = {
@@ -537,8 +545,11 @@ class LudiOracle:
                     opp_team = scenario.get('away_team')
                 else:
                     opp_team = scenario.get('home_team')
-                opp_def = self.team_defense.get(opp_team, scenario.get('def_factor', 1.0))
-                player_def_factor = max(0.92, min(1.08, opp_def))
+                if config.MODIFIER_FLAGS.get('team_defense', True):
+                    opp_def = self.team_defense.get(opp_team, scenario.get('def_factor', 1.0))
+                    player_def_factor = max(0.92, min(1.08, opp_def))
+                else:
+                    player_def_factor = 1.0
 
                 player_mods = {
                     "pace": base_pace * fatigue_tax,
@@ -562,6 +573,14 @@ class LudiOracle:
                 sim_profile['_raw_pace_factor'] = round(base_pace / fatigue_tax if fatigue_tax != 0 else base_pace, 3)
                 sim_profile['_fatigue_tax'] = round(fatigue_tax, 3)
                 sim_profile['_ref_pace_factor'] = round(ref_pace, 3)
+
+                # Hotfix 1: Star projection cap — limit cumulative modifier effect
+                _baseline_pts = player.get('PTS', 0)
+                if sim_profile.get('PTS', 0) > 22 and _baseline_pts > 0:
+                    _cap = _baseline_pts * 1.08
+                    if sim_profile['PTS'] > _cap:
+                        sim_profile['PTS'] = round(_cap, 1)
+                        sim_profile['FANTASY_PTS'] = self._calculate_fantasy_score(sim_profile)
 
                 # Phase 8.9: situational minutes projection
                 if getattr(config, 'USE_MINUTES_PROJECTION', True):
@@ -734,9 +753,10 @@ class LudiOracle:
         fg3_pct = player.get('FG3_PCT', 0.35) * mods['fatigue']
         ft_pct = player.get('FT_PCT', 0.75)
 
-        efficiency_mod = self._calculate_efficiency_modifier(player)
-        fg_pct *= efficiency_mod
-        fg3_pct *= efficiency_mod
+        if config.MODIFIER_FLAGS.get('shot_quality', True):
+            efficiency_mod = self._calculate_efficiency_modifier(player)
+            fg_pct *= efficiency_mod
+            fg3_pct *= efficiency_mod
 
         # NOTE: FGM = FGA * FG_PCT (expected-value method, not per-attempt Bernoulli).
         # Understates variance slightly but runs ~50x faster at 10K iterations.
@@ -764,7 +784,7 @@ class LudiOracle:
         drives_pts_boost = 1.0
         drives_ast_boost = 1.0
 
-        if drives:
+        if config.MODIFIER_FLAGS.get('drives_boost', True) and drives:
             pass_pct = drives.get('pass_pct', 0)
             drives_pts = drives.get('drives_pts', 0)
 

@@ -1113,7 +1113,8 @@ class LudiCalibrator:
                     calibrated['notes'] += " | 📉 Moved to Bench (-8 min)"
 
         # 3.5 SCHEDULE FATIGUE (Phase 4 Integration - Jan 21, 2026)
-        self._apply_fatigue_adjustments(calibrated, yak_report)
+        if config.MODIFIER_FLAGS.get('fatigue_e', True):
+            self._apply_fatigue_adjustments(calibrated, yak_report)
 
         # Pre-fetch odds dict (needed by 3.6 and 4)
         odds = calibrated.get('odds', {})
@@ -1159,8 +1160,9 @@ class LudiCalibrator:
         # Old logic: if spread > 12.5 → -6% for starters
         # New logic: Context-aware (favorite/underdog, starter/bench) in Module F
         
-        if total > 238.0: self._apply_factor(calibrated, 1.03)
-        elif total > 0 and total < 218.0: self._apply_factor(calibrated, config.GAME_TOTAL_LOW_FACTOR)
+        if config.MODIFIER_FLAGS.get('game_total', True):
+            if total > 238.0: self._apply_factor(calibrated, 1.03)
+            elif total > 0 and total < 218.0: self._apply_factor(calibrated, config.GAME_TOTAL_LOW_FACTOR)
 
         _scoring_env = config.get_scoring_environment()
         _over_rate = _scoring_env.get('over_hit_rate_14d', 0.50)
@@ -1182,7 +1184,8 @@ class LudiCalibrator:
         # Phase 6.3: Key boosts use _boost_stat_with_confidence for WOWY weighting
         trans_freq_primary = calibrated.get('synergy_modifiers', {}).get('TRANSITION', (0, 0))[0]
 
-        if archetype == "HELIOCENTRIC_MAESTRO":
+        if config.MODIFIER_FLAGS.get('matchup_scheme', True):
+          if archetype == "HELIOCENTRIC_MAESTRO":
             if def_style == "BLITZ":
                 self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.18, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 0.92, wowy_confidence)
@@ -1192,7 +1195,7 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.08, wowy_confidence)
                 calibrated['notes'] += " | P&R Drop Edge"
 
-        elif archetype == "SLASHING_CREATOR":
+          elif archetype == "SLASHING_CREATOR":
             if def_style == "FUNNEL":
                 funnel_mod = 1.08 if trans_freq_primary >= 14.0 else 1.02
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', funnel_mod, wowy_confidence)
@@ -1202,13 +1205,13 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_fta', 0.92, wowy_confidence)
                 calibrated['notes'] += " | Paint Congestion"
 
-        elif archetype == "JUMBO_FACILITATOR":
+          elif archetype == "JUMBO_FACILITATOR":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_ast', 1.12, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.15, wowy_confidence)
                 calibrated['notes'] += " | Size Mismatch Hub"
 
-        elif archetype == "SNIPER_ELITE":
+          elif archetype == "SNIPER_ELITE":
             if def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Spot-Up vs Helpers"
@@ -1216,12 +1219,12 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_3pm', 0.92, wowy_confidence)
                 calibrated['notes'] += " | Sniper Tax vs Perimeter"
 
-        elif archetype == "TWO_LEVEL_SCORER":
+          elif archetype == "TWO_LEVEL_SCORER":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.08, wowy_confidence)
                 calibrated['notes'] += " | Mid-Range Mismatch"
 
-        elif archetype == "WARRIOR_BIG":
+          elif archetype == "WARRIOR_BIG":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.20, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.20, wowy_confidence)
@@ -1231,13 +1234,13 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_fg_pct', 1.10)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
-        elif archetype == "STRETCH_BIG":
+          elif archetype == "STRETCH_BIG":
             if def_style == "PAINT_PACK":
                 self._boost_stat_with_confidence(calibrated, 'proj_3pm', 1.15, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_3pa', 1.15, wowy_confidence)
                 calibrated['notes'] += f" | {opponent} Paint Pack Edge"
 
-        elif archetype == "ROLL_MAN":
+          elif archetype == "ROLL_MAN":
             if def_style == "PERIMETER":
                 self._boost_stat_with_confidence(calibrated, 'proj_oreb', 1.30, wowy_confidence)
                 self._boost_stat_with_confidence(calibrated, 'proj_reb', 1.15, wowy_confidence)
@@ -1246,7 +1249,7 @@ class LudiCalibrator:
                 self._boost_stat_with_confidence(calibrated, 'proj_pts', 1.12, wowy_confidence)
                 calibrated['notes'] += " | Roll Man vs Drop"
 
-        elif archetype == "CUTTER_SPECIALIST":
+          elif archetype == "CUTTER_SPECIALIST":
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_pts', 1.12)
                 calibrated['notes'] += " | Cutter vs Small Ball"
@@ -1254,24 +1257,24 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_pts', 1.12)
                 calibrated['notes'] += " | Cutting Lanes"
 
-        elif archetype == "FACILITATOR":
+          elif archetype == "FACILITATOR":
             if def_style == "PAINT_PACK":
                 self._boost_stat(calibrated, 'proj_ast', 1.08)
                 calibrated['notes'] += " | Playmaking vs Drop"
 
-        elif archetype == "CONNECTOR":
+          elif archetype == "CONNECTOR":
             if def_style == "PAINT_PACK":
                 self._boost_stat(calibrated, 'proj_ast', 1.05)
                 calibrated['notes'] += " | Connector vs Pack"
 
-        elif archetype == "ENERGY_BIG":
+          elif archetype == "ENERGY_BIG":
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_reb', 1.08)
                 calibrated['notes'] += " | Energy Big Boards"
 
-        # Defensive tag matchup boosts (independent of offensive archetype)
-        d_tag = calibrated.get('defensive_tag')
-        if d_tag == 'RIM_GUARDIAN':
+          # Defensive tag matchup boosts (independent of offensive archetype)
+          d_tag = calibrated.get('defensive_tag')
+          if d_tag == 'RIM_GUARDIAN':
             if def_style == "FUNNEL":
                 self._boost_stat(calibrated, 'proj_blk', 1.12)
                 calibrated['notes'] += " | Rim Guardian vs Funnel"
@@ -1279,16 +1282,16 @@ class LudiCalibrator:
                 self._boost_stat(calibrated, 'proj_blk', 1.08)
                 self._boost_stat(calibrated, 'proj_reb', 1.05)
                 calibrated['notes'] += " | Rim Guardian Help Side"
-        if d_tag == 'PERIMETER_HAWK':
+          if d_tag == 'PERIMETER_HAWK':
             if def_style == "PERIMETER":
                 self._boost_stat(calibrated, 'proj_stl', 1.02)
                 calibrated['notes'] += " | Hawk Passing Lanes"
-        if d_tag == 'SWITCHABLE_ANCHOR':
+          if d_tag == 'SWITCHABLE_ANCHOR':
             if def_style == "BLITZ":
                 self._boost_stat(calibrated, 'proj_stl', 1.02)
                 self._boost_stat(calibrated, 'proj_blk', 1.04)
                 calibrated['notes'] += " | Switchable Pressure"
-        if d_tag == 'HUSTLE_DISRUPTOR':
+          if d_tag == 'HUSTLE_DISRUPTOR':
             if def_style == "FUNNEL":
                 self._boost_stat(calibrated, 'proj_stl', 1.02)
                 calibrated['notes'] += " | Hustle vs Funnel"
@@ -1310,8 +1313,10 @@ class LudiCalibrator:
         # 6. SECONDARY PLAYTYPE MATCHUPS (Week 2 - 14 Total Modifiers)
         # Extracted to separate method for Phase 3 implementation
         # Phase 6.3: Pass wowy_confidence for BENEFICIARY weighting
-        self._apply_secondary_playtype_matchups(calibrated, def_style, wowy_confidence)
-        self._apply_opponent_weak_link_boost(calibrated, opponent, def_style)
+        if config.MODIFIER_FLAGS.get('secondary_playtype', True):
+            self._apply_secondary_playtype_matchups(calibrated, def_style, wowy_confidence)
+        if config.MODIFIER_FLAGS.get('weak_link_boost', True):
+            self._apply_opponent_weak_link_boost(calibrated, opponent, def_style)
 
         # 6b. CLUTCH PERFORMER BOOST (Phase 7.4)
         # Apply +3% PTS boost for players on clutch-strong teams in close games
@@ -1320,19 +1325,23 @@ class LudiCalibrator:
             spread = float(spread)
         except (ValueError, TypeError):
             spread = 10.0
-        self._apply_clutch_boost(calibrated, spread)
+        if config.MODIFIER_FLAGS.get('clutch_boost', True):
+            self._apply_clutch_boost(calibrated, spread)
 
         # 6c. SPEED/FATIGUE CONTEXT (Sprint 1 - Dormant Data Activation)
         # Guards with high speed get hustle boosts; declining speed signals fatigue
-        self._apply_speed_fatigue_context(calibrated)
+        if config.MODIFIER_FLAGS.get('speed_fatigue', True):
+            self._apply_speed_fatigue_context(calibrated)
 
         # 6d. TOUCHES CONTEXT (Sprint 2 - Dormant Data Activation)
         # Quick decision-makers, paint presence, post-ups, efficient scorers
-        self._apply_touches_context(calibrated, def_style)
+        if config.MODIFIER_FLAGS.get('touches_context', True):
+            self._apply_touches_context(calibrated, def_style)
 
         # 6e. LEVERAGE GAME STATE CONTEXT (Sprint 3)
         # Pace by game state, crunch time usage, OREB adjustments
-        self._apply_leverage_context(calibrated, spread)
+        if config.MODIFIER_FLAGS.get('leverage_context', True):
+            self._apply_leverage_context(calibrated, spread)
 
         # 6.5. SYNERGY PLAYTYPE EFFICIENCY (Phase 1 Integration - Jan 21, 2026)
         if use_synergy:
@@ -1347,36 +1356,37 @@ class LudiCalibrator:
         rim_freq = calibrated.get('pbp_rim_freq', 0.0)
         corner_freq = calibrated.get('pbp_corner3_freq', 0.0)
 
-        # A) Efficiency Boost for High Quality Shot Takers
-        # League Avg SQ is ~0.53. Players > 0.55 get easy looks.
-        if pbp_sq > 0.55:
-            self._boost_stat(calibrated, 'proj_pts', 1.04)
-            self._boost_stat(calibrated, 'proj_fg_pct', 1.03) 
-            calibrated['notes'] += " | High SQ Efficiency"
-        elif pbp_sq < 0.48:
-            # Bad shot selection penalty (Only hit efficiency/points, not hustle stats)
-            self._boost_stat(calibrated, 'proj_pts', 0.96)
-            self._boost_stat(calibrated, 'proj_fg_pct', 0.96)
-            calibrated['notes'] += " | Low SQ Tax"
+        if config.MODIFIER_FLAGS.get('pbp_shot_quality', True):
+            # A) Efficiency Boost for High Quality Shot Takers
+            # League Avg SQ is ~0.53. Players > 0.55 get easy looks.
+            if pbp_sq > 0.55:
+                self._boost_stat(calibrated, 'proj_pts', 1.04)
+                self._boost_stat(calibrated, 'proj_fg_pct', 1.03)
+                calibrated['notes'] += " | High SQ Efficiency"
+            elif pbp_sq < 0.48:
+                # Bad shot selection penalty (Only hit efficiency/points, not hustle stats)
+                self._boost_stat(calibrated, 'proj_pts', 0.96)
+                self._boost_stat(calibrated, 'proj_fg_pct', 0.96)
+                calibrated['notes'] += " | Low SQ Tax"
 
-        # B) Slasher Validation (Rim Pressure)
-        # If Rim Freq > 40%, they are legitimate paint threats -> Foul magnets
-        if rim_freq > 0.40:
-            self._boost_stat(calibrated, 'proj_fta', 1.15)
-            if archetype == "SLASHING_CREATOR":
-                calibrated['notes'] += " | Confirmed Rim Pressure"
-        elif rim_freq < 0.15:
-            self._boost_stat(calibrated, 'proj_fta', 0.92)
-            calibrated['notes'] += " | Low Rim Pressure"
+            # B) Slasher Validation (Rim Pressure)
+            # If Rim Freq > 40%, they are legitimate paint threats -> Foul magnets
+            if rim_freq > 0.40:
+                self._boost_stat(calibrated, 'proj_fta', 1.15)
+                if archetype == "SLASHING_CREATOR":
+                    calibrated['notes'] += " | Confirmed Rim Pressure"
+            elif rim_freq < 0.15:
+                self._boost_stat(calibrated, 'proj_fta', 0.92)
+                calibrated['notes'] += " | Low Rim Pressure"
 
-# C) Corner Specialist Logic
-        # Corner 3s are are counter to 'PAINT_PACK' defenses
-        if corner_freq > 0.20 and def_style == "PAINT_PACK":
-            self._boost_stat(calibrated, 'proj_3pm', 1.12)
-            calibrated['notes'] += " | Corner Specialist vs Pack"
-        elif corner_freq < 0.05:
-            self._boost_stat(calibrated, 'proj_3pm', 0.95)
-            calibrated['notes'] += " | Low Corner Volume"
+            # C) Corner Specialist Logic
+            # Corner 3s are counter to 'PAINT_PACK' defenses
+            if corner_freq > 0.20 and def_style == "PAINT_PACK":
+                self._boost_stat(calibrated, 'proj_3pm', 1.12)
+                calibrated['notes'] += " | Corner Specialist vs Pack"
+            elif corner_freq < 0.05:
+                self._boost_stat(calibrated, 'proj_3pm', 0.95)
+                calibrated['notes'] += " | Low Corner Volume"
 
         # === NEW: FT% SHOOTING TOUCH INDICATOR ===
         # Research: Free throw ability indicates shooting touch (ShotQualityBets)
@@ -1452,6 +1462,8 @@ class LudiCalibrator:
         ]
         stat_overrides = {
             'proj_stl': {'max': 1.10, 'min': 0.85},  # Phase 7.9.5: Tightened cap to reduce STL over-projection
+            'proj_pts': {'max': 1.15, 'min': 0.85},  # Hotfix 5: tightened from ±25% to ±15%
+            'proj_ast': {'max': 1.15, 'min': 0.85},  # Hotfix 5: tightened from ±25% to ±15%
         }
         for proj_key, base_key in stat_pairs:
             base_val = calibrated.get(base_key, 0) or 0
