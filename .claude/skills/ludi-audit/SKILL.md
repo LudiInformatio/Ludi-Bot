@@ -192,6 +192,19 @@ produces 0 bets with no alert — looks like a quiet day, not a bug.*
 
 ---
 
+### New Data Script Gate (if a new `scripts/*.py` that writes to DB is in the diff)
+
+Before marking APPROVED, verify:
+- The script has been run with `--dry-run` against the live `ludi.db` (not just compiled)
+- All SQL column names match the actual table schema (`PRAGMA table_info(table_name)`)
+- No `no such column` errors in the dry-run output
+
+*Root cause: `compute_empirical_modifiers.py` shipped with 3 column name mismatches
+(`season`/`min`/`is_starter` vs actual `season_id`/`minutes`/`started`). Passed code
+review but failed on first production run. 3 consecutive nightly failures before detection.*
+
+---
+
 ### ROADMAP Contract (only if ROADMAP.md is in the diff)
 
 If `ROADMAP.md` was modified, verify the header block:

@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 23, 2026
+**Last Updated:** March 24, 2026
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -28,16 +28,6 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 ---
 
 ## Active Debt
-
-### TD-001: Conflicting unique indexes on `player_game_logs`
-- **Severity:** P0
-- **Location:** `database.py` L298 vs `module_h_historian.py` L81-88
-- **Description:** Two different UNIQUE constraints defined with the same index name (`idx_player_game_logs_unique`). `database.py` defines `UNIQUE(game_id, player_id)`. Module H's `_ensure_unique_index()` creates `UNIQUE(player_id, game_date)`. Whichever code ran last determines the live index. UPSERT behavior depends on which index exists.
-- **Impact:** If the wrong index is live, UPSERT operations silently INSERT duplicates instead of updating existing rows. Affects any backfill or sync script targeting `player_game_logs`.
-- **Recommended Fix:** Audit live DB index, pick one authoritative constraint (likely `player_id, game_date`), update both `database.py` and `module_h_historian.py` to match, remove the conflicting definition.
-- **Discovered:** 2026-03-23 (Henrik, BDL backfill planning)
-- **Blocked by:** Nothing — can fix immediately
-- **Blocks:** BDL historical backfill (Phase 0 gate)
 
 ### TD-004: `get_stats()` single-page truncation
 - **Severity:** P2
@@ -97,6 +87,22 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Discovered:** 2026-03-21 (Henrik + Lena + Maren, classification architecture review)
 - **Blocked by:** Junior dev build time
 
+### TD-015: `players.depth_chart_position` column missing
+- **Severity:** P2
+- **Location:** `scripts/compute_empirical_modifiers.py` L286-297, `players` table
+- **Description:** Script queries `players.depth_chart_position` but the column doesn't exist (only `position`). Soft-fail: returns NULL depth_slot. The depth_slot feature was specced but the column was never added to the `players` table.
+- **Impact:** All `player_empirical_modifiers.depth_slot` values are NULL. Low impact — depth_slot is informational only, not consumed by Module C/F.
+- **Recommended Fix:** Either add `depth_chart_position` column to `players` (populated from Tank01 depth charts), or modify the query to derive from `team_lineups` data.
+- **Discovered:** 2026-03-24 (Sprint 0 execution)
+
+### TD-016: `compute_empirical_modifiers.py` never tested against live schema
+- **Severity:** P1
+- **Location:** Best practice gap
+- **Description:** The Empirical Modifiers Sprint 1 shipped March 21 with Henrik APPROVED, but the script was never run against `ludi.db` before commit. Three column name mismatches (`season`, `min`, `is_starter`) went undetected because the schema check was done against the spec, not the live DB. The GH Actions workflow ran nightly for 3 days with 0 output and no alert (until ops-hub was wired).
+- **Impact:** Best practice: all data scripts must pass a `--dry-run` against live DB before shipping.
+- **Recommended Fix:** Add to Henrik's audit checklist: "Run `--dry-run` against live DB for any new data script before APPROVED."
+- **Discovered:** 2026-03-24
+
 ### TD-013: `player_projections.player_id` is unfirewalled
 - **Severity:** P3
 - **Location:** `utils/projection_logger.py` L86
@@ -115,6 +121,8 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 | TD-003 | `CURRENT_SEASON` hardcoded in tracking/clutch scripts | BDL backfill commit (Mar 23) | 2026-03-23 |
 | TD-009 | `sync_bdl_clutch_usage.py` missing `--season` flag | BDL backfill commit (Mar 23) | 2026-03-23 |
 | TD-012 | `main.py` projection_logger uses `print()` not `logging.warning()` | This commit (Mar 23) | 2026-03-23 |
+| TD-001 | Conflicting unique indexes on `player_game_logs` | `database.py` index aligned (`93d84d7`, Mar 23) | 2026-03-23 |
+| TD-014 | `compute_empirical_modifiers.py` 3 column name mismatches | `aec6909` (Mar 24) | 2026-03-24 |
 
 ---
 
