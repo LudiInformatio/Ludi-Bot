@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 23, 2026 — 5:39 PM EDT
+**Last Updated:** Tuesday, March 24, 2026 — 12:41 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Backtesting new data (`scripts/backfill_bdl_game_logs.py`, `compute_empirical_modifiers.py`) — 108K game logs ready for multi-season backtest + empirical modifiers first production run pending + sim integration review with team
-**Completed:** Workflow ops audit — 3 bugs fixed: dead pre-evening check (`claude-qa-check.yml`), PR review perms (`claude-code-review.yml`), ops-hub watch list + `is_active` fix (`1b9ec99`) ✅ + BDL 2-season historical backfill — 76K game logs + 63K advanced/hustle + 26K season averages (`backfill_bdl_game_logs.py`) ✅ + Tech debt register — `docs/TECH_DEBT.md` created with 11 items, TD-002/TD-003 fixed ✅
+**Active Work:** Modifier ablation sprint (`config.MODIFIER_FLAGS`, `module_c.py`, `module_e.py`) — 39 A/B flags wired, 5 hotfixes live (star cap, HOT_STREAK gate, BLK AWAY premium, PTS/AST ±15% cap), awaiting 7-day production validation + B2B double-count fix (Sprint 3)
+**Completed:** Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium, PTS/AST cap tightened (`bfe860e`) ✅ + Empirical modifiers first run — 161/492 players computed, 3 column mismatches fixed (`aec6909`) ✅ + Backtest suite + projection tracking — 21-test suite, `player_projections` table, modifier attribution columns, 2 look-ahead fixes (`bab057c`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
