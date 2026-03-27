@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 24, 2026 — 6:47 PM EDT
+**Last Updated:** Friday, March 27, 2026 — 3:15 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** Sprint 4 production validation (`module_f.py` stat-level Kelly gate) — 7-day window running + T3 Three-Lens Curation Prompt (`curate_plays.py`, `utils/claude_prompts.py`) + P1/P2/P3 Sankore patterns (`docs/VALIDATION_GATES.md`, agent SOUL files)
-**Completed:** Sprint 4-A stat-level Kelly gate + Sprint 4-B chain of command — per-stat units cap (`module_f.py`), Henrik dispatches junior direct (`1cd8ee3`) ✅ + Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492 ✅ + Sprint 2 MODIFIER_FLAGS + 5 hotfixes — 25 flag wrappers across 4 modules, star cap, HOT_STREAK conditional, BLK AWAY premium (`bfe860e`) ✅
+**Active Work:** Session 3 Smart Money Layer (`module_a.py`, `prop_line_snapshots`) — Pinnacle steam detection, Kalshi/Novig integration + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
+**Completed:** T3 Three-Lens Curation (`curate_plays.py` v2.0-three-lens) + T4/P1/P2/P3 Sankore patterns — Validation Gates, PIP Protocol, YAML frontmatter ✅ + Sprint 4-A stat-level Kelly gate + Sprint 4-B chain of command — per-stat units cap (`module_f.py`), Henrik dispatches junior direct (`1cd8ee3`) ✅ + Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492 ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -48,16 +48,19 @@ This is the single source of truth for project tasks and priorities.
 **Next Actions:**
 - [x] **Sprint 4-A: Stat-Level Kelly Gate** — per-stat units cap in `module_f.py` (PTS all edges, AST >14%, REB/BLK/STL/combos >20%, 3PM bypass), `config.py` `stat_kelly_gate` flag, Henrik APPROVED, commit `1cd8ee3` ✅
 - [x] **Sprint 4-B: Chain of Command MVP** — `Agent` tool in `henrik.md`, `AGENTS.md` Henrik-dispatches-junior pattern documented, commit `1cd8ee3` ✅
-- [ ] **T3: Three-Lens Curation Prompt** — VALUE/MOMENTUM/CONTRARIAN lenses into Stage 2 Sonnet. Injection point: between `wr_context` and `OUTPUT SCHEMA` in `curate_plays.py`. Route: Maren designs → junior dev → Henrik.
-- [ ] **T4: Replace Claxton example** — use Jalen Suggs 3PM UNDER 2.5 (game-cap LEAN, LOSS). Add `[STAR_PG]` Example 5 (false STRONG illustration). Files: `curate_plays.py` curate_examples section.
-- [ ] **P1/P2/P3: Sankore Tier 1 patterns** — YAML frontmatter on all agent + SOUL/ONBOARDING files (XS), `docs/VALIDATION_GATES.md` 3-gate doc (S, Lena queries), PIP Protocol in all 8 SOUL.md files (S, Maren designs template).
+- [x] **T3: Three-Lens Curation Prompt** — VALUE/MOMENTUM/CONTRARIAN lenses injected into `curate_plays.py`, PROMPT_VERSION `v2.0-three-lens`, Henrik APPROVED ✅
+- [x] **T4: Replace Claxton example** — Suggs 3PM UNDER 2.5 (Example 4), `[STAR_PG]` false STRONG PTS OVER (Example 5), both in v2.0 Three-Lens thinking format ✅
+- [x] **P1/P2/P3: Sankore Tier 1 patterns** — YAML frontmatter (26 files, local), `docs/VALIDATION_GATES.md` 3-gate doc shipped, PIP Protocol appended to 9 SOUL.md files (local) ✅
+- [ ] **T5d: Smart Money Signal Layer** — Pinnacle `pinnacle_line_over`/`pinnacle_line_under` in `prop_line_snapshots`, `STEAM_MOVE` tag in Module F. MVP: Pinnacle already in `regions=eu` — just separate storage. Route: Lena thresholds → junior dev → Henrik.
+- [ ] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml`. Route: junior dev → Silas validates → Henrik.
+- [ ] **T5c: Game Score Formula v2** — line movement delta + handle% to `_score_game()`. Route: Lena specs weights → junior dev → Henrik.
 - [x] **Per-grade calibration query** — `by_grade` breakdown in `calibrate_claude_outputs.py` with `!` inversion flag (FADE WR > 55%), Henrik APPROVED, commit `f8f7b14` ✅
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
 - [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 5,212 rows in `claude_analysis_log` (17 days, Mar 4–21). Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
-- [ ] **Replace Claxton example in `curate_examples`** — Example 4 is constructed from unsettled data. Replace with first settled LEAN bet from `claude_analysis_log` once T-8.23-F accumulates rows.
+- [x] **Replace Claxton example in `curate_examples`** — Done (T4 Session 2): Suggs 3PM UNDER + `[STAR_PG]` Example 5 ✅
 - [x] **T-CAL-001** — `calibrate_claude_outputs.py` query fix `curation_grade IS NOT NULL` ✅
 - [x] **T-8.23-E** — `scripts/backfill_claude_analysis_outcomes.py` built + runs clean ✅
 - [x] **T-8.23-F** — per-bet INSERT loop + 6-column schema in `database.py` + `curate_plays.py` ✅
@@ -130,6 +133,18 @@ This is the single source of truth for project tasks and priorities.
 - [ ] Sprint 3: Curation prompt engineering (randomize order, prefilling, Many-Shot ICL, CoT)
 - [ ] Sprint 4: Knowledge distillation + Reflexion (feedback loops, Haiku calibration, lessons-learned)
 - [ ] Sprint 5: Advanced patterns + structural hardening (debate, confidence scoring, handoff protocols)
+
+### Phase 10: 24/7 Self-Improving Automation Layer (Post-Phase 9 — All-Hands Planning Required)
+**Status:** CONCEPT — pending all-hands discussion on roadmap alignment
+**Vision:** Graduate the employee workforce from on-demand agents to scheduled, always-on signals. Close the gap between pipeline execution (automated) and pipeline improvement (currently manual).
+**Layers to discuss:**
+- Run (already automated): data sync, simulation, Telegram cards
+- Monitor (~75%): ops-hub failure detection, quota alerts, schema drift
+- Improve (not yet automated): calibration drift, prompt refinement alerts, taxonomy decay, competitive intel collection
+**Employee scheduling candidates:** Silas (nightly health), Vera (pre-game pre-flight), Lena (weekly pattern mine), Maren (monthly prompt calibration), Iris (daily social collect), Kai (weekly repo hygiene)
+- [ ] All-hands planning session — map each employee to a scheduled cadence
+- [ ] Define escalation paths from scheduled signals → human decision
+- [ ] Spec `docs/projects/AUTOMATION_LAYER.md`
 
 ### Ludi Lens Dashboard (Post-Phase 8 — Web App Sprint)
 **Blocked until:** Phase 8 complete + dedicated web app sprint

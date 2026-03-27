@@ -46,7 +46,7 @@ from utils.game_dossier import build_game_dossier
 from utils.slack_notifier import send_slack_failure_alert
 
 # ─── Constants ────────────────────────────────────────────────────────────────
-PROMPT_VERSION = 'v1.3-empirical-mods'
+PROMPT_VERSION = 'v2.0-three-lens'
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
 VOLUME_STATS = {'PTS', 'REB', 'AST', 'MIN'}
 SANITY_FAIL_STATUSES = {'OUT', 'DOUBTFUL'}
@@ -459,7 +459,58 @@ def _sonnet_curate(
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 
-    system_prompt += '\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{"bet_id": 123, "thinking": "WR grade: [grade]. Edge: [edge]. Matchup: [summary]. Decision: [why].", "grade": "STRONG|LEAN|FADE", "reasoning": "one sentence"}]'
+    system_prompt += """
+
+THREE-LENS ANALYTICAL PROTOCOL — apply in order before grading every bet:
+
+LENS 1 — VALUE: Identify the structural mispricing reason.
+  Valid VALUE reasons: injury vacuum (absent player redistributes usage), public overreaction
+  (line moved against sharp book signal), line set on small sample (first 5 games of season),
+  scheme edge (archetype vs opponent defense confirmed in wr_context), or referee tilt.
+  If you cannot name a structural reason — the edge number alone is NOT a VALUE reason —
+  apply downgrade pressure toward LEAN or FADE.
+
+LENS 2 — MOMENTUM: Measure the player's current regime.
+  Primary signal: L5 average vs L10 average for the relevant stat category.
+  Rising trend (L5 > L10 by 10%+): momentum confirmation — use as supporting STRONG signal.
+  Flat trend (L5 within 10% of L10): neutral — does not add or subtract.
+  Cold streak (L5 < L10 by 10%+): yellow flag — downgrade pressure even on high-edge bets.
+    A cold streak does NOT auto-force FADE, but it must be named and weighed against
+    the VALUE lens before grading STRONG.
+  If L5/L10 data is not present in the dossier: note as "momentum: data absent" and treat
+  as neutral.
+
+LENS 3 — CONTRARIAN: State the single most obvious bear case for this bet.
+  Every bet gets a bear case named explicitly. Format: "[specific scenario] → [data response]."
+  Examples of bear cases: opponent posts highest defensive rating against this archetype,
+  player just returned from injury and may be on minutes restriction, game environment
+  is high-spread blowout risk that caps volume, or correlated loss risk with other STRONG picks.
+  Grade only reaches STRONG if the bear case is named AND dismissed with data.
+  Grade stays LEAN if the bear case is real and cannot be fully dismissed.
+  Grade becomes FADE if the bear case is the dominant signal.
+
+CONTRARIAN LENS — CALIBRATION SIGNAL (Sprint 4-A empirical finding):
+  The following patterns indicate model edge compression — probe harder before grading STRONG:
+  - PTS OVER or UNDER with true_edge > 14%: Kelly signal degrades or inverts at this threshold.
+    Name the narrative reason (injury vacuum, scheme, public overreaction) or downgrade to LEAN.
+  - AST OVER or UNDER with true_edge > 14%: same degradation pattern. Same rule.
+  - REB OVER or UNDER with true_edge > 14%: same.
+  - STL OVER or UNDER with true_edge > 14%: same.
+  - PRA, PA, PR, RA combos with true_edge > 20%: Kelly degrades. Probe for narrative or downgrade.
+  - 3PM (either side) at any edge: EXEMPT — sustain positive Kelly signal at extreme edges. Do not flag.
+  - BLK (either side) at any edge: EXEMPT — sustain positive Kelly signal at extreme edges. Do not flag.
+  Flagging does not mean automatic FADE. It means: state the narrative reason or downgrade.
+
+THREE-LENS GRADE LOGIC:
+  STRONG: VALUE lens names a clear structural reason + MOMENTUM is flat or rising +
+          CONTRARIAN bear case is named and dismissed with data + WR grade confirms.
+  LEAN:   VALUE lens is present but weak, OR MOMENTUM is cold, OR bear case is real
+          but not dominant. WR grade is B or below.
+  FADE:   No clear VALUE reason, OR bear case is dominant, OR calibration flag fires
+          with no narrative override, OR WR grade is D/F with no structural exception.
+"""
+
+    system_prompt += "\n\nOUTPUT SCHEMA — return ONLY valid JSON, no other text:\n[{\"bet_id\": 123, \"thinking\": \"VALUE: [structural mispricing reason or 'none identified']. MOMENTUM: [L5 vs L10 status — rising/flat/cold/data absent]. CONTRARIAN: [bear case stated] → [dismissed/sustained + data]. Final: [one-sentence decision].\", \"grade\": \"STRONG|LEAN|FADE\", \"reasoning\": \"one sentence\"}]"
 
     env = config.get_scoring_environment()
     over_rate = env.get('over_hit_rate_14d', 0)
@@ -471,6 +522,10 @@ def _sonnet_curate(
     # Replace Example 4 (Claxton BKN) with a settled LEAN bet once one is available in claude_analysis_log.
     curate_examples = """
 === CURATION EXAMPLES ===
+
+NOTE: Examples 1-3 use the pre-v2.0 thinking format (narrative summary).
+Examples 4-5 use the current v2.0 Three-Lens format (VALUE/MOMENTUM/CONTRARIAN/Final).
+New bets being evaluated should follow the v2.0 format as instructed in the THREE-LENS ANALYTICAL PROTOCOL above.
 
 === EXAMPLE 1 — BLK UNDER: A+ WR grade overrides yellow matchup flag (→ STRONG) ===
 Input:
@@ -544,28 +599,65 @@ Grade: STRONG
 Reasoning: PR UNDER with STRONG curation shows 85.7% WR (WATCH, n=7) — grading LEAN destroys signal. DIAMOND edge + neutral matchup confirm. EMERGING signal — confidence interval wide, verify context.
 === END EXAMPLE 3 ===
 
-=== EXAMPLE 4 — BLK UNDER: A+ category WR, but player personal avg overrides to LEAN ===
+=== EXAMPLE 4 — 3PM UNDER: A-grade WR, DIAMOND edge, but TREND OVERRIDE caps to LEAN ===
 Input:
-  Player: Nicolas Claxton [BKN]
-  Bet: BLK UNDER 1.5
-  True edge: 17.7% | Tier: DIAMOND
-  Archetype: RIM_GUARDIAN
-  Injury status: No active record
-  Game context: BKN vs NYK, spread even, total 217.0
+  Player: Jalen Suggs [ORL]
+  Bet: 3PM UNDER 2.5 @ -154 (DraftKings)
+  True edge: +18.2% | Tier: DIAMOND
+  Projection: 1.90 | Line: 2.5 (gap: -0.60)
+  Archetype: FACILITATOR
+  Tags: FACILITATOR, vs_PAINT_PACK
+  Injury status: Active
+  Game context: ORL @ OKC, spread 10.0 (ORL big underdog), total 223.5
 
 Reasoning chain (consult WR grade FIRST):
-  Step 1 — WR grade: BLK UNDER = A+ (67.1% floor, n=918). Default to STRONG.
-  Step 2 — Player-specific override: Claxton averages 1.8 BLK/g. Line is 1.5 — set BELOW his
-           personal average. A+ category WR applies to structural UNDERs (line above player avg).
-           When line is below player avg, the structural edge disappears.
-  Step 3 — Edge: 17.7% DIAMOND. Real edge, but player-specific risk dilutes it.
-  Step 4 — Grade: LEAN. LEAN means WR context was engaged, specific concern found.
-           LEAN is NOT the same as NULL (no data informed). LEAN = real edge + specific concern.
+  Step 1 — WR grade: 3PM UNDER = A (56% floor, n=960). Default to STRONG.
+  Step 2 — MOMENTUM check: L5 3PM hit rate: 1/5 (20%). L10: 3/10 (30%). Trend: DOWN.
+           Rising 3PM shooter at line 2.5 might hold. Falling shooter in a blowout = risk.
+  Step 3 — Edge: +18.2% DIAMOND. Real edge, projection 1.9 vs line 2.5 is a clean gap.
+  Step 4 — CONTRARIAN: ORL down 10.0 — blowout scenario likely. Suggs min restriction in
+           garbage time caps volume. Cold streak (L5 1/5) means he may not find rhythm.
+  Step 5 — Grade: LEAN. A-grade WR + DIAMOND edge confirmed — but cold trend + blowout
+           exposure reduce conviction. LEAN correctly captures: real edge, real concern.
+           NOTE: Model thinking below computed "STRONG" — the trend flag and game context
+           override applied AFTER thinking output. Final grade diverges from raw model call.
 
-thinking: "WR grade: A+ category BLK UNDER. But Claxton averages 1.8 BLK/g — line at 1.5 is below his mean, structural UNDER edge absent. A+ applies structurally, not here. LEAN not STRONG."
+thinking: "VALUE: 3PM UNDER structural edge — projection 1.9 vs line 2.5, A-grade WR category (56% floor). MOMENTUM: L5 1/5 (20%) vs L10 3/10 (30%) — cold streak, trend DOWN. CONTRARIAN: ORL -10 underdog → blowout risk, starters sit Q4, Suggs loses volume opportunities → dismissed partially (gap is 0.6, structural edge survives), but cold trend sustained. Final: LEAN. Edge real but trend + game context reduce conviction."
 Grade: LEAN
-Reasoning: BLK UNDER A+ category signal, but Claxton's personal avg (1.8 BLK/g) places the 1.5 line below his mean — structural UNDER edge absent. DIAMOND edge real but player-specific risk reduces confidence.
+Reasoning: A-grade 3PM UNDER with DIAMOND edge, but cold shooting trend (L5 1/5) + blowout exposure (spread 10.0) reduce conviction below STRONG threshold.
 === END EXAMPLE 4 ===
+
+=== EXAMPLE 5 — PTS OVER: DIAMOND edge + HOT_STREAK looks STRONG but WR grade + Kelly gate = LEAN ===
+Input:
+  Player: [STAR_PG] [TEAM]    ← placeholder per CLAUDE.md hygiene rule
+  Bet: PTS OVER 24.5
+  True edge: +52.0% | Tier: DIAMOND
+  Projection: 27.8 | Line: 24.5 (gap: +3.3)
+  Archetype: TWO_LEVEL_SCORER
+  Tags: TWO_LEVEL_SCORER, HOT_STREAK, vs_NEUTRAL
+  Injury status: Active
+  Game context: Home game, spread 4.5 (home favored), total 228.0
+
+Reasoning chain (consult WR grade FIRST):
+  Step 1 — WR grade: PTS OVER = D (no A/A+ floor exists for PTS OVER in calibration data).
+           PTS is the highest-variance stat category — no sustained Kelly-positive WR band.
+           Cannot default to STRONG on WR context alone. WR grade D = treat as LEAN base.
+  Step 2 — MOMENTUM check: HOT_STREAK tag present. L5 avg: 27.1, L10 avg: 24.3 (+11.5% rising).
+           Rising trend is a positive signal — noted, but does not override WR grade concern.
+  Step 3 — Edge: +52.0% DIAMOND. Edge is extreme. Note: ⚠️ VERIFY LINE flag applies above 25%
+           edge. Extreme edges on PTS often indicate stale or soft market line, not model alpha.
+  Step 4 — CONTRARIAN: Sprint 4-A calibration finding — PTS OVER above 14% edge: Kelly signal
+           degrades or inverts. WR at 14%+ edge in PTS collapses to ~46-50% (below breakeven).
+           HOT_STREAK + DIAMOND tier signal is real, but edge-to-WR mapping breaks down here.
+           The model projects +3.3 gap, but that gap lives in the same collapsed WR pool.
+  Step 5 — Grade: LEAN. HOT_STREAK + DIAMOND tier are real signals. But D-grade WR on PTS OVER
+           + edge compression above 14% = stat_kelly_gate fires → SIZE_DOWN to 0.5u.
+           LEAN, not STRONG. The model's confidence is higher than the calibration data supports.
+
+thinking: "VALUE: HOT_STREAK + rising L5 (27.1 vs L10 24.3) + home game. Structural edge exists. MOMENTUM: rising trend confirmed +11.5%. CONTRARIAN: PTS OVER WR = D-grade, no calibration floor. Sprint 4-A — edge > 14% on PTS inverts Kelly. 52% edge extreme — verify line flag. HOT_STREAK masked the WR weakness. Bear case sustained: no calibration data supports PTS OVER STRONG above 14%. Final: LEAN. stat_kelly_gate applied (0.5u cap)."
+Grade: LEAN
+Reasoning: DIAMOND edge and HOT_STREAK are real, but PTS OVER WR grade is D (no calibration floor) and Sprint 4-A Kelly gate fires above 14% edge — size down to LEAN, not STRONG.
+=== END EXAMPLE 5 ===
 
 === END EXAMPLES ===
 """

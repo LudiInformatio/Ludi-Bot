@@ -190,7 +190,7 @@ final_projection = base_stat * pace_factor * referee_factor * fatigue_tax * defe
 ## Validation Requirements
 
 **Must-Achieve Metrics Before Dashboard Development:**
-- RMSE < 10% for PTS/AST/REB projections
+- RMSE per stat: PTS < 7.0 | AST < 2.5 | REB < 3.5 (see `docs/VALIDATION_GATES.md` for current measurements)
 - Hit rate > 52% overall
 - Hit rate > 55% on 10%+ edge bets
 - Positive CLV (Closing Line Value) on >50% of bets

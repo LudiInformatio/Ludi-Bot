@@ -231,5 +231,6 @@ This project has custom skills available:
   - **PM Bot Notes Guide**: `best-practices/ai/PM_BOT_NOTES_GUIDE.md` (how to write ROADMAP header lines so PM bot messages are specific, not generic)
   - **Common Mistakes**: `best-practices/ai/COMMON_MISTAKES.md` (recurring Claude Code mistakes — DPO-style prevention rules, schema traps, silent failure patterns)
 - **Tech Debt Register**: `docs/TECH_DEBT.md` (tracked technical debt — Henrik + junior dev maintain, Solomon reviews during debrief)
+- **Validation Gates**: `docs/VALIDATION_GATES.md` (3 pass/fail model accuracy gates — RMSE, hit rate, CLV — with live status)
 - **Tools Guide**: @docs/TOOLS_GUIDE.md (automation scripts, helpers)
 - **Research**: `docs/research/` (competitive analysis, prompt engineering)
