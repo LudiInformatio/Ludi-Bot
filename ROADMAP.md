@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Friday, March 27, 2026 — 3:15 PM EDT
+**Last Updated:** Friday, March 27, 2026 — 3:34 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** Session 3 Smart Money Layer (`module_a.py`, `prop_line_snapshots`) — Pinnacle steam detection, Kalshi/Novig integration + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
-**Completed:** T3 Three-Lens Curation (`curate_plays.py` v2.0-three-lens) + T4/P1/P2/P3 Sankore patterns — Validation Gates, PIP Protocol, YAML frontmatter ✅ + Sprint 4-A stat-level Kelly gate + Sprint 4-B chain of command — per-stat units cap (`module_f.py`), Henrik dispatches junior direct (`1cd8ee3`) ✅ + Sprint 3 calibration — B2B double-count fix, PAV Brier -7.7%, negative-EV gate, empirical modifiers 492/492 ✅
+**Completed:** WS2 ablation unblocked — `_settle_actual_results()` player_name fallback, TD-020 archived (`5c98990`) ✅ + T3 Three-Lens Curation (`curate_plays.py` v2.0-three-lens) + T4/P1/P2/P3 Sankore patterns — Validation Gates, PIP Protocol, YAML frontmatter ✅ + Sprint 4-A stat-level Kelly gate + Sprint 4-B chain of command — per-stat units cap (`module_f.py`), Henrik dispatches junior direct (`1cd8ee3`) ✅
 
 This is the single source of truth for project tasks and priorities.
 

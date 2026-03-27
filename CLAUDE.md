@@ -168,6 +168,7 @@ See `docs/PRODUCTION_HANDBOOK.md` for the full workflow schedule (all times, tri
   - Never collapse all completions into one segment or remove the ` + ` delimiters — it breaks the parser.
 - **`config.MODIFIER_FLAGS`** — 40 boolean flags controlling every modifier in the pipeline (Modules C/E/F/X). All default `True`. Override per-flag via env: `MODIFIER_FLAGS_JSON='{"matchup_scheme": false}'`. Used for A/B ablation testing — disable modifiers individually to measure RMSE impact. Never set a flag to `False` in `config.py` directly — use the env override for temporary experiments.
 - **`## Project Vision` in OVERVIEW.md is permanent** — never delete or trim. Update periodically. This section is institutional memory. Note: `README.md` is a minimal public-facing file; `OVERVIEW.md` (gitignored) is the detailed internal version.
+- **`player_projections.player_id` is always NULL** — The player dict in `main.py` carries `player_id` but it is dropped somewhere in the Module B→C→E pipeline before `projection_logger.py` writes it. Workaround: any JOIN on `player_projections` must use `(player_name, game_date)` as the key. See TD-023. Do NOT assume player_id is populated — check with `SELECT COUNT(*) FROM player_projections WHERE player_id IS NOT NULL`.
 
 ---
 
