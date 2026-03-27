@@ -122,7 +122,8 @@ def validate(warn_threshold=50, fail_on_unresolvable=False, verbose=False):
     Returns:
         0 if validation passes, 1 if fails
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.execute("PRAGMA busy_timeout = 10000")
     cursor = conn.cursor()
 
     print("=" * 60)

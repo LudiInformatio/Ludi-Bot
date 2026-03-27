@@ -19,7 +19,7 @@ on:
       - "Daily WOWY Sync"
       - "Daily Morning Briefing"
       - "Nightly Debrief"
-      - "Evening Slate Lock (6:35 PM EST)"
+      - "Evening Slate Lock (via launchd)"
       - "Daily Referee Sync"
       - "Ghost Protocol Tracking Sync"
       - "Daily Database Backup"
@@ -33,7 +33,7 @@ on:
     types:
       - completed
   schedule:
-    - cron: '0 13 * * *'  # 9 AM EDT daily — Claude OAuth token expiry check
+    - cron: '0 13 * * *'  # 9 AM EDT / 8 AM EST daily — Claude OAuth token expiry check
 
 jobs:
   diagnose-failure:

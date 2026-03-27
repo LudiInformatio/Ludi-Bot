@@ -128,6 +128,8 @@ jobs:
           echo "$CANONICAL_OUT"
 
   # Runs only when failures exist or full scope requested
+  # NOTE: deliberately skips on '30 21 * * *' cron — pre-evening-check handles that slot;
+  # see claude-qa-check history for DST incident (Mar 8 2026: if: checked '30 22' while cron was '30 21')
   claude-qa:
     needs: [validate-schema]
     runs-on: ubuntu-latest
