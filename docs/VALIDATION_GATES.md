@@ -1,6 +1,6 @@
 # Validation Gates
 
-**Last Updated:** March 27, 2026
+**Last Updated:** March 27, 2026 (ablation RMSE added)
 **Owner:** Lena (queries) + Henrik (review)
 **Measurement cadence:** Every session with Henrik audit — re-run measurement scripts, update Current Status column
 
@@ -34,7 +34,7 @@ GROUP BY stat_category
 ORDER BY stat_category;
 ```
 
-**Current Status (measured 2026-03-26, N=PTS:3192 / AST:2593 / REB:1513):**
+**Current Status (production bets — measured 2026-03-26, N=PTS:3192 / AST:2593 / REB:1513):**
 
 | Stat | RMSE | MAE | Mean Error | Status |
 |------|------|-----|------------|--------|
@@ -43,6 +43,21 @@ ORDER BY stat_category;
 | REB | 3.25 | 2.41 | -0.15 | ✅ PASS (target < 3.5) |
 
 **Gate 1 verdict: ❌ FAIL — PTS exceeds target**
+
+**Ablation baseline (all projections — run_modifier_ablation.py, 2026-03-27, N=1,623, Mar 24–27):**
+
+| Stat | Model RMSE | Without Pace | Without Ref | Naive |
+|------|-----------|-------------|------------|-------|
+| PTS | 7.44 | 7.23 (-2.8%) | 7.20 (-3.3%) | — |
+| AST | 3.09 | 3.01 (-2.7%) | 3.02 (-2.3%) | — |
+| REB | 3.50 | 3.37 (-3.8%) | 3.39 (-3.2%) | — |
+| Overall | 3.33 | 3.23 (-3.0%) | 3.23 (-3.1%) | 3.32 (≈same) |
+
+Ablation findings (Mar 27):
+- Pace (+) and Ref (+) modifiers are genuinely HELPFUL (~3% RMSE improvement each)
+- Fatigue, Empirical, Blowout, Scheme all NEUTRAL (stored as 1.0 in player_projections)
+- Empirical NEUTRAL is a new blocker: `empirical_mod` is not being written from Module C output to projection_logger → TD-023
+- Baseline vs naive RMSE nearly identical (3.3251 vs 3.3248) — modifiers net-neutral overall; pace+ref gains offset by NEUTRAL placeholders
 
 Notes:
 - Mean errors near zero = no directional bias. Problem is variance, not systematic drift.

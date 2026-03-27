@@ -127,13 +127,13 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Recommended Fix:** Evaluate after WS2 ablation baseline. Disable via `MODIFIER_FLAGS['leverage_context']` if ablation shows negative lift.
 - **Discovered:** 2026-03-24 (Henrik, Sprint 3 audit)
 
-### TD-020: `player_projections.actual_result` missing — ablation blocker
-- **Severity:** P1
-- **Location:** `player_projections` table, `scripts/run_modifier_ablation.py` L48-54
-- **Description:** `run_modifier_ablation.py` expects an `actual_result` column in `player_projections`. Column does not exist. Script detects the absence at runtime (L53-54) and returns empty list — no exception raised, no error surfaced. Correct fix is Option A: add a `_settle_actual_results()` function that JOINs `player_projections` → `player_game_logs` on `(player_id, game_date)` and maps `stat_category` strings (`'pts'`, `'reb'`, `'ast'`, etc.) to the corresponding `player_game_logs` columns. No schema change to `player_projections` needed.
-- **Impact:** WS2 (modifier ablation baseline) is fully blocked. 0 rows returned, 0 RMSE computed, no ablation output. Modifier flags cannot be evaluated until fixed.
-- **Recommended Fix:** Option A — see `plans/agent-chain-of-command.md` Decision 1 spec. Add `_settle_actual_results(conn, min_date, stat_cat)` to `run_modifier_ablation.py` that does: `SELECT pp.id, pgl.[stat_col] FROM player_projections pp JOIN player_game_logs pgl ON pp.player_id = pgl.player_id AND pp.game_date = pgl.game_date WHERE pp.stat_category = ?`, then bulk-UPDATEs `actual_result`. Add `--settle` CLI flag.
-- **Discovered:** 2026-03-24 (Henrik, Sprint 3 Decision 1 review)
+### TD-023: `player_projections.player_id` always NULL — blocks player_id-based joins
+- **Severity:** P2
+- **Location:** `utils/projection_logger.py` L86, `main.py` player dict flow
+- **Description:** `projection_logger.py` reads `sim.get('player_id') or sim.get('PLAYER_ID')` but all 2,800 rows in `player_projections` have NULL player_id. The player dict in `main.py` populates `'player_id': row[0]` correctly, but the key is lost somewhere in the Module B/C/E pipeline before reaching the logger. Current workaround: `_settle_actual_results()` falls back to `player_name + game_date` JOIN when player_id is NULL (Mar 27 fix). But the root cause is unfixed.
+- **Impact:** Any code relying on `player_projections.player_id` for joins will fail silently. The ablation script now works via name fallback, but canonical ID-based analytics are blocked.
+- **Recommended Fix:** Trace why `player_id` is dropped between `main.py` build and `projection_logger.py` — likely a module dict transformation. Add `player_id` to the intermediate dict keys that modules are required to preserve.
+- **Discovered:** 2026-03-27 (ablation debugging)
 
 ### TD-019: Calibration curve is not grade-stratified
 - **Severity:** P2
@@ -173,6 +173,7 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 | TD-012 | `main.py` projection_logger uses `print()` not `logging.warning()` | This commit (Mar 23) | 2026-03-23 |
 | TD-001 | Conflicting unique indexes on `player_game_logs` | `database.py` index aligned (`93d84d7`, Mar 23) | 2026-03-23 |
 | TD-014 | `compute_empirical_modifiers.py` 3 column name mismatches | `aec6909` (Mar 24) | 2026-03-24 |
+| TD-020 | `player_projections.actual_result` missing — ablation returned 0 rows | `_settle_actual_results()` player_name fallback + `player_name` added to SELECT (Mar 27) | 2026-03-27 |
 
 ---
 

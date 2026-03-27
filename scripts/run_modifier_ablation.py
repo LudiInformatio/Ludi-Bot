@@ -57,48 +57,67 @@ MODIFIER_COLUMNS = {
 def _settle_actual_results(conn, rows: list) -> list:
     """
     In-memory JOIN: attaches actual_result to each projection row by
-    looking up player_game_logs on (player_id, game_date, stat_category).
-    Returns rows with actual_result populated. Rows without a match are dropped.
+    looking up player_game_logs on (player_id, game_date) or (player_name, game_date)
+    when player_id is NULL. Returns rows with actual_result populated; unmatched dropped.
     Read-only — no DB writes.
     """
     if not rows:
         return []
 
-    # Build lookup: {(player_id, game_date): game_log_row}
-    # Fetch all needed game logs in one query
-    player_dates = list({(r['player_id'], r['game_date']) for r in rows})
-    if not player_dates:
-        return []
+    # Detect whether player_id is populated — fall back to player_name if not
+    use_name_key = all(not r.get('player_id') for r in rows)
 
-    placeholders = ','.join('(?,?)' for _ in player_dates)
-    flat_params = [val for pair in player_dates for val in pair]
-
-    try:
+    if use_name_key:
+        # player_id not populated in player_projections — join by (player_name, game_date)
+        name_dates = list({(r['player_name'], r['game_date']) for r in rows if r.get('player_name')})
+        if not name_dates:
+            return []
+        conditions = ' OR '.join('(player_name=? AND game_date=?)' for _ in name_dates)
+        flat_params = [val for pair in name_dates for val in pair]
         gl_rows = conn.execute(f"""
-            SELECT player_id, game_date, pts, reb, ast, stl, blk, fg3m, fta, oreb, dreb, tov, pf, minutes
-            FROM player_game_logs
-            WHERE (player_id, game_date) IN ({placeholders})
-        """, flat_params).fetchall()
-    except sqlite3.OperationalError:
-        # Fallback: SQLite may not support tuple IN — use OR approach
-        conditions = ' OR '.join('(player_id=? AND game_date=?)' for _ in player_dates)
-        gl_rows = conn.execute(f"""
-            SELECT player_id, game_date, pts, reb, ast, stl, blk, fg3m, fta, oreb, dreb, tov, pf, minutes
+            SELECT player_name, game_date, pts, reb, ast, stl, blk, fg3m, fta, oreb, dreb, tov, pf, minutes
             FROM player_game_logs
             WHERE {conditions}
         """, flat_params).fetchall()
-
-    gl_lookup = {}
-    for gl in gl_rows:
-        gl_lookup[(str(gl[0]), str(gl[1]))] = {
-            'pts': gl[2], 'reb': gl[3], 'ast': gl[4], 'stl': gl[5],
-            'blk': gl[6], 'fg3m': gl[7], 'fta': gl[8], 'oreb': gl[9],
-            'dreb': gl[10], 'tov': gl[11], 'pf': gl[12], 'minutes': gl[13],
-        }
+        gl_lookup = {}
+        for gl in gl_rows:
+            gl_lookup[(str(gl[0]), str(gl[1]))] = {
+                'pts': gl[2], 'reb': gl[3], 'ast': gl[4], 'stl': gl[5],
+                'blk': gl[6], 'fg3m': gl[7], 'fta': gl[8], 'oreb': gl[9],
+                'dreb': gl[10], 'tov': gl[11], 'pf': gl[12], 'minutes': gl[13],
+            }
+    else:
+        # Primary path: join by (player_id, game_date)
+        player_dates = list({(r['player_id'], r['game_date']) for r in rows})
+        placeholders = ','.join('(?,?)' for _ in player_dates)
+        flat_params = [val for pair in player_dates for val in pair]
+        try:
+            gl_rows = conn.execute(f"""
+                SELECT player_id, game_date, pts, reb, ast, stl, blk, fg3m, fta, oreb, dreb, tov, pf, minutes
+                FROM player_game_logs
+                WHERE (player_id, game_date) IN ({placeholders})
+            """, flat_params).fetchall()
+        except sqlite3.OperationalError:
+            conditions = ' OR '.join('(player_id=? AND game_date=?)' for _ in player_dates)
+            gl_rows = conn.execute(f"""
+                SELECT player_id, game_date, pts, reb, ast, stl, blk, fg3m, fta, oreb, dreb, tov, pf, minutes
+                FROM player_game_logs
+                WHERE {conditions}
+            """, flat_params).fetchall()
+        gl_lookup = {}
+        for gl in gl_rows:
+            gl_lookup[(str(gl[0]), str(gl[1]))] = {
+                'pts': gl[2], 'reb': gl[3], 'ast': gl[4], 'stl': gl[5],
+                'blk': gl[6], 'fg3m': gl[7], 'fta': gl[8], 'oreb': gl[9],
+                'dreb': gl[10], 'tov': gl[11], 'pf': gl[12], 'minutes': gl[13],
+            }
 
     settled = []
     for row in rows:
-        key = (str(row['player_id']), str(row['game_date']))
+        if use_name_key:
+            key = (str(row.get('player_name', '')), str(row['game_date']))
+        else:
+            key = (str(row['player_id']), str(row['game_date']))
         gl = gl_lookup.get(key)
         if not gl:
             continue  # No game log found — skip row
@@ -164,6 +183,7 @@ def load_settled_projections(conn, min_date: str, stat_cat: str = None) -> list:
     query = f"""
         SELECT
             pp.player_id,
+            pp.player_name,
             pp.game_date,
             pp.stat_category,
             pp.final_projection,
@@ -187,14 +207,15 @@ def load_settled_projections(conn, min_date: str, stat_cat: str = None) -> list:
         for row in rows:
             entry = {
                 'player_id': row[0],
-                'game_date': row[1],
-                'stat_category': row[2],
-                'final_projection': float(row[3]),
-                'base_projection': float(row[4]),
-                'actual_result': float(row[5]) if row[5] is not None else None,
+                'player_name': row[1],
+                'game_date': row[2],
+                'stat_category': row[3],
+                'final_projection': float(row[4]),
+                'base_projection': float(row[5]),
+                'actual_result': float(row[6]) if row[6] is not None else None,
             }
             for i, m in enumerate(mod_keys):
-                entry[f'{m}_mod'] = float(row[6 + i]) if row[6 + i] is not None else 1.0
+                entry[f'{m}_mod'] = float(row[7 + i]) if row[7 + i] is not None else 1.0
             result.append(entry)
 
         # If actual_result not in schema, settle via in-memory JOIN to player_game_logs
@@ -208,7 +229,7 @@ def load_settled_projections(conn, min_date: str, stat_cat: str = None) -> list:
         actual_result_col = "actual_result" if 'actual_result' in cols else "NULL AS actual_result"
         actual_result_filter_fb = "AND actual_result IS NOT NULL" if 'actual_result' in cols else ""
         fallback_query = f"""
-            SELECT player_id, game_date, stat_category, final_projection, base_projection, {actual_result_col}
+            SELECT player_id, player_name, game_date, stat_category, final_projection, base_projection, {actual_result_col}
             FROM player_projections
             WHERE game_date >= ?
               {actual_result_filter_fb}
@@ -222,9 +243,9 @@ def load_settled_projections(conn, min_date: str, stat_cat: str = None) -> list:
             fallback_params.append(stat_cat)
         rows = conn.execute(fallback_query, fallback_params).fetchall()
         result = [{
-            'player_id': row[0], 'game_date': row[1], 'stat_category': row[2],
-            'final_projection': float(row[3]), 'base_projection': float(row[4]),
-            'actual_result': float(row[5]) if row[5] is not None else None,
+            'player_id': row[0], 'player_name': row[1], 'game_date': row[2], 'stat_category': row[3],
+            'final_projection': float(row[4]), 'base_projection': float(row[5]),
+            'actual_result': float(row[6]) if row[6] is not None else None,
             'pace_mod': 1.0, 'fatigue_mod': 1.0, 'ref_mod': 1.0,
             'blowout_mod': 1.0, 'scheme_mod': 1.0, 'empirical_mod': 1.0,
         } for row in rows]
