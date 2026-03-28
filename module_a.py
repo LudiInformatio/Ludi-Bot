@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timedelta
 import pytz  # Added for Timezone conversion
 import config  # Imports: ODDS_API_KEY, TANK01_KEY
+from utils.player_id_resolver import resolve_canonical_name
 
 # [INTEGRATION] Import The Zebras
 from module_g import LudiRefEngine
@@ -633,6 +634,12 @@ class Gatekeeper:
         
         print(f"[3] 📡 Fetching Prop Targets (Limit: {limit_games})...")
         target_ids = list(self.games.keys())[:limit_games]
+
+        # Fix 1: open one DB connection for canonical name resolution across all games.
+        # resolve_canonical_name() uses the caller's connection — no extra opens per player.
+        import sqlite3 as _sqlite3
+        _name_conn = _sqlite3.connect(config.DB_PATH)
+        _name_conn.execute("PRAGMA busy_timeout=10000")
         
         # Valid betting markets (verified live Mar 1 2026 via /events/{id}/markets endpoint)
         # Removed: player_turnovers (PrizePicks-only, 1 book — not worth a market slot)
@@ -699,7 +706,11 @@ class Gatekeeper:
                             short_key = key.replace('player_', '')
 
                             for outcome in market['outcomes']:
-                                player = outcome['description']
+                                # Resolve accent-stripped Odds API names to canonical full_name
+                                # (e.g. "Nikola Jokic" → "Nikola Jokić") before writing to props dict.
+                                # This ensures bet_recommendations and player_projections carry the
+                                # accented name that JOINs to players.name downstream.
+                                player = resolve_canonical_name(_name_conn, outcome['description'])
                                 line = outcome.get('point', 'N/A')
                                 price = outcome.get('price', -110)
                                 side = outcome.get('name', '').lower()
@@ -866,6 +877,12 @@ class Gatekeeper:
                     print(f"   > {self.games[g_id]['matchup']}... ✅ Targets Acquired.")
             except Exception as e:
                 print(f"   ❌ Error on {g_id}: {e}")
+
+        # Fix 1: close canonical name resolution connection after all games processed
+        try:
+            _name_conn.close()
+        except Exception:
+            pass
 
     def fetch_props_balldontlie(self, game_id, limit=50):
         """ [3b] BALLDONTLIE BACKUP/VALIDATION """
