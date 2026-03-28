@@ -85,19 +85,21 @@ class LudiOrchestrator:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        query = '''
+
+        # Phase 2 Recency Weighting: fetch individual game rows (no GROUP BY / AVG).
+        # Step 1 — raw per-game rows for each player, newest first, capped at L25.
+        # The subquery identifies the top-25 game dates per player; the outer query
+        # returns one row per game. Shot quality (per-player-season) is fetched
+        # separately below to avoid 25× row duplication from the JOIN.
+        raw_query = '''
             SELECT pgl.player_id, pgl.player_name, pgl.team_abbreviation,
-                   AVG(pgl.pts), AVG(pgl.reb), AVG(pgl.ast),
-                   AVG(pgl.fga), AVG(pgl.fg3a), AVG(pgl.fta),
-                   AVG(pgl.oreb), AVG(pgl.dreb), AVG(pgl.stl), AVG(pgl.blk),
-                   AVG(pgl.tov), AVG(pgl.minutes),
-                   MAX(psq.shot_quality_avg), MAX(psq.at_rim_frequency), MAX(psq.corner3_frequency),
-                   CASE WHEN SUM(pgl.fga) > 0 THEN ROUND(1.0 * SUM(pgl.fgm) / SUM(pgl.fga), 4) ELSE 0.45 END,
-                   CASE WHEN SUM(pgl.fg3a) > 0 THEN ROUND(1.0 * SUM(pgl.fg3m) / SUM(pgl.fg3a), 4) ELSE 0.35 END,
-                   CASE WHEN SUM(pgl.fta) > 0 THEN ROUND(1.0 * SUM(pgl.ftm) / SUM(pgl.fta), 4) ELSE 0.75 END,
-                   COUNT(pgl.player_id) as games_played
+                   pgl.pts, pgl.reb, pgl.ast,
+                   pgl.fga, pgl.fg3a, pgl.fta,
+                   pgl.oreb, pgl.dreb, pgl.stl, pgl.blk,
+                   pgl.tov, pgl.minutes,
+                   pgl.fgm, pgl.fg3m, pgl.ftm,
+                   pgl.game_date
             FROM player_game_logs pgl
-            LEFT JOIN player_season_quality psq ON pgl.player_id = psq.player_id AND psq.season = '2025-26'
             WHERE pgl.team_abbreviation = ? AND pgl.minutes > 0
               AND pgl.season_id = ?
               AND pgl.game_date IN (
@@ -106,38 +108,121 @@ class LudiOrchestrator:
                     AND sub.season_id = ?
                   ORDER BY game_date DESC LIMIT 25
               )
-            GROUP BY pgl.player_id, pgl.player_name, pgl.team_abbreviation
-            HAVING COUNT(pgl.player_id) >= 3
-            ORDER BY AVG(pgl.minutes) DESC LIMIT ?
+            ORDER BY pgl.player_id, pgl.game_date DESC
         '''
-        cursor.execute(query, (team_abbr, _DB_SEASON, _DB_SEASON, limit))
-        rows = cursor.fetchall()
+        cursor.execute(raw_query, (team_abbr, _DB_SEASON, _DB_SEASON))
+        raw_rows = cursor.fetchall()
+
+        # Step 2 — fetch shot quality per player (season-level, one row per player).
+        cursor.execute(
+            '''SELECT psq.player_id, psq.shot_quality_avg, psq.at_rim_frequency, psq.corner3_frequency
+               FROM player_season_quality psq
+               WHERE psq.season = ?''',
+            (_DB_SEASON,)
+        )
+        psq_map = {r[0]: (r[1], r[2], r[3]) for r in cursor.fetchall()}
         conn.close()
 
+        # Step 3 — group raw rows by player, preserving game_date DESC order.
+        from collections import defaultdict
+        player_rows: dict = defaultdict(list)
+        player_meta: dict = {}  # player_id -> (player_name, team_abbreviation)
+        for r in raw_rows:
+            pid = r[0]
+            player_rows[pid].append(r)
+            if pid not in player_meta:
+                player_meta[pid] = (r[1], r[2])
+
+        # Step 4 — apply recency weights and build roster dicts.
+        import config as _cfg
+
+        # Pre-load weight config once (module-level import avoids re-import per player).
+        _W25 = _cfg.RECENCY_WEIGHTS_L25
+        _MIN_N = _cfg.RECENCY_MIN_GAMES_FOR_WEIGHTING
+        _use_weighting = _cfg.MODIFIER_FLAGS.get('recency_weighting', True)
+
+        # Sort players by weighted-average minutes DESC (mirrors original ORDER BY).
+        def _weighted_avg(games, col_idx):
+            """Return recency-weighted average for a numeric column index."""
+            n = len(games)
+            if _use_weighting and n >= _MIN_N:
+                raw_w = _W25[:n]
+                total = sum(raw_w)
+                weights = [w / total for w in raw_w]
+            else:
+                weights = [1.0 / n] * n
+            return sum(w * (games[i][col_idx] or 0) for i, w in enumerate(weights))
+
+        def _weighted_pct(games, makes_idx, attempts_idx, fallback):
+            """Weighted shooting pct = sum(w * makes) / sum(w * attempts).
+            Never average the pct column directly — that overstates low-volume games.
+            """
+            n = len(games)
+            if _use_weighting and n >= _MIN_N:
+                raw_w = _W25[:n]
+                total = sum(raw_w)
+                weights = [w / total for w in raw_w]
+            else:
+                weights = [1.0 / n] * n
+            w_makes = sum(w * (games[i][makes_idx] or 0) for i, w in enumerate(weights))
+            w_att = sum(w * (games[i][attempts_idx] or 0) for i, w in enumerate(weights))
+            return round(w_makes / w_att, 4) if w_att > 0 else fallback
+
+        player_summaries = []
+        for pid, games in player_rows.items():
+            if len(games) < 3:  # mirrors original HAVING COUNT >= 3
+                continue
+            pname, team = player_meta[pid]
+            avg_min = _weighted_avg(games, 14)
+            player_summaries.append((pid, pname, team, games, avg_min))
+
+        # Sort by weighted average minutes DESC, then slice to limit.
+        player_summaries.sort(key=lambda x: x[4], reverse=True)
+        player_summaries = player_summaries[:limit]
+
         roster = []
-        for row in rows:
-            fga, fta, tov, mins = row[6] or 0, row[8] or 0, row[13] or 0, row[14] or 0
+        for pid, pname, team, games, avg_min in player_summaries:
+            # Column indices from raw_query:
+            # 0:player_id 1:player_name 2:team_abbreviation
+            # 3:pts 4:reb 5:ast 6:fga 7:fg3a 8:fta
+            # 9:oreb 10:dreb 11:stl 12:blk 13:tov 14:minutes
+            # 15:fgm 16:fg3m 17:ftm 18:game_date
+            fga  = _weighted_avg(games, 6)
+            fta  = _weighted_avg(games, 8)
+            tov  = _weighted_avg(games, 13)
+            mins = avg_min  # already computed above for sort
             base_usg = round(((fga + 0.44*fta + tov)/mins)/2.1, 3) if mins > 0 else 0
 
-            # Extract PBP Stats
-            shot_quality = row[15] if row[15] is not None else 0.53  # League avg fallback
-            at_rim_freq = row[16] if row[16] is not None else 0.0
-            corner3_freq = row[17] if row[17] is not None else 0.0
+            # Shot quality from season-level psq_map (unchanged from original).
+            psq = psq_map.get(pid)
+            shot_quality = psq[0] if psq and psq[0] is not None else 0.53
+            at_rim_freq  = psq[1] if psq and psq[1] is not None else 0.0
+            corner3_freq = psq[2] if psq and psq[2] is not None else 0.0
 
             roster.append({
-                'player_id': row[0], 'PLAYER_NAME': row[1], 'TEAM_ABBREVIATION': row[2],
-                'PTS': round(row[3] or 0, 1), 'REB': round(row[4] or 0, 1), 'AST': round(row[5] or 0, 1),
-                'FGA': round(fga, 1), 'FG3A': round(row[7] or 0, 1), 'FTA': round(fta, 1),
-                'OREB': round(row[9] or 0, 1), 'DREB': round(row[10] or 0, 1),
-                'STL': round(row[11] or 0, 1), 'BLK': round(row[12] or 0, 1), 'TOV': round(tov, 1),
+                'player_id': pid, 'PLAYER_NAME': pname, 'TEAM_ABBREVIATION': team,
+                'PTS': round(_weighted_avg(games, 3), 1),
+                'REB': round(_weighted_avg(games, 4), 1),
+                'AST': round(_weighted_avg(games, 5), 1),
+                'FGA': round(fga, 1),
+                'FG3A': round(_weighted_avg(games, 7), 1),
+                'FTA': round(fta, 1),
+                'OREB': round(_weighted_avg(games, 9), 1),
+                'DREB': round(_weighted_avg(games, 10), 1),
+                'STL': round(_weighted_avg(games, 11), 1),
+                'BLK': round(_weighted_avg(games, 12), 1),
+                'TOV': round(tov, 1),
                 'MIN': round(mins, 1), 'base_usg': base_usg, 'base_min': round(mins, 1),
-                'FG_PCT': row[18], 'FG3_PCT': row[19], 'FT_PCT': row[20],
+                # Shooting pct: weighted makes / weighted attempts (not direct pct avg).
+                'FG_PCT':  _weighted_pct(games, 15, 6,  0.45),
+                'FG3_PCT': _weighted_pct(games, 16, 7,  0.35),
+                'FT_PCT':  _weighted_pct(games, 17, 8,  0.75),
                 'pbp_shot_quality': round(shot_quality, 3),
                 'pbp_rim_freq': round(at_rim_freq, 3),
                 'pbp_corner3_freq': round(corner3_freq, 3),
                 # G2c: game count for Module C season-baseline blend confidence
                 # <15 games → blend with season avg; ≥15 games → use recent data only
-                'GAMES_PLAYED': row[21] if row[21] is not None else 25,
+                'GAMES_PLAYED': len(games),
                 # Sprint 3: starter context for Module C minutes projection
                 # Source: players.is_starter (1=starter, 0=bench, NULL=unknown)
                 'is_starter': None,  # populated below from players table

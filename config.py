@@ -330,11 +330,31 @@ MODIFIER_FLAGS = {
     'stat_kelly_gate': True,
     # Module X
     'vegas_guardrail': True,
+    # main.py get_active_roster()
+    'recency_weighting': True,
 }
 
 # Env override: allows per-flag toggling without code changes
 _FLAG_OVERRIDES = json.loads(os.getenv('MODIFIER_FLAGS_JSON', '{}'))
 MODIFIER_FLAGS = {**MODIFIER_FLAGS, **_FLAG_OVERRIDES}
+
+# ====================================================
+# RECENCY WEIGHTING (Projection Accuracy Sprint 1, Phase 2)
+# ====================================================
+# Exponential decay weights for get_active_roster() L25 game window.
+# Half-life = 7 games (most-recent game = index 0, weight ~0.1029).
+# Pre-normalized so sum(RECENCY_WEIGHTS_L25) ≈ 1.0.
+# When n < 25, slice w[:n] and re-normalize: w / sum(w).
+# N-gate: use flat average when player has < RECENCY_MIN_GAMES_FOR_WEIGHTING games
+# (weighting HURTS on small samples: +8.64% RMSE for N=3-7, Lena-verified N=969).
+RECENCY_WEIGHTS_L25 = [
+    0.102935, 0.093231, 0.084441, 0.076480, 0.069270,
+    0.062740, 0.056825, 0.051468, 0.046615, 0.042221,
+    0.038240, 0.034635, 0.031370, 0.028412, 0.025734,
+    0.023308, 0.021110, 0.019120, 0.017318, 0.015685,
+    0.014206, 0.012867, 0.011654, 0.010555, 0.009560
+]
+RECENCY_MIN_GAMES_FOR_WEIGHTING = 15
 
 # Run validation ONLY when executed directly, not on import
 if __name__ == "__main__":
