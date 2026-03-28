@@ -6,6 +6,7 @@
 # Version: 1.0 (Week 2, Days 3-4)
 
 import json
+import logging
 import sqlite3
 from typing import Dict, List, Optional
 from utils.mappings import normalize_bdl_abbr
@@ -155,7 +156,6 @@ class TagClassifier:
                 else:
                     self.DEFENSIVE_SCHEMES[team] = style
         except Exception as e:
-            import logging
             logging.getLogger(__name__).warning(
                 f"[TagClassifier] _load_defensive_schemes_from_cache failed: {e}"
             )
@@ -202,7 +202,6 @@ class TagClassifier:
                 if row and row[0]:
                     return row[0]
             except Exception as e:
-                import logging
                 logging.getLogger(__name__).warning(
                     f"[TagClassifier] assign_archetype_tag DB lookup failed for "
                     f"'{player_name}': {e}"
