@@ -9,6 +9,7 @@ import json
 import sqlite3
 from typing import Dict, List, Optional
 from utils.mappings import normalize_bdl_abbr
+from utils.player_id_resolver import resolve_canonical_name
 
 
 def calculate_streak_score(
@@ -153,7 +154,11 @@ class TagClassifier:
                     self.DEFENSIVE_SCHEMES[team] = "NEUTRAL"
                 else:
                     self.DEFENSIVE_SCHEMES[team] = style
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[TagClassifier] _load_defensive_schemes_from_cache failed: {e}"
+            )
             return
 
     def assign_archetype_tag(self, player_stats: Dict) -> str:
@@ -188,13 +193,20 @@ class TagClassifier:
                 if player_id:
                     cursor.execute("SELECT archetype FROM players WHERE player_id = ? LIMIT 1", (player_id,))
                 else:
-                    cursor.execute("SELECT archetype FROM players WHERE name = ? LIMIT 1", (player_name,))
+                    # Resolve accent variants (e.g. 'Nikola Jokic' -> 'Nikola Jokić')
+                    # before querying players.name — which stores canonical accented names.
+                    canonical_name = resolve_canonical_name(conn, player_name)
+                    cursor.execute("SELECT archetype FROM players WHERE name = ? LIMIT 1", (canonical_name,))
                 row = cursor.fetchone()
                 conn.close()
                 if row and row[0]:
                     return row[0]
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"[TagClassifier] assign_archetype_tag DB lookup failed for "
+                    f"'{player_name}': {e}"
+                )
 
         return "GENERALIST"
 
