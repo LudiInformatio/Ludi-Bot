@@ -423,23 +423,14 @@ def _sonnet_curate(
 ) -> list[dict] | None:
     """
     Ask Sonnet to grade EVERY bet as STRONG/LEAN/FADE.
+    Bets are sent in chunks of BATCH_SIZE to avoid 32k token overflow.
+    game_counts is shared across all batches to enforce max-2-STRONG-per-game
+    across the full day (not just per batch).
     """
+    BATCH_SIZE = 80
+
     if not passing_bets:
         return None
-
-    passing_bets_set = {b['id'] for b in passing_bets}
-    bets_text = '\n\n'.join(
-        _format_player_block(
-            player_name=pname,
-            team=player_team.get(pname, ''),
-            archetype=pbets[0].get('archetype', 'UNKNOWN'),
-            bets=pbets,
-            injury=player_injury.get(pname),
-            dossier=dossier,
-        )
-        for pname, pbets in player_bets.items()
-        if any(b['id'] in passing_bets_set for b in pbets)
-    )
 
     dossier_text = ""
     for gid, data in dossier.items():
@@ -455,7 +446,7 @@ def _sonnet_curate(
 
     system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
     system_prompt += "\n\nPrefer UNDER bets on BLK, 3PM, and STL — these have historically outperformed. Be conservative selecting OVER bets on PTS, AST, and 3PM unless the edge and injury context are compelling."
-    
+
     if wr_context:
         system_prompt += f"\n\n{wr_context}"
 
@@ -662,7 +653,30 @@ Reasoning: DIAMOND edge and HOT_STREAK are real, but PTS OVER WR grade is D (no 
 === END EXAMPLES ===
 """
 
-    user_prompt = f"""You are grading EVERY bet on today's NBA player prop slate as STRONG, LEAN, or FADE.
+    # Split bets into chunks to avoid 32k token overflow on large slates.
+    # game_counts is initialized ONCE here so max-2-STRONG-per-game applies
+    # across ALL batches (not reset per batch).
+    batches = [passing_bets[i:i + BATCH_SIZE] for i in range(0, len(passing_bets), BATCH_SIZE)]
+    bet_id_to_game_map = {b['id']: b.get('game_id', '') for b in passing_bets}
+    game_counts: dict[str, int] = {}
+    all_results: list[dict] = []
+
+    for batch_idx, batch in enumerate(batches):
+        batch_set = {b['id'] for b in batch}
+        bets_text = '\n\n'.join(
+            _format_player_block(
+                player_name=pname,
+                team=player_team.get(pname, ''),
+                archetype=pbets[0].get('archetype', 'UNKNOWN'),
+                bets=pbets,
+                injury=player_injury.get(pname),
+                dossier=dossier,
+            )
+            for pname, pbets in player_bets.items()
+            if any(b['id'] in batch_set for b in pbets)
+        )
+
+        user_prompt = f"""You are grading EVERY bet on today's NBA player prop slate as STRONG, LEAN, or FADE.
 
 DECISION TREE INSTRUCTIONS:
 1. STRONG: High edge (>= 5%), clear injury status, favorable matchup/trends, and no correlation conflicts.
@@ -681,83 +695,82 @@ HARD RULES:
 === GAME DOSSIER ===
 {dossier_text}
 
-TODAY'S CLEAN BETS ({len(passing_bets)} total, already passed injury sanity gate):
+TODAY'S CLEAN BETS ({len(batch)} in this batch, already passed injury sanity gate):
 {bets_text}
 
 Grade every bet listed above. Return JSON array only."""
 
+        if verbose:
+            print(f"  [SONNET] Batch {batch_idx + 1}/{len(batches)}: sending {len(batch)} bets...")
+
+        response = get_claude_analysis(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            model=SONNET_MODEL,
+            temperature=0.1,
+            max_tokens=6000,
+            call_type='curation',
+        )
+
+        if not response:
+            if verbose:
+                print(f"  [SONNET] Batch {batch_idx + 1}: no response — will use deterministic fallback")
+            return None
+
+        try:
+            clean = response.strip()
+            if '```' in clean:
+                clean = clean.split('```')[1]
+                if clean.startswith('json'):
+                    clean = clean[4:]
+            clean = clean.strip()
+            data = json.loads(clean)
+            if not isinstance(data, list):
+                raise ValueError("Expected JSON array")
+
+            for item in data:
+                if 'bet_id' in item and 'grade' in item:
+                    bet_id = int(item['bet_id'])
+                    grade = str(item['grade']).upper()
+                    game_id = bet_id_to_game_map.get(bet_id, '')
+
+                    # Enforce max-2-STRONG-per-game across the ENTIRE day (shared game_counts)
+                    if grade == 'STRONG':
+                        if game_counts.get(game_id, 0) >= 2:
+                            if verbose:
+                                print(f"  [SONNET] Downgrading {bet_id} to LEAN - already 2 STRONG from game {game_id}")
+                            grade = 'LEAN'
+                        else:
+                            game_counts[game_id] = game_counts.get(game_id, 0) + 1
+
+                    all_results.append({
+                        'bet_id': bet_id,
+                        'grade': grade,
+                        'thinking': str(item.get('thinking', '')),  # CoT trace — logged to claude_analysis_log for audit
+                        'reasoning': str(item.get('reasoning', '')),
+                    })
+
+        except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
+            raw_preview = response[:200] if response else "empty"
+            print(f"[SONNET PARSE FAIL] Batch {batch_idx + 1} | {type(e).__name__} | raw={raw_preview}")
+            if verbose:
+                print(f"  [SONNET] Parse error on batch {batch_idx + 1}: {e} — will use deterministic fallback")
+            return None
+
+    if not all_results:
+        print("[SONNET PARSE FAIL] No valid picks parsed from any batch response")
+        return None
+
+    strong_bets = [r for r in all_results if r['grade'] == 'STRONG']
+    id_to_edge = {b['id']: b.get('true_edge', 0) for b in passing_bets}
+    strong_bets.sort(key=lambda x: id_to_edge.get(x['bet_id'], 0), reverse=True)
+
+    for i, bet in enumerate(strong_bets):
+        bet['rank'] = i + 1
+
     if verbose:
-        print(f"  [SONNET] Sending {len(passing_bets)} bets for curation with dossier context...")
-
-    response = get_claude_analysis(
-        prompt=user_prompt,
-        system_prompt=system_prompt,
-        model=SONNET_MODEL,
-        temperature=0.1,
-        max_tokens=32000,
-        call_type='curation',
-    )
-
-    if not response:
-        if verbose:
-            print("  [SONNET] No response — will use deterministic fallback")
-        return None
-
-    try:
-        clean = response.strip()
-        if '```' in clean:
-            clean = clean.split('```')[1]
-            if clean.startswith('json'):
-                clean = clean[4:]
-        clean = clean.strip()
-        data = json.loads(clean)
-        if not isinstance(data, list):
-            raise ValueError("Expected JSON array")
-
-        result = []
-        game_counts: dict[str, int] = {}
-        bet_id_to_game_map = {b['id']: b.get('game_id', '') for b in passing_bets}
-
-        for item in data:
-            if 'bet_id' in item and 'grade' in item:
-                bet_id = int(item['bet_id'])
-                grade = str(item['grade']).upper()
-                game_id = bet_id_to_game_map.get(bet_id, '')
-
-                if grade == 'STRONG':
-                    if game_counts.get(game_id, 0) >= 2:
-                        if verbose:
-                            print(f"  [SONNET] Downgrading {bet_id} to LEAN - already 2 STRONG from game {game_id}")
-                        grade = 'LEAN'
-                    else:
-                        game_counts[game_id] = game_counts.get(game_id, 0) + 1
-
-                result.append({
-                    'bet_id': bet_id,
-                    'grade': grade,
-                    'thinking': str(item.get('thinking', '')),  # CoT trace — logged to claude_analysis_log for audit
-                    'reasoning': str(item.get('reasoning', '')),
-                })
-
-        if not result:
-            raise ValueError("No valid picks parsed from response")
-        
-        strong_bets = [r for r in result if r['grade'] == 'STRONG']
-        id_to_edge = {b['id']: b.get('true_edge', 0) for b in passing_bets}
-        strong_bets.sort(key=lambda x: id_to_edge.get(x['bet_id'], 0), reverse=True)
-        
-        for i, bet in enumerate(strong_bets):
-            bet['rank'] = i + 1
-
-        if verbose:
-            print(f"  [SONNET] Successfully graded {len(result)} bets ({len(strong_bets)} STRONG)")
-        return result
-    except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
-        raw_preview = response[:200] if response else "empty"
-        print(f"[SONNET PARSE FAIL] {type(e).__name__} | raw={raw_preview}")
-        if verbose:
-            print(f"  [SONNET] Parse error: {e} — will use deterministic fallback")
-        return None
+        print(f"  [SONNET] Successfully graded {len(all_results)} bets ({len(strong_bets)} STRONG) across {len(batches)} batch(es)")
+    return all_results
 
 
 # ─── Deterministic Fallback ───────────────────────────────────────────────────
