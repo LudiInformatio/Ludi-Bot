@@ -74,6 +74,7 @@ jobs:
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
           ODDS_API_TIER: paid
           TANK01_TIER: paid
+          SLACK_WEBHOOK_ALERTS: ${{ secrets.SLACK_WEBHOOK_ALERTS }}
         run: |
           export PYTHONPATH=$PWD
           .venv/bin/python scripts/sync_daily_referees.py
