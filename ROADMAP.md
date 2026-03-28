@@ -46,25 +46,19 @@ This is the single source of truth for project tasks and priorities.
 - [-] Phase 8.23 — Claude/Perplexity Feedback Loop — Layer 1 collecting (14-day scan window ~Mar 10)
 
 **Next Actions:**
-- [x] **Sprint 4-A: Stat-Level Kelly Gate** — per-stat units cap in `module_f.py` (PTS all edges, AST >14%, REB/BLK/STL/combos >20%, 3PM bypass), `config.py` `stat_kelly_gate` flag, Henrik APPROVED, commit `1cd8ee3` ✅
-- [x] **Sprint 4-B: Chain of Command MVP** — `Agent` tool in `henrik.md`, `AGENTS.md` Henrik-dispatches-junior pattern documented, commit `1cd8ee3` ✅
-- [x] **T3: Three-Lens Curation Prompt** — VALUE/MOMENTUM/CONTRARIAN lenses injected into `curate_plays.py`, PROMPT_VERSION `v2.0-three-lens`, Henrik APPROVED ✅
-- [x] **T4: Replace Claxton example** — Suggs 3PM UNDER 2.5 (Example 4), `[STAR_PG]` false STRONG PTS OVER (Example 5), both in v2.0 Three-Lens thinking format ✅
-- [x] **P1/P2/P3: Sankore Tier 1 patterns** — YAML frontmatter (26 files, local), `docs/VALIDATION_GATES.md` 3-gate doc shipped, PIP Protocol appended to 9 SOUL.md files (local) ✅
+- [x] **Phase 1 projection baseline** — season filter on L25, MIN in G2 blend, empirical mod scalar, BREAKOUT/REGRESSION signal wired (`cb3e8b5`) ✅
+- [x] **Phase 2 recency weighting** — Exp7 half-life 7g, N-gate 15, `config.RECENCY_WEIGHTS_L25` + `main.py` restructured (`7efb197`) ✅
+- [x] **Accent pipeline fix** — `resolve_canonical_name()` at `module_a.py` write boundary, 576-row migration, `tag_classifier.py` hardened (`a51ae21`) ✅
+- [x] **WOWY Ghost Protocol** — XHR interceptor, lineup key normalization, DELETE+INSERT two-pass, 100% lineup_id 131 dates (`f00c9e3`) ✅
 - [ ] **T5d: Smart Money Signal Layer** — Pinnacle `pinnacle_line_over`/`pinnacle_line_under` in `prop_line_snapshots`, `STEAM_MOVE` tag in Module F. MVP: Pinnacle already in `regions=eu` — just separate storage. Route: Lena thresholds → junior dev → Henrik.
 - [ ] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml`. Route: junior dev → Silas validates → Henrik.
 - [ ] **T5c: Game Score Formula v2** — line movement delta + handle% to `_score_game()`. Route: Lena specs weights → junior dev → Henrik.
-- [x] **Per-grade calibration query** — `by_grade` breakdown in `calibrate_claude_outputs.py` with `!` inversion flag (FADE WR > 55%), Henrik APPROVED, commit `f8f7b14` ✅
+- [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 5,212 rows in `claude_analysis_log` (17 days, Mar 4–21). Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
-- [x] **Replace Claxton example in `curate_examples`** — Done (T4 Session 2): Suggs 3PM UNDER + `[STAR_PG]` Example 5 ✅
-- [x] **T-CAL-001** — `calibrate_claude_outputs.py` query fix `curation_grade IS NOT NULL` ✅
-- [x] **T-8.23-E** — `scripts/backfill_claude_analysis_outcomes.py` built + runs clean ✅
-- [x] **T-8.23-F** — per-bet INSERT loop + 6-column schema in `database.py` + `curate_plays.py` ✅
-- [x] **T-002: Slack P1 wiring** — `#ludi-pipeline-alerts` webhook + GH secret `SLACK_WEBHOOK_ALERTS` deployed ✅
+- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
 
 ---
 
@@ -79,7 +73,7 @@ This is the single source of truth for project tasks and priorities.
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
-| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (T-8.23-F shipped Mar 10). Calibration infra complete: T-CAL-001 + T-8.23-E/F + backfill script + Maren prompt fixes all Henrik APPROVED. Key finding: FADE 66.7% > LEAN 51.5% > STRONG 50.0% — grade hierarchy inverted. Per-grade query in progress (Item 1). | $0 |
+| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (6,402 rows as of Mar 28). Calibration infra complete: T-CAL-001 + T-8.23-E/F + per-grade breakdown + Maren prompt fixes all Henrik APPROVED. Key finding: STRONG 57.0% > LEAN 51.0% > FADE 49.3% at N=1,850 (grade hierarchy normalized). Brier analysis blocked on anti-look-ahead fix. | $0 |
 
 ---
 
