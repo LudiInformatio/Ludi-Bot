@@ -785,3 +785,33 @@ git push origin main                   # Runner now gets correct code
 **Fix:** `(status['status'] or 'ACTIVE').upper()` — None → ACTIVE default. Commit `7940a72`.
 
 **Rule:** Always guard `.upper()` / `.lower()` calls on database-sourced string fields with `or 'DEFAULT'`. Status columns can be NULL even when the row exists.
+
+## 2026-03-28 — Pipeline exit code 2: `validate_pipeline_output.py` archived but still referenced
+
+**Symptom:** `daily_simulation_pipeline.yml` exited with code 2 every run. `validate_pipeline_output.py` not found.
+
+**Root cause:** Script was moved to `scripts/_archive/` on Mar 3 (cleanup) but the workflow step `python scripts/validate_pipeline_output.py` was never updated. Every pipeline run for 25 days silently exited early after curation.
+
+**Fix:** Restored from `scripts/_archive/validate_pipeline_output.py`, removed `# ARCHIVED` header. Commit `604192b`.
+
+**Rule:** Before archiving any script referenced in `.github/workflows/`, grep all workflow files for the script name. Only archive if zero references found.
+
+## 2026-03-28 — Sonnet `max_tokens=32000` + 235 bets = JSON truncation, 0 AI-graded STRONG picks
+
+**Symptom:** `curate_plays.py` produced 0 AI-graded STRONG picks. All "STRONG" bets were top edge-sorted fallback (no AI signal).
+
+**Root cause:** 235 bets × ~50 tokens/bet = ~11,750 input + 24,039 output tokens — hit `max_tokens=32000` cap mid-JSON. Claude's response was truncated → `JSONDecodeError`. Fallback path sorted by edge and labeled top N as STRONG without AI analysis.
+
+**Fix:** Chunked into `BATCH_SIZE=80` batches, `max_tokens=6000` per call. `game_counts` dict initialized once outside batch loop to preserve max-2-STRONG-per-game cap across batches. Commit `338a224`.
+
+**Rule:** For any Sonnet call over a list: estimate output = N_items × tokens_per_item × 1.5. If > 6000, chunk. Never set `max_tokens > 16000` for JSON-output calls — truncated JSON is harder to debug than batch overhead.
+
+## 2026-03-28 — `SLACK_WEBHOOK_ALERTS` env var missing from 3 workflow steps
+
+**Symptom:** `send_slack_failure_alert()` calls in `module_d.py`, `module_g.py`, `curate_plays.py` silently dropped — no Slack notifications on pipeline failures.
+
+**Root cause:** When T-002 Slack wiring was built (Mar 9), the secret was added to some workflow steps but not all steps that invoke modules using it. `daily_simulation_pipeline.yml` simulation step, curate step, and `referee_sync.yml` assignment step all lacked the env injection.
+
+**Fix:** Added `SLACK_WEBHOOK_ALERTS: ${{ secrets.SLACK_WEBHOOK_ALERTS }}` to all 3 steps. Commit `2f421a4`.
+
+**Rule:** When adding a new env secret to a workflow, grep ALL workflow steps that invoke any script/module using that secret — not just the "main" step. Modules called as Python imports inherit the env of their calling script, not the workflow.

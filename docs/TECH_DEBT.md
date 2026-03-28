@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 28, 2026 (Session 4 — TD-025/026 added; TD-025 immediately archived)
+**Last Updated:** March 28, 2026 (Session 4 — TD-025/026 added; TD-025 immediately archived; TD-027/028/029 discovered + immediately fixed)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -191,6 +191,9 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 | TD-014 | `compute_empirical_modifiers.py` 3 column name mismatches | `aec6909` (Mar 24) | 2026-03-24 |
 | TD-020 | `player_projections.actual_result` missing — ablation returned 0 rows | `_settle_actual_results()` player_name fallback + `player_name` added to SELECT (Mar 27) | 2026-03-27 |
 | TD-025 | `utils/tag_classifier.py` logging import inside function — `NameError` on first call | Hoisted to module level (`8f4dbfd`, Mar 28) | 2026-03-28 |
+| TD-027 | `curate_plays.py` Sonnet `max_tokens=32000` overflow — 235 bets × ~50 tokens truncated JSON, all STRONG bets fell back to edge sort | Chunked to `BATCH_SIZE=80`, `max_tokens=6000` per call (`338a224`, Mar 28) | 2026-03-28 |
+| TD-028 | `validate_pipeline_output.py` archived Mar 3 but `daily_simulation_pipeline.yml` still referenced it — pipeline exit code 2 on every run | Restored from `_archive/`, `# ARCHIVED` header removed (`604192b`, Mar 28) | 2026-03-28 |
+| TD-029 | `SLACK_WEBHOOK_ALERTS` missing from 3 workflow steps — `send_slack_failure_alert()` calls in `module_d.py`, `module_g.py`, `curate_plays.py` silently dropped since wiring (T-002) | Added to simulation pipeline curate step, simulation step, and `referee_sync.yml` (`2f421a4`, Mar 28) | 2026-03-28 |
 
 ---
 

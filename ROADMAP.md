@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 28, 2026 — 4:58 PM EDT
+**Last Updated:** Saturday, March 28, 2026 — 5:26 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** T5d Smart Money Layer (`prop_line_snapshots`, `module_f.py`) — Pinnacle line storage + STEAM_MOVE tag + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
-**Completed:** Phase 2 recency weighting — Exp7 half-life 7g, N-gate 15 (`main.py`, `config.py`, `7efb197`) ✅ + Accent pipeline fix — canonical resolver at `module_a.py` write boundary, 576-row migration, `tag_classifier.py` hardened (`a51ae21`) ✅ + WOWY Ghost Protocol — XHR interceptor, lineup key normalization, 100% lineup_id 131 dates (`f00c9e3`) ✅
+**Completed:** Accent pipeline fix — canonical resolver at `module_a.py` write boundary, 576-row migration, `tag_classifier.py` hardened (`a51ae21`) ✅ + WOWY Ghost Protocol — XHR interceptor, lineup key normalization, 100% lineup_id 131 dates (`f00c9e3`) ✅ + Pipeline bug fixes — Sonnet batch chunking (`curate_plays.py`), `validate_pipeline_output.py` restored, `SLACK_WEBHOOK_ALERTS` 3-step wiring (`338a224`/`604192b`/`2f421a4`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
