@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 24, 2026 (Sprint 3 — TD-017/018/019/020 added)
+**Last Updated:** March 28, 2026 (Session 4 — TD-025/026 added; TD-025 immediately archived)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -169,6 +169,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Recommended Fix:** Change `psq.season = '2025-26'` to `psq.season = ?` and add `_DB_SEASON` as an additional bound parameter in the same `cursor.execute()` call.
 - **Discovered:** 2026-03-28 (Henrik, Phase 1 PR audit)
 
+### TD-026: `sync_wowy_hybrid.py` `--end-date` ignored when `--ghost` used without explicit end
+- **Severity:** P2
+- **Location:** `scripts/sync_wowy_hybrid.py` L311-317
+- **Description:** When `--ghost` flag is used with `--start-date` but without `--end-date`, the script defaults `end = datetime.now() - timedelta(days=1)` (yesterday), then falls through to `run_wowy_backfill(start, end, headless=False)`. There is no way to limit the date range when using Ghost Protocol without specifying both `--start-date` and `--end-date`. On Mar 28, intended November test run became full-season backfill (2025-11-01 → 2026-03-27).
+- **Impact:** Unintended multi-month backfill runs when user expects date-limited test. Full backfill took ~3 hours.
+- **Recommended Fix:** Offseason refactor — if `--start-date` is provided without `--end-date`, set `end = start + timedelta(days=30)` as a safe default, or require explicit `--end-date` when `--start-date` is given. Also: consolidate `sync_wowy_hybrid.py` + `sync_wowy_backfill.py` into single unified script.
+- **Discovered:** 2026-03-28 (accidental full-season run)
+
 ---
 
 ## Archive (Fixed)
@@ -182,6 +190,7 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 | TD-001 | Conflicting unique indexes on `player_game_logs` | `database.py` index aligned (`93d84d7`, Mar 23) | 2026-03-23 |
 | TD-014 | `compute_empirical_modifiers.py` 3 column name mismatches | `aec6909` (Mar 24) | 2026-03-24 |
 | TD-020 | `player_projections.actual_result` missing — ablation returned 0 rows | `_settle_actual_results()` player_name fallback + `player_name` added to SELECT (Mar 27) | 2026-03-27 |
+| TD-025 | `utils/tag_classifier.py` logging import inside function — `NameError` on first call | Hoisted to module level (`8f4dbfd`, Mar 28) | 2026-03-28 |
 
 ---
 
