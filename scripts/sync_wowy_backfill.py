@@ -326,8 +326,10 @@ def process_item(item_key, data, date_str, json_group_id_map=None):
             # Key: lineup_players string (e.g. "J. Tatum - J. Brown - D. White - A. Horford - K. Porzingis")
             # If interceptor fired 0 rows, json_group_id_map is empty — lineup_id stays NULL.
             if item_key == "lineups" and json_group_id_map:
-                lineup_str = db_values.get('lineup_players', '')
-                group_id = json_group_id_map.get(lineup_str)
+                raw = db_values.get('lineup_players', '')
+                # Normalize: sort player name parts, lowercase, strip — matches _norm() in interceptor
+                lineup_key = ' - '.join(sorted([p.strip().lower() for p in raw.split(' - ')]))
+                group_id = json_group_id_map.get(lineup_key)
                 if group_id:
                     db_values['lineup_id'] = group_id
 
@@ -457,10 +459,10 @@ def run_wowy_backfill(start_date, end_date, headless=False):
 
                     def handle_response(response):
                         """Intercept LeagueDashLineups XHR and extract GROUP_ID map."""
-                        if 'LeagueDashLineups' not in response.url:
+                        if 'leaguedashlineups' not in response.url.lower():
                             return
                         if response.status != 200:
-                            logger.warning(f"[interceptor] LeagueDashLineups response status {response.status} for {db_date}")
+                            logger.warning(f"[interceptor] leaguedashlineups response status {response.status} for {db_date}")
                             return
                         try:
                             body = response.json()
@@ -473,11 +475,18 @@ def run_wowy_backfill(start_date, end_date, headless=False):
                             # TEAM_ABBREVIATION confirmed present in LeagueDashLineups response
                             # (verified against sync_wowy_hybrid.py save_api_data_to_db line 149)
 
+                            def _norm(s):
+                                """Normalize lineup string for matching: sort player names,
+                                lowercase, strip — handles ordering/spacing differences
+                                between API GROUP_NAME and HTML LINEUPS column."""
+                                parts = [p.strip().lower() for p in str(s).split(' - ')]
+                                return ' - '.join(sorted(parts))
+
                             for row in rows:
                                 group_id = str(row[group_id_idx])
                                 group_name = row[group_name_idx]
                                 if group_id and group_name:
-                                    json_group_id_map[group_name] = group_id
+                                    json_group_id_map[_norm(group_name)] = group_id
 
                             logger.info(f"[interceptor] Captured {len(json_group_id_map)} GROUP_ID entries for {db_date}")
                         except Exception as e:
@@ -489,7 +498,13 @@ def run_wowy_backfill(start_date, end_date, headless=False):
                     # 'commit' throws ERR_ABORTED on redirects; domcontentloaded follows them
                     page.goto(url, wait_until='domcontentloaded', timeout=90000)
                     # Wait for network to settle so XHR has time to fire and be captured
-                    page.wait_for_load_state('networkidle', timeout=30000)
+                    # NBA.com keeps background requests alive indefinitely — networkidle
+                    # may never fire. Treat timeout as non-fatal: XHR interceptor fires
+                    # during domcontentloaded, so GROUP_IDs are already captured by here.
+                    try:
+                        page.wait_for_load_state('networkidle', timeout=30000)
+                    except Exception:
+                        pass  # continue to scrape_table — XHR already captured above
                     # Dismiss NBA.com consent / OneTrust popups before scraping
                     close_popups(page)
 
