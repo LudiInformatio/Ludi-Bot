@@ -161,6 +161,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Recommended Fix:** Hoist `TIER_UNITS` to module-level constant (alongside `_STAT_RMSE`, `_STAT_EDGE_CALIBRATION`). One-line change.
 - **Discovered:** 2026-03-24 (Henrik, Sprint 4-A audit)
 
+### TD-024: `player_season_quality` JOIN in `main.py` has hardcoded season string
+- **Severity:** P3
+- **Location:** `main.py` line 100, `get_active_roster()` LEFT JOIN clause
+- **Description:** `psq.season = '2025-26'` is a hardcoded string literal in the same query where `pgl.season_id = ?` is now correctly parameterized via `_DB_SEASON`. The `_DB_SEASON` constant was added in this PR (Phase 1A) but the `psq.season` condition was not updated to use it.
+- **Impact:** No correctness risk (both values are `'2025-26'`), but diverges from the single-rollover-point pattern and will require a manual hunt next season.
+- **Recommended Fix:** Change `psq.season = '2025-26'` to `psq.season = ?` and add `_DB_SEASON` as an additional bound parameter in the same `cursor.execute()` call.
+- **Discovered:** 2026-03-28 (Henrik, Phase 1 PR audit)
+
 ---
 
 ## Archive (Fixed)

@@ -49,7 +49,7 @@ from utils.mappings import normalize_bdl_abbr
 # Constants
 # ---------------------------------------------------------------------------
 
-CURRENT_SEASON = 2025  # BDL uses start year (2025 = 2024-25 season)
+CURRENT_SEASON = 2025  # BDL uses start year integer: 2025 = 2025-26 season, 2024 = 2024-25 season
 
 # (category, stat_type) tuples -- stat_type=None for hustle (single endpoint)
 CATEGORIES: List[Tuple[str, Optional[str]]] = [

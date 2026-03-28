@@ -9,6 +9,9 @@ import json
 from datetime import datetime
 from typing import List, Dict, Optional
 
+# DB season constant — single rollover point (matches module_c.py:14 and module_b.py:20 pattern)
+_DB_SEASON = '2025-26'
+
 # EST timezone handling
 from utils.time_utils import get_est_today
 from utils.daily_lock import get_target_config, filter_slate_by_config, apply_filters
@@ -96,16 +99,18 @@ class LudiOrchestrator:
             FROM player_game_logs pgl
             LEFT JOIN player_season_quality psq ON pgl.player_id = psq.player_id AND psq.season = '2025-26'
             WHERE pgl.team_abbreviation = ? AND pgl.minutes > 0
+              AND pgl.season_id = ?
               AND pgl.game_date IN (
                   SELECT game_date FROM player_game_logs sub
                   WHERE sub.player_id = pgl.player_id AND sub.minutes > 0
+                    AND sub.season_id = ?
                   ORDER BY game_date DESC LIMIT 25
               )
             GROUP BY pgl.player_id, pgl.player_name, pgl.team_abbreviation
             HAVING COUNT(pgl.player_id) >= 3
             ORDER BY AVG(pgl.minutes) DESC LIMIT ?
         '''
-        cursor.execute(query, (team_abbr, limit))
+        cursor.execute(query, (team_abbr, _DB_SEASON, _DB_SEASON, limit))
         rows = cursor.fetchall()
         conn.close()
 

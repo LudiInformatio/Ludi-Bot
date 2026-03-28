@@ -71,7 +71,8 @@ class LudiEngine:
             rows = conn.execute("""
                 SELECT player_id, player_name, team_abbreviation, stat,
                        l7_avg, l10_avg, l15_avg, season_avg,
-                       trend_delta, trend_label, streak_vs_avg
+                       trend_delta, trend_label, streak_vs_avg,
+                       prior_season_avg, season_delta_pct, trend_signal
                 FROM player_trends
             """).fetchall()
             conn.close()
@@ -88,7 +89,10 @@ class LudiEngine:
                     'season_avg': row['season_avg'],
                     'trend_delta': row['trend_delta'],
                     'trend_label': row['trend_label'],
-                    'streak_vs_avg': row['streak_vs_avg']
+                    'streak_vs_avg': row['streak_vs_avg'],
+                    'prior_season_avg': row['prior_season_avg'],
+                    'season_delta_pct': row['season_delta_pct'],
+                    'trend_signal': row['trend_signal'],
                 }
             print(f"   >>> Trends cache loaded: {len(self.trends_cache)} rows")
         except Exception as e:
@@ -296,7 +300,7 @@ class LudiEngine:
             if len(values) >= 15:
                 p_dict[f'L15_{stat_key}'] = sum(values[:15]) / 15
 
-        # Get season averages from trends cache
+        # Get season averages and cross-season signals from trends cache
         if player_id and team:
             for stat in ['PTS', 'REB', 'AST']:
                 key = (player_id, stat, team)
@@ -305,6 +309,9 @@ class LudiEngine:
                     p_dict[f'season_avg_{stat}'] = trend.get('season_avg', 0)
                     p_dict['trend_label'] = trend.get('trend_label', '')
                     p_dict['trend_delta'] = trend.get('trend_delta', 0)
+                    # Phase 4: prior-season signal (BREAKOUT/REGRESSION/STABLE/None) — wired but inert
+                    p_dict[f'prior_season_avg_{stat}'] = trend.get('prior_season_avg')
+                    p_dict[f'trend_signal_{stat}'] = trend.get('trend_signal')
 
         # Calculate streak_score using calculate_streak_score()
         l5_pts = p_dict.get('L5_PTS', 0)

@@ -441,7 +441,7 @@ class LudiOracle:
                 if config.MODIFIER_FLAGS.get('season_blend', True) and season_base and games_recent < 15:
                     w = min(games_recent / 15.0, 1.0)
                     for stat in ['PTS', 'REB', 'AST', 'FGA', 'FG3A', 'FTA',
-                                 'STL', 'BLK', 'TOV', 'OREB', 'DREB']:
+                                 'STL', 'BLK', 'TOV', 'OREB', 'DREB', 'MIN']:
                         recent_val = player.get(stat, 0)
                         season_val = season_base.get(stat, recent_val)
                         player[stat] = round(w * recent_val + (1 - w) * season_val, 1)
@@ -514,6 +514,7 @@ class LudiOracle:
 
                     # Only apply if N >= MIN_ROLE_GAMES (Lena guard)
                     if role_prefix and role_n >= 10:
+                        applied_mods = []
                         for stat, col in [
                             ('FGA',  f'{role_prefix}_pts_mod'),
                             ('FG3A', f'{role_prefix}_fg3m_mod'),
@@ -526,6 +527,12 @@ class LudiOracle:
                             mod = emp.get(col, 1.0) or 1.0
                             if stat in player and abs(mod - 1.0) > 0.01:
                                 player[stat] = round(player[stat] * mod, 2)
+                                applied_mods.append(mod)
+                        # Composite scalar = arithmetic mean of applied mods (ablation visibility)
+                        player['_empirical_mod_scalar'] = (
+                            round(sum(applied_mods) / len(applied_mods), 4)
+                            if applied_mods else 1.0
+                        )
 
                 player_days_rest = int(player.get('days_rest', scenario.get('days_rest', 1)))
                 if config.MODIFIER_FLAGS.get('fatigue', True):
@@ -607,7 +614,11 @@ class LudiOracle:
                     "REST": f"{player_days_rest}D",
                     "MIN": round(proj_min, 1),
                     "MIN_CONF": min_conf,
-                    "GAMES_SINCE_RETURN": player.get('_games_since_return')
+                    "GAMES_SINCE_RETURN": player.get('_games_since_return'),
+                    "_empirical_mod_scalar": player.get('_empirical_mod_scalar', 1.0),
+                    "TREND_SIGNAL_PTS": player.get('trend_signal_PTS'),
+                    "TREND_SIGNAL_REB": player.get('trend_signal_REB'),
+                    "TREND_SIGNAL_AST": player.get('trend_signal_AST'),
                 })
 
                 simulated_results.append(sim_profile)

@@ -171,7 +171,7 @@ class ProjectionLogger:
                         float(ref_mod) if ref_mod is not None else 1.0,
                         1.0,  # blowout_mod — applied later in Module F, not available at sim time
                         1.0,  # scheme_mod — applied by Module E, not available at sim time
-                        1.0,  # empirical_mod — already baked into base stats by Module C
+                        float(sim.get('_empirical_mod_scalar', 1.0)),  # empirical_mod — composite scalar from Module C role modifier block
                         float(final_proj),
                         None,  # prob_over_line — requires line, computed in Module F
                         float(p10), float(p25), float(p75), float(p90),
