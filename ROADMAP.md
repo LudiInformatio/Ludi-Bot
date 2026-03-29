@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 28, 2026 — 5:26 PM EDT
+**Last Updated:** Saturday, March 28, 2026 — 8:41 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** T5d Smart Money Layer (`prop_line_snapshots`, `module_f.py`) — Pinnacle line storage + STEAM_MOVE tag + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
 **Completed:** Accent pipeline fix — canonical resolver at `module_a.py` write boundary, 576-row migration, `tag_classifier.py` hardened (`a51ae21`) ✅ + WOWY Ghost Protocol — XHR interceptor, lineup key normalization, 100% lineup_id 131 dates (`f00c9e3`) ✅ + Pipeline bug fixes — Sonnet batch chunking (`curate_plays.py`), `validate_pipeline_output.py` restored, `SLACK_WEBHOOK_ALERTS` 3-step wiring (`338a224`/`604192b`/`2f421a4`) ✅
@@ -56,6 +56,15 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
+- [ ] **Game notes overhaul** (`curate_plays.py` prompt, Maren) — **Architectural debate required before implementation.**
+  - **Current problem:** Module F locks bet direction using math only (Poisson probability vs devigged fair prob). Claude receives an already-decided OVER/UNDER and grades confidence. But Claude has context Module F never sees — injury news, line movement, referee tendencies, scheme matchup, Three-Lens signals. If that soft context points the other way, there's nowhere for it to go except a confusing note that contradicts the rec direction.
+  - **Core design question:** Should Claude validate Module F's direction, or should Claude determine direction using the projection as a quantitative anchor + all available context?
+  - **Option A (current):** Module F owns direction (math-based EV). Claude grades confidence only. Simpler, but Claude's context is wasted on direction — notes can contradict recs.
+  - **Option B (directional authority):** Module F surfaces BOTH sides (edge, EV, odds for O and U). Claude uses projection as baseline + all soft signals (injury, steam, scheme, public lean) to make final direction call + grade. More holistic — the projection is the floor, not the answer.
+  - **Option C (hybrid):** Module F direction stands unless Claude flags a hard override condition (e.g., steam move on opposite side, key injury not yet in model). Claude's default is to trust the math; override requires explicit evidence in the Three-Lens block.
+  - **Dependency:** Option B/C need T5d (Pinnacle steam), T5c (line movement delta), and social signals (Phase 8.22) to give Claude a full picture. Without those, Claude is reasoning from projection + injury only — Option A may be correct until the data layer is richer.
+  - **Reference:** Pull Marcus Trading Firm v7.2 docs (`memory/allhands_marcus_review.md`) for best practices on signal hierarchy and decision authority in multi-signal systems — directly relevant to Options A/B/C above.
+  - **Owner:** Maren leads prompt design. Lena validates whether direction accuracy improves with expanded context (before/after RMSE + direction hit rate). Henrik reviews any `curate_plays.py` structural changes.
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
 - [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
