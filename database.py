@@ -2046,6 +2046,54 @@ class LudiHistorian:
             except Exception:
                 pass
 
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS ludi_ops_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT NOT NULL CHECK(event_type IN ('ROUTING','CODE_REVIEW','OWNER_INTERACTION','ADR','PROMPT_CHANGE')),
+                actor TEXT,
+                target_employee TEXT,
+                task_type TEXT,
+                input_summary TEXT,
+                output_summary TEXT,
+                outcome TEXT CHECK(outcome IS NULL OR outcome IN ('APPROVED','REVIEW_REQUIRED','REWORK','BLOCKED','SKIPPED')),
+                blocker_reason TEXT,
+                session_id TEXT,
+                sequence_n INTEGER,
+                prompt_version TEXT,
+                related_task_id TEXT,
+                token_cost_usd REAL,
+                model TEXT,
+                tags TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ops_log_event_type ON ludi_ops_log(event_type)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ops_log_created ON ludi_ops_log(created_at)")
+
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS ask_ludi_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                query_text TEXT NOT NULL,
+                intent TEXT,
+                response_text TEXT,
+                response_time_ms INTEGER,
+                session_id TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ask_ludi_intent ON ask_ludi_interactions(intent)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ask_ludi_created ON ask_ludi_interactions(created_at)")
+
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS pm_bot_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mode TEXT NOT NULL,
+                briefing_text TEXT,
+                telegram_sent INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+
         # Seed canonical_games from any games data already in the DB.
         # Uses the same sync_canonical_games() function available to all game writers.
         _sync_canonical_games(conn)

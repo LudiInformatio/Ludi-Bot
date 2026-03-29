@@ -13,8 +13,12 @@ DO NOT call utils/pm_bot.py directly — use main.py as the entry point.
 """
 import os
 import datetime
+import sqlite3
 from pathlib import Path
 from google import genai
+
+_base_dir = Path(__file__).resolve().parent.parent
+DB_PATH = str(_base_dir / 'ludi.db')
 
 try:
     from config import GEMINI_API_KEY, TELEGRAM_TOKEN
@@ -353,7 +357,16 @@ Tomorrow: {next_task}
 
             # Send to both — Solomon Bot 2 for Telegram (PM/ops channel), Slack for ops context
             send_slack_message(briefing_text)
-            return send_solomon_photo(header_img, caption=briefing_text, parse_mode=None)
+            result = send_solomon_photo(header_img, caption=briefing_text, parse_mode=None)
+            try:
+                with sqlite3.connect(DB_PATH) as _conn:
+                    _conn.execute(
+                        "INSERT INTO pm_bot_messages (mode, briefing_text, telegram_sent) VALUES (?, ?, ?)",
+                        (mode, briefing_text, 1 if result else 0)
+                    )
+            except Exception as _e:
+                print(f"[pm_bot] message log failed: {_e}")
+            return result
 
         except Exception as e:
             print(f"❌ Error generating briefing: {e}")
@@ -410,8 +423,18 @@ Name the module or file being built — format: "[Module/Feature] ([file.py]) �
                 contents=_NBA_DOMAIN_GUARDRAIL + prompt
             )
             # Send to both — Solomon Bot 2 for Telegram (PM/ops channel), Slack for ops context
-            send_slack_message(response.text)
-            return send_solomon_photo(header_img, caption=response.text, parse_mode=None)
+            break_text = response.text
+            send_slack_message(break_text)
+            result = send_solomon_photo(header_img, caption=break_text, parse_mode=None)
+            try:
+                with sqlite3.connect(DB_PATH) as _conn:
+                    _conn.execute(
+                        "INSERT INTO pm_bot_messages (mode, briefing_text, telegram_sent) VALUES (?, ?, ?)",
+                        ('break', break_text, 1 if result else 0)
+                    )
+            except Exception as _e:
+                print(f"[pm_bot] message log failed: {_e}")
+            return result
         except Exception as e:
             print(f"❌ Error sending break message: {e}")
             return False

@@ -1,8 +1,13 @@
+import logging
 import re
+import sqlite3
 import time
 from collections import defaultdict
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
+from database import DB_PATH
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
 from utils.claude_prompts import (
     ASK_LUDI_INTENT_SYSTEM,
@@ -296,6 +301,7 @@ async def handle_message(update, context) -> None:
 
     user_id = update.effective_user.id
     user_message = update.message.text.strip()
+    _req_start = time.time()  # for interaction logging
 
     if not check_rate_limit(user_id):
         await update.message.reply_text(
@@ -323,3 +329,16 @@ async def handle_message(update, context) -> None:
     else:
         for i in range(0, len(response), MAX_TG):
             await update.message.reply_text(response[i:i + MAX_TG])
+
+    # Log interaction for training data — fire-and-forget, never blocks the response
+    try:
+        _resp_ms = int((time.time() - _req_start) * 1000)
+        with sqlite3.connect(DB_PATH) as _log_conn:
+            _log_conn.execute(
+                "INSERT INTO ask_ludi_interactions "
+                "(query_text, intent, response_text, response_time_ms, session_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (user_message, intent, response[:2000], _resp_ms, str(user_id))
+            )
+    except Exception as _e:
+        logger.warning(f"[ask_ludi] interaction log failed: {_e}")
