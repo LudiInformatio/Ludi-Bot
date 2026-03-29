@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Saturday, March 28, 2026 — 9:22 PM EDT
+**Last Updated:** Sunday, March 29, 2026 — 1:09 PM EDT
 **Current Phase:** Phase 8 — AI-Enhanced Pipeline
 **Active Work:** T5d Smart Money Layer (`prop_line_snapshots`, `module_f.py`) — Pinnacle line storage + STEAM_MOVE tag + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
-**Completed:** WOWY Ghost Protocol — XHR interceptor, lineup key normalization, 100% lineup_id 131 dates (`f00c9e3`) ✅ + Pipeline bug fixes — Sonnet batch chunking (`curate_plays.py`), `validate_pipeline_output.py` restored, `SLACK_WEBHOOK_ALERTS` 3-step wiring (`338a224`/`604192b`/`2f421a4`) ✅ + Prompt architecture sprint — ROLE_PHILOSOPHY + DECISION TREE removal + ANALYSIS_PROTOCOL_CURATION + SCHEME_VOCABULARY + v2.1-preflight (`02e2b0d`/`f76c83c`) ✅
+**Completed:** Pipeline bug fixes — Sonnet batch chunking (`curate_plays.py`), `validate_pipeline_output.py` restored, `SLACK_WEBHOOK_ALERTS` 3-step wiring (`338a224`/`604192b`/`2f421a4`) ✅ + Prompt architecture sprint — ROLE_PHILOSOPHY + DECISION TREE removal + ANALYSIS_PROTOCOL_CURATION + SCHEME_VOCABULARY + v2.1-preflight (`02e2b0d`/`f76c83c`) ✅ + Curation hardening + roster sync + ops data capture — PE-2 pre-flight, HIGH_DIVERGENCE flag, IR team patch, `ludi_ops_log`/`ask_ludi_interactions` (`488af94`/`a792789`) ✅
 
 This is the single source of truth for project tasks and priorities.
 

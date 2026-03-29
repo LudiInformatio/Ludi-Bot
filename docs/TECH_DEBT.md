@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 28, 2026 (Session 4 — TD-025/026 added; TD-025 immediately archived; TD-027/028/029 discovered + immediately fixed)
+**Last Updated:** March 29, 2026 (Session 7 — TD-030 added; no items archived)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -176,6 +176,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Impact:** Unintended multi-month backfill runs when user expects date-limited test. Full backfill took ~3 hours.
 - **Recommended Fix:** Offseason refactor — if `--start-date` is provided without `--end-date`, set `end = start + timedelta(days=30)` as a safe default, or require explicit `--end-date` when `--start-date` is given. Also: consolidate `sync_wowy_hybrid.py` + `sync_wowy_backfill.py` into single unified script.
 - **Discovered:** 2026-03-28 (accidental full-season run)
+
+### TD-030: `utils/pm_bot.py` uses `print()` for DB log failure — no `logger` import
+- **Severity:** P3
+- **Location:** `utils/pm_bot.py` — `generate_briefing()` and `send_break_message()` logging error handlers
+- **Description:** `pm_bot.py` has no `import logging` / `logger = logging.getLogger(__name__)`. The DB write failure handlers for `pm_bot_messages` use `print(f"[pm_bot] message log failed: {_e}")`. Errors surface in stdout but not in the structured log pipeline.
+- **Impact:** Log failures are visible in terminal but invisible to `claude-ops-hub.yml` log scanning. Low risk since these are fire-and-forget writes, but inconsistent with the rest of the codebase.
+- **Recommended Fix:** Add `import logging` + `logger = logging.getLogger(__name__)` at top of `pm_bot.py`. Replace both `print(...)` handlers with `logger.warning(...)`.
+- **Discovered:** 2026-03-29 (Henrik audit of ops data capture PR)
 
 ---
 
