@@ -2212,13 +2212,10 @@ class LudiHistorian:
         conn = self._get_conn()
         c = conn.cursor()
 
-        try:
-            # 🛡️ GUARDRAIL: Resolve ID before writing (Heal on Ingestion)
-            # This protects against Tank01 sending "28398804489" -> converts to "1629029"
-            canonical_id = self.resolver.resolve_to_canonical_id(player_data['id'])
-            player_data['id'] = canonical_id
-        except ValueError:
-            pass # Keep original if resolution fails
+        # 🛡️ DB FIREWALL (4-Tier): handles new players via name fallback + warns on dirty IDs
+        player_data['id'] = self.resolve_player_id_for_insert(
+            player_data['id'], player_data.get('name')
+        )
 
         # Check if player exists and team changed (trade detection)
         c.execute('SELECT team FROM players WHERE player_id = ?', (player_data['id'],))
