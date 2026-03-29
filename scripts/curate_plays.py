@@ -480,6 +480,15 @@ LENS 3 — CONTRARIAN: State the single most obvious bear case for this bet.
   Grade stays LEAN if the bear case is real and cannot be fully dismissed.
   Grade becomes FADE if the bear case is the dominant signal.
 
+STRONG PRE-FLIGHT (required before any STRONG grade):
+  Before marking STRONG, answer all three:
+  (1) Loss mechanism: name the specific scenario that makes this bet lose — not "bad game" or "off night."
+      Cannot name a specific mechanism → downgrade to LEAN.
+  (2) Steam check: if STEAM_MOVE tag is present, is it toward or against this bet direction?
+      Steam against → name it in CONTRARIAN bear case. Steam toward → note as confirming.
+  (3) Edge range check: does the WR grade hold at this exact edge level (per CALIBRATION SIGNAL below)?
+      WR grade D/F at this edge range with no structural exception → downgrade to LEAN.
+
 CONTRARIAN LENS — CALIBRATION SIGNAL (Sprint 4-A empirical finding):
   Kelly signal compresses above these thresholds — name a narrative reason or downgrade to LEAN:
   - PTS, AST, REB, STL: flag at true_edge > 14%
