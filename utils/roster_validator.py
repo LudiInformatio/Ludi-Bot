@@ -9,10 +9,14 @@ import requests
 import json
 import os
 import time
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+from unidecode import unidecode
 import config
 from utils.api_monitor import get_monitor
+
+logger = logging.getLogger(__name__)
 
 class RosterValidator:
     """
@@ -354,6 +358,67 @@ class RosterValidator:
 
         return total_changes
 
+    def _patch_injured_player_teams(self, conn) -> int:
+        """Second-pass fix: sync players.team from player_injuries for IR players
+        whose team doesn't match — covers Tank01 omitting IR players from roster responses.
+
+        Uses Python-side unidecode normalization instead of a SQL JOIN to handle
+        accented vs non-accented name mismatches (e.g. 'Nikola Jokić' vs 'Nikola Jokic').
+        """
+        c = conn.cursor()
+
+        # Check if resolved_at column exists
+        col_names = [r[1] for r in c.execute('PRAGMA table_info(player_injuries)').fetchall()]
+        resolved_filter = "AND resolved_at IS NULL" if 'resolved_at' in col_names else ""
+
+        # Fetch all relevant injured players (no JOIN — we match in Python)
+        c.execute(f'''
+            SELECT team_abbreviation, player_name, status, snapshot_time
+            FROM player_injuries
+            WHERE status IN ('OUT', 'DOUBTFUL', 'Q')
+              {resolved_filter}
+            ORDER BY snapshot_time DESC
+        ''')
+        injury_rows = c.fetchall()
+
+        # Build lookup: normalized_name -> (team_abbreviation, snapshot_time)
+        # Most-recent snapshot wins (rows already ordered DESC, first entry kept)
+        injury_team = {}
+        for team_abbr, pname, status, snap_time in injury_rows:
+            if not pname:
+                continue
+            key = unidecode(pname).lower().strip()
+            if key not in injury_team or snap_time > injury_team[key][1]:
+                injury_team[key] = (team_abbr, snap_time)
+
+        # Fetch all active players with their current team
+        c.execute('SELECT player_id, name, team FROM players WHERE is_active = 1')
+        player_rows = c.fetchall()
+
+        updated = 0
+        seen = set()
+        for player_id, name, current_team in player_rows:
+            if player_id in seen:
+                continue
+            key = unidecode(name).lower().strip()
+            if key not in injury_team:
+                continue
+            new_team, _ = injury_team[key]
+            if new_team == current_team:
+                continue
+            seen.add(player_id)
+            c.execute(
+                'UPDATE players SET team = ? WHERE player_id = ?',
+                (new_team, player_id)
+            )
+            updated += 1
+            logger.warning(
+                f"[roster_validator] team mismatch patched: {name} {current_team} -> {new_team} (from injury report)"
+            )
+
+        conn.commit()
+        return updated
+
     def generate_validation_report(self, changes: Dict, db_player_count: int, tank01_player_count: int) -> str:
         """
         Generate human-readable validation report.
@@ -523,6 +588,14 @@ class RosterValidator:
             json.dump(report_data, f, indent=2)
 
         print(f"\n   📄 Detailed report saved: {report_file}")
+
+        # Second pass: patch injured players whose team mismatches injury report
+        if not dry_run:
+            patch_conn = self._get_conn()
+            patched = self._patch_injured_player_teams(patch_conn)
+            patch_conn.close()
+            if patched > 0:
+                logger.warning(f"[roster_validator] {patched} injured player(s) had stale team — patched from injury report")
 
         return {
             'changes': changes,

@@ -254,6 +254,15 @@ jobs:
           TANK01_KEY: ${{ secrets.TANK01_KEY }}
           BALLDONTLIE_KEY: ${{ secrets.BALLDONTLIE_KEY }}
 
+      - name: Validate and sync rosters
+        continue-on-error: true
+        env:
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+          SLACK_WEBHOOK_ALERTS: ${{ secrets.SLACK_WEBHOOK_ALERTS }}
+        run: |
+          source .venv/bin/activate
+          python validate_rosters.py --verbose 2>&1 | tail -20
+
       - name: Sync Suspensions (ESPN — no API key required)
         continue-on-error: true
         timeout-minutes: 5
