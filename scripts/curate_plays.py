@@ -172,6 +172,9 @@ def _format_player_block(
     else:
         lines.append(f"Injury: No active record | Last checked: {datetime.now().strftime('%Y-%m-%d %H:%M')} UTC")
 
+    # Exempt combos: confirmed high WR at high edge — skip HIGH_DIVERGENCE flag
+    _HIGH_DIV_EXEMPT = {('BLK', 'UNDER'), ('3PM', 'UNDER'), ('REB', 'UNDER'), ('TOV', 'UNDER')}
+
     # Bets
     lines.append(f"Bets ({len(bets)}):")
     for bet in bets:
@@ -180,13 +183,24 @@ def _format_player_block(
         else:
             odds = bet.get('odds_under')
         odds_str = f"@ {odds}" if odds else ""
-        
+
         line = (
             f"  [{bet['id']}] {bet['stat_category']} {bet['bet_side']} {bet['line']} {odds_str} | "
             f"Tier={bet.get('confidence_tier', 'N/A')} | Edge=+{bet.get('true_edge', 0):.1f}% | "
             f"Proj={bet.get('projection', 'N/A')}"
         )
         lines.append(line)
+
+        # HIGH_DIVERGENCE: flag bets where model edge diverges strongly from market consensus
+        _stat = bet.get('stat_category', '').upper()
+        _side = bet.get('bet_side', '').upper()
+        if (bet.get('true_edge') or 0) >= 20.0 and (_stat, _side) not in _HIGH_DIV_EXEMPT:
+            lines.append(
+                f"  [HIGH_DIVERGENCE] Edge={bet.get('true_edge', 0):.1f}% >= 20% — MANDATORY CHECK: "
+                f"name the specific reason this model probability is not overconfident before grading STRONG. "
+                f"If no structural reason can be named (injury vacuum, confirmed steam, scheme edge confirmed in WR data), "
+                f"downgrade to LEAN."
+            )
 
     # Game Context & Dossier Signals
     if bets:
