@@ -12,6 +12,10 @@ Created: February 2026
 Purpose: Phase 8 AI Integration for Ludi-Bot
 """
 
+ROLE_PHILOSOPHY = """=== DECISION AUTHORITY ===
+You are a synthesis layer, not a validator. The projection is your quantitative anchor — not the answer.
+EV beats narrative: only durable, data-grounded edge survives. Know when to fold a good-looking signal."""
+
 ROSTER_RULES = """
 === CRITICAL: ROSTER VERIFICATION ===
 **BEFORE listing any player, check the injury report above.**
@@ -65,6 +69,13 @@ changes your training data does not reflect. If a player is not in CURRENT ROSTE
 do not mention them by name. Use the [TEAM] label in injury lines to determine which
 team each player belongs to — do NOT guess from memory.
 """
+
+ANALYSIS_PROTOCOL_CURATION = """=== ANALYSIS RULES ===
+DATA GROUNDING (non-negotiable): Your ONLY data source is the context in this prompt. Do NOT use training knowledge for players, teams, stats, or rosters. If data is not in the prompt, say "Data not available" — never estimate, approximate, or characterize from memory.
+
+OUTPUT FORMAT: Reference data generically ("per injury reports", "season data shows"). Do NOT mention internal system names, pipeline names, or database names. Flag uncertainty as "Unverified". Keep analysis under 1500 characters. No OUT/SUSPENDED players cited as active.
+
+ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Use the [TEAM] label to assign team — do NOT guess from memory."""
 
 GAME_NOTES_TEMPLATE = """📅 {game_label}
 ## {away_team} @ {home_team}

@@ -39,14 +39,14 @@ import config
 
 # ─── Reused Infrastructure (do NOT rewrite these) ─────────────────────────────
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL, SONNET_MODEL
-from utils.claude_prompts import ROSTER_RULES, ANALYSIS_PROTOCOL
+from utils.claude_prompts import ROLE_PHILOSOPHY, ROSTER_RULES, ANALYSIS_PROTOCOL, ANALYSIS_PROTOCOL_CURATION
 from utils.telegram_notifier import send_message, send_solomon_message
 from utils.player_id_resolver import resolve_canonical_name
 from utils.game_dossier import build_game_dossier
 from utils.slack_notifier import send_slack_failure_alert
 
 # ─── Constants ────────────────────────────────────────────────────────────────
-PROMPT_VERSION = 'v2.0-three-lens'
+PROMPT_VERSION = 'v2.1-preflight'
 # Stats where an OUT/DOUBTFUL player bet OVER is clearly wrong
 VOLUME_STATS = {'PTS', 'REB', 'AST', 'MIN'}
 SANITY_FAIL_STATUSES = {'OUT', 'DOUBTFUL'}
@@ -444,7 +444,7 @@ def _sonnet_curate(
         print(f"[WARN] WR context query failed — curation will proceed without empirical WR data: {e}")
         wr_context = ""
 
-    system_prompt = f"{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL}"
+    system_prompt = f"{ROLE_PHILOSOPHY}\n\n{ROSTER_RULES}\n\n{ANALYSIS_PROTOCOL_CURATION}"
     system_prompt += "\n\nPrefer UNDER bets on BLK, 3PM, and STL — these have historically outperformed. Be conservative selecting OVER bets on PTS, AST, and 3PM unless the edge and injury context are compelling."
 
     if wr_context:
@@ -514,9 +514,8 @@ THREE-LENS GRADE LOGIC:
     curate_examples = """
 === CURATION EXAMPLES ===
 
-NOTE: Examples 1-3 use the pre-v2.0 thinking format (narrative summary).
-Examples 4-5 use the current v2.0 Three-Lens format (VALUE/MOMENTUM/CONTRARIAN/Final).
-New bets being evaluated should follow the v2.0 format as instructed in the THREE-LENS ANALYTICAL PROTOCOL above.
+NOTE: All examples use the v2.0 Three-Lens thinking format (VALUE/MOMENTUM/CONTRARIAN/Final).
+New bets being evaluated should follow this format as instructed in the THREE-LENS ANALYTICAL PROTOCOL above.
 
 === EXAMPLE 1 — BLK UNDER: A+ WR grade overrides yellow matchup flag (→ STRONG) ===
 Input:
@@ -537,7 +536,7 @@ Reasoning chain (consult WR grade FIRST):
            frequency in Tatum's own log (he averages 0.5 BLK/g — structural UNDER holds).
   Step 4 — Grade: STRONG. WR primary signal + DIAMOND edge + acceptable matchup risk.
 
-thinking: "WR grade for BLK UNDER: A+ (67.1% floor, n=918). Edge confirms at 34.9% DIAMOND. MIA rim freq is yellow flag but does not override A+ grade. Grade: STRONG."
+thinking: "VALUE: BLK UNDER A+ WR structural floor (67.1%, n=918) — category-level mispricing. MOMENTUM: no streak signal in BLK context. CONTRARIAN: MIA high rim freq → 1-block risk → dismissed (structural UNDER survives vs 0.5 line). Final: STRONG."
 Grade: STRONG
 Reasoning: BLK UNDER A+ empirical signal (67.1% floor, 918 bets) + DIAMOND edge confirms. Opponent rim frequency is a yellow flag but does not override A+ WR grade.
 === END EXAMPLE 1 ===
@@ -561,7 +560,7 @@ Reasoning chain (consult WR grade FIRST):
            defense is neutral-to-negative for slash + drive volume. Neutral matchup signal.
   Step 4 — Grade: FADE. D-grade WR + extreme edge outlier flag. Edge% alone never makes STRONG.
 
-thinking: "WR grade for PTS OVER: absent from established table (D grade). Edge 109.2% is an outlier flag, not a signal. CLE PERIMETER = neutral matchup for SLASHING_CREATOR. Grade: FADE."
+thinking: "VALUE: no structural reason — D-grade WR, absent from A/A+ table. Edge 109.2% = market volatility flag, not signal. MOMENTUM: no trend data provided. CONTRARIAN: CLE PERIMETER neutral for SLASHING_CREATOR → bear case sustained (no WR floor). Final: FADE."
 Grade: FADE
 Reasoning: PTS OVER has no confirmed empirical edge in this system (absent from WR table). Extreme edge outlier (109.2%) signals market volatility, not probability certainty.
 === END EXAMPLE 2 ===
@@ -585,7 +584,7 @@ Reasoning chain (consult WR grade FIRST):
            Perimeter defense = neutral for Flagg volume. Blowout risk: DAL -6.5, below 7.5 threshold.
   Step 4 — n-guard: PR UNDER STRONG n=7 is WATCH-tier. Apply uncertainty note in reasoning.
 
-thinking: "WR grade: PR UNDER C overall, but STRONG grade cases = 85.7% WR (WATCH n=7). Grading LEAN destroys signal. DIAMOND edge + neutral matchup confirms. Grade: STRONG with EMERGING note."
+thinking: "VALUE: STRONG-grade PR UNDER cases = 85.7% WR (WATCH n=7) — curation-conditional mispricing. MOMENTUM: no trend degradation noted. CONTRARIAN: WATCH-tier n=7 is wide CI → risk noted, not sustained. Final: STRONG (EMERGING note)."
 Grade: STRONG
 Reasoning: PR UNDER with STRONG curation shows 85.7% WR (WATCH, n=7) — grading LEAN destroys signal. DIAMOND edge + neutral matchup confirm. EMERGING signal — confidence interval wide, verify context.
 === END EXAMPLE 3 ===
@@ -676,12 +675,7 @@ Reasoning: DIAMOND edge and HOT_STREAK are real, but PTS OVER WR grade is D (no 
             if any(b['id'] in batch_set for b in pbets)
         )
 
-        user_prompt = f"""You are grading EVERY bet on today's NBA player prop slate as STRONG, LEAN, or FADE.
-
-DECISION TREE INSTRUCTIONS:
-1. STRONG: High edge (>= 5%), clear injury status, favorable matchup/trends, and no correlation conflicts.
-2. LEAN: Decent edge, but has one minor yellow flag (e.g., tough matchup, cold streak, or ref bias).
-3. FADE: Low edge, major injury uncertainty, high-risk correlation, or statistically "noisy" stat type.
+        user_prompt = f"""You are grading EVERY bet on today's NBA player prop slate as STRONG, LEAN, or FADE using the Three-Lens protocol in your system instructions.
 
 HARD RULES:
 - Maximum 2 STRONG bets from the same game_id (avoid correlated losses in one game)
