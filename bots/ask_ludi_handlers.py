@@ -38,7 +38,7 @@ def classify_intent(user_message: str) -> str:
         prompt=prompt,
         system_prompt=ASK_LUDI_INTENT_SYSTEM,
         model=HAIKU_MODEL,
-        temperature=0.1,
+        temperature=0.0,
         max_tokens=200,
         call_type="ask_ludi_intent",
     )

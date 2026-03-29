@@ -44,6 +44,7 @@ except ImportError:
 
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL
 from utils.mappings import normalize_bdl_abbr
+from utils.claude_prompts import SCHEME_VOCABULARY
 
 DB_PATH = "ludi.db"
 SEASON = "2025-26"
@@ -53,7 +54,7 @@ VALID_DEF_STYLES = {'PAINT_PACK', 'PERIMETER', 'FUNNEL', 'BLITZ', 'NEUTRAL'}
 VALID_OFF_STYLES = {'MOTION', 'ISO_HEAVY', 'PACE_PUSH', 'HALF_COURT', 'BALANCED'}
 
 # Cost: ~$0.0003/run at 2K input + 300 output tokens — negligible
-CLASSIFY_SYSTEM = """You are a basketball analytics classifier for Ludi-Bot.
+CLASSIFY_SYSTEM = f"""You are a basketball analytics classifier for Ludi-Bot.
 Your job: review team scheme classifications and decide if they need updating based on DATA ONLY.
 
 CRITICAL RULES:
@@ -68,12 +69,7 @@ CRITICAL RULES:
 - Teams with BOTH metric ranks indicating the opposite scheme are LABEL_ERRORs.
   Teams with ONE metric mismatched may be QUALITY_ISSUEs (scheme is right, execution varies).
 
-DEFENSE scheme meanings:
-  PAINT_PACK: Protects the paint — expects LOW drives allowed (rank ≤15) and average-low C&S
-  PERIMETER: Closes out on shooters — expects LOW C&S 3PA allowed (rank ≤15)
-  FUNNEL: Channels drives to paint — expects HIGH drives allowed (rank ≥16) + LOW C&S (rank ≤15)
-  BLITZ: Traps P&R ball handlers — expects disrupted P&R possessions, higher TOV
-  NEUTRAL: No strong defensive identity — neither top nor bottom on any metric
+{SCHEME_VOCABULARY}
 
 OFFENSE scheme meanings:
   MOTION: High ball movement — expects ast_per_fgm ≥ 0.660
@@ -299,7 +295,7 @@ def main():
         prompt=context,
         system_prompt=CLASSIFY_SYSTEM,
         model=HAIKU_MODEL,
-        temperature=0.1,
+        temperature=0.0,
         max_tokens=2000,  # Increased: 30 teams × ~2-3 JSON entries = needs room
         call_type='scheme',
     )

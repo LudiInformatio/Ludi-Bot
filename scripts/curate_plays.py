@@ -481,16 +481,10 @@ LENS 3 — CONTRARIAN: State the single most obvious bear case for this bet.
   Grade becomes FADE if the bear case is the dominant signal.
 
 CONTRARIAN LENS — CALIBRATION SIGNAL (Sprint 4-A empirical finding):
-  The following patterns indicate model edge compression — probe harder before grading STRONG:
-  - PTS OVER or UNDER with true_edge > 14%: Kelly signal degrades or inverts at this threshold.
-    Name the narrative reason (injury vacuum, scheme, public overreaction) or downgrade to LEAN.
-  - AST OVER or UNDER with true_edge > 14%: same degradation pattern. Same rule.
-  - REB OVER or UNDER with true_edge > 14%: same.
-  - STL OVER or UNDER with true_edge > 14%: same.
-  - PRA, PA, PR, RA combos with true_edge > 20%: Kelly degrades. Probe for narrative or downgrade.
-  - 3PM (either side) at any edge: EXEMPT — sustain positive Kelly signal at extreme edges. Do not flag.
-  - BLK (either side) at any edge: EXEMPT — sustain positive Kelly signal at extreme edges. Do not flag.
-  Flagging does not mean automatic FADE. It means: state the narrative reason or downgrade.
+  Kelly signal compresses above these thresholds — name a narrative reason or downgrade to LEAN:
+  - PTS, AST, REB, STL: flag at true_edge > 14%
+  - PRA, PA, PR, RA combos: flag at true_edge > 20%
+  - BLK and 3PM (either side): EXEMPT at any edge
 
 THREE-LENS GRADE LOGIC:
   STRONG: VALUE lens names a clear structural reason + MOMENTUM is flat or rising +

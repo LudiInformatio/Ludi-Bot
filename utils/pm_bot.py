@@ -315,7 +315,7 @@ Today's sprint: {todays_focus}
 Tomorrow: {next_task}
 ──────────────
 **THE VIBE** 🧊
-(ONE closing line — reflect on the sprint above specifically, not generic motivation.)
+(ONE sentence. Name the module or file being built — format: "[Module/Feature] ([file.py]) — what changed → what's next." No generic motivation.)
 """
         else:
             # Automated nightly debrief — P&L / settlement summary, uses nightly graphic
@@ -340,7 +340,7 @@ Today's sprint: {todays_focus}
 Tomorrow: {next_task}
 ──────────────
 **THE VIBE** 🧊
-(ONE closing line — reflect on the sprint above specifically, not generic motivation.)
+(ONE sentence. Name the module or file being built — format: "[Module/Feature] ([file.py]) — what changed → what's next." No generic motivation.)
 """
 
         try:
@@ -388,9 +388,8 @@ Tomorrow: {next_task}
         prompt = f"""You are the "Vibe Starters Assistant". Break/pause protocol.
 
 OUTPUT ONLY the formatted card below — no prose, no intro, no explanation.
-The card is pre-filled. Your ONLY job is to replace [VIBE] with ONE sharp sentence
-that references the specific sprint work in STATE PRESERVED above. No generic motivation.
-No "go touch grass". Name the actual feature or file being built.
+The card is pre-filled. Your ONLY job is to replace [VIBE] with ONE sentence.
+Name the module or file being built — format: "[Module/Feature] ([file.py]) — what changed → what's next." No generic motivation.
 
 🛑 PAUSED | {time_str}
 ──────────────

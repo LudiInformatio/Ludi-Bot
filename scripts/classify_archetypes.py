@@ -47,7 +47,7 @@ except ImportError:
     pass
 
 from utils.claude_client import get_claude_analysis, HAIKU_MODEL
-from utils.claude_prompts import ARCHETYPE_SYSTEM_PROMPT as SYSTEM_PROMPT_ARCHETYPE
+from utils.claude_prompts import ARCHETYPE_SYSTEM_PROMPT as SYSTEM_PROMPT_ARCHETYPE, SCHEME_VOCABULARY
 
 # Offensive role archetypes only — what offensive role does this player fill?
 # Defensive role is tracked separately in players.defensive_tag (see _assign_defensive_tag).
@@ -68,17 +68,12 @@ VALID_DEFENSIVE_TAGS = {
 VALID_DEFENSE = {'PAINT_PACK', 'PERIMETER', 'BLITZ', 'FUNNEL', 'NEUTRAL'}
 VALID_OFFENSE = {'MOTION', 'ISO_HEAVY', 'HALF_COURT', 'PACE_PUSH', 'BALANCED'}
 
-SYSTEM_PROMPT_SCHEME = """You are an NBA team scheme classifier. Output EXACTLY ONE label. No explanation.
+SYSTEM_PROMPT_SCHEME = f"""You are an NBA team scheme classifier. Output EXACTLY ONE label. No explanation.
 
 VALID DEFENSIVE: PAINT_PACK, PERIMETER, BLITZ, FUNNEL, NEUTRAL
 VALID OFFENSIVE: MOTION, ISO_HEAVY, HALF_COURT, PACE_PUSH, BALANCED
 
-DEFENSIVE:
-- PAINT_PACK: drops in coverage, allows 3s, elite paint protection
-- PERIMETER: switch-heavy, fights over screens
-- BLITZ: ball movement allowed, zone elements, high cs_3pa allowed
-- FUNNEL: channels drives to help, limits 3PA
-- NEUTRAL: no dominant pattern
+{SCHEME_VOCABULARY}
 
 OFFENSIVE:
 - MOTION: high AST/FGM (>0.675), ball movement
@@ -1491,7 +1486,7 @@ def main():
             prompt,
             SYSTEM_PROMPT_SCHEME,
             HAIKU_MODEL,
-            temperature=0.1,
+            temperature=0.0,
             max_tokens=20,
             call_type='scheme_verify',
         )

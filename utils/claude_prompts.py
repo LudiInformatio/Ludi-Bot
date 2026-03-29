@@ -77,6 +77,15 @@ OUTPUT FORMAT: Reference data generically ("per injury reports", "season data sh
 
 ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Use the [TEAM] label to assign team — do NOT guess from memory."""
 
+# Shared scheme vocabulary — single source of truth for PAINT_PACK/PERIMETER/FUNNEL/BLITZ/NEUTRAL.
+# Imported by scripts/classify_archetypes.py and scripts/claude_classify_schemes.py.
+SCHEME_VOCABULARY = """DEFENSIVE SCHEMES:
+- PAINT_PACK: drops in coverage, protects the paint — low drives allowed (rank ≤15), average-low C&S
+- PERIMETER: closes out on shooters, switch-heavy — low C&S 3PA allowed (rank ≤15)
+- FUNNEL: channels drives to paint — high drives allowed (rank ≥16), low C&S (rank ≤15)
+- BLITZ: traps P&R ball handlers — disrupted P&R possessions, higher TOV
+- NEUTRAL: no strong defensive identity"""
+
 GAME_NOTES_TEMPLATE = """📅 {game_label}
 ## {away_team} @ {home_team}
 
@@ -267,21 +276,9 @@ Blurb: "Feb 7: Hart (ankle) is listed as questionable for Sunday's game against 
 Player: Josh Hart
 Output: {{"body_part": "ankle", "severity": "moderate", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": true, "tonight_available": "uncertain", "status_override": null, "rest": false, "no_designation": false}}
 
-Blurb: "Feb 12: Marshall (foot) is probable for Thursday's game against the Lakers"
-Player: Naji Marshall
-Output: {{"body_part": "foot", "severity": "minor", "games_out_estimate": "0 games", "context": "returning_soon", "minutes_risk": true, "tonight_available": true, "status_override": null, "rest": false, "no_designation": false}}
-
-Blurb: "Feb 13: Marshall has been ruled out for the rest of Thursday's game due to a left foot strain. He collected 19 points in 29 minutes."
-Player: Naji Marshall
-Output: {{"body_part": "foot", "severity": "moderate", "games_out_estimate": "1-2 games", "context": "mid_game_exit", "minutes_risk": false, "tonight_available": false, "status_override": "OUT", "rest": false, "no_designation": false}}
-
 Blurb: "Curry (rest) will sit out Sunday's game as part of his planned load management schedule"
 Player: Stephen Curry
 Output: {{"body_part": null, "severity": "non_injury", "games_out_estimate": "1 game", "context": "rest", "minutes_risk": false, "tonight_available": false, "blurb_is_stale": false, "status_override": "OUT_REST", "rest": true, "no_designation": false}}
-
-Blurb: "Mitchell is dealing with some soreness and his status will be updated closer to game time"
-Player: Donovan Mitchell
-Output: {{"body_part": null, "severity": "minor", "games_out_estimate": "game_time_decision", "context": "ongoing", "minutes_risk": false, "tonight_available": "uncertain", "blurb_is_stale": false, "status_override": null, "rest": false, "no_designation": false}}
 
 === YOUR TASK ===
 
@@ -394,10 +391,6 @@ RULES:
 - ROLL_MAN: PR_ROLL_MAN > 20%, lob threat, high at-rim freq
 - HUB_BIG: passing-first big, AST > 4, FGA < 9, facilitator role
 - ENERGY_BIG: OREB + PUTBACK, consistent minutes, FGA < 9
-- RIM_GUARDIAN: at-rim > 50%, BLK rate, minimal perimeter shooting
-- PERIMETER_HAWK: STL > 0.9/g, opportunistic SPOT_UP scorer, wing defender
-- SWITCHABLE_ANCHOR: versatile defender, moderate BLK + STL, multi-position
-- HUSTLE_DISRUPTOR: deflections, multiple secondary playtypes, chaos agent
 - CUTTER_SPECIALIST: CUT freq > 20%, off-ball movement
 - CONNECTOR: secondary ball-handler, moderate AST, TRANSITION secondary
 - FACILITATOR: pure passer, high AST/USG, HANDOFF or P&R handler
@@ -432,6 +425,9 @@ ASK_LUDI_INTENT_PROMPT = """Classify this user question:
 
 Intent:"""
 
+# DEV: The three WR percentages in DOMAIN KNOWLEDGE below are STALE.
+# Update after each run of scripts/calibrate_claude_outputs.py.
+# Last confirmed accurate: pre-Mar 10, 2026. Current N=2,136 graded shows different values.
 ASK_LUDI_NARRATIVE_SYSTEM = """You are "Ask Ludi", a knowledgeable NBA analytics assistant for the Ludi Lens v2.0 platform — The Edge, Magnified.
 
 ROLE: Answer user questions using ONLY the provided data. Never use training data for rosters, injuries, or trades — it is outdated and will be wrong.
