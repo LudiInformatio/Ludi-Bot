@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 29, 2026 — 1:09 PM EDT
-**Current Phase:** Phase 8 — AI-Enhanced Pipeline
-**Active Work:** T5d Smart Money Layer (`prop_line_snapshots`, `module_f.py`) — Pinnacle line storage + STEAM_MOVE tag + T5b quota circuit breaker (`api_monitor.py`) + T5c Game Score v2
-**Completed:** Pipeline bug fixes — Sonnet batch chunking (`curate_plays.py`), `validate_pipeline_output.py` restored, `SLACK_WEBHOOK_ALERTS` 3-step wiring (`338a224`/`604192b`/`2f421a4`) ✅ + Prompt architecture sprint — ROLE_PHILOSOPHY + DECISION TREE removal + ANALYSIS_PROTOCOL_CURATION + SCHEME_VOCABULARY + v2.1-preflight (`02e2b0d`/`f76c83c`) ✅ + Curation hardening + roster sync + ops data capture — PE-2 pre-flight, HIGH_DIVERGENCE flag, IR team patch, `ludi_ops_log`/`ask_ludi_interactions` (`488af94`/`a792789`) ✅
+**Last Updated:** Sunday, March 29, 2026 — 3:00 PM EDT
+**Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
+**Active Work:** Phase 3 MIN_SCALE coupling (`module_c.py`) — blocked until Apr 4 + T5c Game Score v2 (`module_f.py` `_score_game()`) + Sprint 2 Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`)
+**Completed:** T5b API quota circuit breaker — `api_monitor.py` pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅ + T5d Smart Money Layer — Pinnacle columns in `prop_line_snapshots`, STEAM_MOVE tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅ + Curation hardening + roster sync + ops data capture — PE-2 pre-flight, HIGH_DIVERGENCE flag, IR team patch, `ludi_ops_log`/`ask_ludi_interactions` (`488af94`/`a792789`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -50,8 +50,8 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Phase 2 recency weighting** — Exp7 half-life 7g, N-gate 15, `config.RECENCY_WEIGHTS_L25` + `main.py` restructured (`7efb197`) ✅
 - [x] **Accent pipeline fix** — `resolve_canonical_name()` at `module_a.py` write boundary, 576-row migration, `tag_classifier.py` hardened (`a51ae21`) ✅
 - [x] **WOWY Ghost Protocol** — XHR interceptor, lineup key normalization, DELETE+INSERT two-pass, 100% lineup_id 131 dates (`f00c9e3`) ✅
-- [ ] **T5d: Smart Money Signal Layer** — Pinnacle `pinnacle_line_over`/`pinnacle_line_under` in `prop_line_snapshots`, `STEAM_MOVE` tag in Module F. MVP: Pinnacle already in `regions=eu` — just separate storage. Route: Lena thresholds → junior dev → Henrik.
-- [ ] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml`. Route: junior dev → Silas validates → Henrik.
+- [x] **T5d: Smart Money Signal Layer** — Pinnacle columns in `prop_line_snapshots`, `STEAM_MOVE` tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅
+- [x] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅
 - [ ] **T5c: Game Score Formula v2** — line movement delta + handle% to `_score_game()`. Route: Lena specs weights → junior dev → Henrik.
 - [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
@@ -71,14 +71,14 @@ This is the single source of truth for project tasks and priorities.
 
 ---
 
-### Phase 8: AI-Enhanced Pipeline (Remaining Sub-Phases)
+### Phase 8: AI-Enhanced Pipeline ✅ COMPLETE (Mar 29, 2026)
 
 **Principle:** LLMs orchestrate and reason — never calculate. Math stays deterministic.
-**Completed:** 8.0-A/B/C/D + 8.2–8.17 + 8.21 + 8.24–8.28 ✅ — Full details: `docs/STATUS_HISTORY.md`
+**Completed:** 8.0-A/B/C/D + 8.2–8.17 + 8.21 + 8.24–8.28 + T5b + T5d ✅ — Full details: `docs/STATUS_HISTORY.md`
 
 | # | Sub-Phase | Status | Description | Cost |
 |---|-----------|--------|-------------|------|
-| 8.8 | Game Score Formula v2 | LOW | Add line movement delta + handle% to `_score_game()`. **UNBLOCKED: Mar 2026 data available (4,984 prop_line_snapshots).** | $0 |
+| 8.8 | Game Score Formula v2 | CARRIES → P9 | Add line movement delta + handle% to `_score_game()`. Data available. T5c scope. | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
@@ -123,8 +123,18 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Phase 3 subagents** — Vera, Solomon, Maren, Kai agents + `/iris-collect` skill (zero-LLM) ✅
 - [x] **ONBOARDING.md** — All 8 employees have `employees/{name}/ONBOARDING.md` ✅
 - [x] **Lena SOUL.md** — new soul file at `employees/lena/SOUL.md` + Kai SOUL.md at `employees/kai/SOUL.md` ✅
-- [ ] **`bots/solomon_bot.py`** — two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
-- [ ] **Lena: Season Pattern Mining** — mine `player_game_logs`, `referee_player_bias`, `team_lineups`, `player_synergy_playtypes`, `prop_line_snapshots`. Focus: ref stat tendencies, archetype B2B resilience, streak persistence, scheme × archetype win rates. Output feeds curation dossier + Module E modifiers.
+- [x] **Lena: Season Pattern Mining** — BLK UNDER 70.3% WR (N=1,067), SNIPER_ELITE B2B +1.0 pts (N=818), STRETCH_BIG vs FUNNEL 64.7% (N=68). Referee tendencies BLOCKED on 2024-25 backfill. SNIPER_ELITE exemption shipped (`bf5fcaa`) ✅
+- [ ] **`bots/solomon_bot.py`** — moved to Phase 9. Two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
+
+### Pre-Phase 9: Company Study + Cross-Pollination Sprint (Before Phase 9 Begins)
+**Status:** PLANNED — scheduled for a dedicated session before Phase 9 kickoff
+**Scope:** Full company review — employees (LESSONS_LEARNED backfill, REFERENCE_CARD updates, training loop fix) + code (prompt patterns, calibration baselines, any architectural debt that Phase 9 will build on). Goal: every employee enters Phase 9 with a clean, current knowledge state.
+**Key areas identified in Mar 30 audit:**
+- Backfill LESSONS_LEARNED for Maren, Kai, Gemini, Iris (empty) + Henrik/Lena/Silas/Vera (stale since Mar 10)
+- Update all 6 REFERENCE_CARDs with patterns from Sessions 2–7 (batch tokens, accent-safe JOIN, Playwright listeners, HIGH_DIVERGENCE, PE-2 pre-flight)
+- Wire session-debrief to prompt LESSONS_LEARNED updates per domain touched
+- Code baseline: validate RMSE gates, calibration curves, and any TD items blocking Phase 9 Sprint 1
+- [ ] Schedule this sprint before Phase 9 kickoff
 
 ### Phase 9: Advanced LLM Paradigms & Model Calibration (Post-Phase 8)
 **Full plan:** `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md`
