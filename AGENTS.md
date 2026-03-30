@@ -166,6 +166,29 @@ No shortcuts. No exceptions.
 
 **Henrik dispatches junior dev directly** — Henrik now has the `Agent` tool and can spawn the junior dev (general-purpose subagent) to write code without Solomon as intermediary. Solomon still owns the task assignment, but once Henrik has a plan, he can execute the full write+audit cycle autonomously. Solomon is notified of the outcome, not the intermediate steps.
 
+### TK Task Contract Format (MANDATORY for all junior dev dispatches)
+
+Every Henrik→junior dev handoff MUST use this 8-field contract. No unstructured prose. No exceptions.
+
+```
+TASK: [One-sentence description of what to build/change]
+CONTEXT: [Why this is needed — sprint goal, blocker, or finding it addresses]
+DELIVERABLE: [Exact files changed + what the output looks like]
+DEADLINE: [Session / today / this sprint / next sprint]
+RESOURCES: [Files to read, tables to query, prior examples to reference]
+SUCCESS: [How completion is verified — specific assertion, query, or test]
+CONFIDENCE: [Minimum confidence required: HIGH / MEDIUM / LOW — and N= if data-dependent]
+ESCALATE_IF: [Specific conditions that should pause the task and route back to Henrik]
+```
+
+**Rules:**
+- No `SUCCESS` field = task is incomplete spec. Henrik must reject and re-spec before dispatching.
+- `ESCALATE_IF` must name at least one condition (e.g., "schema change touches >2 tables", "Claude API unavailable during test", "test fails on first run").
+- `CONFIDENCE` must specify a minimum level. If the deliverable is data-dependent (RMSE, WR, N=), state the minimum N before marking complete.
+- This format also applies to Solomon-authored task descriptions sent directly to junior dev.
+
+**All employees** use this format when assigning tasks across the workforce — not just Henrik. Maren uses it for prompt proposals. Lena uses it for schema specs. Silas uses it for infra tasks routed to junior dev.
+
 ### Solomon-as-Primary Rules
 
 1. **Voice:** Respond as Solomon — direct, bullet-heavy, status-prefixed (`✅`, `🔄`, `⚠️`). No "Let me help you with that" pleasantries.

@@ -1,5 +1,5 @@
 # Agent Output Patterns
-**Last Updated:** March 8, 2026
+**Last Updated:** March 30, 2026
 
 ## Root Cause: Silent Agent Failure (No Output Returned)
 
@@ -81,3 +81,64 @@ If an agent returns no output:
 3. **Re-run only if** the resume returns no useful context (rare).
 
 Never re-run an agent that just returned no output without trying resume first — re-running wastes all the tool calls from the previous run.
+
+---
+
+## TK Task Contract Format (MANDATORY for all junior dev dispatches)
+
+Every employee→junior dev handoff must use this 8-field contract. No unstructured prose. No exceptions.
+
+```
+TASK: [One-sentence description of what to build/change]
+CONTEXT: [Why this is needed — sprint goal, blocker, or finding it addresses]
+DELIVERABLE: [Exact files changed + what the output looks like]
+DEADLINE: [Session / today / this sprint / next sprint]
+RESOURCES: [Files to read, tables to query, prior examples to reference]
+SUCCESS: [How completion is verified — specific assertion, query, or test]
+CONFIDENCE: [Minimum confidence required: HIGH / MEDIUM / LOW — and N= if data-dependent]
+ESCALATE_IF: [Specific conditions that should pause the task and route back to reviewer]
+```
+
+**Rules:**
+- No `SUCCESS` field = task is incomplete spec. Reject and re-spec before dispatching.
+- `ESCALATE_IF` must name at least one condition (e.g., "schema change touches >2 tables", "test fails on first run").
+- `CONFIDENCE` must specify a minimum level. If data-dependent, state minimum N before marking complete.
+- Applies to ALL employees, not just Henrik — Maren uses it for prompt proposals, Lena for schema specs, Silas for infra tasks.
+
+**Why:** Tasks dispatched without this format routinely return wrong deliverables, skip verification, or fail silently. The 8-field contract forces spec completeness BEFORE execution. Adopted Mar 30, 2026.
+
+---
+
+## Agent Confidence Footer (MANDATORY for all audit reports)
+
+Every Henrik audit report and any agent producing findings must end with:
+
+```
+CONFIDENCE: HIGH | MEDIUM | LOW
+N= [integer — number of code lines, test results, or data points reviewed]
+SOURCES: [files read, line numbers cited, test results referenced]
+```
+
+**Why:** Findings without sourcing cannot be acted on. The footer forces agents to cite specific evidence and prevents MEDIUM-confidence guesses from being treated as HIGH-confidence conclusions. Adopted Mar 30, 2026.
+
+---
+
+## 5-Cluster Parallel All-Hands Pattern
+
+For deep cross-company reviews (50+ documents, multiple domains), dispatch 5 background agents simultaneously, each scoped to one domain:
+
+| Cluster | Agent | Scope |
+|---------|-------|-------|
+| Engineering | Henrik | Code quality, pipeline risk, architectural findings |
+| Ops/Infra | Silas | Infrastructure patterns, monitoring gaps, ops risk |
+| AI/Prompts | Maren | Prompt patterns, calibration signals, BERT findings |
+| Data/Schema | Lena | Schema design, data model patterns, query findings |
+| Org/Summaries | Lena (or general-purpose) | People patterns, process findings, cross-cluster synthesis |
+
+**Rules:**
+- All 5 run in background (`run_in_background: true`) — do not block main session
+- Each agent reads only their cluster's docs — no overlap
+- Solomon synthesizes findings into architectural decisions after all 5 complete
+- Token-efficient: extract last assistant message from task JSON with `python3 -c "import json; ..."` rather than reading full task file (avoids 90K+ token reads)
+
+**Evidence from Mar 30, 2026:** 5-cluster review over 50+ Sankore docs resolved the 3-option game notes debate (Option A/B/C) in one session, surfaced DIAMOND tier inversion root cause, and identified the FUNNEL scheme misclassification bug.

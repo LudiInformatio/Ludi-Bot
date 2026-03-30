@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 30, 2026 — 11:23 AM EDT
+**Last Updated:** Monday, March 30, 2026 — 3:45 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
-**Active Work:** Phase 3 MIN_SCALE coupling (`module_c.py`) — blocked until Apr 4 + T5c Game Score v2 (`module_f.py` `_score_game()`) + Sprint 2 Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`)
-**Completed:** T5b API quota circuit breaker — `api_monitor.py` pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅ + T5d Smart Money Layer — Pinnacle columns in `prop_line_snapshots`, STEAM_MOVE tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅ + Curation hardening + roster sync + ops data capture — PE-2 pre-flight, HIGH_DIVERGENCE flag, IR team patch, `ludi_ops_log`/`ask_ludi_interactions` (`488af94`/`a792789`) ✅
+**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + T5c Game Score v2 (`module_f.py` `_score_game()`) + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed
+**Completed:** Pre-Phase 9 Sankore all-hands review — 5-cluster 50+ docs, Option C resolved, FUNNEL fix + synthesis_score scoped ✅ + T5b API quota circuit breaker — `api_monitor.py` pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅ + T5d Smart Money Layer — Pinnacle columns in `prop_line_snapshots`, STEAM_MOVE tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -56,18 +56,37 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
-- [ ] **Game notes overhaul** (`curate_plays.py` prompt, Maren) — **Architectural debate required before implementation.**
-  - **Current problem:** Module F locks bet direction using math only (Poisson probability vs devigged fair prob). Claude receives an already-decided OVER/UNDER and grades confidence. But Claude has context Module F never sees — injury news, line movement, referee tendencies, scheme matchup, Three-Lens signals. If that soft context points the other way, there's nowhere for it to go except a confusing note that contradicts the rec direction.
-  - **Core design question:** Should Claude validate Module F's direction, or should Claude determine direction using the projection as a quantitative anchor + all available context?
-  - **Option A (current):** Module F owns direction (math-based EV). Claude grades confidence only. Simpler, but Claude's context is wasted on direction — notes can contradict recs.
-  - **Option B (directional authority):** Module F surfaces BOTH sides (edge, EV, odds for O and U). Claude uses projection as baseline + all soft signals (injury, steam, scheme, public lean) to make final direction call + grade. More holistic — the projection is the floor, not the answer.
-  - **Option C (hybrid):** Module F direction stands unless Claude flags a hard override condition (e.g., steam move on opposite side, key injury not yet in model). Claude's default is to trust the math; override requires explicit evidence in the Three-Lens block.
-  - **Dependency:** Option B/C need T5d (Pinnacle steam), T5c (line movement delta), and social signals (Phase 8.22) to give Claude a full picture. Without those, Claude is reasoning from projection + injury only — Option A may be correct until the data layer is richer.
-  - **Reference:** Pull Marcus Trading Firm v7.2 docs (`memory/allhands_marcus_review.md`) for best practices on signal hierarchy and decision authority in multi-signal systems — directly relevant to Options A/B/C above.
-  - **Owner:** Maren leads prompt design. Lena validates whether direction accuracy improves with expanded context (before/after RMSE + direction hit rate). Henrik reviews any `curate_plays.py` structural changes.
+- [ ] **Game notes overhaul — Option C via Roundtable pattern** (`curate_plays.py`, `module_f.py`, Maren) — **DEBATE RESOLVED (Mar 30 Sankore all-hands).**
+  - **Resolution:** Option C confirmed via Sankore `roundtable-debate-protocol.md`. Module F = Briefer (surfaces `over_ev`, `under_ev`, `over_prob`, `under_prob` for BOTH sides, then goes silent). Claude = Zuberi (synthesizes direction using Three-Lens: VALUE=math, MOMENTUM=steam, CONTRARIAN=why market may be wrong). Direction is the OUTPUT of synthesis, not the input.
+  - **Why not Option B:** Roundtable explicitly rejected full directional authority without a math anchor. Module F direction is the default; override requires explicit MOMENTUM or CONTRARIAN lens evidence.
+  - **Now unblocked:** T5d (steam) is live. Data layer is sufficient for Option C.
+  - **Implementation spec:** `module_f.py` injects both-sides EV into player block. `curate_plays.py` `_build_player_bet_block()` updated to receive and format both sides. `ANALYSIS_PROTOCOL_CURATION` updated with Zuberi synthesis framing (BRIEFER_GOES_SILENT pattern) + `drift_check` field in thinking schema.
+  - **Route:** Maren writes prompt spec → Lena validates direction hit rate before/after on `claude_analysis_log` → Henrik reviews structural changes → Solomon approves.
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding).
+- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding). UNBLOCK PATH: add `signal_available_at` + `acted_on_at` columns to `claude_analysis_log` (four-timestamp pattern, Henrik finding E3).
+
+- [ ] **Post-game simulation eval** (`scripts/post_game_eval.py`) — **Autoresearch feed.** After each game slate completes, run a backward evaluation pass: compare `player_projections` vs actual `player_game_logs`, decompose error by modifier (pace_contribution, fatigue_contribution, scheme_contribution, ref_contribution), write per-bet RMSE + modifier delta rows to new `post_game_eval_log` table. This is the data source for the autoresearch loop and Darwinian weight system. Schedule: nightly after games complete (~11 PM, launchd or GH Actions). Output feeds `calibrate_claude_outputs.py` weekly run.
+  - **Schema:** `post_game_eval_log (game_date, player_name, stat, projected, actual, error, abs_error, pace_delta, fatigue_delta, scheme_delta, ref_delta, empirical_delta, curation_grade, prompt_version, created_at)`
+  - **Route:** Lena specs error decomposition → junior dev → Henrik audit.
+
+- [ ] **Autoresearch loop — defined targets** (Phase 9 Sprint 4) — The plan is thorough. Targets are now defined. Autoresearch fires when a target is FAILING for 7+ consecutive days; a prompt variant is tested in isolation for 14 days; if improvement confirmed → merge, else revert (ATLAS 30% survival rate is the benchmark).
+  - **Target 1 (Model Accuracy):** PTS RMSE < 7.0, AST RMSE < 2.5, REB RMSE < 3.5 — currently PTS 7.36 WARNING, AST 2.71 WARNING. Autoresearch triggers on: recency weight decay, empirical mod N-gate, G2 blend parameters.
+  - **Target 2 (Tier Monotonicity):** DIAMOND WR ≥ BLUE_CHIP WR ≥ CORE_ASSET WR ≥ STEAL WR — currently INVERTED (DIAMOND 51.5% < CORE_ASSET 62.5%). Autoresearch triggers on: DIAMOND tier definition, true_edge threshold, stat filtering logic.
+  - **Target 3 (Grade Hierarchy):** STRONG WR ≥ 58%, LEAN WR ≥ 52%, FADE WR ≤ 48% over rolling 90-day window. Currently STRONG 57% / LEAN 51% / FADE 49.3% — all within range, LEAN and FADE need tightening. Autoresearch triggers on: Three-Lens prompt, CURATION_IGNORES, drift_check field.
+  - **Target 4 (CLV Signal):** CLV+ bets WR ≥ CLV- bets WR + 3pp — currently only 0.6pp separation (FAIL). Autoresearch triggers on: closing line capture timing, Pinnacle line freshness, steam threshold calibration.
+  - **Target 5 (Direction Hit Rate):** ≥ 54% after Option C ships (proposed Gate 4). Measured by `post_game_eval_log` direction accuracy column.
+  - **Survival rule:** 14-day test window, N ≥ 50 settled bets per variant, p < 0.10 binomial test required for "IMPROVED" verdict. Revert on FAIL. Log all trials in `model_deployments` table (Henrik finding E4).
+
+- [ ] **FUNNEL scheme fix** — 313 bets priced against FUNNEL teams at 48.9% WR (below breakeven). DAL/GSW/IND tagged FUNNEL but FUNNEL has no canonical archetype modifier matrix. Lena recommendation: query 60-day WR by archetype vs FUNNEL teams, map to closest canonical scheme (NEUTRAL or PAINT_PACK) before adding FUNNEL as 5th tier. Route: Lena query → decision → junior dev updates `team_scheme_cache`.
+
+- [ ] **`synthesis_score` + `curation_weight_history`** — Continuous conviction score replacing 4-bucket tier for unit sizing. `synthesis_score REAL` column in `bet_recommendations`. `curation_weight_history` table for Darwinian feedback loop (WR by prompt_version + stat_category + bet_side, nightly compute). Route: Lena specs formula → junior dev → Henrik.
+
+- [ ] **Empirical mod freshness alert** — `empirical_modifiers.yml` silently fails with no alert. Add post-run check: if 0 rows written today → exit 1. Route: junior dev → Henrik. (Silas finding O1)
+
+- [ ] **TK task format rollout** — All employee agents updated to use 8-field task contract for every dispatch. `AGENTS.md` updated ✅. `.claude/agents/henrik.md` updated ✅. Remaining: verify all 8 employee agent files reference TK format in their dispatch sections.
+
+- [ ] **Four-timestamp columns on `claude_analysis_log`** — Add `signal_available_at TEXT` + `acted_on_at TEXT`. Directly unblocks anti-look-ahead fix → unblocks Brier calibration. Route: junior dev → Henrik. (Henrik finding E3)
 
 ---
 
