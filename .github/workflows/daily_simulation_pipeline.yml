@@ -79,6 +79,14 @@ jobs:
         run: |
           .venv/bin/python -c "import config; print('Environment validated')"
 
+      - name: Pre-flight quota check
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TANK01_KEY: ${{ secrets.TANK01_KEY }}
+        run: |
+          export PYTHONPATH=$PWD
+          .venv/bin/python scripts/api_monitor.py --check-quotas --exit-on-fail
+
       - name: Create Production Logs Directory
         run: |
           mkdir -p logs/production
