@@ -114,6 +114,13 @@ STRUCTURAL_LOSERS = {
     ('pa',  'over'),   # 36.9% WR — F grade
 }
 
+# T5d — Smart Money: minimum line movement from opening to flag a STEAM_MOVE
+STEAM_THRESHOLD = {
+    'pts': 1.5, 'reb': 1.0, 'ast': 1.0, 'blk': 0.5,
+    'stl': 0.5, '3pm': 0.5, 'tov': 0.5,
+}
+_STEAM_THRESHOLD_DEFAULT = 1.5
+
 def _get_stat_edge_min(stat_key, direction):
     floor = STAT_EDGE_MINIMUMS.get(stat_key.lower(), DEFAULT_EDGE_MIN)
     if isinstance(floor, dict):
@@ -253,6 +260,10 @@ class LudiReporter:
 
         # Sprint 1: Load empirical stdev cache for RMSE-based unit sizing
         self.empirical_mod_cache = self._load_empirical_mod_cache()
+
+        # T5d: Load Pinnacle line cache for STEAM_MOVE detection
+        _today = get_est_today()
+        self._pinnacle_cache = self._load_pinnacle_snapshots(_today)
 
         # C1: Hit rate cache — {(player_name, stat_key, line, direction): (l5_hr, l10_hr)}
         # Populated lazily during generate_report(); avoids duplicate DB queries per player.
@@ -709,6 +720,19 @@ class LudiReporter:
                                         )
                                 if _best_alt_note:
                                     note_elements.append(_best_alt_note)
+
+                            # --- STEAM_MOVE DETECTION (T5d Smart Money Layer) ---
+                            if config.MODIFIER_FLAGS.get('steam_move', True):
+                                _pm_key = (p['name'].lower(), stat_key.lower())
+                                _pm_row = self._pinnacle_cache.get(_pm_key)
+                                if _pm_row and _pm_row.get('opening_line') is not None:
+                                    _thresh = STEAM_THRESHOLD.get(stat_key.lower(), _STEAM_THRESHOLD_DEFAULT)
+                                    _pinnacle_current = _pm_row.get('pinnacle_line_over')
+                                    _opening = _pm_row['opening_line']
+                                    if _pinnacle_current is not None:
+                                        _delta = abs(_pinnacle_current - _opening)
+                                        if _delta >= _thresh:
+                                            note_elements.append("STEAM_MOVE")
 
                             # --- TAG CLASSIFICATION (V4.6 - Week 2, Days 3-4) ---
                             tags_formatted = "[]"  # Default empty tags
@@ -1241,6 +1265,38 @@ class LudiReporter:
         except Exception as e:
             logger.warning(f"[Alchemist] empirical stdev load failed: {e} — using _STAT_RMSE")
             return {}
+
+    def _load_pinnacle_snapshots(self, game_date: str) -> dict:
+        """Load Pinnacle lines into cache: (player_name_lower, stat_lower) -> row dict.
+
+        T5d Smart Money Layer — used at report time to detect STEAM_MOVE.
+        Returns empty dict when no Pinnacle data is available (column may not exist yet
+        on older DB instances — the OperationalError is caught gracefully).
+        """
+        cache = {}
+        try:
+            conn = sqlite3.connect(config.DB_PATH, timeout=10)
+            c = conn.cursor()
+            c.execute("""
+                SELECT player_name, stat_category,
+                       pinnacle_line_over, pinnacle_line_under,
+                       opening_line, pinnacle_captured_at
+                FROM prop_line_snapshots
+                WHERE game_date = ?
+                  AND pinnacle_line_over IS NOT NULL
+            """, (game_date,))
+            for row in c.fetchall():
+                key = (row[0].lower(), row[1].lower())
+                cache[key] = {
+                    'pinnacle_line_over':  row[2],
+                    'pinnacle_line_under': row[3],
+                    'opening_line':        row[4],
+                    'pinnacle_captured_at': row[5],
+                }
+            conn.close()
+        except Exception as e:
+            logger.warning(f"[module_f] _load_pinnacle_snapshots failed: {e}")
+        return cache
 
     def _apply_stat_calibration(self, edge: float, stat_key: str, bet_direction: str) -> float:
         """V5.3: Apply stat-specific edge calibration — live cache when data is sufficient,

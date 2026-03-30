@@ -328,6 +328,8 @@ MODIFIER_FLAGS = {
     'rmse_sizing': True,
     'combo_correlation': True,
     'stat_kelly_gate': True,
+    'steam_move': True,        # T5d: flag STEAM_MOVE when Pinnacle line moves >= threshold
+    'sniper_b2b_exempt': True, # SNIPER_ELITE players bypass B2B fatigue penalty
     # Module X
     'vegas_guardrail': True,
     # main.py get_active_roster()

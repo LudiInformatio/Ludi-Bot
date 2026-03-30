@@ -1,0 +1,64 @@
+name: Capture Pinnacle Lines
+
+# T5d Smart Money Layer — capture Pinnacle opening/movement lines into prop_line_snapshots
+# Runs nightly at 6:30 PM EDT (22:30 UTC) — after pipeline, before evening slate lock.
+on:
+  schedule:
+    - cron: '30 22 * * *'   # 6:30 PM EDT
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Game date to capture (YYYY-MM-DD)'
+        required: false
+        type: string
+
+jobs:
+  capture-pinnacle:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    env:
+      IS_SELF_HOSTED: 'true'
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        timeout-minutes: 5
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Capture Pinnacle lines
+        timeout-minutes: 3
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_TIER: paid
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.date }}"
+          else
+            DATE_ARG="--date $(TZ='America/New_York' date +%Y-%m-%d)"
+          fi
+          .venv/bin/python scripts/capture_pinnacle_lines.py $DATE_ARG
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN_SOLOMON: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
+          TELEGRAM_CHAT_ID_SOLOMON: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
+        run: |
+          export PYTHONPATH=$PWD
+          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Capture Pinnacle Lines')" || echo "Solomon notification failed"

@@ -2200,9 +2200,21 @@ class LudiCalibrator:
         density_5day = yak_report.get('games_in_last_5_days', 0)
         position = calibrated.get('position', 'UNK')
 
+        # === SNIPER_ELITE B2B EXEMPTION ===
+        # SNIPER_ELITE players have a confirmed positive B2B delta (N=818).
+        # Applying a fatigue penalty to them is anti-edge; skip the B2B block entirely.
+        _sniper_b2b_exempt = (
+            is_b2b
+            and calibrated.get('archetype') == 'SNIPER_ELITE'
+            and config.MODIFIER_FLAGS.get('sniper_b2b_exempt', True)
+        )
+        if _sniper_b2b_exempt:
+            calibrated['notes'] = (calibrated.get('notes', '') + " | B2B Resilient (SNIPER)").lstrip()
+            self._log_adjustment(player_name, 'FATIGUE_B2B', 1.0, "SNIPER_ELITE exempt — positive B2B delta (N=818)")
+
         # === BACK-TO-BACK LOGIC (I1: Player-specific B2B splits) ===
         # Use actual B2B performance data when available, fall back to hardcoded values
-        if is_b2b:
+        if is_b2b and not _sniper_b2b_exempt:
             key = _canonical_key(player_name)
             b2b_data = self.b2b_splits.get(key)
 

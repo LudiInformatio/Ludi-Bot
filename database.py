@@ -2159,6 +2159,20 @@ class LudiHistorian:
         except Exception:
             pass
         
+        # T5d: Add Pinnacle line columns if they don't exist yet
+        pinnacle_columns = [
+            ("pinnacle_line_over",   "REAL"),
+            ("pinnacle_line_under",  "REAL"),
+            ("pinnacle_odds_over",   "INTEGER"),
+            ("pinnacle_odds_under",  "INTEGER"),
+            ("pinnacle_captured_at", "TEXT"),
+        ]
+        for col_name, col_type in pinnacle_columns:
+            try:
+                c.execute(f"ALTER TABLE prop_line_snapshots ADD COLUMN {col_name} {col_type}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
         conn.commit()
         conn.close()
 
