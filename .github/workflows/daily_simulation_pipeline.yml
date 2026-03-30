@@ -263,8 +263,11 @@ jobs:
       - name: Notify on failure
         if: failure()
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN_SOLOMON }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_SOLOMON }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          .venv/bin/python -c "from utils.telegram_notifier import send_solomon_message; send_solomon_message('WORKFLOW FAILED: Daily Production Pipeline')" || echo "Telegram notification failed"
+          .venv/bin/python -c "
+from utils.telegram_notifier import send_message
+send_message('⚠️ PIPELINE FAILED: Daily Production Pipeline — check GitHub Actions for details')
+" || echo "Telegram notification failed (non-fatal)"

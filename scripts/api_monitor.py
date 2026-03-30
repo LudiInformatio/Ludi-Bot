@@ -31,6 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger('api_monitor')
 
 ODDS_API_CRITICAL_THRESHOLD = 200
+ODDS_API_EXHAUSTED_THRESHOLD = 0  # Fully exhausted — BDL fallback takes over, pipeline continues
 TANK01_CRITICAL_THRESHOLD = 50
 
 
@@ -141,11 +142,19 @@ def check_quotas(exit_on_fail: bool = False) -> dict:
 
     if odds_remaining is not None:
         logger.info(f"[odds_api] {odds_remaining} credits remaining")
-        if odds_remaining < ODDS_API_CRITICAL_THRESHOLD:
+        if odds_remaining <= 0:
+            msg = (
+                f"Odds API quota exhausted ({odds_remaining} credits). "
+                f"BDL/ESPN fallback active — pipeline continuing."
+            )
+            logger.warning(f"[odds_api] WARNING: {msg}")
+            results["odds_api"] = {"remaining": odds_remaining, "status": "EXHAUSTED_FALLBACK"}
+            # Do NOT raise SystemExit — Module A has BDL and ESPN fallbacks
+        elif odds_remaining < ODDS_API_CRITICAL_THRESHOLD:
             msg = (
                 f"Odds API quota critically low: {odds_remaining} remaining "
                 f"(threshold: {ODDS_API_CRITICAL_THRESHOLD}). "
-                f"Pipeline aborted to prevent exhaustion mid-run."
+                f"Aborting to prevent mid-run exhaustion."
             )
             logger.error(f"[odds_api] CRITICAL: {msg}")
             results["odds_api"] = {"remaining": odds_remaining, "status": "CRITICAL"}
