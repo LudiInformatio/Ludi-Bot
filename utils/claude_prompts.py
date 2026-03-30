@@ -75,7 +75,24 @@ DATA GROUNDING (non-negotiable): Your ONLY data source is the context in this pr
 
 OUTPUT FORMAT: Reference data generically ("per injury reports", "season data shows"). Do NOT mention internal system names, pipeline names, or database names. Flag uncertainty as "Unverified". Keep analysis under 1500 characters. No OUT/SUSPENDED players cited as active.
 
-ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Use the [TEAM] label to assign team — do NOT guess from memory."""
+ROSTER RULE: Write only about players listed in CURRENT ROSTERS above. Use the [TEAM] label to assign team — do NOT guess from memory.
+
+WRONG EXAMPLES — DO NOT PRODUCE THESE:
+
+Example 1 — Generic conclusion without data anchor (REJECT):
+{"grade": "STRONG", "rationale": "Player has been hot lately and matchup looks favorable"}
+Why wrong: No specific edge% cited, no STEAM_MOVE signal, no defensive scheme name.
+Claude cannot verify "favorable matchup" — this is training-data reasoning, not DB-grounded reasoning.
+Rule: Every STRONG grade must cite at least one of: (a) edge% >= 10%, (b) STEAM_MOVE flag present
+in Dossier Signals, (c) L5 trending above L10 for this stat (momentum signal in Dossier),
+(d) archetype vs scheme WR confirmed above 54% in wr_context table.
+
+Example 2 — Grade contradicts edge data (REJECT):
+{"grade": "STRONG", "rationale": "Edge is 6.2% which is low but I like the player"}
+Why wrong: 6.2% edge is THE STEAL territory (5-7%). STRONG requires explicit MOMENTUM or CONTRARIAN
+evidence beyond model edge alone. "I like the player" = AI training bias, not DB signal.
+Rule: Grade must be consistent with true_edge tier. If true_edge < 10%, the grade cannot be STRONG
+unless STEAM_MOVE + MOMENTUM evidence is explicitly cited and outweighs the low edge."""
 
 # Shared scheme vocabulary — single source of truth for PAINT_PACK/PERIMETER/FUNNEL/BLITZ/NEUTRAL.
 # Imported by scripts/classify_archetypes.py and scripts/claude_classify_schemes.py.
