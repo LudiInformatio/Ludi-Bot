@@ -1,6 +1,6 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Sunday, March 29, 2026 — 3:00 PM EDT
+**Last Updated:** Monday, March 30, 2026 — 11:23 AM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
 **Active Work:** Phase 3 MIN_SCALE coupling (`module_c.py`) — blocked until Apr 4 + T5c Game Score v2 (`module_f.py` `_score_game()`) + Sprint 2 Dynamic Rec Lifecycle (`revalidate_recs.py`, `midday_refresh.py`)
 **Completed:** T5b API quota circuit breaker — `api_monitor.py` pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅ + T5d Smart Money Layer — Pinnacle columns in `prop_line_snapshots`, STEAM_MOVE tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅ + Curation hardening + roster sync + ops data capture — PE-2 pre-flight, HIGH_DIVERGENCE flag, IR team patch, `ludi_ops_log`/`ask_ludi_interactions` (`488af94`/`a792789`) ✅

@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 29, 2026 (Session 7 — TD-030 added; no items archived)
+**Last Updated:** March 30, 2026 (Session 8 — TD-031 added; no items archived)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -184,6 +184,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Impact:** Log failures are visible in terminal but invisible to `claude-ops-hub.yml` log scanning. Low risk since these are fire-and-forget writes, but inconsistent with the rest of the codebase.
 - **Recommended Fix:** Add `import logging` + `logger = logging.getLogger(__name__)` at top of `pm_bot.py`. Replace both `print(...)` handlers with `logger.warning(...)`.
 - **Discovered:** 2026-03-29 (Henrik audit of ops data capture PR)
+
+### TD-031: Redundant `sys.exit(1)` in `scripts/api_monitor.py` main()
+- **Severity:** P3
+- **Location:** `scripts/api_monitor.py` — `main()` function, final line
+- **Description:** `main()` calls `check_quotas(exit_on_fail=True)` which raises `SystemExit` on CRITICAL status. The `sys.exit(1)` immediately following is unreachable dead code — `SystemExit` is raised before the normal return path.
+- **Impact:** None at runtime. Cosmetic noise that suggests an error path exists where it doesn't.
+- **Recommended Fix:** Remove the `sys.exit(1)` line from `main()`. `check_quotas()` handles all exit signaling.
+- **Discovered:** 2026-03-30 (Henrik audit of T5b PR)
 
 ---
 

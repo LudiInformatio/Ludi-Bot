@@ -137,6 +137,7 @@ All workflows run on a self-hosted macOS runner. See `.github/workflows/` for de
 | 6:35 PM (launchd) + 8:20 PM (launchd) | `evening_slate_lock.yml` | Evening Telegram cards (6:35 PM early games 7-8:30 PM tips; 8:20 PM late games 9 PM+ tips only) — triggered via `scripts/launchd/com.ludiinformatio.evening-slate-*.plist`, not GH cron (GH `01:xx UTC` zone unreliable) |
 | 8:30 PM | `nightly_debrief.yml` | Settlement + daily P&L |
 | Hourly 6:25–11:25 PM | `capture_closing_lines.yml` | Pre-tipoff CLV capture (6 hourly runs); overnight batch in `db_backup.yml` as fallback |
+| 6:30 PM | `capture_pinnacle_lines.yml` | Pinnacle PM line snapshot (T5d Smart Money Layer) — writes `pinnacle_line_*` columns in `prop_line_snapshots`, consumed by `module_f.py` STEAM_MOVE tag |
 | Sundays + Thursdays | `ghost_protocol_sync.yml` | NBA.com tracking data (Sunday: 7-day sweep, Thursday: gap-fill only) |
 | Tuesdays | `weekly_validation.yml` | Backtest + drift detection |
 | 6:00 AM + 8:00 PM | `claude-qa-check.yml` | Workflow failure review + schema validation |
