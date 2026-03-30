@@ -267,7 +267,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           export PYTHONPATH=$PWD
-          .venv/bin/python -c "
-from utils.telegram_notifier import send_message
-send_message('⚠️ PIPELINE FAILED: Daily Production Pipeline — check GitHub Actions for details')
-" || echo "Telegram notification failed (non-fatal)"
+          .venv/bin/python -c "from utils.telegram_notifier import send_message; send_message('PIPELINE FAILED: Daily Production Pipeline — check GitHub Actions')" || echo "Telegram notification failed (non-fatal)"
