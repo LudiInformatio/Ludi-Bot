@@ -1479,6 +1479,31 @@ class LudiCalibrator:
                 calibrated[proj_key] = round(base_val * min_mod, 2)
                 calibrated['notes'] += f" | FLOOR({proj_key}:{ratio:.2f}->{min_mod})"
 
+        # --- LAYER 2: ABSOLUTE FLOOR+CEILING (anchored to season average, not Module C output) ---
+        if config.MODIFIER_FLAGS.get('proj_hard_bounds', True):
+            _l2_pairs = [
+                ('proj_pts',  'season_avg_PTS'),
+                ('proj_reb',  'season_avg_REB'),
+                ('proj_ast',  'season_avg_AST'),
+            ]
+            _ceil_mult = getattr(config, 'PROJ_HARD_CEIL', 1.50)
+            _floor_mult = getattr(config, 'PROJ_HARD_FLOOR', 0.40)
+            for _proj_k, _avg_k in _l2_pairs:
+                _s_avg = calibrated.get(_avg_k, 0) or 0
+                if _s_avg <= 0:
+                    continue  # No season average — skip (rookie, Tier 1.5, mid-season call-up)
+                if _proj_k not in calibrated:
+                    continue
+                _ceil_val = round(_s_avg * _ceil_mult, 2)
+                _floor_val = round(_s_avg * _floor_mult, 2)
+                _cur = calibrated[_proj_k]
+                if _cur > _ceil_val:
+                    calibrated[_proj_k] = _ceil_val
+                    calibrated['notes'] += f" | L2_CEIL({_proj_k}:{_cur:.1f}->{_ceil_val:.1f})"
+                elif _cur < _floor_val:
+                    calibrated[_proj_k] = _floor_val
+                    calibrated['notes'] += f" | L2_FLOOR({_proj_k}:{_cur:.1f}->{_floor_val:.1f})"
+
         return calibrated
 
 

@@ -160,6 +160,8 @@ FATIGUE_RUST_TAX = 0.985
 LEAGUE_AVG_PPP = 1.05
 MAX_MODIFIER = 1.25
 MIN_MODIFIER = 0.75
+PROJ_HARD_CEIL = 1.50   # max proj as multiple of season avg
+PROJ_HARD_FLOOR = 0.40  # min proj as multiple of season avg
 GAME_TOTAL_LOW_FACTOR = 0.97
 SHOT_CREATION_PULLUP_TAX = 0.97
 
@@ -330,6 +332,7 @@ MODIFIER_FLAGS = {
     'stat_kelly_gate': True,
     'steam_move': True,        # T5d: flag STEAM_MOVE when Pinnacle line moves >= threshold
     'sniper_b2b_exempt': True, # SNIPER_ELITE players bypass B2B fatigue penalty
+    'proj_hard_bounds': True,       # Layer 2 absolute floor+ceiling (anchored to season_avg)
     # Module X
     'vegas_guardrail': True,
     # main.py get_active_roster()

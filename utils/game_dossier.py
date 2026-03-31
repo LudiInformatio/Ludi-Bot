@@ -5,6 +5,7 @@ from pathlib import Path
 import config
 from utils.perplexity_client import PerplexityClient
 from utils.player_id_resolver import resolve_canonical_name
+from utils.mappings import normalize_bdl_abbr
 
 CACHE_DIR = Path("cache")
 MAX_GAME_CONTEXT_CHARS = 400
@@ -71,7 +72,7 @@ def build_game_dossier(conn: sqlite3.Connection, run_date: str, bets: list) -> d
                     GROUP BY game_id
                 )
             """
-            row = conn.execute(query_l5, (team, twelve_days_ago, run_date)).fetchone()
+            row = conn.execute(query_l5, (normalize_bdl_abbr(team), twelve_days_ago, run_date)).fetchone()
             l5_ppg[team] = round(row[0], 1) if row and row[0] else 0.0
 
         # C. B2B
@@ -115,7 +116,7 @@ def build_game_dossier(conn: sqlite3.Connection, run_date: str, bets: list) -> d
         # E. Defense Scheme
         scheme_note = "Unknown"
         quality_note = "N/A"
-        row_scheme = conn.execute("SELECT active_style, def_quality_14d FROM team_scheme_cache WHERE team_abbr = ? AND scheme_type = 'defense'", (home,)).fetchone()
+        row_scheme = conn.execute("SELECT active_style, def_quality_14d FROM team_scheme_cache WHERE team_abbr = ? AND scheme_type = 'DEFENSE'", (home,)).fetchone()
         if row_scheme:
             scheme_note, quality_note = row_scheme
 

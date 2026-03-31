@@ -33,6 +33,7 @@ try:
     from utils.pm_bot import ProjectManagerBot
     from utils.api_monitor import get_monitor
     from utils.telegram_notifier import send_message
+    from utils.mappings import normalize_bdl_abbr
 except ImportError as e:
     print(f"CRITICAL ERROR: Missing a Ludi Module. {e}")
     sys.exit(1)
@@ -245,7 +246,8 @@ class LudiOrchestrator:
                 for p in roster:
                     raw = starter_map.get(str(p['player_id']))
                     p['is_starter'] = bool(raw) if raw is not None else None
-            except Exception:
+            except Exception as e:
+                print(f"[main] is_starter lookup failed for player_id batch: {e}")
                 pass  # Silently fall back to None (Module C will use avg_minutes)
 
         # --- Tier 1.5: Freshly Traded (on team per players table but no new-team logs yet) ---
@@ -268,7 +270,7 @@ class LudiOrchestrator:
                       WHERE pgl2.player_id = p.player_id
                         AND pgl2.game_date >= date('now', '-30 days')
                   )
-            """, (team_abbr, team_abbr))
+            """, (team_abbr, normalize_bdl_abbr(team_abbr)))
             traded_players = cursor15.fetchall()
 
             for pid, pname in traded_players:
