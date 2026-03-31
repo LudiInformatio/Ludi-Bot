@@ -134,7 +134,7 @@ class ProjectionLogger:
                             blowout_mod, scheme_mod, empirical_mod,
                             final_projection, prob_over_line,
                             p10, p25, p75, p90, sim_stdev,
-                            is_bet, bet_rec_id, scenario
+                            is_bet, bet_rec_id, scenario, role_data_flag
                         ) VALUES (
                             ?, ?, ?, ?, ?,
                             ?, ?, ?, ?,
@@ -145,7 +145,7 @@ class ProjectionLogger:
                             ?, ?, ?,
                             ?, ?,
                             ?, ?, ?, ?, ?,
-                            ?, ?, ?
+                            ?, ?, ?, ?
                         )
                     ''', (
                         run_date,
@@ -179,6 +179,7 @@ class ProjectionLogger:
                         is_bet,
                         bet_rec_id,
                         scenario,
+                        sim.get('role_flag'),
                     ))
                     rows_inserted += 1
 

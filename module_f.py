@@ -401,6 +401,23 @@ class LudiReporter:
                         if bet_direction == 'over' and _opp in _OVER_KILL_DEFENSES:
                             continue
 
+                        # Filter 6: Combo UNDER minimum gap gate
+                        # Lena analysis (N=313 settled bets): combo UNDER bets average -3.53 pts below
+                        # line at bet time but actuals land near the line (+0.27 mean error).
+                        # True edge far smaller than model believes — require >= 4.0 pt gap to filter
+                        # the weakest combo UNDER bets where the model is marginally below the line.
+                        _COMBO_STATS = frozenset({'pra', 'pa', 'pr', 'ra'})
+                        if (config.MODIFIER_FLAGS.get('combo_under_min_gap', True)
+                                and stat_key.lower() in _COMBO_STATS
+                                and bet_direction == 'under'):
+                            _proj_vs_line = final_proj - line  # negative when projecting under
+                            if _proj_vs_line > -4.0:
+                                logger.debug(
+                                    f"[combo_gate] {p.get('name', '?')} {stat_key.upper()} UNDER skipped "
+                                    f"— proj_vs_line {_proj_vs_line:.1f} > -4.0 threshold"
+                                )
+                                continue
+
                         # --- END CALIBRATION FILTERS ---
 
                         # --- Filter 3: PROJECTION/LINE SANITY GATE (BDL Fallback) ---

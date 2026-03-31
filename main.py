@@ -169,6 +169,52 @@ class LudiOrchestrator:
             w_att = sum(w * (games[i][attempts_idx] or 0) for i, w in enumerate(weights))
             return round(w_makes / w_att, 4) if w_att > 0 else fallback
 
+        def _detect_role_volatility(games):
+            """
+            Detect if player's role has shifted significantly (L5 vs L25 minutes).
+            Returns: (shift_type, l5_avg_min, l25_avg_min)
+              shift_type: 'NONE' | 'NEW_SHIFT' | 'PERSISTENT_SHIFT' | 'TRADED'
+            games rows: [0]=player_id [1]=player_name [2]=team_abbr [3]=pts ... [14]=minutes [18]=game_date
+            NOTE: >= 30 games gate in caller makes this mutually exclusive with Module C's G2 blend (< 15 games).
+            """
+            if len(games) < 5:
+                return 'NONE', 0.0, 0.0
+
+            # Traded player: team changed within L5 window → 90% L5 override
+            current_team = games[0][2]
+            if any(games[i][2] != current_team for i in range(min(5, len(games)))):
+                l5_avg = sum(g[14] for g in games[:5]) / 5
+                l25_filtered = [g[14] for g in games if g[14] >= 5]
+                l25_avg = sum(l25_filtered) / len(l25_filtered) if l25_filtered else 0.0
+                return 'TRADED', l5_avg, l25_avg
+
+            # L25 flat avg: exclude < 5 min games (DNP/injury fragments)
+            l25_games = [g[14] for g in games if g[14] >= 5]
+            if not l25_games:
+                return 'NONE', 0.0, 0.0
+            l25_avg = sum(l25_games) / len(l25_games)
+
+            # L5 flat avg: unfiltered (0-min is real data for role collapse detection)
+            l5_avg = sum(g[14] for g in games[:5]) / 5
+
+            # Guards
+            if l25_avg < 10 or l5_avg < 5:
+                return 'NONE', l5_avg, l25_avg
+
+            # Divergence check
+            divergence = abs(l5_avg - l25_avg) / l25_avg
+            if divergence < _cfg.ROLE_VOLATILITY_THRESHOLD:
+                return 'NONE', l5_avg, l25_avg
+
+            # Persistent vs new: check games 6-10
+            games_6_10 = games[5:10]
+            if len(games_6_10) < 5:
+                return 'NEW_SHIFT', l5_avg, l25_avg  # insufficient window, treat as new
+            l6_10_avg = sum(g[14] for g in games_6_10) / len(games_6_10)
+            if abs(l6_10_avg - l25_avg) / l25_avg >= 0.15:
+                return 'PERSISTENT_SHIFT', l5_avg, l25_avg
+            return 'NEW_SHIFT', l5_avg, l25_avg
+
         player_summaries = []
         for pid, games in player_rows.items():
             if len(games) < 3:  # mirrors original HAVING COUNT >= 3
@@ -200,7 +246,7 @@ class LudiOrchestrator:
             at_rim_freq  = psq[1] if psq and psq[1] is not None else 0.0
             corner3_freq = psq[2] if psq and psq[2] is not None else 0.0
 
-            roster.append({
+            player = {
                 'player_id': pid, 'PLAYER_NAME': pname, 'TEAM_ABBREVIATION': team,
                 'PTS': round(_weighted_avg(games, 3), 1),
                 'REB': round(_weighted_avg(games, 4), 1),
@@ -227,7 +273,40 @@ class LudiOrchestrator:
                 # Sprint 3: starter context for Module C minutes projection
                 # Source: players.is_starter (1=starter, 0=bench, NULL=unknown)
                 'is_starter': None,  # populated below from players table
-            })
+            }
+
+            # Bayesian Role-Update: blend L5/L25 stats for role-volatile players
+            # Gate: >= 30 games required (mutually exclusive with G2 blend < 15 games)
+            role_flag = None
+            if _cfg.MODIFIER_FLAGS.get('bayesian_role_update', True) and len(games) >= 30:
+                shift_type, l5_min, l25_min = _detect_role_volatility(games)
+                if shift_type != 'NONE':
+                    if shift_type == 'TRADED':
+                        w_l5 = _cfg.ROLE_VOLATILITY_TRADED_OVERRIDE
+                    elif shift_type == 'NEW_SHIFT':
+                        w_l5 = _cfg.ROLE_VOLATILITY_BLEND_NEW[0]
+                    else:  # PERSISTENT_SHIFT
+                        w_l5 = _cfg.ROLE_VOLATILITY_BLEND_PERSISTENT[0]
+                    w_l25 = 1.0 - w_l5
+
+                    # Blend counting stats: L5 window vs full L25 window, then weighted combine
+                    stat_cols = {
+                        'PTS': 3, 'REB': 4, 'AST': 5, 'FGA': 6, 'FG3A': 7, 'FTA': 8,
+                        'OREB': 9, 'DREB': 10, 'STL': 11, 'BLK': 12, 'TOV': 13, 'MIN': 14,
+                    }
+                    for stat_key, col_idx in stat_cols.items():
+                        if stat_key in player:
+                            l5_val = _weighted_avg(games[:5], col_idx)
+                            l25_val = _weighted_avg(games, col_idx)
+                            player[stat_key] = round(w_l5 * l5_val + w_l25 * l25_val, 3)
+
+                    # Recompute base_usg and base_min from blended values
+                    if 'MIN' in player:
+                        player['base_min'] = player['MIN']
+                    role_flag = shift_type
+
+            player['role_flag'] = role_flag
+            roster.append(player)
 
         # Sprint 3: Populate is_starter for each roster player from players table
         # This lets Module C choose avg_min_as_starter or avg_min_off_bench appropriately.
@@ -829,6 +908,8 @@ class LudiOrchestrator:
                             if scenario_player.get('PLAYER_NAME') == r.get('PLAYER_NAME'):
                                 if 'wowy_confidence' in scenario_player:
                                     r['wowy_confidence'] = scenario_player['wowy_confidence']
+                                if 'role_flag' in scenario_player:
+                                    r['role_flag'] = scenario_player.get('role_flag')
                                 break
                     
                     game_sim_results.extend(res)

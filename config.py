@@ -338,6 +338,8 @@ MODIFIER_FLAGS = {
     'vegas_guardrail': True,
     # main.py get_active_roster()
     'recency_weighting': True,
+    'bayesian_role_update': True,   # Blend L5/L25 for role-volatile players (30%+ min divergence)
+    'combo_under_min_gap': True,    # Combo UNDER (PRA/PA/PR/RA) requires proj <= line - 4.0 pts
 }
 
 # Env override: allows per-flag toggling without code changes
@@ -361,6 +363,12 @@ RECENCY_WEIGHTS_L25 = [
     0.014206, 0.012867, 0.011654, 0.010555, 0.009560
 ]
 RECENCY_MIN_GAMES_FOR_WEIGHTING = 15
+
+# Bayesian Role-Update — blend weights for role-volatile players
+ROLE_VOLATILITY_THRESHOLD = 0.30        # 30% L5 vs L25 minutes divergence triggers blend
+ROLE_VOLATILITY_BLEND_NEW = (0.70, 0.30)         # (L5_weight, L25_weight) new shift
+ROLE_VOLATILITY_BLEND_PERSISTENT = (0.55, 0.45)  # (L5_weight, L25_weight) persistent shift
+ROLE_VOLATILITY_TRADED_OVERRIDE = 0.90  # 90% L5 when team changed within L5 window
 
 # Run validation ONLY when executed directly, not on import
 if __name__ == "__main__":

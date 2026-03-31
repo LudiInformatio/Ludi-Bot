@@ -1170,9 +1170,20 @@ class LudiCalibrator:
             self._apply_factor(calibrated, config.SCORING_ENV_DAMPENER)
 
         # 5. MATCHUP LOGIC (Primary Archetypes)
-        opponent = calibrated.get('opponent', 'UNK') 
+        opponent = calibrated.get('opponent', 'UNK')
         def_style = self.DEFENSIVE_STYLES.get(opponent, "NEUTRAL")
-        
+
+        # FUNNEL→NEUTRAL fallback: FUNNEL has no canonical modifier matrix yet.
+        # Teams tagged FUNNEL (e.g. DAL/GSW/IND from team_scheme_cache) would silently
+        # receive no modifiers for most archetype×scheme branches. Map to NEUTRAL so
+        # those players get baseline treatment rather than falling through to undefined behavior.
+        # Re-evaluate when FUNNEL canonical matrix is defined (ROADMAP: FUNNEL scheme fix).
+        if def_style == 'FUNNEL':
+            logger.debug(
+                f"[scheme_fallback] {opponent} FUNNEL→NEUTRAL applied (no canonical FUNNEL matrix)"
+            )
+            def_style = 'NEUTRAL'
+
         # Get team offensive style
         player_team = calibrated.get('team', player_packet.get('TEAM_ABBREVIATION', ''))
         team_offense = self.classify_team_offense(player_team)

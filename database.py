@@ -1928,6 +1928,7 @@ class LudiHistorian:
                 is_bet                BOOLEAN DEFAULT 0,
                 bet_rec_id            INTEGER,
                 scenario              TEXT,
+                role_data_flag        TEXT,
                 UNIQUE(game_date, player_name, stat_category, run_date)
             )
         ''')
@@ -2006,6 +2007,13 @@ class LudiHistorian:
                 c.execute(_col_def)
             except Exception as e:
                 logger.debug(f"[migration] ALTER TABLE failed (likely already exists): {e}")
+
+        # Phase 9 migration — Bayesian role-update observability
+        try:
+            conn.execute("ALTER TABLE player_projections ADD COLUMN role_data_flag TEXT")
+            conn.commit()
+        except Exception as e:
+            logger.debug(f"[migration] role_data_flag already exists: {e}")
 
         # Sprint 1 — lineup_id column for WOWY lineup identity
         try:
