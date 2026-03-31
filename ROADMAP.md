@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 31, 2026 — 6:00 PM EDT
+**Last Updated:** Tuesday, March 31, 2026 — 6:35 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
 **Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed, Lena specs schema → junior dev → Henrik
-**Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + Bayesian blend + combo gate + FUNNEL fallback — Module C/F/E + role_data_flag column (`ab8653d`) ✅
+**Completed:** Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + Bayesian blend + combo gate + FUNNEL fallback — Module C/F/E + role_data_flag column (`ab8653d`) ✅ + GH-39 DB lock cascade fix — `classify_archetypes.py` busy_timeout + accuracy guard + batch mode (`e899e13`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -223,6 +223,7 @@ This is the single source of truth for project tasks and priorities.
 - [x] Steam move detection — `STEAM_MOVE` tag in `module_f.py` via T5d Pinnacle snapshot layer (`bf5fcaa`) ✅
 
 ### GH Actions / Claude Ops Improvements
+- [ ] **busy_timeout sweep — 4 backtest/monitor scripts** (GH-39 P1 follow-up, Henrik Finding 3) — Add `sqlite3.connect(db_path, timeout=30)` + `PRAGMA busy_timeout=30000` to: `scripts/backtest_fatigue_21day.py` (line 36), `scripts/backtest_playtype_trends_14day.py` (lines 138, 221), `scripts/monitor_system_health.py` (lines 50, 125, 227, 298), `scripts/sync_team_dvp_by_archetype.py` (line 305). Not the GH-39 cascade origin — protection against concurrent workflow lock collisions. Reference: `sync_stagger_stats.py:39-40`. Route: junior dev → Henrik.
 - [ ] **PR review action**: Add `anthropics/claude-code-action@v1` to PR events for automated code review on push to main
 - [ ] **`pip-audit` step**: Add to `data_sync.yml` — fails build on known CVEs in `requirements.txt`
 - [ ] **Weekly Claude cost report**: `scripts/claude_cost_report.py` — reads `claude_usage_log`, sends weekly $/1k-token summary
@@ -230,6 +231,7 @@ This is the single source of truth for project tasks and priorities.
 - [ ] **Ask Ludi bot management workflow**: `bot_management.yml` — start/stop/status commands via launchd
 - [ ] **Schema validation script**: `scripts/validate_schema.py` — assert all expected columns exist at pipeline start. Dead references removed from 3 workflows (Mar 4). Archived at `scripts/_archive/validate_schema.py` — restore and wire when implementing.
 - [ ] **OAuth token refresh reminder**: Warn in `claude-ops-hub.yml` when `CLAUDE_CODE_OAUTH_TOKEN` is >25 days old
+- [ ] **Automated GH issue triage workflow** (`claude-issue-triage.yml`) — **Dry run completed Mar 31, 2026.** Manual pattern validated: (1) `gh issue list` → classify each as SELF_RESOLVING / TRANSIENT / DATA_ISSUE / CODE_BUG, (2) comment triage summary + close SELF_RESOLVING/TRANSIENT via REST API, (3) route CODE_BUG → Henrik TK task, DATA_ISSUE → Silas. Next step: automate as weekly scheduled workflow. Trigger: every Monday 6 AM + on-demand. Input: all open `ops-hub` labeled issues. Output: triage comments, closures, and routed TK tasks dispatched to employee agents.
 
 ---
 

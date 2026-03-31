@@ -860,3 +860,19 @@ if 'role_flag' in scenario_player:
 Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab8653d`.
 
 **Rule:** Any new player dict key must be explicitly carried through the sim_profile boundary. See COMMON_MISTAKES §5.6 for the full prevention checklist.
+
+## 2026-03-31 — classify_archetypes.py DB lock cascade (GH-39)
+
+**Symptom:** Weekly validation fails every Tuesday with "database is locked" on 6 downstream steps. `classify_archetypes.py` SIGKILL'd at 30-min timeout, leaving WAL uncommitted.
+
+**Root cause (dual failure):**
+1. `get_db_connection()` had bare `sqlite3.connect(db_path)` — no `timeout`, no `PRAGMA busy_timeout`. Default 5s retry → instant failure cascade across 6 downstream steps.
+2. `conn.close()` at end of Part B fired BEFORE accuracy guard `conn.rollback()` — rollback was dead code on a closed connection. Bad archetypes committed even when GENERALIST ≥ 40% block threshold.
+3. `--per-player --limit 400` mode: ~1,000s API calls vs 30-min step timeout → guaranteed SIGKILL.
+
+**Fix (`e899e13`):**
+- `get_db_connection()`: `sqlite3.connect(db_path, timeout=30)` + `conn.execute("PRAGMA busy_timeout = 30000")`
+- Moved `conn.close()` to after accuracy guard block — rollback now fires on live connection
+- `weekly_validation.yml`: removed `--per-player` flag → batch mode (~75s vs ~1,000s)
+
+**Rule:** When auditing a script with a safety-net rollback, always verify `conn.close()` has NOT already fired before the rollback call. Python sqlite3 raises `ProgrammingError` on a closed connection — the rollback silently becomes dead code. Check execution order, not just presence.
