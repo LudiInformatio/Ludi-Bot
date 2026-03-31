@@ -715,12 +715,33 @@ class MorningBriefEngine:
             try:
                 conn = self._get_db_conn()
 
+                # T5c: pre-load line_movement for STEAM_ALIGNED/STEAM_FADE scoring
+                _movement_lookup = {}
+                try:
+                    _t5c_date = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
+                    _t5c_conn = self._get_db_conn()
+                    _rows = _t5c_conn.execute(
+                        """SELECT player_name, stat_category, bet_side, line_movement
+                           FROM bet_recommendations
+                           WHERE game_date = ? AND line_movement IS NOT NULL""",
+                        (_t5c_date,)
+                    ).fetchall()
+                    _t5c_conn.close()
+                    for _r in _rows:
+                        _movement_lookup[(_r[0], _r[1], _r[2].lower())] = _r[3]
+                except Exception as e:
+                    logger.warning(f"[T5c] line_movement pre-load failed: {e}")
+
                 # 1. Group all bets by game_id
                 game_groups = {}
                 for bet in processed_bets:
                     gid = bet.get('game_id') or bet.get('matchup', 'UNKNOWN')
                     if gid not in game_groups: game_groups[gid] = []
                     game_groups[gid].append(bet)
+                    bet['line_movement'] = _movement_lookup.get(
+                        (bet.get('name'), bet.get('stat'), bet.get('bet_on', '').lower()),
+                        None
+                    )
 
                 # 2. Deterministic game selection — score by tier quality, full slate
                 # DIAMOND=4.0, BLUE CHIP=2.5, CORE ASSET=1.0, THE STEAL=0.5
@@ -780,13 +801,31 @@ class MorningBriefEngine:
                         + (1.0 if 'BENEFICIARY' in str(b.get('tags', '')) else 0.0)
                         for b in bets
                     )
+
+                    # T5c: STEAM_ALIGNED/STEAM_FADE line movement signal
+                    if config.MODIFIER_FLAGS.get('game_score_v2', True):
+                        try:
+                            _bets_with_mv = [b for b in bets if b.get('line_movement') is not None and abs(b['line_movement']) >= 1.0]
+                            if len(_bets_with_mv) >= 2:
+                                for _b in _bets_with_mv:
+                                    _mv = _b['line_movement']
+                                    _bet_on = _b.get('bet_on', '').upper()
+                                    _is_aligned = (_bet_on == 'OVER' and _mv > 0) or (_bet_on == 'UNDER' and _mv < 0)
+                                    _capped_mv = min(abs(_mv), 4.0)
+                                    if _is_aligned:
+                                        score += 0.5 * _capped_mv   # STEAM_ALIGNED: max +2.0 per bet
+                                    else:
+                                        score -= 0.3 * _capped_mv   # STEAM_FADE: max -1.2 per bet
+                        except Exception as e:
+                            logger.warning(f"[T5c game_score_v2] {e}")
+
                     news = game_news_cache.get(gid, "")
                     if news:
                         score_delta = 0.0
                         key_signal = ""
                         try:
-                            players = [b['player_name'] for b in bets[:5]]
-                            stats = list({b['stat_category'] for b in bets})
+                            players = [b.get('name', '') for b in bets[:5]]
+                            stats = list({b.get('stat', '') for b in bets})
 
                             nsp_system = """You are an NBA news relevance scorer for a sports betting model.
 Return ONLY valid JSON: {"score_delta": <-2.0 to +2.0>, "key_signal": "<10 words>"}

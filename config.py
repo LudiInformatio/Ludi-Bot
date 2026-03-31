@@ -331,6 +331,7 @@ MODIFIER_FLAGS = {
     'combo_correlation': True,
     'stat_kelly_gate': True,
     'steam_move': True,        # T5d: flag STEAM_MOVE when Pinnacle line moves >= threshold
+    'game_score_v2': True,     # T5c: STEAM_ALIGNED/STEAM_FADE line movement signal in _score_game()
     'sniper_b2b_exempt': True, # SNIPER_ELITE players bypass B2B fatigue penalty
     'proj_hard_bounds': True,       # Layer 2 absolute floor+ceiling (anchored to season_avg)
     # Module X
