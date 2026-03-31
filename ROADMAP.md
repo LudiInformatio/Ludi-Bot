@@ -3,7 +3,7 @@
 **Last Updated:** Tuesday, March 31, 2026 — 2:58 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
 **Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed + FUNNEL→NEUTRAL fallback in Module E (in progress, DAL/GSW/IND reclassified PERIMETER)
-**Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + BDL abbr normalization + Layer 2 floor/ceiling — fixes 43 PPG projection bug + scheme "Unknown" (`a6da13b`) ✅
+**Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + Bayesian blend + combo gate + FUNNEL fallback — Module C/F/E + role_data_flag column (`ab8653d`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -54,7 +54,10 @@ This is the single source of truth for project tasks and priorities.
 - [x] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅
 - [x] **T5c: Game Score Formula v2** — STEAM_ALIGNED/STEAM_FADE signal in `morning_brief.py` `_score_game()`. Lena spec → Henrik APPROVED → `bccdaf0` ✅
 - [x] **BDL abbr normalization + Layer 2 floor/ceiling + scheme fix** — `normalize_bdl_abbr()` in `game_dossier.py` + `main.py`, `scheme_type='DEFENSE'` case fix, `PROJ_HARD_CEIL=1.50`/`PROJ_HARD_FLOOR=0.40` anchored to `season_avg` in `module_e.py` (`a6da13b`) ✅
-- [ ] **Bayesian role-update spec** — Role-volatile bench players (e.g., Gui Santos) pinned to stale L25 baseline; L5 breakout not captured fast enough. Lena to spec L5 vs L25 divergence threshold — when to weight recent role heavier. Route: Lena spec → junior dev → Henrik.
+- [x] **Bayesian role-update** — L5 vs L25 minutes divergence detection (30% threshold), blend weights 70/30 new / 55/45 persistent / 90% traded. `role_data_flag` column in `player_projections`. (`ab8653d`) ✅
+- [ ] **[MONITOR] Bayesian blend validation** — Silas: verify `role_data_flag` is non-NULL in `player_projections` after first post-deploy pipeline run. Lena: track RMSE improvement in weekly backtest vs pre-blend baseline. Escalate if PTS RMSE does not improve ≥0.3 pts within 14 days. Owner: Silas (1-time check) + Lena (weekly).
+- [ ] **[MONITOR] CHI/MIA vs PAINT_PACK WR** — Lena watches weekly: CHI 48.2% WR (N=168), MIA 42.6% WR (N=54). Escalate if either remains below 49% at N≥200. No code action until N gate met. Owner: Lena.
+- [ ] **[MONITOR] PRA/PA combo gate calibration** — Lena tracks combo UNDER WR post-deploy of -4.0 min gap gate. At N≥50 settled combo UNDER bets: if WR ≥ 53% → threshold confirmed; if WR < 50% → escalate to tighten further. Owner: Lena.
 - [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
@@ -81,6 +84,7 @@ This is the single source of truth for project tasks and priorities.
   - **Survival rule:** 14-day test window, N ≥ 50 settled bets per variant, p < 0.10 binomial test required for "IMPROVED" verdict. Revert on FAIL. Log all trials in `model_deployments` table (Henrik finding E4).
 
 - [ ] **FUNNEL scheme fix** — 930 bets at 51.5% WR overall (above breakeven — severity reduced from original flag). DAL/GSW/IND reclassified to PERIMETER in `team_scheme_cache` (Mar 31). Only MIN currently carries FUNNEL active_style (d21 window; d14 already shows PERIMETER — transitioning). Below-breakeven concern shifted: CHI (48.2%, N=168) and MIA (42.6%, N=54) — both PAINT_PACK cohort, not FUNNEL. Action: FUNNEL→NEUTRAL explicit fallback in Module E (in progress — junior dev). Monitor CHI/MIA within PAINT_PACK archetype×scheme cells.
+- [ ] **FUNNEL canonical matrix** — Full archetype×FUNNEL modifier set in `module_e.py`. DEFERRED: ~60 days clean FUNNEL data needed (est. May 2026). FUNNEL→NEUTRAL fallback active in production (`ab8653d`). Owner: Lena spec → junior dev → Henrik.
 
 - [ ] **`synthesis_score` + `curation_weight_history`** — Continuous conviction score replacing 4-bucket tier for unit sizing. `synthesis_score REAL` column in `bet_recommendations`. `curation_weight_history` table for Darwinian feedback loop (WR by prompt_version + stat_category + bet_side, nightly compute). Route: Lena specs formula → junior dev → Henrik.
 

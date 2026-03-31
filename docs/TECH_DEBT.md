@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-**Last Updated:** March 30, 2026 (Session 8 — TD-031 added; no items archived)
+**Last Updated:** March 31, 2026 (Session 11 — TD-032 added; no items archived)
 **Owners:** Henrik (Code Auditor) + Junior Dev
 **Review Cadence:** Every session where Henrik audits code — append new items, update existing
 
@@ -192,6 +192,14 @@ This register tracks known technical debt across the Ludi-Bot codebase. Each ent
 - **Impact:** None at runtime. Cosmetic noise that suggests an error path exists where it doesn't.
 - **Recommended Fix:** Remove the `sys.exit(1)` line from `main()`. `check_quotas()` handles all exit signaling.
 - **Discovered:** 2026-03-30 (Henrik audit of T5b PR)
+
+### TD-032: `main.py:329` bare `print()` in is_starter batch exception handler
+- **Severity:** P3
+- **Location:** `main.py` line 329 — is_starter batch exception handler
+- **Description:** Pre-existing bare `print()` call instead of `logger.warning()` in the is_starter batch exception handler. Not introduced by `ab8653d`. Errors surface in stdout but are invisible to the structured log pipeline and `claude-ops-hub.yml` log scanning.
+- **Impact:** Low. Exception details are visible in terminal but skipped by automated log analysis.
+- **Recommended Fix:** Replace `print(...)` with `logger.warning(...)`. One-line change. Low priority cleanup pass.
+- **Discovered:** 2026-03-31 (Henrik audit of `ab8653d`)
 
 ---
 
