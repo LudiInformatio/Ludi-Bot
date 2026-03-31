@@ -1959,7 +1959,9 @@ class LudiHistorian:
                 curation_grade   TEXT,
                 bet_id           INTEGER,
                 true_edge        REAL,
-                thinking_text    TEXT
+                thinking_text    TEXT,
+                signal_available_at TEXT,  -- when underlying signal (injury/line) was first available
+                acted_on_at      TEXT      -- when model consumed/acted on the signal
             )
         ''')
         c.execute("CREATE INDEX IF NOT EXISTS idx_cal_call_type ON claude_analysis_log(call_type)")
@@ -1989,6 +1991,16 @@ class LudiHistorian:
             "ALTER TABLE claude_analysis_log ADD COLUMN true_edge REAL",
             "ALTER TABLE claude_analysis_log ADD COLUMN thinking_text TEXT",
             "ALTER TABLE claude_analysis_log ADD COLUMN prompt_version TEXT",
+        ]:
+            try:
+                c.execute(_col_def)
+            except Exception:
+                pass
+
+        # Phase 9 — Four-timestamp pattern migration guard (unblocks Brier calibration)
+        for _col_def in [
+            "ALTER TABLE claude_analysis_log ADD COLUMN signal_available_at TEXT",
+            "ALTER TABLE claude_analysis_log ADD COLUMN acted_on_at TEXT",
         ]:
             try:
                 c.execute(_col_def)

@@ -67,8 +67,9 @@ def log_claude_call(
             """
             INSERT INTO claude_analysis_log
                 (call_type, model, input_tokens, output_tokens, game_date,
-                 player_name, response_text, estimated_cost_usd)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 player_name, response_text, estimated_cost_usd,
+                 signal_available_at, acted_on_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
             """,
             (call_type, model, input_tokens, output_tokens, game_date,
              player_name, truncated, cost)

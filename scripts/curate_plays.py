@@ -853,8 +853,9 @@ def _write_curation_results(
                     (call_type, model, game_date, player_name,
                      stat_category, bet_side, curation_grade, bet_id,
                      true_edge, thinking_text, prompt_version,
-                     input_tokens, output_tokens, estimated_cost_usd, response_text)
-                VALUES ('curation_per_bet', 'batch', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, '')
+                     input_tokens, output_tokens, estimated_cost_usd, response_text,
+                     signal_available_at, acted_on_at)
+                VALUES ('curation_per_bet', 'batch', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, '', NULL, NULL)
                 """,
                 (
                     run_date,
