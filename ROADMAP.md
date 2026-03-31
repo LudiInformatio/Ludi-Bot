@@ -1,8 +1,8 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 31, 2026 — 2:58 PM EDT
+**Last Updated:** Tuesday, March 31, 2026 — 6:00 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
-**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed + FUNNEL→NEUTRAL fallback in Module E (in progress, DAL/GSW/IND reclassified PERIMETER)
+**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed, Lena specs schema → junior dev → Henrik
 **Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + Bayesian blend + combo gate + FUNNEL fallback — Module C/F/E + role_data_flag column (`ab8653d`) ✅
 
 This is the single source of truth for project tasks and priorities.

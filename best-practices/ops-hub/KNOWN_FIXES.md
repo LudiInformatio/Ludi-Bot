@@ -845,3 +845,18 @@ git push origin main                   # Runner now gets correct code
 **Fix:** Added Layer 2 absolute floor+ceiling (`PROJ_HARD_CEIL=1.50`, `PROJ_HARD_FLOOR=0.40` × `season_avg`) at `module_e.py:1482`, after GLOBAL MODIFIER CAP. Gated by `MODIFIER_FLAGS['proj_hard_bounds']`. Commit `a6da13b`.
 
 **Rule:** Modifier caps must be anchored to a stable reference (season average), not an upstream module's already-modified output. Anchoring to modified output allows compound multiplication to bypass the cap.
+
+## 2026-03-31 — role_data_flag column 100% NULL after Bayesian blend ship
+
+**Symptom:** `player_projections.role_data_flag` is NULL for all rows despite `role_flag` being set in `get_active_roster()`.
+
+**Root cause:** Module C's `_simulate_outcomes()` builds `sim_profile` with an explicit key allowlist. `role_flag` was not in the allowlist → dropped before `projection_logger.py` write. `sim.get('role_flag')` returns None for all rows.
+
+**Fix:** 2-line back-patch in scenario propagation loop at `main.py:911-912`:
+```python
+if 'role_flag' in scenario_player:
+    r['role_flag'] = scenario_player.get('role_flag')
+```
+Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab8653d`.
+
+**Rule:** Any new player dict key must be explicitly carried through the sim_profile boundary. See COMMON_MISTAKES §5.6 for the full prevention checklist.

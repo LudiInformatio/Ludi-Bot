@@ -188,7 +188,7 @@ from module_e import LudiEvaluator           # ImportError
 | `team_standings_bdl` | Dynamic | BDL V2 standings: wins, losses, win_pct, conference/division rank, home/away splits, ortg, drtg, pace (Sprint D). |
 | `player_wowy_observed` | Dynamic | Starter-filtered WOWY: observed pts/reb/ast/min for beneficiary canonical_id when star_canonical_id is out. Trade-aware (Phase 2B). |
 | `player_canonical_ids_staging` | Dynamic | Auto-ingest staging for unrecognized player IDs: source, source_player_id, seen_count. Auto-promotes after 3+ appearances. |
-| `player_projections` | Dynamic | Full projection breakdown per simulated player: base_projection, modifier values (pace/fatigue/ref/blowout/scheme/empirical), percentiles (p10–p90), is_bet. NOTE: player_id is always NULL — JOIN key = (player_name, game_date). See TD-023. |
+| `player_projections` | Dynamic | Full projection breakdown per simulated player: base_projection, modifier values (pace/fatigue/ref/blowout/scheme/empirical), percentiles (p10–p90), is_bet, `role_data_flag TEXT` (NONE/NEW_SHIFT/PERSISTENT_SHIFT/TRADED — Bayesian blend signal, added Mar 31). NOTE: player_id is always NULL — JOIN key = (player_name, game_date). See TD-023. |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 
