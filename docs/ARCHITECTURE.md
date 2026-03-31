@@ -232,11 +232,16 @@ Every player gets **two independent role tags**:
 ### 2. Blowout Tax (Module F)
 **Problem**: Starters sit early in blowouts, killing volume props.
 
-**Solution**: Sliding scale reduction based on spread
+**Solution**: Context-aware sliding scale based on spread, role, and side (see `utils/blowout_tax.py`)
 ```python
-if spread > 7.0:
-    blowout_mult = 1.0 - ((spread - 7.0) * 0.015)
-    # Example: 12-point spread = 0.925 multiplier (-7.5% volume)
+# Tax kicks in at 10+ points spread (no tax for close games)
+if abs_spread < 10.0:
+    return 1.0
+spread_tax = (abs_spread - 10.0) * 0.02  # 2% per point over 10
+# Favorite starter: floor at 0.70 (30% max tax)
+blowout_mult = max(0.7, 1.0 - spread_tax)
+# Example: 15-point spread = 0.90 multiplier (-10% volume) for favorite starter
+# Favorite bench: boost up to 1.20 (garbage time). Underdogs: 1.0 (neutral).
 ```
 
 ### 3. 15-Minute Injury Sync (Module D)

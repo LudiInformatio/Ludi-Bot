@@ -2,7 +2,7 @@
 
 **Last Updated:** Tuesday, March 31, 2026 — 2:58 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
-**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed + FUNNEL scheme re-classification (Lena query pending)
+**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed + FUNNEL→NEUTRAL fallback in Module E (in progress, DAL/GSW/IND reclassified PERIMETER)
 **Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + BDL abbr normalization + Layer 2 floor/ceiling — fixes 43 PPG projection bug + scheme "Unknown" (`a6da13b`) ✅
 
 This is the single source of truth for project tasks and priorities.
@@ -80,7 +80,7 @@ This is the single source of truth for project tasks and priorities.
   - **Target 5 (Direction Hit Rate):** ≥ 54% after Option C ships (proposed Gate 4). Measured by `post_game_eval_log` direction accuracy column.
   - **Survival rule:** 14-day test window, N ≥ 50 settled bets per variant, p < 0.10 binomial test required for "IMPROVED" verdict. Revert on FAIL. Log all trials in `model_deployments` table (Henrik finding E4).
 
-- [ ] **FUNNEL scheme fix** — 313 bets priced against FUNNEL teams at 48.9% WR (below breakeven). DAL/GSW/IND tagged FUNNEL but FUNNEL has no canonical archetype modifier matrix. Lena recommendation: query 60-day WR by archetype vs FUNNEL teams, map to closest canonical scheme (NEUTRAL or PAINT_PACK) before adding FUNNEL as 5th tier. Route: Lena query → decision → junior dev updates `team_scheme_cache`.
+- [ ] **FUNNEL scheme fix** — 930 bets at 51.5% WR overall (above breakeven — severity reduced from original flag). DAL/GSW/IND reclassified to PERIMETER in `team_scheme_cache` (Mar 31). Only MIN currently carries FUNNEL active_style (d21 window; d14 already shows PERIMETER — transitioning). Below-breakeven concern shifted: CHI (48.2%, N=168) and MIA (42.6%, N=54) — both PAINT_PACK cohort, not FUNNEL. Action: FUNNEL→NEUTRAL explicit fallback in Module E (in progress — junior dev). Monitor CHI/MIA within PAINT_PACK archetype×scheme cells.
 
 - [ ] **`synthesis_score` + `curation_weight_history`** — Continuous conviction score replacing 4-bucket tier for unit sizing. `synthesis_score REAL` column in `bet_recommendations`. `curation_weight_history` table for Darwinian feedback loop (WR by prompt_version + stat_category + bet_side, nightly compute). Route: Lena specs formula → junior dev → Henrik.
 
