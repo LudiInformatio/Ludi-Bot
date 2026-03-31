@@ -719,14 +719,12 @@ class MorningBriefEngine:
                 _movement_lookup = {}
                 try:
                     _t5c_date = getattr(self, 'run_date', None) or datetime.datetime.now().strftime('%Y-%m-%d')
-                    _t5c_conn = self._get_db_conn()
-                    _rows = _t5c_conn.execute(
+                    _rows = conn.execute(
                         """SELECT player_name, stat_category, bet_side, line_movement
                            FROM bet_recommendations
                            WHERE game_date = ? AND line_movement IS NOT NULL""",
                         (_t5c_date,)
                     ).fetchall()
-                    _t5c_conn.close()
                     for _r in _rows:
                         _movement_lookup[(_r[0], _r[1], _r[2].lower())] = _r[3]
                 except Exception as e:
