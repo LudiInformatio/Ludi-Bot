@@ -133,13 +133,13 @@ from module_e import LudiEvaluator           # ImportError
 | `games` | 496+ | Game results with pace and referee crews |
 | `odds` | Dynamic | Live market data from bookmakers |
 | `simulations` | Archive | Model output archive for backtesting |
-| `bet_recommendations` | Dynamic | Logged bets with tags. `curation_grade` (STRONG/LEAN/FADE) added Mar 4 — Curation v2 full-slate AI grading. `is_curated=1` + `curated_rank` set for STRONG bets only. Shared game dossier via `cache/game_dossier_{date}.json` (written by `curate_plays.py`, read by `morning_brief.py`). |
+| `bet_recommendations` | Dynamic | Created in utils/bet_logger.py (not database.py init_db). Logged bets with tags. `curation_grade` (STRONG/LEAN/FADE) added Mar 4 — Curation v2 full-slate AI grading. `is_curated=1` + `curated_rank` set for STRONG bets only. Shared game dossier via `cache/game_dossier_{date}.json` (written by `curate_plays.py`, read by `morning_brief.py`). |
 | `referee_profiles` | 85 | 81 NBA officials + 4 retired. `avg_fouls_per_game` (OddsShark per-ref: (home+away)/3), `rolling_21d_fouls` (internal L10), `games_worked`, `ou_percentage`, `home_ats_bias`, `badge_number`, `style` (STRICT/NEUTRAL/LENIENT). Sources: Covers.com (O/U, total), OddsShark (ATS, Home/Away Fouls), NBA Staff PDF (badge#). Weekly: `sync_external_intelligence.py`. (Mar 2) |
 | `referee_player_bias` | 1,810+ | Per-player bias vs each referee: `avg_pf_called`, `avg_fta_awarded`, `points_impact_vs_avg`, `games_officiated`. Written daily by `scripts/analyze_star_bias.py`. Queried by `LudiRefEngine.get_player_crew_bias()` → consumed in `module_f.py` note field (STAR_KILLER / PROTECTOR labels, ≥3.5 PPG delta, ≥5 games threshold). Backfill pending: `scripts/backfill_referee_bias.py` (Feb 28) |
 | `team_betting_trends` | 30 | H/A records, scoring avgs, ATS splits — computed from canonical_games + player_game_logs + bet_recommendations. Synced by `scripts/sync_team_betting_trends.py`. (Feb 28) |
-| `player_synergy_playtypes` | 1,326 | Synergy playtype data |
+| `player_synergy_playtypes` | 1,326 | Created in migrations/create_synergy_tables.sql (not database.py init_db). Synergy playtype data |
 | `player_shot_quality` | 499 | PBP Stats shot quality data |
-| `team_lineups` | 10,669 | WOWY lineup data |
+| `team_lineups` | 10,669 | Created in scripts/sync_wowy_backfill.py (not database.py init_db). WOWY lineup data |
 | `player_canonical_ids` | 638+ | ID crosswalk: `canonical_id`, `normalized_name`, `full_name`, `sportsdata_id`, `dk_player_id`, `fd_player_id`, `espn_id` (Feb 24); `team` column removed (Mar 3) — team always via LEFT JOIN `players`. CREATE TABLE in `database.py`. Full remediation Mar 4: 0 dirty canonical IDs, 99.79% downstream clean. |
 | `canonical_teams` | 30 | Team ID crosswalk: `standard_abbr` (PK), `full_name`, `bdl_abbr`, `tank01_abbr`, `espn_id`; single source of truth for all BDL/Tank01/ESPN team ID mappings (Feb 24) |
 | `canonical_games` | 955+ | Game identity crosswalk: `canonical_game_id` PK (`{date}_{home}_{away}`), `nba_official_id` (002... format), `referee_crew`, `pace`. Deduplicates the 3-format games table (NBA official / shortened / date-team). `sync_canonical_games(conn)` importable from `database.py`. Use for Pattern-B JOINs (date+team pair) to prevent 3× row inflation. Added Feb 28. |
@@ -152,6 +152,43 @@ from module_e import LudiEvaluator           # ImportError
 | `ask_ludi_interactions` | Dynamic | Ask Ludi query/response log for local model training. Written by `bots/ask_ludi_handlers.py` `handle_message()` — one row per user message. Columns: `query_text`, `intent`, `response_text` (truncated to 2000 chars), `response_time_ms`, `session_id` (Telegram user_id as string). Primary training corpus for intent classification fine-tuning. Added Mar 29. |
 | `pm_bot_messages` | Dynamic | PM bot briefing archive for local model training. Written by `utils/pm_bot.py` `generate_briefing()` + `send_break_message()`. Columns: `mode` (morning/session/nightly/break), `briefing_text`, `telegram_sent` (0/1). Added Mar 29. |
 | `ludi_ops_log` | Dynamic | Company operations event log for local model training. Written via `utils/ops_logger.log_ops_event()`. Captures routing decisions, code review outcomes, ADRs, owner interactions. Columns: `event_type` (ROUTING/CODE_REVIEW/OWNER_INTERACTION/ADR/PROMPT_CHANGE), `actor`, `target_employee`, `task_type`, `input_summary`, `output_summary`, `outcome` (nullable), `blocker_reason`, `session_id`, `prompt_version`, `token_cost_usd`, `model`, `tags` (JSON string). Added Mar 29. |
+| `roster_history` | Dynamic | Player team-change audit log: change_type, change_date, previous_team, status per season. |
+| `shot_quality` | Dynamic | PBP Stats-derived per-game shot quality metrics: shot_quality_avg, leverage_score, wowy_on_off. |
+| `player_workload` | Dynamic | Season rebounding + passing workload: contested_reb_pct, total_passes (NBA Tracking Phase 1.3). |
+| `defender_matchups` | Dynamic | Per-player vs per-defender matchup stats: matchup_minutes, fg_pct vs specific defender (NBA Tracking Phase 1.3). |
+| `player_game_tracking` | Dynamic | Per-game tracking: drives, catch-and-shoot, pull-up shooting, speed/distance (Module H Ghost Protocol, NBA.com). |
+| `player_game_advanced` | Dynamic | Per-game advanced box score: off_rating, def_rating, net_rating, usg_pct, ts_pct, pace, PIE (Module H). |
+| `player_clutch_stats` | Dynamic | Per-game clutch stats (±5 pts, last 5 min): clutch_pts, clutch_fga, clutch_fg_pct (NBA API). |
+| `player_game_opponent` | Dynamic | Per-game opponent defensive stats: opp_pts, opp_reb, opp_ast allowed vs the player's team (Phase 3). |
+| `player_game_hustle` | Dynamic | Per-game hustle stats: screen_assists, deflections, loose_balls_recovered, charges_drawn (Phase 4). |
+| `player_wowy_stats` | Dynamic | Per-game WOWY on/off splits: on/off_court_off_rtg, on_off_diff, possessions (PBP Stats). |
+| `referee_game_assignments` | Dynamic | Daily referee crew assignments: game_date, home_team, crew, source. PRIMARY KEY (game_date, home_team). |
+| `referee_daily_stats` | Dynamic | Rolling 5-game referee stats: last5_fouls_avg, is_hot_whistle, is_fast_paced (NBAStuffer). |
+| `depth_charts` | Dynamic | Official Tank01 depth charts: team_abbr, position, player_name, depth_order (1=starter). Updated daily (Phase 6.1). |
+| `player_season_wowy` | Dynamic | Full-season on/off splits from PBP Stats: on/off_ortg, on/off_drtg, on_off_diff, Four Factors (Phase 6.3). |
+| `team_leverage_profiles` | Dynamic | Team game-state efficiency: vh/h/l/overall ortg + efg_pct + pace per leverage tier (PBP Stats Sprint 3). |
+| `player_leverage_usage` | Dynamic | Player crunch-time usage: clutch_usage_rate, vh_shot_attempts vs total_shot_attempts (PBP Stats Sprint 3). |
+| `player_defensive_synergy` | Dynamic | Per-player defensive synergy playtypes: poss_per_game, ppp_allowed, fg_pct_allowed per playtype (Phase 7.9). |
+| `team_scheme_cache` | Dynamic | Cached defensive scheme per team: season_style, 21d, 14d, active_style. PRIMARY KEY (team_abbr, scheme_type). Query WHERE scheme_type='DEFENSE'. |
+| `player_injuries` | Dynamic | Live injury snapshots: status, injury_type, onset_date, snapshot_time, is_game_day_report, resolved_at (Phase 8.0). |
+| `canonical_injury_statuses` | Dynamic | Reference table: status_code PK, severity_score, sim_multiplier, usage_vacuum_trigger, confidence_decay_hours (Phase 8). |
+| `injury_language_map` | Dynamic | Source-phrase-to-canonical-status mapping: source_phrase, source, canonical_status, parse_type, confidence (Phase 8). |
+| `game_notes_log` | Dynamic | Claude-generated S.A.V.A.G.E. game notes archive: game_id, run_date, notes_text. UNIQUE(game_id, run_date) (Phase 8.6). |
+| `rotation_profiles` | Dynamic | Per-player situational minutes: avg_min_as_starter/bench/blowout/b2b/close_game, depth_order, window_days=21 (Phase 8.9). |
+| `beneficiary_minutes` | Dynamic | Injury beneficiary analysis: out_player → beneficiary player minutes_delta across games_without (Phase 8.9). |
+| `player_stagger_stats` | Dynamic | Two-man pairing on/off splits: pts/ast/reb/usg with/without partner_player, per season (Phase 8.9-B). |
+| `player_stint_profiles` | Dynamic | Intra-game stint patterns: avg_first_stint_min, pct_games_q4_starter, avg_min_q4_when_close (Phase 8.9). |
+| `nba_calendar` | Dynamic | Schedule metadata for every date including off-days: has_games, game_count, season_phase. Separate from `games` table (Phase 8). |
+| `player_trends` | Dynamic | Pre-computed L7/L10/L15 + season_avg per stat per player: trend_label, streak_vs_avg. Stats: PTS/REB/AST/3PM/BLK/STL/TOV/PRA/PA/PR/RA/MIN (Phase 8.15). |
+| `tank01_projections` | Dynamic | Tank01 fantasy projections: pts/reb/ast/stl/blk/tov/fantasy_pts. READ-ONLY benchmark — never fed into SAVAGE model. |
+| `team_current_info` | Dynamic | Team standings + win/loss streaks: wins, losses, win_streak, conference_rank. Synced daily from getNBACurrentInfo. |
+| `player_news_cache` | Dynamic | Daily player/team news from Tank01 getNBATopNews: headline, content, published_at. Dedup on (headline, published_at). |
+| `player_injury_history` | Dynamic | Historical injury records: injury_date, return_date, injury_type, games_missed. *(source API dead — Tank01 getNBAInjuryListHistory confirmed 404 — table kept for future BDL/Perplexity data.)* |
+| `player_season_averages_bdl` | Dynamic | BDL V2 season averages: stats_json, ppp, efg_pct, drives, avg_speed, deflections, box_outs, screen_assists (Sprint B). |
+| `team_standings_bdl` | Dynamic | BDL V2 standings: wins, losses, win_pct, conference/division rank, home/away splits, ortg, drtg, pace (Sprint D). |
+| `player_wowy_observed` | Dynamic | Starter-filtered WOWY: observed pts/reb/ast/min for beneficiary canonical_id when star_canonical_id is out. Trade-aware (Phase 2B). |
+| `player_canonical_ids_staging` | Dynamic | Auto-ingest staging for unrecognized player IDs: source, source_player_id, seen_count. Auto-promotes after 3+ appearances. |
+| `player_projections` | Dynamic | Full projection breakdown per simulated player: base_projection, modifier values (pace/fatigue/ref/blowout/scheme/empirical), percentiles (p10–p90), is_bet. NOTE: player_id is always NULL — JOIN key = (player_name, game_date). See TD-023. |
 
 #### Player Classification Columns — Hybrid Off/Def System (Feb 22 2026)
 

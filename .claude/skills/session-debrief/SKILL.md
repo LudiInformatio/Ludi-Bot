@@ -105,11 +105,21 @@ Use the Step 2 findings to determine what to check:
 |---------------------------|----------------|
 | Module files (`module_*.py`) | `docs/ARCHITECTURE.md` module reference table |
 | Workflow files (`.github/workflows/*.yml`) | `CLAUDE.md` automation schedule table |
-| Database schema (`database.py`) | `docs/ARCHITECTURE.md` schema section |
+| Database schema (`database.py`) | `docs/ARCHITECTURE.md` schema section + **run schema gap check below** |
 | New API behavior confirmed | `CLAUDE.md` API Configuration table |
 | New scripts added | `CLAUDE.md` Quick Commands or `docs/TOOLS_GUIDE.md` |
 | Any session with shipped features or phase completions | `README.md` — update Status date, Active/Planned Next section, add to Phase 8 completions table if warranted |
 | Code fixes or workarounds shipped | `docs/TECH_DEBT.md` — move resolved items to Archive with commit hash; add new debt discovered |
+
+**Schema gap check (run every session, not just when database.py changed):**
+```bash
+db_tables=$(grep -c 'CREATE TABLE IF NOT EXISTS\|CREATE TABLE [^I]' database.py 2>/dev/null || echo 0)
+arch_tables=$(grep -c '^\| \`' docs/ARCHITECTURE.md 2>/dev/null || echo 0)
+echo "DB:$db_tables ARCH:$arch_tables GAP:$((db_tables - arch_tables))"
+```
+- GAP ≤ 5 → acceptable drift, skip
+- GAP 6–15 → add to **Next Session Priorities** in the debrief output
+- GAP > 15 → add to Next Session Priorities AND flag in ROADMAP `**Active Work:**` if not already there
 
 If nothing in the relevant doc is wrong → skip this step entirely.
 

@@ -50,6 +50,14 @@ When invoked, perform ALL of the following steps before writing any output:
 
 4. **Use the Bash tool to run `git status --short`** — modified + untracked files
 
+5. **Use the Bash tool to run the schema gap check:**
+   ```bash
+   db_tables=$(grep -c 'CREATE TABLE IF NOT EXISTS\|CREATE TABLE [^I]' database.py 2>/dev/null || echo 0)
+   arch_tables=$(grep -c '^\| \`' docs/ARCHITECTURE.md 2>/dev/null || echo 0)
+   echo "DB:$db_tables ARCH:$arch_tables GAP:$((db_tables - arch_tables))"
+   ```
+   If GAP > 5, surface as a warning in the brief output (see Step 3 below).
+
 ---
 
 ### Step 3 — Output the Session Brief
@@ -74,6 +82,9 @@ Format the output exactly as shown below. Keep each section tight — bullets on
 
 ### Memory Highlights (recent)
 [2-4 most recent bullet points from MEMORY.md that are likely relevant right now]
+
+### ⚠️ Schema Gap  ← ONLY include this section if GAP > 5
+`database.py` has [DB count] CREATE TABLE statements but `docs/ARCHITECTURE.md` only documents [ARCH count]. [GAP] tables undocumented. Run Option B sync or dispatch Henrik.
 
 ### Recommended Next Step
 [One sentence synthesizing all of the above: "Based on the active work and recent commits, the most logical next step is..."]
