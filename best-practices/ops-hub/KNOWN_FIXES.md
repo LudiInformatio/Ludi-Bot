@@ -815,3 +815,33 @@ git push origin main                   # Runner now gets correct code
 **Fix:** Added `SLACK_WEBHOOK_ALERTS: ${{ secrets.SLACK_WEBHOOK_ALERTS }}` to all 3 steps. Commit `2f421a4`.
 
 **Rule:** When adding a new env secret to a workflow, grep ALL workflow steps that invoke any script/module using that secret — not just the "main" step. Modules called as Python imports inherit the env of their calling script, not the workflow.
+
+## 2026-03-31 — All game dossiers show "Unknown defense" for every team
+
+**Symptom:** Every Claude game prompt includes "Unknown defense" instead of team's actual scheme. All 30 teams affected.
+
+**Root cause:** `game_dossier.py:119` queried `WHERE scheme_type='defense'` (lowercase) but DB stores `'DEFENSE'` (uppercase). SQLite string comparison is case-sensitive for non-ASCII, so all 30 rows returned 0 results. Silent failure — no error, just empty string → "Unknown defense" fallback.
+
+**Fix:** Changed `'defense'` → `'DEFENSE'` at `game_dossier.py:119`. Commit `a6da13b`.
+
+**Rule:** Always check `PRAGMA table_info` + `SELECT DISTINCT scheme_type FROM team_scheme_cache` before assuming the column value format. COMMON_MISTAKES §2.1 table already lists the correct query pattern.
+
+## 2026-03-31 — BDL team abbrev mismatch causes false NEWLY_TRADED tags + minutes dampener
+
+**Symptom:** PHX/SAS/NOP/NYK/GSW players flagged as NEWLY_TRADED (5% minutes dampener applied), even when they've been on the team all season.
+
+**Root cause:** `player_game_logs.team_abbreviation` stores BDL short-form (PHO/SA/NO/NY/GS). Queries in `game_dossier.py` L75 and `main.py` L273 used canonical abbrevs (PHX/SAS etc.) → zero rows returned → false "no recent games on this team" → NEWLY_TRADED.
+
+**Fix:** Added `normalize_bdl_abbr(team)` wrapping at both query sites. Commit `a6da13b`.
+
+**Rule:** Any query on `player_game_logs.team_abbreviation` must use BDL-normalized abbreviation. See CLAUDE.md Known Gotchas §2.3.
+
+## 2026-03-31 — Star player projections reaching 40+ PPG (LeBron 43, KD 41)
+
+**Symptom:** `module_e.py` output contained `proj_pts: 43.2` for LeBron. Existing GLOBAL MODIFIER CAP was not catching it.
+
+**Root cause:** GLOBAL MODIFIER CAP (module_e.py L1450-1480) anchored to `base_pts` (Module C's output, ~37 PPG after pace/empirical/fatigue). The 1.15× ceiling on 37 = 42.5. Layer 2 now anchors to `season_avg_PTS` (~24 PPG) → ceiling = 36 PPG.
+
+**Fix:** Added Layer 2 absolute floor+ceiling (`PROJ_HARD_CEIL=1.50`, `PROJ_HARD_FLOOR=0.40` × `season_avg`) at `module_e.py:1482`, after GLOBAL MODIFIER CAP. Gated by `MODIFIER_FLAGS['proj_hard_bounds']`. Commit `a6da13b`.
+
+**Rule:** Modifier caps must be anchored to a stable reference (season average), not an upstream module's already-modified output. Anchoring to modified output allows compound multiplication to bypass the cap.

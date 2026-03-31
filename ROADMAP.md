@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Monday, March 30, 2026 — 3:45 PM EDT
+**Last Updated:** Tuesday, March 31, 2026 — 2:58 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
-**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + T5c Game Score v2 (`module_f.py` `_score_game()`) + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed
-**Completed:** Pre-Phase 9 Sankore all-hands review — 5-cluster 50+ docs, Option C resolved, FUNNEL fix + synthesis_score scoped ✅ + T5b API quota circuit breaker — `api_monitor.py` pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅ + T5d Smart Money Layer — Pinnacle columns in `prop_line_snapshots`, STEAM_MOVE tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅
+**Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed + FUNNEL scheme re-classification (Lena query pending)
+**Completed:** T5c Game Score Formula v2 — STEAM_ALIGNED/STEAM_FADE signal in `_score_game()` (`bccdaf0`) ✅ + Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + BDL abbr normalization + Layer 2 floor/ceiling — fixes 43 PPG projection bug + scheme "Unknown" (`a6da13b`) ✅
 
 This is the single source of truth for project tasks and priorities.
 
@@ -52,7 +52,9 @@ This is the single source of truth for project tasks and priorities.
 - [x] **WOWY Ghost Protocol** — XHR interceptor, lineup key normalization, DELETE+INSERT two-pass, 100% lineup_id 131 dates (`f00c9e3`) ✅
 - [x] **T5d: Smart Money Signal Layer** — Pinnacle columns in `prop_line_snapshots`, `STEAM_MOVE` tag, `capture_pinnacle_lines.py` + SNIPER_ELITE B2B exemption (`bf5fcaa`) ✅
 - [x] **T5b: API Quota Circuit Breaker** — `check_quotas(exit_on_fail=True)` in `scripts/api_monitor.py` + pre-flight gate in `daily_simulation_pipeline.yml` (`ac7597a`) ✅
-- [ ] **T5c: Game Score Formula v2** — line movement delta + handle% to `_score_game()`. Route: Lena specs weights → junior dev → Henrik.
+- [x] **T5c: Game Score Formula v2** — STEAM_ALIGNED/STEAM_FADE signal in `morning_brief.py` `_score_game()`. Lena spec → Henrik APPROVED → `bccdaf0` ✅
+- [x] **BDL abbr normalization + Layer 2 floor/ceiling + scheme fix** — `normalize_bdl_abbr()` in `game_dossier.py` + `main.py`, `scheme_type='DEFENSE'` case fix, `PROJ_HARD_CEIL=1.50`/`PROJ_HARD_FLOOR=0.40` anchored to `season_avg` in `module_e.py` (`a6da13b`) ✅
+- [ ] **Bayesian role-update spec** — Role-volatile bench players (e.g., Gui Santos) pinned to stale L25 baseline; L5 breakout not captured fast enough. Lena to spec L5 vs L25 divergence threshold — when to weight recent role heavier. Route: Lena spec → junior dev → Henrik.
 - [ ] **Phase 3 MIN_SCALE coupling** — scale FGA/FTA/REB/AST pre-sim using min_scale in `module_c.py`. BLOCKED: Phase 2 needs 1-week production stability (earliest Apr 4). Route: junior dev → Henrik.
 - [ ] **Sprint 2: Dynamic Rec Lifecycle + Perplexity upgrade** — `is_valid` column, `revalidate_recs.py`, `midday_refresh.py` (2 PM + 4:30 PM EST), `perplexity_client.py` upgrades. Full spec in `plans/pure-baking-river.md` PART 2B + 2C.
 - [ ] **Alt note surface** — wire `Alt:` note from `bet_recommendations.note` into `morning_brief.py` cards + `bots/ask_ludi_db.py` edges intent (Sprint 4 follow-up).
@@ -64,7 +66,7 @@ This is the single source of truth for project tasks and priorities.
   - **Route:** Maren writes prompt spec → Lena validates direction hit rate before/after on `claude_analysis_log` → Henrik reviews structural changes → Solomon approves.
 - [ ] **Research follow-ups** — injury timestamp in cards (`player_injuries.snapshot_time`), `pct_money+diff` in Phase 8.22 social_signals, Ask Ludi `edges` intent 11-row scorecard, Ask Ludi `injuries` sub-intent WOWY delta.
 - [ ] **Telegram native formatting upgrade** (`morning_brief.py`) — 4 zero-API text changes: (1) `>` blockquote on Key Advantage, (2) monospace projection table for bet cards, (3) L10 team context line under game header, (4) shot type progress bar per player. All data already in DB. Full spec + source screenshots: `docs/FUTURE_DATA_SOURCES.md` §5.3.
-- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. Prerequisite: anti-look-ahead backtesting fix (Vera/Henrik all-hands finding). UNBLOCK PATH: add `signal_available_at` + `acted_on_at` columns to `claude_analysis_log` (four-timestamp pattern, Henrik finding E3).
+- [ ] **Brier score calibration analysis** — model probability confidence worse than naive (0.2666 vs 0.25 baseline). UNBLOCKED: 6,402 rows in `claude_analysis_log`. `signal_available_at` + `acted_on_at` columns now live (`8907581`). Next step: anti-look-ahead backtesting fix (populate the new columns at write time), then run Brier analysis.
 
 - [ ] **Post-game simulation eval** (`scripts/post_game_eval.py`) — **Autoresearch feed.** After each game slate completes, run a backward evaluation pass: compare `player_projections` vs actual `player_game_logs`, decompose error by modifier (pace_contribution, fatigue_contribution, scheme_contribution, ref_contribution), write per-bet RMSE + modifier delta rows to new `post_game_eval_log` table. This is the data source for the autoresearch loop and Darwinian weight system. Schedule: nightly after games complete (~11 PM, launchd or GH Actions). Output feeds `calibrate_claude_outputs.py` weekly run.
   - **Schema:** `post_game_eval_log (game_date, player_name, stat, projected, actual, error, abs_error, pace_delta, fatigue_delta, scheme_delta, ref_delta, empirical_delta, curation_grade, prompt_version, created_at)`
@@ -86,7 +88,7 @@ This is the single source of truth for project tasks and priorities.
 
 - [ ] **TK task format rollout** — All employee agents updated to use 8-field task contract for every dispatch. `AGENTS.md` updated ✅. `.claude/agents/henrik.md` updated ✅. Remaining: verify all 8 employee agent files reference TK format in their dispatch sections.
 
-- [ ] **Four-timestamp columns on `claude_analysis_log`** — Add `signal_available_at TEXT` + `acted_on_at TEXT`. Directly unblocks anti-look-ahead fix → unblocks Brier calibration. Route: junior dev → Henrik. (Henrik finding E3)
+- [x] **Four-timestamp columns on `claude_analysis_log`** — `signal_available_at TEXT` + `acted_on_at TEXT` added to schema, CREATE TABLE, and all INSERT sites (`8907581`) ✅
 
 ---
 
@@ -97,17 +99,17 @@ This is the single source of truth for project tasks and priorities.
 
 | # | Sub-Phase | Status | Description | Cost |
 |---|-----------|--------|-------------|------|
-| 8.8 | Game Score Formula v2 | CARRIES → P9 | Add line movement delta + handle% to `_score_game()`. Data available. T5c scope. | $0 |
+| 8.8 | Game Score Formula v2 | ✅ COMPLETE | STEAM_ALIGNED/STEAM_FADE signal in `morning_brief.py` `_score_game()`. handle% unavailable (not ingested). Pinnacle delta = Phase 2 when data accumulates. (`bccdaf0`) | $0 |
 | 8.11 | Ludi Power Ratings | LOW | Blended ortg+drtg+pace power ratings for game scoring + Ludi Lens. | $0 |
 | 8.13 | Ask Ludi — Telegram Bot | TESTING | v1 live — `/start`, `/help`, 7 intents. Data freshness layer shipped: ghost injury guard, `build_slate_context()` cache, freshness footers, BERT prompt upgrade, ESPN fallback Source 4. | ~$0.02/day |
 | 8.22 | Social Intelligence System | MEDIUM | Social sentiment + market signals → Prop Pulse Score injected into `curate_plays.py`. Architecture complete. See `docs/projects/SOCIAL_INTELLIGENCE_SYSTEM.md`. | ~$0.02/day |
-| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (6,402 rows as of Mar 28). Calibration infra complete: T-CAL-001 + T-8.23-E/F + per-grade breakdown + Maren prompt fixes all Henrik APPROVED. Key finding: STRONG 57.0% > LEAN 51.0% > FADE 49.3% at N=1,850 (grade hierarchy normalized). Brier analysis blocked on anti-look-ahead fix. | $0 |
+| 8.23 | Claude/Perplexity Feedback Loop | MEDIUM | Layer 1 LIVE — `claude_analysis_log` collecting per-bet rows (6,402 rows as of Mar 28). Calibration infra complete: T-CAL-001 + T-8.23-E/F + per-grade breakdown + Maren prompt fixes all Henrik APPROVED. Key finding: STRONG 57.0% > LEAN 51.0% > FADE 49.3% at N=1,850 (grade hierarchy normalized). `signal_available_at` + `acted_on_at` columns now live (`8907581`) — Brier anti-look-ahead unblocked. Next: populate columns at INSERT time. | $0 |
 
 ---
 
 ### Database Architecture Strategy
 
-**Current State:** Single SQLite database (`ludi.db`) — ~30 MB, 40+ tables
+**Current State:** Single SQLite database (`ludi.db`) — ~132 MB, 40+ tables (projected 400 MB by Aug 2026 — archive plan needed April)
 
 **Phase 1: Consolidation** ✅ COMPLETE — Single source of truth, direct SQLite writes, no JSON staging
 
@@ -145,15 +147,14 @@ This is the single source of truth for project tasks and priorities.
 - [x] **Lena: Season Pattern Mining** — BLK UNDER 70.3% WR (N=1,067), SNIPER_ELITE B2B +1.0 pts (N=818), STRETCH_BIG vs FUNNEL 64.7% (N=68). Referee tendencies BLOCKED on 2024-25 backfill. SNIPER_ELITE exemption shipped (`bf5fcaa`) ✅
 - [ ] **`bots/solomon_bot.py`** — moved to Phase 9. Two-way Telegram chat with Solomon. Pattern: `bots/ask_ludi.py`. Stays external (always-on).
 
-### Pre-Phase 9: Company Study + Cross-Pollination Sprint (Before Phase 9 Begins)
-**Status:** PLANNED — scheduled for a dedicated session before Phase 9 kickoff
-**Scope:** Full company review — employees (LESSONS_LEARNED backfill, REFERENCE_CARD updates, training loop fix) + code (prompt patterns, calibration baselines, any architectural debt that Phase 9 will build on). Goal: every employee enters Phase 9 with a clean, current knowledge state.
-**Key areas identified in Mar 30 audit:**
-- Backfill LESSONS_LEARNED for Maren, Kai, Gemini, Iris (empty) + Henrik/Lena/Silas/Vera (stale since Mar 10)
-- Update all 6 REFERENCE_CARDs with patterns from Sessions 2–7 (batch tokens, accent-safe JOIN, Playwright listeners, HIGH_DIVERGENCE, PE-2 pre-flight)
-- Wire session-debrief to prompt LESSONS_LEARNED updates per domain touched
-- Code baseline: validate RMSE gates, calibration curves, and any TD items blocking Phase 9 Sprint 1
-- [ ] Schedule this sprint before Phase 9 kickoff
+### Pre-Phase 9: Company Study + Cross-Pollination Sprint ✅ COMPLETE (Mar 30, 2026)
+**Status:** COMPLETE — full company cross-pollination session completed Mar 30
+**Scope:** Full company review — employees (LESSONS_LEARNED backfill, REFERENCE_CARD updates, training loop fix) + code (prompt patterns, calibration baselines, any architectural debt that Phase 9 will build on).
+- [x] 5-employee LESSONS_LEARNED backfill — Maren (6), Kai (5), Gemini (4), Iris (2), Solomon (+3) ✅
+- [x] Full team repo audit (5 clusters, 50+ docs) — Henrik, Silas, Maren, Lena, Org cluster ✅
+- [x] DuckDB migration scoped — `docs/projects/DUCKDB_MIGRATION.md`, `utils/db_connection.py` plan, review gate: Lena + Henrik before Phase 9 Sprint 1 ✅
+- [x] Adaptive Thinking syntax fix — correct Sonnet 4.6 pattern documented (`thinking: {"type": "adaptive"}`), old `budget_tokens` = DEPRECATED ✅
+- [x] Competitive moat analysis — VSiN/Opta, Rithmm, PickScope reviewed. Moat = calibration + narrative depth ✅
 
 ### Phase 9: Advanced LLM Paradigms & Model Calibration (Post-Phase 8)
 **Full plan:** `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md`
@@ -215,7 +216,7 @@ This is the single source of truth for project tasks and priorities.
 - [ ] PBP Stats: wire `get_possessions` endpoint → clutch detection + blowout tax validation (Section 4.4 in `docs/FUTURE_DATA_SOURCES.md`)
 - [ ] Ghost Protocol date-skip optimization: pre-check `team_lineups` before scraping each date (~30s saved)
 - [ ] Multi-book arbitrage detection
-- [ ] Steam move detection (rapid line movement alerts)
+- [x] Steam move detection — `STEAM_MOVE` tag in `module_f.py` via T5d Pinnacle snapshot layer (`bf5fcaa`) ✅
 
 ### GH Actions / Claude Ops Improvements
 - [ ] **PR review action**: Add `anthropics/claude-code-action@v1` to PR events for automated code review on push to main
