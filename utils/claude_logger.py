@@ -13,10 +13,13 @@ Layer 2: scripts/calibrate_claude_outputs.py — weekly Wilson accuracy per call
 Layer 3: inject calibration dict into _get_system_wr_context() (already wired for stat confidence)
 """
 
+import logging
 import os
 import sqlite3
 
 # Pricing per 1k tokens (Feb 2026 rates)
+logger = logging.getLogger(__name__)
+
 _HAIKU_IN  = 0.0008
 _HAIKU_OUT = 0.004
 _SONNET_IN = 0.003
@@ -76,5 +79,5 @@ def log_claude_call(
         )
         conn.commit()
         conn.close()
-    except Exception:
-        pass  # Never let logging break the pipeline
+    except Exception as e:
+        logger.debug(f"[claude_logger] log_claude_call suppressed: {e}")

@@ -2004,8 +2004,8 @@ class LudiHistorian:
         ]:
             try:
                 c.execute(_col_def)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[migration] ALTER TABLE failed (likely already exists): {e}")
 
         # Sprint 1 — lineup_id column for WOWY lineup identity
         try:

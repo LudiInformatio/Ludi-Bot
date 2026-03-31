@@ -254,6 +254,7 @@ class LudiOrchestrator:
         # Phase 8.12: catch players traded in last 1-2 days who haven't played for new team
         tier1_ids = {p['player_id'] for p in roster}
         try:
+            team_abbr = normalize_bdl_abbr(team_abbr)
             conn15 = sqlite3.connect(self.db_path)
             cursor15 = conn15.cursor()
             cursor15.execute("""
@@ -270,7 +271,7 @@ class LudiOrchestrator:
                       WHERE pgl2.player_id = p.player_id
                         AND pgl2.game_date >= date('now', '-30 days')
                   )
-            """, (team_abbr, normalize_bdl_abbr(team_abbr)))
+            """, (team_abbr, team_abbr))
             traded_players = cursor15.fetchall()
 
             for pid, pname in traded_players:
