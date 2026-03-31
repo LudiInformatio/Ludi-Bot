@@ -150,9 +150,9 @@ jobs:
         continue-on-error: true
         run: |
           echo "Running Weekly Archetype Classification..."
-          # Batch mode disabled until GENERALIST rate tuned below 35% — see plans/batch_archetype_classification_spec.md
+          # Batch mode re-enabled — per-player removed to prevent 30-min SIGKILL + WAL lock cascade
           # --limit 400 guards against timeout (400×2.5s≈17min, well under 30min cap)
-          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 --per-player --limit 400 || echo "WARNING: Classification failed -- continuing"
+          .venv/bin/python scripts/classify_archetypes.py --window-days 21 --min-games 3 --limit 400 || echo "WARNING: Classification failed -- continuing"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 

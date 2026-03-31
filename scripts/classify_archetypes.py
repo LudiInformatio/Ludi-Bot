@@ -85,7 +85,9 @@ OFFENSIVE:
 
 
 def get_db_connection(db_path='ludi.db'):
-    return sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")
+    return conn
 
 
 def get_active_players(conn, window_days=21, min_games=3):
@@ -1517,13 +1519,11 @@ def main():
     
     if not args.dry_run and n_resolved > 0:
         conn.commit()
-    
+
     after_neutral = 0
     cur.execute("SELECT COUNT(*) FROM team_scheme_cache WHERE scheme_type='DEFENSE' AND active_style='NEUTRAL'")
     after_neutral = cur.fetchone()[0]
-    
-    conn.close()
-    
+
     # ===================== SUMMARY =====================
     generalist_pct = (generalist_count / processed * 100) if processed > 0 else 0
 
@@ -1572,6 +1572,7 @@ def main():
         'neutral_after': after_neutral,
     }
 
+    conn.close()
     return summary
 
 
