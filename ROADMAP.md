@@ -160,6 +160,34 @@ This is the single source of truth for project tasks and priorities.
 - [x] Adaptive Thinking syntax fix — correct Sonnet 4.6 pattern documented (`thinking: {"type": "adaptive"}`), old `budget_tokens` = DEPRECATED ✅
 - [x] Competitive moat analysis — VSiN/Opta, Rithmm, PickScope reviewed. Moat = calibration + narrative depth ✅
 
+### Sankore Wealth Group Cross-Pollination Audit — Ludi-Bot Review (Apr 1, 2026)
+**Source:** `07-meetings/senior/cross-pollination-ludibot-260401.md` | All 7 department heads present (Mansa, Kofi, Safiya, Sekou, Amara, Tariq, Kito)
+**Status:** Filed. Takeaways being integrated incrementally — not a separate sprint.
+
+**Validates existing Ludi-Bot architecture (no change needed):**
+- Pre-load at init / zero runtime queries (F6) → Module C/B pre-load pattern ✅
+- Circuit breaker with per-endpoint isolation → T5b quota gate ✅
+- Database Firewall 4-tier ID resolution → `LudiHistorian.resolve_player_id_for_insert()` ✅
+- Feature flag / modifier toggle system → `config.MODIFIER_FLAGS` (40+ flags) ✅
+- Predict-then-update ordering (F12) → `signal_available_at` + `acted_on_at` columns (in progress) ✅
+- Nightly calibration loop (F3) → `scripts/post_game_eval.py` (active sprint) ✅
+- Temporal correctness (F9) → Brier anti-look-ahead fix (next priority) ✅
+
+**Gaps to integrate (logged as ROADMAP items):**
+- [ ] **F11 — Monotonic edge validation alert** — DIAMOND WR < CORE_ASSET WR is a live F11 violation. Add weekly backtest alert: if any lower-tier WR exceeds a higher-tier WR at N≥100 → Slack alert. `synthesis_score` continuous float (already in ROADMAP) is the architectural fix. Validation gate is the guard rail. Route: Lena spec → junior dev → Henrik.
+- [ ] **F10 — Negative result registry (`model_deployments` table)** — "better at catching failure than confirming success." Autoresearch loop needs a formal log of what was tested, what was deployed, and what was reverted. `model_deployments (trial_id, target, variant_description, prompt_version, started_at, ended_at, n_bets, wr, p_value, verdict, reverted_at)`. Henrik Finding E4 already identified this table as missing. Route: Lena spec → junior dev → Henrik. Unblocks autoresearch loop tracking.
+- [ ] **F8 — Data provenance tags (systematic)** — We have partial coverage (`role_data_flag`, `data_confidence` on foul splits) but no systematic provenance tag across all modifier inputs. Phase 9 data quality tiers (COMPLETE/PARTIAL/DEGRADED/INVALID) address this. Integrate as part of Phase 9 Sprint 1 measurement infra.
+- [ ] **Feature flag audit trail** — `MODIFIER_FLAGS` env override has zero logging (no actor, no timestamp). Add `flag_changes_log (flag_name, old_value, new_value, changed_by, changed_at)` table — lightweight Kito-style audit without Supabase. Route: junior dev → Henrik.
+
+**Sankore adoptions of Ludi-Bot patterns (for reference):**
+- Sankore is porting DB Firewall to financial instrument CUSIPs/ISINs (Sekou builds, Zuberi maps)
+- Sankore is porting `MODIFIER_FLAGS` to Supabase `feature_flags` table with `last_changed_by` + `changed_at`
+- Sankore is building nightly calibration loop based on Ludi-Bot's `post_game_eval.py` design
+- Ludi-Bot's `synthesis_score` (continuous float) directly addresses their F11 monotonic validation requirement
+
+**Kito's closing statement (institutional memory):**
+> *"When we are wrong, do we know it, and do we know why?"* — Every audit table, every CI gate, every attribution tag exists to answer this. This is the design principle behind `post_game_eval.py`, the autoresearch loop, and the negative result registry.
+
 ### Phase 9: Advanced LLM Paradigms & Model Calibration (Post-Phase 8)
 **Full plan:** `docs/projects/LLM_PARADIGMS_AND_CALIBRATION.md`
 **Research:** `docs/research/LLM_TRAINING_METHODOLOGIES_LANDSCAPE.md` | `docs/research/LLM_CANONICAL_RESEARCH_TABLE.md`
