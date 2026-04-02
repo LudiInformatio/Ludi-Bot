@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Wednesday, April 1, 2026 — 8:22 PM EDT
+**Last Updated:** Thursday, April 2, 2026 — 12:18 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
 **Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed, Lena specs schema → junior dev → Henrik
-**Completed:** GH-39 DB lock cascade fix — `classify_archetypes.py` busy_timeout + accuracy guard + batch mode (`e899e13`) ✅ + Sankore cross-pollination audit logged + 4-issue triage dry run pattern validated (`03ef4ad`) ✅ + SSH dual-account permanent auth — `~/.ssh/config` aliases, both remotes updated ✅
+**Completed:** Sankore cross-pollination audit logged + 4-issue triage dry run pattern validated (`03ef4ad`) ✅ + SSH dual-account permanent auth — `~/.ssh/config` aliases, both remotes updated ✅ + Curation JSON truncation fix — `curate_plays.py` max_tokens 6k→16k + batch 80→50 (`2a72b7e`) ✅
 
 This is the single source of truth for project tasks and priorities.
 

@@ -875,4 +875,19 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 - Moved `conn.close()` to after accuracy guard block — rollback now fires on live connection
 - `weekly_validation.yml`: removed `--per-player` flag → batch mode (~75s vs ~1,000s)
 
+## 2026-04-02 — curate_plays.py `max_tokens=6000` truncation (7 days of silent fallback)
+
+**Symptom:** All curated bets STRONG only (no LEAN/FADE) since Mar 27. "Edge-Sorted (AI unavailable)" label in Telegram cards. Fallback firing every morning.
+
+**Root cause:** Mar 28 fix set `BATCH_SIZE=80` + `max_tokens=6000`. With 159 passing bets, 80-bet batches still generate ~8-10K tokens of JSON output — exceeding the 6K cap. Response truncated mid-JSON → `JSONDecodeError` → fallback. The previous fix reduced the cap too aggressively.
+
+**Diagnosis path:** DB fingerprint: `curation_grade` showing only STRONG (no LEAN/FADE) = deterministic fallback. `_deterministic_top()` assigns only STRONG. `claude_analysis_log` had `batch` model rows (fallback writes them) but no `curation` Sonnet rows. GH Actions step stdout (not pipeline log file) had the actual warning.
+
+**Fix (`2a72b7e`):**
+- `max_tokens=6000` → `max_tokens=16000` at `curate_plays.py:722`
+- `BATCH_SIZE=80` → `BATCH_SIZE=50` at `curate_plays.py:444` — smaller batches reduce per-batch output ceiling to ~5-10K, giving 1.6-3.2x headroom within 16K cap
+- Sonnet auto-routes to streaming when `max_tokens > 4096` (claude_client.py:100) — no client change needed
+
+**Rule:** When fallback fires and all grades are STRONG (no LEAN/FADE), that's the `_deterministic_top()` fingerprint — not a Claude grading result. Check DB before assuming auth failure. The actual error lives in the GH Actions step stdout for `daily_briefing.yml`, not in `logs/production/`.
+
 **Rule:** When auditing a script with a safety-net rollback, always verify `conn.close()` has NOT already fired before the rollback call. Python sqlite3 raises `ProgrammingError` on a closed connection — the rollback silently becomes dead code. Check execution order, not just presence.
