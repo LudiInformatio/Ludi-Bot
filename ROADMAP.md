@@ -1,9 +1,9 @@
 # Ludi-Bot Roadmap
 
-**Last Updated:** Tuesday, March 31, 2026 — 6:35 PM EDT
+**Last Updated:** Wednesday, April 1, 2026 — 8:22 PM EDT
 **Current Phase:** Phase 9 — Advanced LLM Paradigms & Model Calibration
 **Active Work:** Game notes Option C (`curate_plays.py`, `module_f.py`) — Zuberi/Roundtable pattern, Maren spec + Lena validates + Post-game sim eval (`scripts/post_game_eval.py`) — autoresearch feed, Lena specs schema → junior dev → Henrik
-**Completed:** Four-timestamp columns on `claude_analysis_log` — unblocks Brier calibration (`8907581`) ✅ + Bayesian blend + combo gate + FUNNEL fallback — Module C/F/E + role_data_flag column (`ab8653d`) ✅ + GH-39 DB lock cascade fix — `classify_archetypes.py` busy_timeout + accuracy guard + batch mode (`e899e13`) ✅
+**Completed:** GH-39 DB lock cascade fix — `classify_archetypes.py` busy_timeout + accuracy guard + batch mode (`e899e13`) ✅ + Sankore cross-pollination audit logged + 4-issue triage dry run pattern validated (`03ef4ad`) ✅ + SSH dual-account permanent auth — `~/.ssh/config` aliases, both remotes updated ✅
 
 This is the single source of truth for project tasks and priorities.
 
