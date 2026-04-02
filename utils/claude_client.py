@@ -1,10 +1,10 @@
 """
 LUDI INFORMATIO | CLAUDE API CLIENT
 ====================================
-OAuth-first authentication priority:
-  - Priority 1: CLAUDE_CODE_OAUTH_TOKEN env var (GitHub Actions)
-  - Priority 2: ~/.claude/config.json → oauthToken (local dev with Max plan)
-  - Priority 3: ANTHROPIC_API_KEY env var (future fallback)
+Authentication priority (correct order as of Mar 2026):
+  - Priority 1: ANTHROPIC_API_KEY env var — long-lived API key, works everywhere
+  - Priority 2: ~/.claude/config.json → oauthToken (local dev, non-CI only)
+  - Priority 3: CLAUDE_CODE_OAUTH_TOKEN env var — expires frequently, last resort
 
 Temperature guide:
   - 0.1: Sanity gates, classification (Haiku)
@@ -17,7 +17,10 @@ Purpose: Phase 8 AI Integration for Ludi-Bot
 
 import os
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
 SONNET_MODEL = "claude-sonnet-4-6"
@@ -84,7 +87,7 @@ def get_claude_analysis(
     auth_token = _get_claude_auth_token()
     
     if not auth_token:
-        print("[claude_client] Warning: No Claude auth token available")
+        logger.warning("[claude_client] No Claude auth token available")
         return None
 
     try:
@@ -149,5 +152,5 @@ def get_claude_analysis(
         return response_text
 
     except Exception as e:
-        print(f"[claude_client] Error: {e}")
+        logger.warning("[claude_client] API call failed: %s", e)
         return None
