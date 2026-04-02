@@ -441,7 +441,7 @@ def _sonnet_curate(
     game_counts is shared across all batches to enforce max-2-STRONG-per-game
     across the full day (not just per batch).
     """
-    BATCH_SIZE = 80
+    BATCH_SIZE = 50
 
     if not passing_bets:
         return None
@@ -719,7 +719,7 @@ Grade every bet listed above. Return JSON array only."""
             system_prompt=system_prompt,
             model=SONNET_MODEL,
             temperature=0.1,
-            max_tokens=6000,
+            max_tokens=16000,
             call_type='curation',
         )
 
