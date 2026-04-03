@@ -366,7 +366,7 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
             f"{base}/events/{game_id}/odds",
             {
                 'api_key':    config.ODDS_API_KEY,
-                'regions':    'us,us2,us_dfs,us_ex,eu',  # match module_a.py L652 — eu unlocks Pinnacle CLV
+                'regions':    'us,eu',  # us=NC Legal books, eu=Pinnacle CLV. Removed us2/us_dfs/us_ex Mar 2026 (credit burn fix)
                 'markets':    PLAYER_PROP_MARKETS,
                 'oddsFormat': 'american',
             }
@@ -380,6 +380,8 @@ def fetch_all_closing_data(pending_bets: List[Dict], game_date: str, verbose: bo
         else:
             print(f"    {away_team} @ {home_team}: props fetch failed, skipping")
 
+    print(f"  Odds API: {len(matched_events)} per-event prop call(s) completed this run — "
+          f"{len(normalized)} succeeded, {len(matched_events) - len(normalized)} failed")
     return normalized, False  # all_games_live=False — we had real pre-tip matches
 
 

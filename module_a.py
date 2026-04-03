@@ -656,7 +656,7 @@ class Gatekeeper:
             url = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{g_id}/odds'
             params = {
                 'api_key': config.ODDS_API_KEY,
-                'regions': 'us,us2,us_dfs,us_ex,eu',  # eu added Mar 1 2026: unlocks Pinnacle for prop CLV
+                'regions': 'us,eu',  # us=NC Legal books, eu=Pinnacle CLV. Removed us2/us_dfs/us_ex Mar 2026 (credit burn fix)
                 'markets': markets,
                 'oddsFormat': 'american'
             }

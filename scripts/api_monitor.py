@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger('api_monitor')
 
-ODDS_API_CRITICAL_THRESHOLD = 200
+ODDS_API_CRITICAL_THRESHOLD = 3000
 ODDS_API_EXHAUSTED_THRESHOLD = 0  # Fully exhausted — BDL fallback takes over, pipeline continues
 TANK01_CRITICAL_THRESHOLD = 50
 
