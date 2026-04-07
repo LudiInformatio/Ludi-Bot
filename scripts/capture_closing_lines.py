@@ -260,6 +260,7 @@ def _odds_api_get(url: str, params: dict) -> Optional[dict]:
             remaining = response.headers.get('x-requests-remaining', 'unknown')
             print(f"  Odds API 401 — quota exhausted or key invalid "
                   f"(quota remaining: {remaining})")
+            _cache_quota("0")  # treat 401 as quota=0 so graceful-exit checks fire downstream
             return None
 
         response.raise_for_status()
