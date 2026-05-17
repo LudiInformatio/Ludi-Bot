@@ -891,3 +891,11 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 **Rule:** When fallback fires and all grades are STRONG (no LEAN/FADE), that's the `_deterministic_top()` fingerprint — not a Claude grading result. Check DB before assuming auth failure. The actual error lives in the GH Actions step stdout for `daily_briefing.yml`, not in `logs/production/`.
 
 **Rule:** When auditing a script with a safety-net rollback, always verify `conn.close()` has NOT already fired before the rollback call. Python sqlite3 raises `ProgrammingError` on a closed connection — the rollback silently becomes dead code. Check execution order, not just presence.
+
+## 2026-05-17 -- Daily Reports: Gemini free-tier quota exhaustion crashes PM Bot morning brief
+
+- **Symptom**: `utils.pm_bot --mode morning` exits code 1 on Gemini 429 RESOURCE_EXHAUSTED (all three free-tier metrics at limit:0), failing the `work-notes` job.
+- **Root Cause**: Gemini free-tier daily RPD quota exhausted. pm_bot has no graceful 429 handling -- raises exception, exit 1.
+- **Fix Applied**: Tier 1 -- added `continue-on-error: true` to "Send PM Bot Morning Brief (Work Notes)" step in `.github/workflows/daily_reports.yml`. Morning brief is a non-critical Telegram notification and must never gate bet settlement or the git commit step. Quota resets nightly so this is a recurrent transient.
+- **Secondary Recommendation**: Add graceful exit(0) for 429 in `utils/pm_bot.py` so the step passes cleanly rather than being suppressed.
+- **Commit/PR/Issue**: issue #45, auto-fix commit
