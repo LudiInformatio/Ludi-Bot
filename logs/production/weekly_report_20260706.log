@@ -1,0 +1,39 @@
+============================================================
+SOLOMON WEEKLY REPORT
+Period: 2026-06-29 -> 2026-07-06
+============================================================
+Settled bets found: 0
+No settled bets this week. Generating empty-pool report.
+Git log lines: 1
+
+============================================================
+## Solomon's Weekly Report — Week of 2026-06-29
+
+### THE WINS
+```
+373ad7fbd chore: data sync 2026-06-30 06:31
+```
+
+### MODEL HEALTH
+No settled bets this week — calibration pool empty.
+| Grade  | W  | N  | WR%  | Lower CI | Flag |
+|--------|----|----|------|----------|------|
+| STRONG | —  | —  | —    | —        |      |
+| LEAN   | —  | —  | —    | —        |      |
+| FADE   | —  | —  | —    | —        |      |
+
+> ! = FADE WR > 55% (grade hierarchy may be inverted)
+
+### CODE HEALTH
+(Henrik digest — populate manually from session notes or `/session-debrief`)
+
+### NEXT WEEK
+(no pending items found in ROADMAP.md)
+
+---
+*Generated: 2026-07-06 | ludi.db settled bets 2026-06-29 → 2026-07-06 | $0 cost*
+============================================================
+
+[OK] Discord #weekly-roundtable sent
+[OK] Slack #ludi-bot-notes sent
+[OK] Report saved to /Users/flyprice/actions-runner/_work/Ludi-Bot/Ludi-Bot/reports/weekly_summary_2026-07-06.md
