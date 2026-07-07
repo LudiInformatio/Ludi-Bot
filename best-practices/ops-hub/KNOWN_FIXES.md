@@ -899,3 +899,21 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 - **Fix Applied**: Tier 1 -- added `continue-on-error: true` to "Send PM Bot Morning Brief (Work Notes)" step in `.github/workflows/daily_reports.yml`. Morning brief is a non-critical Telegram notification and must never gate bet settlement or the git commit step. Quota resets nightly so this is a recurrent transient.
 - **Secondary Recommendation**: Add graceful exit(0) for 429 in `utils/pm_bot.py` so the step passes cleanly rather than being suppressed.
 - **Commit/PR/Issue**: issue #45, auto-fix commit
+
+## 2026-07-07 — Self-hosted runner backlog: scheduled run cancelled with 0 jobs started
+
+**Symptom:** Workflow run shows `conclusion: cancelled`, `status: completed`, but `GET /actions/runs/{id}/jobs` returns `total_count: 0` -- no job (not even `check-slate`) ever started. No failure logs exist because nothing ran.
+
+**Root cause:** The self-hosted runner is intermittently backed up -- other runs across multiple workflows are simultaneously sitting in `queued`/`pending` state (visible via `gh run list --json status,conclusion`). When the runner can't drain the queue fast enough, GitHub cancels some scheduled runs before any job is created. This is NOT a code bug -- it's runner capacity/availability. Same underlying pattern as issue #46 (`referee_sync.yml`, runner offline / job "not acquired") and issue #48 (`db_backup.yml`, runner offline, job never picked up) -- those two were diagnosed correctly at the time but never backfilled here, so this is the 3rd occurrence overall and the 1st logged.
+
+**Diagnosis path:**
+1. `gh api repos/{owner}/{repo}/actions/runs/{run_id}` -- check `conclusion` vs `status`. `conclusion: cancelled` + no failed step logs = suspect runner-availability, not code.
+2. `gh api repos/{owner}/{repo}/actions/runs/{run_id}/jobs` -- `total_count: 0` confirms no job was ever created.
+3. `gh run list --limit 100 --json databaseId,name,createdAt,status,conclusion,event` -- grep for queued/pending status across ALL workflows (not just the failing one). A backlog spanning multiple workflow names confirms it's runner-wide, not workflow-specific.
+4. Compare against recent successful runs of the same workflow -- if some succeeded in the same window, the runner is intermittently overloaded rather than fully offline.
+
+**Fix Applied:** TIER_3 -- issue only, no code change. Recommend verifying self-hosted runner is online/not overloaded. `gh workflow run <name>.yml` to manually re-trigger if a specific run's data capture window was missed.
+
+**Rule:** Do not assume a `cancelled` conclusion with no jobs is a code issue -- always check `/jobs` endpoint first and cross-reference the full `gh run list` for concurrent queue backlog before writing off-topic fixes into an unrelated existing issue. If the existing open issue for the workflow describes a different symptom, do not comment there -- file a new issue.
+
+**Commit/PR/Issue:** issue #52 (also see #46, #48 for the same underlying pattern on other workflows)
