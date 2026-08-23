@@ -11,7 +11,8 @@
 
 **Root cause:** `module_b.py snapshot_opening_lines()` wrote `stat_key.upper()` → stored `'PTS'`, `'REB'`, `'AST'`. `bet_recommendations` stores lowercase `'pts'`, `'reb'`, `'ast'`. Case-sensitive UNIQUE index prevents merging.
 
-**Fix:** Change `stat_key.upper()` → `stat_key.lower()` in `module_b.py` (~line 441). Run one-time migration: `UPDATE prop_line_snapshots SET stat_category = LOWER(stat_category);`
+**Fix:** Change `stat_key.upper()` → `stat_key.lower()` in `module_b.py` (
+line 441). Run one-time migration: `UPDATE prop_line_snapshots SET stat_category = LOWER(stat_category);`
 
 **Always JOIN with:** `LOWER(br.stat_category) = pls.stat_category` until all historical rows confirmed lowercase.
 
@@ -19,23 +20,26 @@
 
 ## 2026-03-04 — Canonical ID Remediation: 43,930 dirty rows across 11 tables
 
-**Symptom:** Tank01 changed player ID format Jan 2026 (6-7 digit NBA IDs → 8-11 digit composites). 40 entries in `player_canonical_ids` had dirty PKs, poisoning 7+ downstream tables. `validate_canonical_ids.py -v` showed 96.83% clean, 2,568 orphans.
+**Symptom:** Tank01 changed player ID format Jan 2026 (6-7 digit NBA IDs → 8-11 digit composites). 40 entries in `player_canonical_ids` had dirty PKs, poisoning 7  downstream tables. `validate_canonical_ids.py -v` showed 96.83% clean, 2,568 orphans.
 
 **Root cause:** No database-layer firewall existed (documented in `STATUS_HISTORY.md` Jan 20 but never built). Ghost Protocol, BDL Season Averages, and Module H wrote IDs with zero validation.
 
 **Fix:** `scripts/fix_canonical_ids.py` — one-time remediation. Key patterns:
 - Name-based resolution: each table has different dirty IDs for the same player. Resolve by `normalize_for_lookup(player_name)` → `player_canonical_ids.normalized_name`, not by ID map.
 - "Last, First" reversal: `player_game_opponent` uses PBP Stats format. `normalize_for_lookup()` detects comma → reverses.
-- UNIQUE constraint: DELETE overlapping dirty rows (same game_date + clean ID already exists) before UPDATE remaining.
+- UNIQUE constraint: DELETE overlapping dirty rows (same game_date   clean ID already exists) before UPDATE remaining.
 - Firewall: `resolve_player_id_for_insert()` in `database.py` (4-tier) prevents future contamination.
 
-**Result:** 43,930 → 257 dirty rows (99.79% clean). Phase 2 (same day): resolved 11 remaining dirty canonical IDs, batch-resolved 119 historical players (80 new canonical entries), fixed 25 corrupt `normalized_name` values. Remaining 257 are ~10 very recent rookies not yet in `nba_api` static list (Carlton Carrington, Grant Nelson, GG Jackson, etc.).
+**Result:** 43,930 → 257 dirty rows (99.79% clean). Phase 2 (same day): resolved 11 remaining dirty canonical IDs, batch-resolved 119 historical players (80 new canonical entries), fixed 25 corrupt `normalized_name` values. Remaining 257 are 
+10 very recent rookies not yet in `nba_api` static list (Carlton Carrington, Grant Nelson, GG Jackson, etc.).
 
 ---
 
 ## 2026-03-04 — bet_recommendations: 17,202 duplicate rows from pipeline re-runs
 
-**Symptom:** L10 P&L shows extreme unit totals (-198u when true figure is ~-55u). Bet count for a 10-game slate shows 2,439 rows instead of expected ~600. `void_dnp` rate appears elevated but win rate % looks correct.
+**Symptom:** L10 P&L shows extreme unit totals (-198u when true figure is 
+-55u). Bet count for a 10-game slate shows 2,439 rows instead of expected 
+600. `void_dnp` rate appears elevated but win rate % looks correct.
 
 **Root cause:** `utils/bet_logger.py` used plain `INSERT INTO bet_recommendations` with no dedup guard and no UNIQUE constraint on the table. Every pipeline re-run (manual triggers, GH Actions retries, multiple scheduled runs in a day) appended fresh rows. Peak duplication: Jan 12 at **10.17×** (3,680 rows for 362 real bets). Sustained average: **2.5–3.0×** across all dates since Jan 12.
 
@@ -61,7 +65,8 @@ Any `dupe_factor > 1.0` = duplicates present.
 
 ## 2026-03-04 — claude-code-action: AJV crash = misleading error for auth/billing failures
 
-**Symptom:** All `claude-code-action` runs fail: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: ~300-700ms`. Logs show AJV minified JS dump (`depsCount`, `dependencies` keyword code). No API calls made.
+**Symptom:** All `claude-code-action` runs fail: `is_error: true, total_cost_usd: 0, num_turns: 1, duration_ms: 
+300-700ms`. Logs show AJV minified JS dump (`depsCount`, `dependencies` keyword code). No API calls made.
 
 **Real root cause (confirmed via `show_full_output: true`):** The AJV dump is the SDK's error-wrapping code, NOT an AJV bug. The actual error was hidden behind `show_full_output: false` (default). Full output revealed: `"error": "authentication_failed", "text": "Invalid API key · Fix external API key"`. The `ANTHROPIC_API_KEY` GitHub Secret had an invalid/wrong value.
 
@@ -79,7 +84,8 @@ claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`, `claude.yml`.
 
-**OAuth token refresh:** Get from `claude auth login` or Chrome cookies at claude.ai (`sk-ant-sid01-...`). Update `CLAUDE_CODE_OAUTH_TOKEN` GitHub Secret. Token valid ~1 year. Update `CLAUDE_TOKEN_EXPIRES_AT` variable when refreshed.
+**OAuth token refresh:** Get from `claude auth login` or Chrome cookies at claude.ai (`sk-ant-sid01-...`). Update `CLAUDE_CODE_OAUTH_TOKEN` GitHub Secret. Token valid 
+1 year. Update `CLAUDE_TOKEN_EXPIRES_AT` variable when refreshed.
 
 **Diagnosing future crashes:** Add `show_full_output: true` to any failing `claude-code-action` step — the real error message will appear above the AJV dump. Remove after diagnosis.
 
@@ -115,7 +121,7 @@ Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`,
 
 **Root cause:** `save_games_cache()` serializes `datetime` → JSON string. `load_games_cache()` reads it back as string. Line 512 assumed `start_time` was always a `datetime` object (`_start.tzinfo`). First scheduled run to hit cache path since the odds cache feature shipped (Mar 1).
 
-**Fix:** `morning_brief.py` L508-516 — `isinstance(str)` check + `datetime.fromisoformat()` parse before accessing `.tzinfo`. Handles both live (datetime) and cache (string) paths.
+**Fix:** `morning_brief.py` L508-516 — `isinstance(str)` check   `datetime.fromisoformat()` parse before accessing `.tzinfo`. Handles both live (datetime) and cache (string) paths.
 
 **Also fixed:** `scripts/news_agent.py` L86 — `games.game_date` → `games.date` (column doesn't exist; correct column is `date`).
 
@@ -146,7 +152,7 @@ Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`,
 **Root cause:** Zombie `main.py --games LAL` process (PID 29623) held 134 open file descriptors on `ludi.db`. Default SQLite timeout = 5s, insufficient when another process holds WAL lock indefinitely. Per-row errors were caught and continued, so the script finished with exit code 0 despite writing nothing.
 
 **Fix (2 files):**
-1. `scripts/sync_wowy_backfill.py` + `scripts/sync_wowy_hybrid.py`: Added `PRAGMA busy_timeout = 30000` (retry for 30s on lock). Added fail-loud pattern: track `row_errors`, log first 3, `sys.exit(1)` if 100% of rows fail.
+1. `scripts/sync_wowy_backfill.py`   `scripts/sync_wowy_hybrid.py`: Added `PRAGMA busy_timeout = 30000` (retry for 30s on lock). Added fail-loud pattern: track `row_errors`, log first 3, `sys.exit(1)` if 100% of rows fail.
 2. Kill zombie process: `kill <PID>`, verify with `lsof ludi.db`.
 
 **Prevention:** Always check `lsof ludi.db` before investigating silent workflow failures. If FD count > 10, a zombie process is likely.
@@ -165,7 +171,7 @@ Apply to: `claude-qa-check.yml`, `claude-ops-hub.yml`, `claude-code-review.yml`,
 
 ## 2026-03-02 — Team Scheme Cache Calendar-Day Windows Break During Schedule Gaps
 
-**Symptom:** Team classifications show INSUFFICIENT during All-Star break or schedule gaps because `timedelta(days=7)` window may contain 0-2 games for some teams while others have 4+.
+**Symptom:** Team classifications show INSUFFICIENT during All-Star break or schedule gaps because `timedelta(days=7)` window may contain 0-2 games for some teams while others have 4 .
 
 **Root cause:** `update_team_scheme_cache.py` used `timedelta(days=59/20/6)` for 3-window voting. Calendar-day windows produce unequal sample sizes across teams.
 
@@ -189,19 +195,20 @@ git push origin main                   # Runner now gets correct code
 
 **Prevention:** Always run `git push origin main` at end of every session, immediately after the debrief commit. This is now required in Step 8 of the `session-debrief` skill.
 
-**Secondary fix (CLV workflow):** `capture_closing_lines.yml` was missing `TANK01_KEY` + `TANK01_TIER` in the `Capture closing lines` step env block. Tank01 Tier 3 fallback silently failed auth on every CLV run. Fixed 2026-03-01 in commit `96fc556`.
+**Secondary fix (CLV workflow):** `capture_closing_lines.yml` was missing `TANK01_KEY`   `TANK01_TIER` in the `Capture closing lines` step env block. Tank01 Tier 3 fallback silently failed auth on every CLV run. Fixed 2026-03-01 in commit `96fc556`.
 
 ---
 
 ## 2026-02-28 — Module G Zebras Audit: Referee Profile Data Quality Fixes
 
-- **H1 (avg_pace_impact stale)**: `referee_profiles.avg_pace_impact` was seeded with `/~42` divisor; correct formula is `/12.5` (fouls per game / league avg). Tony Brothers: DB=0.413, correct=1.387. `get_game_impact()` safety cap `[0.90, 1.10]` was hiding the error silently. Fix: `scripts/fix_referee_profiles_pace.py` — one-time repair SQL. Defensive fallback added to `_get_referee_profile()`: recomputes from fouls if `pace_impact < 0.5`.
+- **H1 (avg_pace_impact stale)**: `referee_profiles.avg_pace_impact` was seeded with `/
+42` divisor; correct formula is `/12.5` (fouls per game / league avg). Tony Brothers: DB=0.413, correct=1.387. `get_game_impact()` safety cap `[0.90, 1.10]` was hiding the error silently. Fix: `scripts/fix_referee_profiles_pace.py` — one-time repair SQL. Defensive fallback added to `_get_referee_profile()`: recomputes from fouls if `pace_impact < 0.5`.
 - **H2 (style thresholds wrong)**: STRICT threshold was `>= 16.0` (matches only 1 ref: Sean Wright 17.88). Corrected to `>= 14.0 STRICT / <= 12.0 LENIENT`. Tony Brothers (17.34), Scott Twardoski (17.07), Dedric Taylor (17.04) all now STRICT.
 - **M1 (dead code)**: `DailyRefereeSync._populate_todays_games()` existed (lines 80-148) but was never called from `run()`. Removed. `module_g._populate_todays_games()` handles game insertion correctly (with `sync_canonical_games`).
-- **M3 (learn_daily_trends failure kills data_sync)**: `learn_daily_trends.py` step in `data_sync.yml` was missing `continue-on-error: true` — failure killed all 50+ downstream steps. Fixed. `analyze_star_bias.py` step also added with `continue-on-error: true`.
+- **M3 (learn_daily_trends failure kills data_sync)**: `learn_daily_trends.py` step in `data_sync.yml` was missing `continue-on-error: true` — failure killed all 50  downstream steps. Fixed. `analyze_star_bias.py` step also added with `continue-on-error: true`.
 - **Rolling window undersampling**: Calendar-day 21-day cutoff returned 1-2 games per ref during All-Star break. Fix: changed to last-N-games (ROLLING_WINDOW_GAMES=10) — game-count is scheduling-agnostic. See data-modeling Pattern 10.
-- **New OddsShark signals wired**: `ou_percentage`, `avg_total`, `home_ats_bias`, `ou_record`, `home_ats_record` fields now returned from `_get_referee_profile()` with COALESCE defaults (0.5 for pcts, 0 for totals). `get_game_impact()` returns `ref_ou_avg` + `ref_home_ats_avg` across crew.
-- **Team trends**: `team_betting_trends` table (30 rows) + `get_team_trends(team_abbr)` in `module_g.py`. `sync_team_betting_trends.py` derives H/A W-L, scoring averages, ATS splits from `canonical_games` + `player_game_logs`. Score derivation: SUM(pts) per game_date+team WITHOUT `home_or_away` filter (BDL rows have NULL). See data-modeling Pattern 11.
+- **New OddsShark signals wired**: `ou_percentage`, `avg_total`, `home_ats_bias`, `ou_record`, `home_ats_record` fields now returned from `_get_referee_profile()` with COALESCE defaults (0.5 for pcts, 0 for totals). `get_game_impact()` returns `ref_ou_avg`   `ref_home_ats_avg` across crew.
+- **Team trends**: `team_betting_trends` table (30 rows)   `get_team_trends(team_abbr)` in `module_g.py`. `sync_team_betting_trends.py` derives H/A W-L, scoring averages, ATS splits from `canonical_games`   `player_game_logs`. Score derivation: SUM(pts) per game_date team WITHOUT `home_or_away` filter (BDL rows have NULL). See data-modeling Pattern 11.
 
 ---
 
@@ -228,16 +235,16 @@ git push origin main                   # Runner now gets correct code
 - **A1 (avg_ev)**: `bet_daily_summaries.avg_ev` stored `p['edge']` not `p['ev']` — mislabeled data since V5.0. Fix: `sum(p['ev'] for p in all_props)`.
 - **B1 (emoji map)**: `_classify_edge_type()` returns `'Injury-Return'` but emoji map had no entry → fell through to 📊 default. Fix: Added `'Injury-Return': '🩹'`.
 - **B2 (defensive archetypes)**: `positive_archetypes` contained `RIM_GUARDIAN`, `PERIMETER_HAWK`, `SWITCHABLE_ANCHOR`, `HUSTLE_DISRUPTOR` (all defensive tags). Caused tier bonus to fire for defensive roles. Fix: Removed all 4 defensive tags from set.
-- **C1 (old SGP block)**: 3-line SGP correlation block fired when single player had PTS OVER + AST OVER, mislabeling as `[🔥 CORRELATED SGP]`. Superseded by Phase 8.26 `curate_plays.py`. Fix: Removed entirely.
+- **C1 (old SGP block)**: 3-line SGP correlation block fired when single player had PTS OVER   AST OVER, mislabeling as `[🔥 CORRELATED SGP]`. Superseded by Phase 8.26 `curate_plays.py`. Fix: Removed entirely.
 - **C2 (_STAT_COL_MAP aliases)**: Map had `'points' → 'pts'` but NOT `'pts' → 'pts'`. Module A sends short-form keys — DB hit-rate fallback returned 0.5/0.5 neutral for every bet. Fix: Added 8 short-form aliases.
 - **C3 (_bdl_fallback_active)**: Read via `getattr` at line 1171 but never initialized in `__init__`. Fix: `self._bdl_fallback_active = False`.
 - **CR1 (multi-window hit rates)**: Bet card showed single hit rate. Fix: L5/L10/L15 windows now surface in note field when available from Module B.
 
 ---
 
-## 2026-02-28 — Module B Enhancement: vs_scheme_cache + L20 Windows + time_context
+## 2026-02-28 — Module B Enhancement: vs_scheme_cache   L20 Windows   time_context
 
-- **vs_scheme_cache**: Pre-loads last-5 game values per player/stat vs each defense scheme (live `team_scheme_cache.active_style`). L5/L10/L15/L20 windows + L5-vs-scheme all surfaced in CR1 note block.
+- **vs_scheme_cache**: Pre-loads last-5 game values per player/stat vs each defense scheme (live `team_scheme_cache.active_style`). L5/L10/L15/L20 windows   L5-vs-scheme all surfaced in CR1 note block.
 - **time_context**: `EARLY_LOOK/AFTERNOON/PRE_GAME/LOCK_TIME` column added to `bet_recommendations`.
 - **Note**: Both features added in same session as Module F audit. Verified against HOU/MIA test with JSJ OUT scenario.
 
@@ -249,7 +256,8 @@ git push origin main                   # Runner now gets correct code
 
 - **Symptom**: `json.loads("")` ValueError — James Harden "Expecting value: line 1 column 1" errors in logs.
 - **Root Cause**: Haiku returns empty string when `description` field is empty or <10 chars. `json.loads("")` raises JSONDecodeError. Also `json.loads(None)` raises TypeError.
-- **Fix Applied**: `module_d.py _ai_parse_blurb()` (lines ~907-950):
+- **Fix Applied**: `module_d.py _ai_parse_blurb()` (lines 
+907-950):
   - Added pre-call guard: `if not description or len(description.strip()) < 10: return {}`
   - Added None/empty guard after API call: `if not result_text or not result_text.strip(): return {}`
   - Added markdown code-fence strip: `if text.startswith('...'): text = '\n'.join(lines_list[1:-1])`
@@ -268,10 +276,10 @@ git push origin main                   # Runner now gets correct code
 
 ### G1: Ghost Injury Auto-Resolve (Data Quality)
 
-- **Symptom**: Players shown as OUT/DOUBTFUL who have active game logs (Naji Marshall, Tyler Herro with 130+ duplicate rows).
+- **Symptom**: Players shown as OUT/DOUBTFUL who have active game logs (Naji Marshall, Tyler Herro with 130  duplicate rows).
 - **Root Cause**: Tank01 keeps returning stale injured players. Resolve step only fires when player disappears from API list. Also dedup used 3-column key `(player_name, status, DATE)` allowing duplicates when injury_type changes.
 - **Fix Applied**: `scripts/sync_injuries.py`:
-  - Added `_auto_resolve_active_players()` function — UPDATE player_injuries SET resolved_at=now() WHERE player logged 10+ min in last 3 game_days
+  - Added `_auto_resolve_active_players()` function — UPDATE player_injuries SET resolved_at=now() WHERE player logged 10  min in last 3 game_days
   - Changed dedup from `(player_name, status, DATE)` to `(player_name, DATE)` only
   - Added call to `_auto_resolve_active_players()` at end of main()
 - **Note**: Fix runs when sync_injuries.py executes (next scheduled run). Existing ghost rows will be cleaned up.
@@ -280,11 +288,13 @@ git push origin main                   # Runner now gets correct code
 
 ### G3: INJURY_RETURN Edge Type (Bet Analytics)
 
-- **Symptom**: Ramp-up players (returning from 7+ day absence) generate UNDER edges labeled "EDGE: Projection" — identical to normal projection bets, hiding ramp-up signal from post-hoc analysis.
+- **Symptom**: Ramp-up players (returning from 7  day absence) generate UNDER edges labeled "EDGE: Projection" — identical to normal projection bets, hiding ramp-up signal from post-hoc analysis.
 - **Root Cause**: Module C G3 ramp-up dampening existed but no edge type classification for it.
 - **Fix Applied**:
-  - `module_c.py run_simulation_batch()` — added `player['_games_since_return'] = games_back` when ramp-up fires (line ~427), added `GAMES_SINCE_RETURN` to sim_profile
-  - `main.py build_reporter_input()` — added pass-through: `'games_since_return': sim.get('GAMES_SINCE_RETURN')` (line ~467)
+  - `module_c.py run_simulation_batch()` — added `player['_games_since_return'] = games_back` when ramp-up fires (line 
+427), added `GAMES_SINCE_RETURN` to sim_profile
+  - `main.py build_reporter_input()` — added pass-through: `'games_since_return': sim.get('GAMES_SINCE_RETURN')` (line 
+467)
   - `module_f.py _classify_edge_type()` — added new branch after Injury-Vacuum: `if games_since_return and int(games_since_return) <= 4: return 'Injury-Return'`
 - **Prevention**: When adding stat dampeners, always propagate signal metadata to edge classification.
 
@@ -295,9 +305,12 @@ git push origin main                   # Runner now gets correct code
 - **Symptom**: Telegram cards show bare "OUT" with no freshness context. Competitors (Outlier, StraightBettin) surface timestamps.
 - **Root Cause**: `player_injuries.snapshot_time` exists in DB but not surfaced in output.
 - **Fix Applied**: `morning_brief.py`:
-  - Added `snapshot_time` to SELECT queries (lines ~689, ~697)
+  - Added `snapshot_time` to SELECT queries (lines 
+689, 
+697)
   - Added `_format_injury_stamp()` helper function — formats as "OUT (updated 5:18 PM)" if <6h, "OUT (reported 5:18 PM)" if <36h, "OUT (as of Feb 25)" otherwise
-  - Updated injury line formatting to use helper (line ~725)
+  - Updated injury line formatting to use helper (line 
+725)
 
 ---
 
@@ -306,14 +319,17 @@ git push origin main                   # Runner now gets correct code
 - **Symptom**: `archetypes['home_pace']`, `archetypes['home_def_rtg']`, `archetypes['home_ortg']` always 0 — team pace/DRtg data never populated despite successful DB queries.
 - **Root Cause**: Agent used wrong dict key names when accessing the `games[game_id]` dict. Wrote `game.get('home_team', '')` but the key is `'home'`. Wrote `game.get('team_info', {})` but the key is `'archetypes'`. The whole method ran without error but populated nothing.
 - **Fix Applied**: `module_a.py fetch_team_archetypes()` — `'home_team'`→`'home'`, `'away_team'`→`'away'`, `'team_info'`→`'archetypes'`. All downstream references updated (`team_info['home_pace']`→`archetypes['home_pace']` etc).
-- **Prevention**: Before writing any method that reads from `self.games[game_id]`, check the game dict contract at `module_a.py` init sections (lines ~176, ~388, ~486) to confirm key names. The data contract docstring in the `Gatekeeper` class also documents the exact keys.
+- **Prevention**: Before writing any method that reads from `self.games[game_id]`, check the game dict contract at `module_a.py` init sections (lines 
+176, 
+388, 
+486) to confirm key names. The data contract docstring in the `Gatekeeper` class also documents the exact keys.
 - **Commit**: 771439e — fix(audit): Module A Tier F
 
 ---
 
 ## 2026-02-26 — Ghost Injuries (Players Shown as OUT Who Are Playing)
 
-- **Symptom**: Ask Ludi bot shows players as OUT/DOUBTFUL who have active game logs (e.g., Naji Marshall 131+ duplicate rows, Tyler Herro 45 rows — both playing full minutes).
+- **Symptom**: Ask Ludi bot shows players as OUT/DOUBTFUL who have active game logs (e.g., Naji Marshall 131  duplicate rows, Tyler Herro 45 rows — both playing full minutes).
 - **Root Cause**: Tank01 keeps returning stale injured players in every API response. The resolve step in `sync_injuries.py` (lines 660-694) only resolves players NOT present in `active_player_names` from current API response — so if Tank01 keeps sending them, they're never resolved. The dedup guard checks `(player_name, status, DATE(snapshot_time))` but misses same-player entries with different `injury_type` strings.
 - **Bot-Level Fix (applied Feb 26)**: Added `_GHOST_INJURY_GUARD` SQL fragment to all injury queries in `bots/ask_ludi_db.py`:
   ```sql
@@ -325,7 +341,7 @@ git push origin main                   # Runner now gets correct code
   )
   ```
   Also added `GROUP BY player_name, team_abbreviation` dedup guard.
-- **Root Fix (deferred to module audit)**: Fix `sync_injuries.py` resolve logic to cross-reference `player_game_logs` — if a player logged 10+ min last 3 days → auto-resolve regardless of API response. Change dedup to `(player_name, DATE(snapshot_time))` only.
+- **Root Fix (deferred to module audit)**: Fix `sync_injuries.py` resolve logic to cross-reference `player_game_logs` — if a player logged 10  min last 3 days → auto-resolve regardless of API response. Change dedup to `(player_name, DATE(snapshot_time))` only.
 
 ---
 
@@ -333,7 +349,7 @@ git push origin main                   # Runner now gets correct code
 
 - **Symptom**: `ASK_LUDI_NARRATIVE_SYSTEM` example used Trae Young, Anthony Davis, D'Angelo Russell as WAS players (OUT). Those players were traded to WAS but had not yet played a game — "OUT" meant nothing since they had no usage baseline.
 - **Root Cause**: Using AI training data to recall current roster assignments in hardcoded prompt examples. AI knowledge cutoff predates current season trades.
-- **Fix**: Query `ludi.db` directly before writing any prompt example. Use `SELECT name, team FROM players WHERE team = 'WAS'` to find real current roster + game logs to verify they've actually played.
+- **Fix**: Query `ludi.db` directly before writing any prompt example. Use `SELECT name, team FROM players WHERE team = 'WAS'` to find real current roster   game logs to verify they've actually played.
 - **Rule**: Every hardcoded player example in `utils/claude_prompts.py` must be verified against `ludi.db` OR use clearly generic placeholders like `[PLAYER_A]`, `[TEAM]`. Never use AI training memory for current-season roster facts.
 
 
@@ -359,7 +375,7 @@ git push origin main                   # Runner now gets correct code
 
 - **Symptom**: Settlement Telegram showed "no bets" / 0-0 record. DB showed 348 bets settled as PUSH with `actual_result = -998.0` (VOID-DNP code).
 - **Root Cause**: `player_game_logs` for Feb 22 were not inserted until Feb 24 08:29 AM (due to Module H `c35fed5` bug). Settlement ran Feb 23 10:49 AM — found no game logs — voided all 348 bets as DNP. Same pattern hit Feb 23 bets (445 bets, same day).
-- **Diagnosis Signal**: `actual_result = -998` for ALL bets on a given date + `player_game_logs` `created_at` timestamp AFTER `settled_at` timestamp = game logs arrived after settlement ran.
+- **Diagnosis Signal**: `actual_result = -998` for ALL bets on a given date   `player_game_logs` `created_at` timestamp AFTER `settled_at` timestamp = game logs arrived after settlement ran.
 - **Recovery**: `python settle_bets.py --date YYYY-MM-DD` re-settles all bets for that `game_date` regardless of current outcome. Verify game log coverage first: `SELECT team_abbreviation, COUNT(*) FROM player_game_logs WHERE game_date = 'YYYY-MM-DD' GROUP BY team_abbreviation`.
 - **Fix Applied**: `settle_bets.py` — date ceiling guard: normal runs now filter `game_date <= get_est_yesterday()`, preventing settlement of today's future slate. Also added Strategy 3 canonical name fallback (`resolve_canonical_name`) for accent mismatches.
 - **Pattern**: When all bets on a date are `-998`, check game log `created_at` vs `settled_at`. If logs arrived after settlement → re-settle with `--date`. Not a model failure, a data timing failure.
@@ -368,7 +384,7 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-02-24 — Capture Closing Lines: Graceful Quota Exit + Live Game Filter
+## 2026-02-24 — Capture Closing Lines: Graceful Quota Exit   Live Game Filter
 
 - **Workflow**: `capture_closing_lines.yml`
 - **Symptom**: `exit code 1` at 10:32 PM EST. Logs: "Found 322 uncaptured bets → Odds API: quota exhausted (cached) → BDL: 3 scheduled games → Matched 1 game(s) → 0 updated, 96 skipped → WARNING: Had pending bets but captured 0 closing lines".
@@ -382,12 +398,12 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-02-23 — Injury Pipeline: ESPN/BDL Source Conflict + Name Normalization
+## 2026-02-23 — Injury Pipeline: ESPN/BDL Source Conflict   Name Normalization
 
 - **Symptom**: Players (Nurkić/Nurkic, Porziņģis/Porzingis) had injury records with `team_abbreviation = ''` — invisible to morning brief query `WHERE team_abbreviation IN (...)`. JJJ appeared healthy despite being injured (no record in DB).
 - **Root Cause**: `sync_injuries.py` used `.lower()` only for team resolution → accented names never matched `players.name` → blank team. JJJ: BDL/Tank01 hadn't reported his injury; only ESPN had it.
 - **Fix Applied**: Tier 2 —
-  1. `_normalize_for_canonical()` in `sync_injuries.py` — NFD accent strip + suffix removal (Jr./Sr./III) matching `player_canonical_ids.normalized_name`
+  1. `_normalize_for_canonical()` in `sync_injuries.py` — NFD accent strip   suffix removal (Jr./Sr./III) matching `player_canonical_ids.normalized_name`
   2. `_get_canonical_lookup_from_db()` — preload canonical lookup once per sync run
   3. Stores canonical `full_name` (e.g. `Jusuf Nurkić`) in `player_injuries` for consistent downstream joins
   4. `morning_brief.py` UNION query catches blank `team_abbreviation` via canonical_ids join
@@ -398,11 +414,11 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-02-23 — Module D: yak_cache Never Written + Perplexity Not Cached
+## 2026-02-23 — Module D: yak_cache Never Written   Perplexity Not Cached
 
 - **Symptom**: `yak_cache.json` never existed. Perplexity was called on every `search_news()` invocation even for repeat queries in the same pipeline run.
 - **Root Cause**: `_save_cache()` was called in `search_news()` but never defined — `AttributeError` silently caught by `except Exception`. Perplexity path returned without writing to `self.cache` at all.
-- **Fix Applied**: Tier 1 — Added `_save_cache()` definition. Both Perplexity and DuckDuckGo results now written to `self.cache` + flushed to disk. 20-min TTL prevents repeat API calls within same pipeline run.
+- **Fix Applied**: Tier 1 — Added `_save_cache()` definition. Both Perplexity and DuckDuckGo results now written to `self.cache`   flushed to disk. 20-min TTL prevents repeat API calls within same pipeline run.
 - **Commit**: 8b1366b
 
 ---
@@ -437,10 +453,11 @@ git push origin main                   # Runner now gets correct code
 
 - **Workflow**: `data_sync.yml`
 - **Symptom**: Job cancelled after 60 minutes. 22 downstream steps (injuries, rotations, trends, scheme cache, commit) skipped entirely. Ops Hub did NOT fire (only triggered on `failure`, not `cancelled`).
-- **Root Cause**: 3 PBP Stats scripts had step timeouts summing to 75 min (30+25+20) inside a 60-min job timeout budget. `sync_pbp_wowy.py` and `sync_four_factor_wowy.py` each hung until their individual timeouts, consuming 55 min. Job-level timeout killed everything before remaining steps could run.
+- **Root Cause**: 3 PBP Stats scripts had step timeouts summing to 75 min (30 25 20) inside a 60-min job timeout budget. `sync_pbp_wowy.py` and `sync_four_factor_wowy.py` each hung until their individual timeouts, consuming 55 min. Job-level timeout killed everything before remaining steps could run.
 - **Fix Applied**: Tier 2 (multi-file) —
   1. Split 3 PBP Stats scripts to own workflow `pbp_stats_sync.yml` (Mon/Wed/Fri 5 AM EST, 90-min budget)
-  2. Removed those steps from `data_sync.yml` (remaining steps ~25 min, well within 60-min budget)
+  2. Removed those steps from `data_sync.yml` (remaining steps 
+25 min, well within 60-min budget)
   3. Added `cancelled` trigger to `claude-ops-hub.yml` condition
   4. Added wall-clock guards (`MAX_RUNTIME_SECONDS`) in all 3 scripts
   5. Lowered HTTP timeouts in `pbp_stats_client.py` (120→60s, 180→90s)
@@ -449,7 +466,7 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-02-22 — Capture Closing Lines: BDL V2 Status Filter + Quota Pre-flight
+## 2026-02-22 — Capture Closing Lines: BDL V2 Status Filter   Quota Pre-flight
 
 - **Workflow**: `capture_closing_lines.yml`
 - **Symptom**: "BDL: 0 scheduled games for YYYY-MM-DD" (logs show 0 games despite active slate)
@@ -494,12 +511,12 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-02-24 -- Capture Closing Lines: Odds API Quota Exhausted + BDL Post-Game Props Unavailable
+## 2026-02-24 -- Capture Closing Lines: Odds API Quota Exhausted   BDL Post-Game Props Unavailable
 
 - **Workflow**: `capture_closing_lines.yml`
 - **Symptom**: 322 uncaptured bets, 0 CLV captures. All bets SKIPd with no match [bdl]. Script exits non-zero.
 - **Root Cause**: Two compounding TRANSIENT factors -- (1) Odds API monthly quota exhausted (cache pre-flight working correctly, skipped to BDL). (2) Run at 10:32 PM EST after games concluded; BDL does not serve historical closing line data for completed games, only returned 4 players with props for UTA@HOU (none matching bet records for Sengun, A. Thompson, etc.).
-- **Fix Applied**: No code change -- TRANSIENT. If this pattern repeats 3+ nights consecutively, escalate to TIER_3 to evaluate earlier CLV window or graceful exit on quota exhaustion.
+- **Fix Applied**: No code change -- TRANSIENT. If this pattern repeats 3  nights consecutively, escalate to TIER_3 to evaluate earlier CLV window or graceful exit on quota exhaustion.
 - **Commit/PR/Issue**: Issue created (severity:transient)
 
 ---
@@ -519,7 +536,9 @@ git push origin main                   # Runner now gets correct code
 ## 2026-02-26 — Module G: LEAGUE_AVG_FOULS Calibration Error (21.5 → 12.5)
 
 - **Script**: `module_g.py`, `scripts/learn_daily_trends.py`, `scripts/sync_daily_referees.py`
-- **Symptom**: `referee_profiles.whistle_impact` scores ~1.7x for most refs instead of ~1.1x (near-neutral). Almost no refs classified LENIENT. `player_foul_splits.pf_vs_strict`/`pf_vs_lenient` columns always NULL.
+- **Symptom**: `referee_profiles.whistle_impact` scores 
+1.7x for most refs instead of 
+1.1x (near-neutral). Almost no refs classified LENIENT. `player_foul_splits.pf_vs_strict`/`pf_vs_lenient` columns always NULL.
 - **Root Cause**: `LEAGUE_AVG_FOULS = 21.5` (per-game total, both teams) used as per-ref baseline. Correct value is 12.5 per ref per game (18.74 team fouls × 2 teams ÷ 3 crew = 12.49). `whistle_impact = ref_avg / LEAGUE_AVG_FOULS` → 14.0 / 21.5 = 0.65 (looked lenient) vs 14.0 / 12.5 = 1.12 (correctly strict). Same error in `learn_daily_trends.py`: used 42.0 (full game total instead of 37.5), and 21.5 per-ref avg instead of 12.5.
 - **Fix Applied**: `module_g.py` LEAGUE_AVG_FOULS 21.5 → 12.5. `learn_daily_trends.py` LEAGUE_AVG_FOULS 42.0 → 37.5, PER_REF_AVG_FOULS 21.5 → 12.5. Seed default in `sync_daily_referees.py` 21.5 → 12.5. DB migration WHERE avg_fouls_per_game > 18.0 → 0 rows needed reset (EMA had already converged to realistic values).
 - **STRICT/LENIENT thresholds**: ≥14.0 / ≤11.0 fouls per ref per game. With 21.5 as the divisor, nearly every ref appeared LENIENT — inverted signal.
@@ -533,14 +552,14 @@ git push origin main                   # Runner now gets correct code
 - **G1 — Calendar-day → game-count window** (`main.py:get_active_roster()`):
   - **Problem**: `WHERE game_date >= date('now', '-30 days')` returns 1-4 games during All-Star breaks or injuries (77 players had ≤4 games in the 30d window pre-fix). Player averages become statistically noisy.
   - **Fix**: Replaced with game-count subquery — last 25 played games per player. `WHERE game_date IN (SELECT game_date FROM player_game_logs sub WHERE sub.player_id = pgl.player_id AND sub.minutes > 0 ORDER BY game_date DESC LIMIT 25)`. Also added `GAMES_PLAYED` column (COUNT of rows) to the SELECT and player dict output for G2 confidence weighting.
-  - **Performance note**: Correlated subquery pattern with `player_game_logs` (10K+ rows) → acceptable at this scale. If table grows >100K rows, convert to CTE with `ROW_NUMBER()` (same pattern as module_c.py pre-load methods).
+  - **Performance note**: Correlated subquery pattern with `player_game_logs` (10K  rows) → acceptable at this scale. If table grows >100K rows, convert to CTE with `ROW_NUMBER()` (same pattern as module_c.py pre-load methods).
 - **G2 — Season baseline blend for thin-sample players** (`module_c.py:run_simulation_batch()`):
   - **Problem**: Players with <15 recent games use a statistically unreliable average. SGA with 3 games showed PTS=28.0 vs true season avg 31.8 (3.8 delta).
-  - **Fix**: Added `_load_season_baselines()` pre-load from `player_season_averages_bdl`. In `run_simulation_batch()`, if `GAMES_PLAYED < 15`: blend recent avg with season baseline using `w = min(games_recent / 15.0, 1.0)`. At 3 games → SGA PTS becomes 31.0 (w=0.20). At 15+ games → w=1.0, pure recent data.
+  - **Fix**: Added `_load_season_baselines()` pre-load from `player_season_averages_bdl`. In `run_simulation_batch()`, if `GAMES_PLAYED < 15`: blend recent avg with season baseline using `w = min(games_recent / 15.0, 1.0)`. At 3 games → SGA PTS becomes 31.0 (w=0.20). At 15  games → w=1.0, pure recent data.
   - **Data source**: `player_season_averages_bdl` table (`category='general'`, `stat_type='base'`, `season=2025`). Falls back gracefully if table empty.
 - **G3 — Injury return ramp-up detection** (`module_c.py`):
   - **Problem**: Game 1 back from a 2-week absence treated identically to Game 50. Return-from-injury players show reduced volume for 2-4 games post-return.
-  - **Fix**: Added `_load_return_status()` pre-load — detects 7+ day gaps in `player_game_logs` via `LAG() OVER (PARTITION BY player_id ORDER BY game_date ASC)`. Stores `games_since_return` per player. In `run_simulation_batch()`, applies ramp factors to ALL stats: `{1: 0.70, 2: 0.80, 3: 0.90, 4: 0.95}`. 416 players detected as recently returned on audit date.
+  - **Fix**: Added `_load_return_status()` pre-load — detects 7  day gaps in `player_game_logs` via `LAG() OVER (PARTITION BY player_id ORDER BY game_date ASC)`. Stores `games_since_return` per player. In `run_simulation_batch()`, applies ramp factors to ALL stats: `{1: 0.70, 2: 0.80, 3: 0.90, 4: 0.95}`. 416 players detected as recently returned on audit date.
 - **Commits**: Module C audit sprint (Feb 27, 2026)
 
 ---
@@ -548,7 +567,7 @@ git push origin main                   # Runner now gets correct code
 ## 2026-02-27 — Module C Audit: Pre-load, Mutation, and Normalization Fixes (C1/C3/C4)
 
 - **C1 — `rotation_profiles` per-player DB query** (`module_c.py:_get_projected_minutes()`):
-  - **Symptom**: `_get_projected_minutes()` opened `sqlite3.connect()` for every player. 16 players × 5+ games = 80+ DB connections per pipeline run. Every other data source was pre-loaded at init; this one was missed.
+  - **Symptom**: `_get_projected_minutes()` opened `sqlite3.connect()` for every player. 16 players × 5  games = 80  DB connections per pipeline run. Every other data source was pre-loaded at init; this one was missed.
   - **Fix**: Added `_load_rotation_data()` pre-load at init — loads all `rotation_profiles WHERE window_days = 21` keyed by `str(player_id)`. `_get_projected_minutes()` now does `row = self.rotation_data.get(player_id)` dict lookup. Zero DB connections during simulation.
   - **Rule**: Any data used inside `run_simulation_batch()` (which calls `_simulate_player()` 10K times) MUST be pre-loaded at init. Never open a DB connection inside a simulation loop.
 - **C3 — Player dict mutation after simulation** (`module_c.py:run_simulation_batch()`):
@@ -557,18 +576,19 @@ git push origin main                   # Runner now gets correct code
   - **Verification**: `build_reporter_input()` in `main.py` reads from the `sim` dict only (`sim.get('PTS', 0)` etc). Confirmed at `main.py:447-454`. No downstream code reads `player['FGA']` after Module C returns.
 - **C4 — Accent normalization for name-keyed lookups** (`module_c.py`):
   - **Symptom**: `rolling_ts_data` and `drives_data` dicts keyed by raw `player_name`. BDL-sourced rows store "Nikola Jokic" (no accent); canonical names use "Nikola Jokić". Lookups silently returned `None` → default 1.0 modifier for all accented-name players. Always use NFKD, never `str.replace()` chains — those miss ć/č/š/ž.
-  - **Fix**: Added `_normalize_name()` static method (NFKD decompose + strip Mn categories). Dicts now keyed by normalized name at load time. Lookups normalize the input name before `.get()`. Follows the same pattern as `module_b.py:155-164`.
+  - **Fix**: Added `_normalize_name()` static method (NFKD decompose   strip Mn categories). Dicts now keyed by normalized name at load time. Lookups normalize the input name before `.get()`. Follows the same pattern as `module_b.py:155-164`.
 - **Commits**: Module C audit sprint (Feb 27, 2026)
 
 ---
 
 ## 2026-02-27 — BDL Team Abbreviation Contamination Cleaned (C16)
 
-- **Symptom**: `get_active_roster('GSW', 8)` returned fewer players than expected. ~33-40% of game logs for GS/NO/NY/PHO/SA teams were stored under BDL abbreviations, invisible to standard queries.
+- **Symptom**: `get_active_roster('GSW', 8)` returned fewer players than expected. 
+33-40% of game logs for GS/NO/NY/PHO/SA teams were stored under BDL abbreviations, invisible to standard queries.
 - **Root Cause**: Module H BDL fallback (added Feb 23) wrote `team_abbr` directly from BDL API response without normalizing. The `normalize_bdl_abbr()` centralization in `utils/mappings.py` (Feb 24) was only applied to sync scripts written after that date — not to the BDL fallback path in `module_h_historian.py`.
-- **Contamination scope**: 1,857 `player_game_logs` rows (GS:113, NO:109, NY:145, PHO:149, SA:153 pre-2025-26 + current season mix) + 253 `games` rows (home_team + away_team). Full SQL cleanup applied.
+- **Contamination scope**: 1,857 `player_game_logs` rows (GS:113, NO:109, NY:145, PHO:149, SA:153 pre-2025-26   current season mix)   253 `games` rows (home_team   away_team). Full SQL cleanup applied.
 - **Fix Applied**:
-  1. SQL: `UPDATE player_game_logs SET team_abbreviation = 'GSW' WHERE team_abbreviation = 'GS'` (+ NO→NOP, NY→NYK, PHO→PHX, SA→SAS). Same for `games.home_team` and `games.away_team`. All 10 updates executed, 0 rows remaining.
+  1. SQL: `UPDATE player_game_logs SET team_abbreviation = 'GSW' WHERE team_abbreviation = 'GS'` (  NO→NOP, NY→NYK, PHO→PHX, SA→SAS). Same for `games.home_team` and `games.away_team`. All 10 updates executed, 0 rows remaining.
   2. `module_h_historian.py` BDL fallback: added `from utils.mappings import normalize_bdl_abbr` and `team_abbr = normalize_bdl_abbr(side.get('team', {}).get('abbreviation', 'UNK'))` at write time — prevents re-contamination on future BDL fallback runs.
 - **Prevention**: All BDL API consumers MUST call `normalize_bdl_abbr()` before any write to `player_game_logs.team_abbreviation` or `games.home_team/away_team`. The function is idempotent: `normalize_bdl_abbr('GSW') = 'GSW'`. Check new BDL sync scripts against `utils/mappings.py` pattern.
 - **Module C defense confirmed safe**: Module C's `_load_team_defense_data()` reads from `player_game_opponent.team_abbrev` — all standard abbreviations, no BDL contamination. Defense lookup keyed by scenario's `home_team` (Odds-API standard). No fix needed in Module C itself.
@@ -596,10 +616,11 @@ git push origin main                   # Runner now gets correct code
 - **Context**: Module E (`module_e.py`) audit — performance optimization, data accuracy, backup intelligence
 - **Root Cause**: Per-player DB queries, hardcoded matchup boosts, missing data sources
 - **Fixes Applied**:
-  1. **A1**: Synergy + tracking bulk pre-load at init — eliminates ~160 DB connections per slate
+  1. **A1**: Synergy   tracking bulk pre-load at init — eliminates 
+160 DB connections per slate
      - `_load_synergy_playtypes_bulk()`: pre-loads player_synergy_playtypes with canonical name resolution
      - `_load_tracking_stats_bulk()`: CTE-based last-15-games window (not days)
-     - `_get_synergy_playtypes()` + `_get_tracking_stats()`: cache-first with DB fallback
+     - `_get_synergy_playtypes()`   `_get_tracking_stats()`: cache-first with DB fallback
   2. **B1**: DVP data-driven matchup modulation
      - `_load_dvp_by_archetype()`: pre-loads team_dvp_by_archetype (HIGH/MEDIUM only)
      - `_get_dvp_modulator()`: applies ±8% modulation based on real per-100-possession data
@@ -630,7 +651,8 @@ git push origin main                   # Runner now gets correct code
   12. **C1**: Removed dead `import pandas as pd` (line 1)
   13. **C2**: Added named constants for magic numbers (GAME_TOTAL_HIGH/LOW_THRESHOLD, etc.)
   14. **D1**: Added debug logging to 3 silent exception handlers
-- **Module Changes**: module_e.py (~320 lines), main.py (3 changes), module_x_scenario.py (3 additions)
+- **Module Changes**: module_e.py (
+320 lines), main.py (3 changes), module_x_scenario.py (3 additions)
 - **Verification**: Integration test `.venv/bin/python main.py --games CLE`
 
 
@@ -641,7 +663,7 @@ git push origin main                   # Runner now gets correct code
 - **Affected file**: `module_a.py` — `fetch_live_slate()`
 - **Symptom**: `⚠️ The-Odds-API Failed: 422 Unprocessable Entity` — entire Gatekeeper falls back to BDL, which only had 3/5 games with lines. Two upcoming games invisible to pipeline every day.
 - **Root Cause**: `team_totals` was in the bulk `/v4/sports/basketball_nba/odds` markets string (`h2h,spreads,totals,team_totals`). The bulk endpoint does NOT support `team_totals` — it returns 422 and drops ALL markets/games.
-- **Fix**: Remove `team_totals` from bulk call. Add Phase 1.5 per-event enrichment loop: after game slate built, call `/v4/sports/{sport}/events/{event_id}/odds?markets=team_totals` per game (1 credit/game). Parse using `outcome['description']` (team name) + `outcome['name']` (Over/Under) — different from old bulk format that used `outcome['name']` for team.
+- **Fix**: Remove `team_totals` from bulk call. Add Phase 1.5 per-event enrichment loop: after game slate built, call `/v4/sports/{sport}/events/{event_id}/odds?markets=team_totals` per game (1 credit/game). Parse using `outcome['description']` (team name)   `outcome['name']` (Over/Under) — different from old bulk format that used `outcome['name']` for team.
 - **Field mapping (per-event format)**:
   ```python
   # outcome['description'] = team name (e.g. "Toronto Raptors")
@@ -649,7 +671,8 @@ git push origin main                   # Runner now gets correct code
   # outcome['point'] = the line value
   # (old bulk parser was wrong — used outcome['name'] == home_team, never fired)
   ```
-- **Credit cost**: 1 credit per game per day (~5 games = 5 credits). Previously 0 credits but 0 data.
+- **Credit cost**: 1 credit per game per day (
+5 games = 5 credits). Previously 0 credits but 0 data.
 - **Verification**: `TeamTotal:114.5` appears in Module E bet card notes confirming data flows correctly.
 
 ---
@@ -672,18 +695,20 @@ git push origin main                   # Runner now gets correct code
 
 ---
 
-## 2026-03-02 — Referee External Intelligence: Stale Seeded Data + 42 Duplicates
+## 2026-03-02 — Referee External Intelligence: Stale Seeded Data   42 Duplicates
 
 - **Affected file**: `scripts/sync_external_intelligence.py` (full rewrite v2)
-- **Symptom**: `referee_profiles.avg_fouls_per_game` contained BBR-seeded values (e.g., Tony Brothers=17.34) on a different scale than internal rolling L10 data (~11.80). Result: ~66 refs incorrectly labeled STRICT. Also 42 duplicate rows with `(#N)` badge suffix alongside bare-name rows.
+- **Symptom**: `referee_profiles.avg_fouls_per_game` contained BBR-seeded values (e.g., Tony Brothers=17.34) on a different scale than internal rolling L10 data (
+11.80). Result: 
+66 refs incorrectly labeled STRICT. Also 42 duplicate rows with `(#N)` badge suffix alongside bare-name rows.
 - **Root Cause**: Original scraper used hardcoded column indices (broke on site layout changes), no name normalization, no duplicate detection. OddsShark Home/Away Fouls were never scraped — only ATS data was captured.
 - **Fix**: Full rewrite with 5 improvements:
   1. **Header-based column matching**: JavaScript `evaluate()` builds header index map from `<th>` — resilient to column reorder
   2. **Name normalization**: `_normalize_ref_name()` strips `(#N)` badge suffix, removes periods in initials ("J.B." → "JB"), lowercases
-  3. **OddsShark Home/Away Fouls**: `(home_fouls + away_fouls) / 3` = per-ref scale matching internal rolling_21d_fouls
+  3. **OddsShark Home/Away Fouls**: `(home_fouls   away_fouls) / 3` = per-ref scale matching internal rolling_21d_fouls
   4. **Style recalculation**: STRICT ≥13.5, LENIENT ≤11.0, NEUTRAL otherwise (per-ref scale, not BBR team-total scale)
   5. **Duplicate cleanup**: `_cleanup_duplicate_rows()` deletes `(#N)` suffixed rows where bare-name exists
-- **Result**: 42 duplicates cleaned, NULL ou_percentage 48%→12%, NULL home_ats_bias 50%→8%, style distribution corrected (59 NEUTRAL + 26 STRICT vs mostly-STRICT before)
+- **Result**: 42 duplicates cleaned, NULL ou_percentage 48%→12%, NULL home_ats_bias 50%→8%, style distribution corrected (59 NEUTRAL   26 STRICT vs mostly-STRICT before)
 - **Pattern 11 compliance**: `setup_page()` after `context.new_page()`, `close_popups()` after `page.goto()`, `wait_until='domcontentloaded'`
 
 ---
@@ -704,7 +729,7 @@ git push origin main                   # Runner now gets correct code
 
 **Root cause:** L150 `WHERE LOWER(player_name) = LOWER(?)` — LOWER() doesn't strip Unicode diacritics. `player_injuries.player_name` stores canonical accented names after Feb 24 fix. Non-accented lookup misses.
 
-**Fix:** NFD-normalize input before query: `unicodedata.normalize('NFKD', name)` + strip combining chars.
+**Fix:** NFD-normalize input before query: `unicodedata.normalize('NFKD', name)`   strip combining chars.
 
 ---
 
@@ -722,19 +747,24 @@ git push origin main                   # Runner now gets correct code
 
 **Symptom:** `_haiku_sanity_check()` in `curate_plays.py` calls `PerplexityClient.search_player_news()` for short-term injury verification, but the call always silently skips in CI. No error, no log.
 
-**Root cause:** `daily_simulation_pipeline.yml` curate step (line ~188) only had `ANTHROPIC_API_KEY` in its env block — `PERPLEXITY_API_KEY` was never added. The `getattr(config, 'PERPLEXITY_API_KEY', None)` guard returns None → all Perplexity calls skip.
+**Root cause:** `daily_simulation_pipeline.yml` curate step (line 
+188) only had `ANTHROPIC_API_KEY` in its env block — `PERPLEXITY_API_KEY` was never added. The `getattr(config, 'PERPLEXITY_API_KEY', None)` guard returns None → all Perplexity calls skip.
 
 **Fix:** Add `PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}` to the curate step env block. Pattern: always verify ALL required API keys are in a workflow step's env, not just the primary one.
 
 **Same bug in 2 more workflows (found same day):** `evening_slate_lock.yml` news agent step had ZERO env vars (no ANTHROPIC_API_KEY, no PERPLEXITY_API_KEY, no PYTHONPATH) → Claude auth fails, Perplexity falls back to DuckDuckGo. Injury refresh step also missing PERPLEXITY_API_KEY. `daily_briefing.yml` news agent step had same gap. Also: `claude-ops-hub.yml` monitored `"Evening Slate Lock (6PM EST)"` but actual workflow name is `"Evening Slate Lock (6:35 PM EST)"` → evening slate failures were invisible to Ops Hub. All fixed in commit `63885c5`.
 
-## 2026-03-04 — GitHub Actions 01:xx UTC cron delay (~2 hours)
+## 2026-03-04 — GitHub Actions 01:xx UTC cron delay (
+2 hours)
 
-**Symptom:** Evening slate 8:25 PM cron (`25 1 * * *`) and nightly debrief 8:30 PM cron (`30 1 * * *`) consistently fire ~2 hours late (03:34-04:04 UTC). The 6:35 PM cron (`35 23 * * *`) fires within 15-20 min.
+**Symptom:** Evening slate 8:25 PM cron (`25 1 * * *`) and nightly debrief 8:30 PM cron (`30 1 * * *`) consistently fire 
+2 hours late (03:34-04:04 UTC). The 6:35 PM cron (`35 23 * * *`) fires within 15-20 min.
 
 **Root cause:** GitHub Actions cron scheduler has higher delay in the 01:xx UTC window (8 PM EST = peak global usage). Documented GH limitation — not a self-hosted runner issue.
 
-**Fix:** Shifted evening slate 2nd cron from `25 1 * * *` → `55 0 * * *` (7:55 PM EST). The 00:xx UTC window fires within ~15 min. Nightly debrief left at `30 1` because its 2-hour delay accidentally benefits settlement (runs ~10:30 PM when more games finished). Commit `6ceb447`.
+**Fix:** Shifted evening slate 2nd cron from `25 1 * * *` → `55 0 * * *` (7:55 PM EST). The 00:xx UTC window fires within 
+15 min. Nightly debrief left at `30 1` because its 2-hour delay accidentally benefits settlement (runs 
+10:30 PM when more games finished). Commit `6ceb447`.
 
 **Rule:** Avoid scheduling crons in the 01:xx-04:xx UTC range on GitHub Actions. Use 23:xx or 00:xx UTC for time-sensitive evening workflows.
 
@@ -746,13 +776,14 @@ git push origin main                   # Runner now gets correct code
 
 **Fix:** Restored 6 hourly crons (`25 23,0,1,2,3,4 * * *`). Overnight batch kept as fallback. Commit `6ceb447`.
 
-## 2026-03-06 — Evening slate 2nd run (00:50 UTC) silently skipped + launchd migration
+## 2026-03-06 — Evening slate 2nd run (00:50 UTC) silently skipped   launchd migration
 
-**Symptom:** The 7:50 PM EST evening slate cron (`50 0 * * *`) never appeared in GH Actions for the March 6 evening. The 6:35 PM run (`35 23 * * *`) worked. Second run was 35+ min past schedule with no queued job.
+**Symptom:** The 7:50 PM EST evening slate cron (`50 0 * * *`) never appeared in GH Actions for the March 6 evening. The 6:35 PM run (`35 23 * * *`) worked. Second run was 35  min past schedule with no queued job.
 
 **Root cause:** The `00:50 UTC` zone is still within the high-delay window — tonight it was skipped entirely (not delayed, absent). `workflow_dispatch` events from launchd have lower queue contention than `schedule` crons.
 
-**Fix:** Removed both crons from `evening_slate_lock.yml`. Added two macOS launchd plists at `scripts/launchd/com.ludiinformatio.evening-slate-early.plist` (6:35 PM) and `com.ludiinformatio.evening-slate-late.plist` (8:20 PM). Each calls `gh workflow run evening_slate_lock.yml --ref main`. Logs to `~/Library/Logs/ludi-evening-{early,late}.log`. Commit `a5eee3c`.
+**Fix:** Removed both crons from `evening_slate_lock.yml`. Added two macOS launchd plists at `scripts/launchd/com.ludiinformatio.evening-slate-early.plist` (6:35 PM) and `com.ludiinformatio.evening-slate-late.plist` (8:20 PM). Each calls `gh workflow run evening_slate_lock.yml --ref main`. Logs to `
+/Library/Logs/ludi-evening-{early,late}.log`. Commit `a5eee3c`.
 
 **Rule:** For time-critical single-user workflows on a self-hosted runner, prefer `launchd` (macOS) over GH Actions crons. launchd fires at exact local time regardless of GH queue state. Only applies to `workflow_dispatch`-capable workflows.
 
@@ -796,11 +827,13 @@ git push origin main                   # Runner now gets correct code
 
 **Rule:** Before archiving any script referenced in `.github/workflows/`, grep all workflow files for the script name. Only archive if zero references found.
 
-## 2026-03-28 — Sonnet `max_tokens=32000` + 235 bets = JSON truncation, 0 AI-graded STRONG picks
+## 2026-03-28 — Sonnet `max_tokens=32000`   235 bets = JSON truncation, 0 AI-graded STRONG picks
 
 **Symptom:** `curate_plays.py` produced 0 AI-graded STRONG picks. All "STRONG" bets were top edge-sorted fallback (no AI signal).
 
-**Root cause:** 235 bets × ~50 tokens/bet = ~11,750 input + 24,039 output tokens — hit `max_tokens=32000` cap mid-JSON. Claude's response was truncated → `JSONDecodeError`. Fallback path sorted by edge and labeled top N as STRONG without AI analysis.
+**Root cause:** 235 bets × 
+50 tokens/bet = 
+11,750 input   24,039 output tokens — hit `max_tokens=32000` cap mid-JSON. Claude's response was truncated → `JSONDecodeError`. Fallback path sorted by edge and labeled top N as STRONG without AI analysis.
 
 **Fix:** Chunked into `BATCH_SIZE=80` batches, `max_tokens=6000` per call. `game_counts` dict initialized once outside batch loop to preserve max-2-STRONG-per-game cap across batches. Commit `338a224`.
 
@@ -824,9 +857,9 @@ git push origin main                   # Runner now gets correct code
 
 **Fix:** Changed `'defense'` → `'DEFENSE'` at `game_dossier.py:119`. Commit `a6da13b`.
 
-**Rule:** Always check `PRAGMA table_info` + `SELECT DISTINCT scheme_type FROM team_scheme_cache` before assuming the column value format. COMMON_MISTAKES §2.1 table already lists the correct query pattern.
+**Rule:** Always check `PRAGMA table_info`   `SELECT DISTINCT scheme_type FROM team_scheme_cache` before assuming the column value format. COMMON_MISTAKES §2.1 table already lists the correct query pattern.
 
-## 2026-03-31 — BDL team abbrev mismatch causes false NEWLY_TRADED tags + minutes dampener
+## 2026-03-31 — BDL team abbrev mismatch causes false NEWLY_TRADED tags   minutes dampener
 
 **Symptom:** PHX/SAS/NOP/NYK/GSW players flagged as NEWLY_TRADED (5% minutes dampener applied), even when they've been on the team all season.
 
@@ -836,13 +869,15 @@ git push origin main                   # Runner now gets correct code
 
 **Rule:** Any query on `player_game_logs.team_abbreviation` must use BDL-normalized abbreviation. See CLAUDE.md Known Gotchas §2.3.
 
-## 2026-03-31 — Star player projections reaching 40+ PPG (LeBron 43, KD 41)
+## 2026-03-31 — Star player projections reaching 40  PPG (LeBron 43, KD 41)
 
 **Symptom:** `module_e.py` output contained `proj_pts: 43.2` for LeBron. Existing GLOBAL MODIFIER CAP was not catching it.
 
-**Root cause:** GLOBAL MODIFIER CAP (module_e.py L1450-1480) anchored to `base_pts` (Module C's output, ~37 PPG after pace/empirical/fatigue). The 1.15× ceiling on 37 = 42.5. Layer 2 now anchors to `season_avg_PTS` (~24 PPG) → ceiling = 36 PPG.
+**Root cause:** GLOBAL MODIFIER CAP (module_e.py L1450-1480) anchored to `base_pts` (Module C's output, 
+37 PPG after pace/empirical/fatigue). The 1.15× ceiling on 37 = 42.5. Layer 2 now anchors to `season_avg_PTS` (
+24 PPG) → ceiling = 36 PPG.
 
-**Fix:** Added Layer 2 absolute floor+ceiling (`PROJ_HARD_CEIL=1.50`, `PROJ_HARD_FLOOR=0.40` × `season_avg`) at `module_e.py:1482`, after GLOBAL MODIFIER CAP. Gated by `MODIFIER_FLAGS['proj_hard_bounds']`. Commit `a6da13b`.
+**Fix:** Added Layer 2 absolute floor ceiling (`PROJ_HARD_CEIL=1.50`, `PROJ_HARD_FLOOR=0.40` × `season_avg`) at `module_e.py:1482`, after GLOBAL MODIFIER CAP. Gated by `MODIFIER_FLAGS['proj_hard_bounds']`. Commit `a6da13b`.
 
 **Rule:** Modifier caps must be anchored to a stable reference (season average), not an upstream module's already-modified output. Anchoring to modified output allows compound multiplication to bypass the cap.
 
@@ -868,24 +903,29 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 **Root cause (dual failure):**
 1. `get_db_connection()` had bare `sqlite3.connect(db_path)` — no `timeout`, no `PRAGMA busy_timeout`. Default 5s retry → instant failure cascade across 6 downstream steps.
 2. `conn.close()` at end of Part B fired BEFORE accuracy guard `conn.rollback()` — rollback was dead code on a closed connection. Bad archetypes committed even when GENERALIST ≥ 40% block threshold.
-3. `--per-player --limit 400` mode: ~1,000s API calls vs 30-min step timeout → guaranteed SIGKILL.
+3. `--per-player --limit 400` mode: 
+1,000s API calls vs 30-min step timeout → guaranteed SIGKILL.
 
 **Fix (`e899e13`):**
-- `get_db_connection()`: `sqlite3.connect(db_path, timeout=30)` + `conn.execute("PRAGMA busy_timeout = 30000")`
+- `get_db_connection()`: `sqlite3.connect(db_path, timeout=30)`   `conn.execute("PRAGMA busy_timeout = 30000")`
 - Moved `conn.close()` to after accuracy guard block — rollback now fires on live connection
-- `weekly_validation.yml`: removed `--per-player` flag → batch mode (~75s vs ~1,000s)
+- `weekly_validation.yml`: removed `--per-player` flag → batch mode (
+75s vs 
+1,000s)
 
 ## 2026-04-02 — curate_plays.py `max_tokens=6000` truncation (7 days of silent fallback)
 
 **Symptom:** All curated bets STRONG only (no LEAN/FADE) since Mar 27. "Edge-Sorted (AI unavailable)" label in Telegram cards. Fallback firing every morning.
 
-**Root cause:** Mar 28 fix set `BATCH_SIZE=80` + `max_tokens=6000`. With 159 passing bets, 80-bet batches still generate ~8-10K tokens of JSON output — exceeding the 6K cap. Response truncated mid-JSON → `JSONDecodeError` → fallback. The previous fix reduced the cap too aggressively.
+**Root cause:** Mar 28 fix set `BATCH_SIZE=80`   `max_tokens=6000`. With 159 passing bets, 80-bet batches still generate 
+8-10K tokens of JSON output — exceeding the 6K cap. Response truncated mid-JSON → `JSONDecodeError` → fallback. The previous fix reduced the cap too aggressively.
 
 **Diagnosis path:** DB fingerprint: `curation_grade` showing only STRONG (no LEAN/FADE) = deterministic fallback. `_deterministic_top()` assigns only STRONG. `claude_analysis_log` had `batch` model rows (fallback writes them) but no `curation` Sonnet rows. GH Actions step stdout (not pipeline log file) had the actual warning.
 
 **Fix (`2a72b7e`):**
 - `max_tokens=6000` → `max_tokens=16000` at `curate_plays.py:722`
-- `BATCH_SIZE=80` → `BATCH_SIZE=50` at `curate_plays.py:444` — smaller batches reduce per-batch output ceiling to ~5-10K, giving 1.6-3.2x headroom within 16K cap
+- `BATCH_SIZE=80` → `BATCH_SIZE=50` at `curate_plays.py:444` — smaller batches reduce per-batch output ceiling to 
+5-10K, giving 1.6-3.2x headroom within 16K cap
 - Sonnet auto-routes to streaming when `max_tokens > 4096` (claude_client.py:100) — no client change needed
 
 **Rule:** When fallback fires and all grades are STRONG (no LEAN/FADE), that's the `_deterministic_top()` fingerprint — not a Claude grading result. Check DB before assuming auth failure. The actual error lives in the GH Actions step stdout for `daily_briefing.yml`, not in `logs/production/`.
@@ -907,7 +947,7 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 **Root cause:** The self-hosted runner is intermittently backed up -- other runs across multiple workflows are simultaneously sitting in `queued`/`pending` state (visible via `gh run list --json status,conclusion`). When the runner can't drain the queue fast enough, GitHub cancels some scheduled runs before any job is created. This is NOT a code bug -- it's runner capacity/availability. Same underlying pattern as issue #46 (`referee_sync.yml`, runner offline / job "not acquired") and issue #48 (`db_backup.yml`, runner offline, job never picked up) -- those two were diagnosed correctly at the time but never backfilled here, so this is the 3rd occurrence overall and the 1st logged.
 
 **Diagnosis path:**
-1. `gh api repos/{owner}/{repo}/actions/runs/{run_id}` -- check `conclusion` vs `status`. `conclusion: cancelled` + no failed step logs = suspect runner-availability, not code.
+1. `gh api repos/{owner}/{repo}/actions/runs/{run_id}` -- check `conclusion` vs `status`. `conclusion: cancelled`   no failed step logs = suspect runner-availability, not code.
 2. `gh api repos/{owner}/{repo}/actions/runs/{run_id}/jobs` -- `total_count: 0` confirms no job was ever created.
 3. `gh run list --limit 100 --json databaseId,name,createdAt,status,conclusion,event` -- grep for queued/pending status across ALL workflows (not just the failing one). A backlog spanning multiple workflow names confirms it's runner-wide, not workflow-specific.
 4. Compare against recent successful runs of the same workflow -- if some succeeded in the same window, the runner is intermittently overloaded rather than fully offline.
@@ -917,3 +957,5 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 **Rule:** Do not assume a `cancelled` conclusion with no jobs is a code issue -- always check `/jobs` endpoint first and cross-reference the full `gh run list` for concurrent queue backlog before writing off-topic fixes into an unrelated existing issue. If the existing open issue for the workflow describes a different symptom, do not comment there -- file a new issue.
 
 **Commit/PR/Issue:** issue #52 (also see #46, #48 for the same underlying pattern on other workflows)
+
+2026-08-23 gemini model retired fixed in pm_bot see issue59
