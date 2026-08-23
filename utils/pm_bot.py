@@ -69,7 +69,7 @@ class ProjectManagerBot:
             try:
                 # google-genai SDK
                 self.client = genai.Client(api_key=GEMINI_API_KEY)
-                self.model_id = 'gemini-2.0-flash' 
+                self.model_id = 'gemini-3.6-flash'
             except Exception as e:
                 print(f"⚠️ Error configuring Gemini: {e}")
                 self.client = None
