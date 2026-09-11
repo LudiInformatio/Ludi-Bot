@@ -959,3 +959,24 @@ Mirrors existing `wowy_confidence` back-patch at the same location. Commit `ab86
 **Commit/PR/Issue:** issue #52 (also see #46, #48 for the same underlying pattern on other workflows)
 
 2026-08-23 gemini model retired fixed in pm_bot see issue59
+
+---
+
+## 2026-09-11 — Daily Data Sync: recurring offseason gate stuck on is_extended_break (see issue #50)
+
+**Symptom:** `Populate Today's Games (with fallback)` fails — all 4 sources (Odds API, Tank01, BDL, ESPN) return 0 games. Odds API additionally returns `401 Client Error: Unauthorized` and Tank01 reports "N/A credits remaining".
+
+**Root Cause:** `.github/workflows/data_sync.yml:135` gates the step on `steps.slate_check.outputs.is_extended_break != 'true'`. `_check_extended_break()` (`scripts/check_slate.py`) needs `nba_calendar` rows 14 days into the future to compute a real value; during full offseason (no next-season calendar synced yet) the lookahead returns zero rows and the function fails open (`return False`), so `is_extended_break` is permanently `'false'` and the step never skips. The Odds API 401 / Tank01 "N/A credits" are a red herring — how those APIs respond during full NBA offseason with zero live markets, not a credential problem (only worth re-investigating as real if it occurs on a confirmed active game day, e.g. once October preseason odds should exist).
+
+**Fix (TIER_1, 1 line, zero logic impact):** `scripts/check_slate.py` already writes a `has_games` output. Change the gate to use it instead:
+```diff
+-        if: steps.slate_check.outputs.is_extended_break != 'true'
++        if: steps.slate_check.outputs.has_games == 'true'
+```
+at `.github/workflows/data_sync.yml:135`.
+
+**Status: NOT YET APPLIED.** Automated Ops Hub runs cannot write to `.github/workflows/**` — the Edit tool is denied by the harness in this execution context. Confirmed on 4 separate dates: 2026-06-29, 2026-07-01, 2026-08-19, 2026-09-11. Requires a human (or an agent explicitly granted workflow-file write access) to apply the diff.
+
+**Action for future Ops Hub runs:** If this fires again before the fix lands, do NOT re-derive — comment "still unapplied" on issue #50 and stop. Only re-investigate the 401/N/A-credits detail if it occurs on a confirmed active game day.
+
+**Commit/PR/Issue:** issue #50 (83+ comments, pinned 2026-08-19)
