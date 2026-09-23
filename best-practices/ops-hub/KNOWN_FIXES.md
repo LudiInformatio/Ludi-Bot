@@ -1125,3 +1125,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Outage now ~44h+ with zero sign of self-recovery, well past every prior escalation threshold logged in this file.
 
 **Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T14:17:16Z run diagnosis
+
+---
+
+## 2026-09-23 — Daily WOWY Sync: cancelled 0-step run 35747437318, 24h timeout awaiting runner, same outage as issue #60
+
+**Symptom:** Run [35747437318](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35747437318) (triggered 2026-09-22T15:27:09Z) shows `conclusion: cancelled`, `status: completed`, job `sync-wowy` with an empty `steps` array — `started_at` (2026-09-22T15:27:10Z) to `completed_at` (2026-09-23T15:27:10Z) is exactly 24h0m0s apart, i.e. the job timed out waiting for a runner rather than failing mid-execution. Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with this signature.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list` at diagnosis time shows the backlog still active and widened further: 40+ affected runs (queued/pending/cancelled) across Daily WOWY Sync, Claude QA & Debug Check, Daily Reports, PBP Stats WOWY Sync, Daily Data Sync, Nightly Empirical Modifiers Compute, Daily Database Backup, Capture Closing Lines, Injury Refresh, Nightly Debrief, Capture Pinnacle Lines, Daily Morning Briefing, Daily Production Pipeline, Lineup Sync, Daily Referee Sync, and Weekly Validation. A fresh Daily WOWY Sync retry (queued at 2026-09-23T15:21:36Z, immediately after this failure) is already stuck in the same state. Not a `sync_wowy_hybrid.py` defect.
+
+**Dedup note:** Dispatch metadata pointed at issue #56 (workflow-name match), but #56 documents a different, older symptom — an issue-creation failure on an unrelated earlier run (29022940018) — not this outage signature. Per the standing rule, commented on issue #60 (actively-updated consolidated tracker) instead of #56.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Outage window is now ~44h+ since the ~2026-09-21 18:49 UTC start, with zero sign of self-recovery.
+
+**Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T15:27:09Z run diagnosis
