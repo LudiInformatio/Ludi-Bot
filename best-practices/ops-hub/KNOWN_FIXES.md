@@ -1073,3 +1073,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Rule reinforced:** The `existing_issue` field supplied in dispatch metadata is a workflow-name match, not a semantic match — always verify it actually describes the same symptom before defaulting to it. For the cancelled/timed-out-awaiting-runner signature specifically, check open ops-hub issues for an actively-updated infra tracker first.
 
 **Commit/PR/Issue:** comment added to issue #60 for the 2026-09-22T05:12:17Z run diagnosis
+
+---
+
+## 2026-09-23 — Capture Closing Lines: cancelled 0-job run 35825153879, outage still active ~2 days later, no auto-recovery
+
+**Symptom:** Run 35825153879 (triggered 2026-09-23T06:05:16Z) shows `conclusion: cancelled`, `status: completed`, 0 jobs ever created — identical fingerprint to every prior occurrence in this file.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list --workflow=capture_closing_lines.yml --limit 10` at diagnosis time shows 8/10 of the most recent scheduled runs cancelled with the same 0-job signature; sibling workflows (`Injury Refresh (Intraday)`, `Nightly Debrief`, `Claude QA & Debug Check`) are simultaneously stuck queued/pending/cancelled — confirming this is still the runner-wide outage, not a new/different problem. Outage has now persisted 24h+ past the prior 2026-09-23 diagnosis entry with zero sign of self-recovery.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (workflow-name-matched, and the same issue this failure class has been logged against since July) and cross-referenced issue #60 as the consolidated critical tracker.
+
+**Escalation:** This is now the 8th+ logged occurrence of this exact pattern across #46, #48, #52, and #60. Auto-diagnosis has repeatedly confirmed the same root cause and repeatedly recommended the same fix (verify the physical runner machine is online) — that recommendation has not yet been actioned as of this run. Ops Hub cannot resolve this itself; it can only keep confirming the outage is ongoing. No further value in additional TIER_3 issue comments beyond periodic confirmation until a human intervenes on the runner host.
+
+**Commit/PR/Issue:** issue #52 (comment added for the 2026-09-23T06:05:16Z run diagnosis), cross-referenced to issue #60
