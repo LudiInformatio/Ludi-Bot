@@ -1029,3 +1029,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Escalation:** Reiterated the standing recommendation in issue #60 - 30+ hours and 4+ consecutive cancellations for this workflow alone is well past the point where a queue-drain resolves it on its own; needs a human to physically verify the runner machine is powered on, network-connected, and the actions-runner service is alive.
 
 **Commit/PR/Issue:** issue #52 (comment added for the 2026-09-22T08:39:35Z run diagnosis), cross-referenced to issue #60
+
+---
+
+## 2026-09-22 (logged 2026-09-23) — Capture Closing Lines: cancelled 0-job run 35673879496, earliest casualty of the runner outage in issue #60
+
+**Symptom:** Run 35673879496 (triggered 2026-09-22T00:55:36Z) shows conclusion=cancelled, status=completed. `check-slate` job has an empty `steps` array with `startedAt`≈`completedAt` (~1s apart, no job ever acquired), `capture-clv` shows conclusion=skipped. Diagnosed retroactively/out of order relative to the later same-morning occurrences already logged above.
+
+**Root Cause:** Same macbookpro self-hosted runner outage tracked in issue #60. `gh run list` confirms this is actually the *first* cancellation in the streak — the last successful Capture Closing Lines run was 2026-09-21T09:06:56Z (35581456695), and 35673879496 is the very next scheduled run, followed by 01:40:40Z, 05:10:50Z, 06:21:00Z, 07:46:21Z, and 08:39:35Z (all already logged). A newer run (35803350612, created 2026-09-23T00:44:18Z) was still sitting `queued` at diagnosis time, confirming the outage remains active 30+ hours in.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (workflow-name-matched issue provided for this diagnosis) rather than opening a new issue, and cross-referenced issue #60 as the consolidated tracker.
+
+**Rule confirmed:** When diagnosing a backlog of failed runs for the same workflow out of chronological order, check `gh run list` against the last known-success timestamp to correctly identify which cancelled run started the incident vs. which are downstream recurrences — don't assume the run being diagnosed now is the latest chronologically.
+
+**Commit/PR/Issue:** issue #52 (comment added for the 2026-09-22T00:55:36Z run diagnosis), cross-referenced to issue #60
