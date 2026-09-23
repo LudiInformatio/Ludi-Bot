@@ -1153,3 +1153,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Outage window is now ~47h since the ~2026-09-21 18:49 UTC start, well past every prior escalation threshold logged in this file, with zero sign of self-recovery via queue drain.
 
 **Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T17:59:10Z run diagnosis
+
+## 2026-09-23 - Daily Morning Briefing: cancelled 0-step run 35768556266, 24h timeout awaiting runner, same outage as issue 60
+
+**Symptom:** Run 35768556266 (triggered 2026-09-22T18:38:55Z) shows conclusion: cancelled, status: completed, 3 jobs created but check-slate (id 106884178920) has an empty steps array with started_at/completed_at exactly 24h0m0s apart (2026-09-22T18:38:56Z to 2026-09-23T18:38:56Z) - annotation "The job has exceeded the maximum execution time while awaiting a runner for 24h0m0s". Downstream briefing and notify-off-day jobs were both skipped. Dispatch metadata Failed Steps and failure log were both empty, consistent with this signature. Full run URL: https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35768556266
+
+**Root Cause:** Same macbookpro self-hosted runner outage tracked centrally in issue 60 (opened 2026-09-21, severity:critical, still open). gh run list at diagnosis time shows the backlog still active and widened further: 58 queued/pending/cancelled runs across 17 workflow names (Capture Closing Lines, Capture Pinnacle Lines, Claude Ops Hub, Claude QA and Debug Check, Daily Data Sync, Daily Database Backup, Daily Morning Briefing, Daily Production Pipeline, Daily Referee Sync, Daily Reports, Daily WOWY Sync, Injury Refresh Intraday, Lineup Sync 9:45 AM EST, Nightly Debrief, Nightly Empirical Modifiers Compute, PBP Stats WOWY Sync, Weekly Validation). Not a bots/ask_ludi.py or briefing-script defect.
+
+**Dedup note:** Dispatch metadata pointed at issue 49 (workflow-name match), which does have a 2026-09-21 comment diagnosing this same outage for an earlier Daily Morning Briefing run. However, per the standing rule already established repeatedly in this file (Weekly Validation, Nightly Empirical Modifiers Compute, Daily Data Sync, Daily WOWY Sync all bypassed their workflow-name-matched issues), commented on issue 60 (the actively-updated consolidated tracker) instead of 49, to avoid fragmenting the incident timeline across per-workflow issues.
+
+**Fix Applied:** TIER_3 - issue only, no code change. Outage now approximately 48+ hours with zero sign of self-recovery, well past every prior escalation threshold logged in this file.
+
+**Commit/PR/Issue:** issue 60 comment added for the 2026-09-22T18:38:55Z run diagnosis
+
+---
