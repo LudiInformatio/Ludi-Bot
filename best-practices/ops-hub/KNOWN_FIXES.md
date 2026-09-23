@@ -1043,3 +1043,15 @@ at `.github/workflows/data_sync.yml:135`.
 **Rule confirmed:** When diagnosing a backlog of failed runs for the same workflow out of chronological order, check `gh run list` against the last known-success timestamp to correctly identify which cancelled run started the incident vs. which are downstream recurrences — don't assume the run being diagnosed now is the latest chronologically.
 
 **Commit/PR/Issue:** issue #52 (comment added for the 2026-09-22T00:55:36Z run diagnosis), cross-referenced to issue #60
+
+---
+
+## 2026-09-23 — Capture Closing Lines: cancelled 0-job run 35806902365, 7th consecutive cancellation, runner outage now ~40h (see issue #60)
+
+**Symptom:** Run 35806902365 (triggered 2026-09-23T01:35:17Z) shows `conclusion: cancelled`, `status: completed`, 0 jobs ever created — identical fingerprint to every prior occurrence.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked in issue #60. This is the 7th consecutive Capture Closing Lines cancellation since the last success (2026-09-21T09:06:56Z, run 35581456695): 00:55:36Z, 01:40:40Z, 05:10:50Z, 06:21:00Z, 07:46:21Z, 08:39:35Z (all 2026-09-22), and now 01:35:17Z (2026-09-23). `gh run list` at diagnosis time confirms the outage is still active runner-wide: 17 `queued` + 2 `pending` runs across many workflow names, plus a newer Capture Closing Lines run (35820287563) already sitting `pending`. Outage window is now ~40 hours (started ~2026-09-21 18:49 UTC per #60).
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (workflow-name-matched issue) and cross-referenced issue #60 as the consolidated tracker, per standing dedup rule for this failure class.
+
+**Escalation:** 7 consecutive cancellations and ~40 hours is well past every prior escalation threshold logged in this file. Reiterated the standing recommendation on both #52 and #60 that a human physically verify the `macbookpro` runner machine is powered on, network-connected, and the actions-runner service is alive — this will not self-resolve via queue drain.
