@@ -1015,3 +1015,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Escalation:** 30-plus hours now exceeds the "4th or later consecutive cancellation" escalation threshold by a wide margin, and it now spans failures across many workflows, not one. Recommended a human physically verify the runner machine is powered on, network-connected, and the actions-runner service is alive — a queue-drain is very unlikely to self-resolve a stall this long.
 
 **Commit/PR/Issue:** issue #60 (comment added for the 2026-09-22T00:14Z / Claude QA and Debug Check run diagnosis)
+
+---
+
+## 2026-09-22 (logged 2026-09-23) - Capture Closing Lines: cancelled 0-job run, 4th consecutive same-morning occurrence, same runner outage as issue #60
+
+**Symptom:** Run 35706006957 (triggered 2026-09-22T08:39:35Z) shows conclusion=cancelled, status=completed, jobs total_count=0 - no job ever acquired by the self-hosted runner.
+
+**Root Cause:** Same macbookpro self-hosted runner outage tracked in issue #60. This is the 4th consecutive Capture Closing Lines cancellation in the same morning window (05:10Z, 06:21Z, 07:46Z, 08:39Z), and gh run list at diagnosis time confirms the backlog is still active runner-wide (dozens of workflows stuck queued/pending from 2026-09-22T11:54Z onward), consistent with the incident window documented in issue #60 (approximately 2026-09-21 18:49 UTC to present, 30+ hours).
+
+**Fix Applied:** TIER_3 - issue only, no code change. Commented on issue #52 (the workflow-name-matched issue provided for this diagnosis) rather than opening a new issue, and cross-referenced issue #60 as the consolidated tracker for the underlying runner-wide outage.
+
+**Escalation:** Reiterated the standing recommendation in issue #60 - 30+ hours and 4+ consecutive cancellations for this workflow alone is well past the point where a queue-drain resolves it on its own; needs a human to physically verify the runner machine is powered on, network-connected, and the actions-runner service is alive.
+
+**Commit/PR/Issue:** issue #52 (comment added for the 2026-09-22T08:39:35Z run diagnosis), cross-referenced to issue #60
