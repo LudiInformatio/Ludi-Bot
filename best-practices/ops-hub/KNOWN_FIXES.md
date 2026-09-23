@@ -1099,3 +1099,15 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (the actively-updated dedup target for this workflow's cancelled/0-job signature) and cross-referenced issue #60 as the consolidated critical tracker. No new issue created per standing dedup rule.
 
 **Commit/PR/Issue:** issue #52 comment added for the 2026-09-23T07:49:19Z run diagnosis, cross-referenced to issue #60
+
+---
+
+## 2026-09-23 — Nightly Empirical Modifiers Compute: cancelled 0-step run 35724120766, same runner outage as issue #60
+
+**Symptom:** Run [35724120766](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35724120766) (triggered 2026-09-22T11:54:55Z) shows `conclusion: cancelled`, `status: completed`, 1 job created (`compute-modifiers`, id 106733571534) but with an empty `steps` array and `started_at` == `completed_at` (~1s apart) — no step, including "Set up job", ever ran. Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with a job that never actually executed.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). At diagnosis time (2026-09-23) `gh run list` shows the very next scheduled run of this same workflow (35857277262, created 2026-09-23T11:54:39Z) already sitting `queued`, plus Daily Database Backup (queued), Capture Closing Lines (pending, own ongoing streak on #52), Injury Refresh (pending), Nightly Debrief (queued), and Claude QA & Debug Check (queued) in the same window — confirming this is the runner-wide outage, not a workflow-specific defect.
+
+**Dedup note:** Dispatch metadata pointed at issue #54 (workflow-name match), but #54 documents a *different* symptom class for this workflow — real steps completing successfully with only job finalization hanging (2026-07-07), or a mid-step connectivity drop (2026-08-23). Neither matches tonight's zero-steps-ever-ran signature. Per the rule reinforced in the 2026-09-23 "Nightly Debrief" entry above, commented on issue #60 (the actively-updated consolidated tracker) instead of #54.
+
+**Fix Applied:** TIER_3 — issue only, no code change. No manual re-run performed; next scheduled run will re-attempt naturally.
