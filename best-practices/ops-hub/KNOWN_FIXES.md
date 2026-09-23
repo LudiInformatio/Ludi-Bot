@@ -1111,3 +1111,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Dedup note:** Dispatch metadata pointed at issue #54 (workflow-name match), but #54 documents a *different* symptom class for this workflow — real steps completing successfully with only job finalization hanging (2026-07-07), or a mid-step connectivity drop (2026-08-23). Neither matches tonight's zero-steps-ever-ran signature. Per the rule reinforced in the 2026-09-23 "Nightly Debrief" entry above, commented on issue #60 (the actively-updated consolidated tracker) instead of #54.
 
 **Fix Applied:** TIER_3 — issue only, no code change. No manual re-run performed; next scheduled run will re-attempt naturally.
+
+---
+
+## 2026-09-23 — Weekly Validation: cancelled 0-step run 35739255018, 24h timeout awaiting runner, same outage as issue #60
+
+**Symptom:** Run [35739255018](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35739255018) (triggered 2026-09-22T14:17:16Z) shows `conclusion: cancelled`, `status: completed`, 1 job created (`run-weekly-validation`, id 106784391835) but with an empty `steps` array and `startedAt`/`completedAt` exactly ~24h0m1s apart (2026-09-22T14:17:17Z → 2026-09-23T14:17:18Z) — no step ever ran; the job timed out waiting for a runner. Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with this signature.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list` at diagnosis time shows the backlog still active and widened further: 13+ workflow names sitting `queued`/`pending` (Daily Reports, PBP Stats WOWY Sync, Daily Data Sync, Nightly Empirical Modifiers Compute, Daily Database Backup, Capture Closing Lines, Injury Refresh, Nightly Debrief, Claude QA & Debug Check, Capture Pinnacle Lines, Daily Morning Briefing, Daily Production Pipeline), plus more 0-job `cancelled` casualties. Not a `validate_canonical_ids.py` or Weekly-Validation-specific defect.
+
+**Dedup note:** No open issue name-matches "Weekly Validation" — closed #35 and #39 describe unrelated older symptoms (a 2026-03-10 diagnosis and a `classify_archetypes.py` 20-min timeout DB-lock cascade), neither matching tonight's zero-steps-ever-ran signature. Commented on issue #60 (actively-updated consolidated tracker) instead of opening a new issue or reopening a stale one, per the standing dedup rule for this failure class.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Outage now ~44h+ with zero sign of self-recovery, well past every prior escalation threshold logged in this file.
+
+**Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T14:17:16Z run diagnosis
