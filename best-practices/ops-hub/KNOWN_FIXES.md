@@ -1139,3 +1139,17 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Outage window is now ~44h+ since the ~2026-09-21 18:49 UTC start, with zero sign of self-recovery.
 
 **Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T15:27:09Z run diagnosis
+
+---
+
+## 2026-09-23 — Daily Production Pipeline: check-slate job 24h timeout awaiting runner, same outage as issue #60
+
+**Symptom:** Run [35764190542](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35764190542) (triggered 2026-09-22T17:59:10Z) shows job `check-slate` with annotation "The job has exceeded the maximum execution time while awaiting a runner for 24h0m0s" — `run-production-pipeline` never started (0 jobs downstream). Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with a job that timed out waiting for a runner rather than failing mid-execution.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21 for this exact workflow, severity:critical, still open). `gh run list --limit 100` at diagnosis time confirms the backlog is still active and wide: **56 queued/pending/cancelled runs across 16 workflow names** (Injury Refresh ×16, Capture Closing Lines ×12, Claude QA & Debug Check ×6, plus Daily Data Sync, Daily Database Backup, Daily Referee Sync, Daily Reports, Daily WOWY Sync, Lineup Sync, Nightly Debrief, Nightly Empirical Modifiers Compute, Daily Morning Briefing, PBP Stats WOWY Sync, Weekly Validation, and this run's own workflow). Not a `main.py`/pipeline logic defect.
+
+**Dedup note:** `existing_issue` supplied in dispatch metadata (60) matches directly this time — it's the same workflow that originally opened issue #60 — so commented there rather than searching for another match.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Outage window is now ~47h since the ~2026-09-21 18:49 UTC start, well past every prior escalation threshold logged in this file, with zero sign of self-recovery via queue drain.
+
+**Commit/PR/Issue:** issue #60 comment added for the 2026-09-22T17:59:10Z run diagnosis
