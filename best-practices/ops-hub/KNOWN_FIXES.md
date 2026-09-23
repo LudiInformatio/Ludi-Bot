@@ -1087,3 +1087,15 @@ at `.github/workflows/data_sync.yml:135`.
 **Escalation:** This is now the 8th+ logged occurrence of this exact pattern across #46, #48, #52, and #60. Auto-diagnosis has repeatedly confirmed the same root cause and repeatedly recommended the same fix (verify the physical runner machine is online) — that recommendation has not yet been actioned as of this run. Ops Hub cannot resolve this itself; it can only keep confirming the outage is ongoing. No further value in additional TIER_3 issue comments beyond periodic confirmation until a human intervenes on the runner host.
 
 **Commit/PR/Issue:** issue #52 (comment added for the 2026-09-23T06:05:16Z run diagnosis), cross-referenced to issue #60
+
+---
+
+## 2026-09-23 — Capture Closing Lines: cancelled 0-job run 35833735325, 10th consecutive cancellation, outage ~37h
+
+**Symptom:** Run [35833735325](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35833735325) (triggered 2026-09-23T07:49:19Z) shows `conclusion: cancelled`, `status: completed`, `jobs.total_count: 0` — identical fingerprint to every prior occurrence in this file. Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with a run cancelled before any job/step was ever created.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). This is the **10th consecutive** Capture Closing Lines cancellation since the last success (2026-09-21T09:06:56Z, run 35581456695): 00:55:36Z, 01:40:40Z, 05:10:50Z, 06:21:00Z, 07:46:21Z, 08:39:35Z (all 2026-09-22), 01:35:17Z, 04:55:15Z, 06:05:16Z, and now 07:49:19Z (all 2026-09-23). `gh run list` at diagnosis time confirms the outage is still active runner-wide: the very next scheduled Capture Closing Lines run (35838583278, created 08:41:47Z) is already sitting `pending`, plus Injury Refresh (Intraday) `pending` and Nightly Debrief `queued` in the same window. Outage window is now ~37 hours with zero sign of self-recovery.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (the actively-updated dedup target for this workflow's cancelled/0-job signature) and cross-referenced issue #60 as the consolidated critical tracker. No new issue created per standing dedup rule.
+
+**Commit/PR/Issue:** issue #52 comment added for the 2026-09-23T07:49:19Z run diagnosis, cross-referenced to issue #60
