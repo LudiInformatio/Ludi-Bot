@@ -1167,3 +1167,15 @@ at `.github/workflows/data_sync.yml:135`.
 **Commit/PR/Issue:** issue 60 comment added for the 2026-09-22T18:38:55Z run diagnosis
 
 ---
+
+## 2026-09-24 — Claude QA & Debug Check: cancelled 0-step run 35877118977, same runner outage as issue #60, ~3 days in
+
+**Symptom:** Run [35877118977](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35877118977) (triggered 2026-09-23T14:50:18Z) shows `conclusion: cancelled`, `status: completed`. `validate-schema` job (ID 107235804799) has an empty `steps` array; `gh api .../jobs/107235804799` confirms empty `runner_name`/`runner_group_name` and zero billable duration — the job was never acquired by any runner. `pre-evening-check` and `claude-qa` jobs both `skipped`. Dispatch metadata's `Failed Steps` and failure log were both empty, consistent with this signature.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list --limit 100` at diagnosis time shows the outage still active and widened further: **69 queued/pending/cancelled runs across 16 workflow names** (Capture Closing Lines, Capture Pinnacle Lines, Claude QA & Debug Check, Daily Data Sync, Daily Database Backup, Daily Morning Briefing, Daily Production Pipeline, Daily Referee Sync, Daily Reports, Daily WOWY Sync, Injury Refresh (Intraday), Lineup Sync (9:45 AM EST), Nightly Debrief, Nightly Empirical Modifiers Compute, PBP Stats WOWY Sync, Weekly Validation). Not a `claude-qa-check.yml` / QA-script defect. Outage window is now ~3 days since the ~2026-09-21 18:49 UTC start.
+
+**Dedup note:** Dispatch metadata pointed at issue #51 (title-text match), but a prior diagnosis in this file (2026-09-22T23:44:57Z run) already confirmed #51 is a stale, unrelated 2026-06-23 issue (Gemini 429 / Odds API 401) — reconfirmed here. Commented on issue #60 (the actively-updated consolidated tracker) instead, per the standing dedup rule.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Reiterated the standing recommendation on #60: a human needs to physically verify the `macbookpro` runner host is powered on, network-connected, and the `actions-runner` service is alive — queue-drain has not self-resolved this in 3 days and the affected surface is still growing.
+
+**Commit/PR/Issue:** issue #60 comment added for the 2026-09-23T14:50:18Z run diagnosis
