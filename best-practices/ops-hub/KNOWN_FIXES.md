@@ -1219,3 +1219,11 @@ at `.github/workflows/data_sync.yml:135`.
 **Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list --workflow=capture_closing_lines.yml` at diagnosis time shows the outage still active and unresolved: the very next scheduled run (35963560337, created 06:14:38Z) is already sitting `pending`, and 35939170410 (created 00:36:24Z) is still `queued`. At least the 13th consecutive cancelled/stuck Capture Closing Lines run since the last success on 2026-09-21T09:06:56Z. Outage is now in its 3rd calendar day with zero sign of self-recovery.
 
 **Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (the standing dedup target for this workflow's cancelled/0-job signature) and cross-referenced issue #60 as the consolidated critical tracker. No new issue created.
+
+---
+
+## 2026-09-24 — Capture Closing Lines: cancelled 0-job run 35963560337, 14th consecutive occurrence, outage past 60h
+
+**Symptom:** Run [35963560337](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35963560337) (triggered 2026-09-24T06:14:38Z) shows `conclusion: cancelled`, `status: completed`, `jobs.total_count: 0` — no job ever acquired by the runner, not even `Set up job`. Run sat queued from 06:14:38Z until auto-cancelled at 07:39:27Z (~85 min), coinciding with the next scheduled run (35970793935, created 07:39:26Z) queuing behind it. Dispatch metadata's `Failed Steps` and failure log were both empty, matching the established 0-job signature.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list --workflow=capture_closing_lines.yml` at diagnosis time confirms the outage is unresolved and widened further: nearly every recent run across Sept 22-24 shows the identical cancelled/0-job fingerprint. This is at least the 14th consecutive cancelled/stuck Capture Closing Lines run since the last success on 2026-09-21T09:06:56Z (35581456695). Outage window is now ~2026-09-21 18:49 UTC onset through present -- 60+ hours (2.5+ days) with zero sign of self-recovery.
