@@ -1243,3 +1243,19 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (workflow-name-matched dedup target) and cross-referenced issue #60 as the consolidated critical tracker. No new issue created — root cause is unchanged from every prior entry in this incident.
 
 **Commit/PR/Issue:** issue #52 comment added for the 2026-09-24T07:39:26Z run diagnosis, cross-referenced to issue #60
+
+---
+
+## 2026-09-24 — Daily Database Backup: cancelled 0-step run 35844030071, same outage, ~3rd day, 2nd Backup casualty
+
+**Symptom:** Run [35844030071](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35844030071) (triggered 2026-09-23T09:37:27Z) shows `conclusion: cancelled`, `status: completed`. The `backup` job has an empty `steps` array, `startedAt` 2026-09-23T09:37:28Z and `completedAt` 2026-09-24T09:37:28Z — exactly 24h apart, confirming the job never ran and simply timed out waiting for a runner. Dispatch metadata's `Failed Steps` and failure log were both empty — identical fingerprint to every other casualty logged in this incident.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). Not a `backup_database.sh` or Daily-Database-Backup-specific defect — this is the 2nd Daily Database Backup casualty (previous: run created 2026-09-22T09:32:21Z, also cancelled/0-step).
+
+**Current status check (diagnosis time ~2026-09-24T09:37Z):** `gh run list --limit 100` shows the outage still active and unresolved: 66 queued/pending/cancelled runs across 16 workflow names (Capture Closing Lines, Capture Pinnacle Lines, Claude QA & Debug Check, Daily Data Sync, Daily Database Backup, Daily Morning Briefing, Daily Production Pipeline, Daily Referee Sync, Daily Reports, Daily WOWY Sync, Injury Refresh (Intraday), Lineup Sync (9:45 AM EST), Nightly Debrief, Nightly Empirical Modifiers Compute, PBP Stats WOWY Sync, Weekly Validation). The very next scheduled Daily Database Backup run (created 2026-09-24T09:36:45Z) is already sitting `queued`. Outage window is now ~63 hours (2.6+ days) since the ~2026-09-21 18:49 UTC start.
+
+**Dedup note:** Dispatch metadata pointed at issue #53 (workflow-name match), but #53 is a stale, unrelated issue (July upload-artifact-stall root cause — not this outage's job-never-acquired signature). Commented on issue #60 (the actively-updated consolidated tracker) instead, per the standing dedup rule reinforced throughout this incident. Left #53 untouched since its root cause is unrelated.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #60. No new issue created.
+
+**Commit/PR/Issue:** issue #60 comment added for the 2026-09-23T09:37:27Z run diagnosis
