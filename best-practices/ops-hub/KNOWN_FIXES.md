@@ -1209,3 +1209,13 @@ at `.github/workflows/data_sync.yml:135`.
 **Dedup note:** Dispatch metadata pointed at issue #58 (workflow-name match), but #58 is a stale, unrelated 2026-07-22 issue (a different run's "Set up job" step failure, not this outage signature). Commented on issue #60 (the actively-updated consolidated tracker) instead, per the standing dedup rule reinforced throughout this incident.
 
 **Fix Applied:** TIER_3 — issue only, no code change. Reiterated the standing recommendation on #60: a human needs to physically verify the `macbookpro` runner host is powered on, network-connected, and the `actions-runner` service is alive — queue-drain has not self-resolved this in ~58 hours.
+
+---
+
+## 2026-09-24 — Capture Closing Lines: cancelled 0-job run 35958391800, outage now in 3rd calendar day
+
+**Symptom:** Run [35958391800](https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35958391800) (triggered 2026-09-24T05:05:10Z) shows `conclusion: cancelled`, `status: completed`, `jobs.total_count: 0` — no job ever acquired by the runner. Failure log empty, identical fingerprint to every prior occurrence in this file.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue #60 (opened 2026-09-21, severity:critical, still open). `gh run list --workflow=capture_closing_lines.yml` at diagnosis time shows the outage still active and unresolved: the very next scheduled run (35963560337, created 06:14:38Z) is already sitting `pending`, and 35939170410 (created 00:36:24Z) is still `queued`. At least the 13th consecutive cancelled/stuck Capture Closing Lines run since the last success on 2026-09-21T09:06:56Z. Outage is now in its 3rd calendar day with zero sign of self-recovery.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #52 (the standing dedup target for this workflow's cancelled/0-job signature) and cross-referenced issue #60 as the consolidated critical tracker. No new issue created.
