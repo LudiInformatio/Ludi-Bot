@@ -1259,3 +1259,23 @@ at `.github/workflows/data_sync.yml:135`.
 **Fix Applied:** TIER_3 — issue only, no code change. Commented on issue #60. No new issue created.
 
 **Commit/PR/Issue:** issue #60 comment added for the 2026-09-23T09:37:27Z run diagnosis
+
+---
+
+**2026-09-24 — Daily Reports: both jobs cancelled, back-to-back 24h timeouts, 2nd Daily Reports casualty**
+
+**Symptom:** Run 35736785598 (https://github.com/LudiInformatio/Ludi-Bot/actions/runs/35736785598), triggered 2026-09-22T13:55:56Z. Both jobs never acquired a runner — `runner_id: 0`, empty `runner_name`, empty `steps` array:
+- `work-notes` (job 106775955258): 2026-09-22T13:55:56Z → 2026-09-23T13:55:56Z (24h0m0s)
+- `bet-summary` (job 107213107582): 2026-09-23T13:55:57Z → 2026-09-24T13:55:57Z (24h0m0s)
+
+Unlike single-job casualties logged elsewhere in this thread, both jobs in this run each sat the full 24h timeout sequentially — this one run occupied the queue for ~48h total. Dispatch metadata's Failed Steps and failure log were both empty.
+
+**Root Cause:** Same `macbookpro` self-hosted runner outage tracked centrally in issue 60 (opened 2026-09-21, severity:critical, still open). Not a `daily_reports.yml`/PM-bot defect — this is the 2nd Daily Reports casualty.
+
+**Current status check (diagnosis time ~2026-09-24T13:56Z):** `gh run list --limit 100` shows 64 queued/pending/cancelled runs across 16 workflow names (Capture Closing Lines, Capture Pinnacle Lines, Claude QA & Debug Check, Daily Data Sync, Daily Database Backup, Daily Morning Briefing, Daily Production Pipeline, Daily Referee Sync, Daily Reports, Daily WOWY Sync, Injury Refresh (Intraday), Lineup Sync (9:45 AM EST), Nightly Debrief, Nightly Empirical Modifiers Compute, PBP Stats WOWY Sync, Weekly Validation). Outage window is now ~71 hours (~3 days) since the ~2026-09-21 18:49 UTC start, zero sign of self-recovery.
+
+**Dedup note:** Dispatch metadata pointed at issue 45 (workflow-name match), but issue 45 is a stale, unrelated issue diagnosing a Gemini 429 rate-limit failure during real execution — a different symptom than this job-never-acquired signature. Commented on issue 60 (the actively-updated consolidated tracker) instead, per the standing dedup rule reinforced throughout this incident. Left issue 45 untouched since its root cause is unrelated.
+
+**Fix Applied:** TIER_3 — issue only, no code change. Commented on issue 60. No new issue created.
+
+**Commit/PR/Issue:** issue 60 comment added for the 2026-09-22T13:55:56Z run diagnosis
